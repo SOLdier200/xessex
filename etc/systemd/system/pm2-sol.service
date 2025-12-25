@@ -1,0 +1,13 @@
+[Service]
+Type=simple
+User=sol
+
+Environment=PATH=/home/sol/.nvm/versions/node/v23.11.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PM2_HOME=/home/sol/.pm2
+
+ExecStart=/usr/lib/node_modules/pm2/bin/pm2 resurrect --no-daemon
+ExecReload=/usr/lib/node_modules/pm2/bin/pm2 reload all
+ExecStop=/usr/lib/node_modules/pm2/bin/pm2 kill
+
+Restart=on-failure
+RestartSec=5
