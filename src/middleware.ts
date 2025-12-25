@@ -1,40 +1,53 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = new Set([
+const AGE_COOKIE = "age_verified";
+const AGE_PATH = "/age";
+
+// Routes that should NOT be blocked
+const PUBLIC_PATH_PREFIXES = [
   "/age",
-  "/terms",
+  "/leave",
   "/privacy",
+  "/terms",
+  "/_next",
+  "/favicon.ico",
   "/robots.txt",
   "/sitemap.xml",
-]);
+];
+
+// Also allow common static assets
+const PUBLIC_FILE = /\.(.*)$/;
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow next internals + static files
+  // Allow public routes and files
   if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.includes(".")
+    PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
+    PUBLIC_FILE.test(pathname)
   ) {
     return NextResponse.next();
   }
 
-  // Allow public paths
-  if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
+  const ageVerified = req.cookies.get(AGE_COOKIE)?.value === "1";
 
-  // Check age cookie
-  const ageOk = req.cookies.get("age_ok")?.value === "1";
-  if (ageOk) return NextResponse.next();
+  if (!ageVerified) {
+    const url = req.nextUrl.clone();
+    url.pathname = AGE_PATH;
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
 
-  // Redirect to age gate, preserve destination
-  const url = req.nextUrl.clone();
-  url.pathname = "/age";
-  url.searchParams.set("next", pathname);
-  return NextResponse.redirect(url);
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api).*)"], // keep APIs reachable if you want
+  matcher: [
+    /*
+      Run middleware on all routes except:
+      - next internals (_next)
+      - static files
+    */
+    "/((?!_next/static|_next/image).*)",
+  ],
 };

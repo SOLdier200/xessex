@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "all": "fuser -k 3001/tcp 2>/dev/null; next build && (cmd.exe /c start http://localhost:3001 &) && next start -p 3001"
   },
   "dependencies": {
     "next": "16.1.1",

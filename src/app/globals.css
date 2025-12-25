@@ -3,12 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --neon-pink: #ff2bd6;
+  --bg-deep: #050a1a;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, sans-serif;
+html, body {
+  background: var(--bg-deep);
+  color: var(--neon-pink);
+}
+
+a {
+  color: var(--neon-pink);
+}
+
+.neon-border {
+  border: 2px solid var(--neon-pink);
+}
+
+.neon-text {
+  color: var(--neon-pink);
+  text-shadow:
+    0 0 8px rgba(255, 43, 214, 0.55),
+    0 0 20px rgba(255, 43, 214, 0.25);
 }
