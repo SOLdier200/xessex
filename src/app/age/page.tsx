@@ -7,30 +7,30 @@ export default function AgeGatePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function accept(e?: React.MouseEvent) {
-    e?.preventDefault();
-    e?.stopPropagation();
+  async function handleEnter(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     if (loading) return;
-
     setLoading(true);
+
     try {
-      await fetch("/api/age", {
+      const res = await fetch("/api/age", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ accept: true }),
       });
-
-      router.replace("/");
-      router.refresh();
-    } finally {
+      if (res.ok) {
+        router.push("/");
+      }
+    } catch (err) {
+      console.error("Age verification error:", err);
       setLoading(false);
     }
   }
 
-  function leave(e?: React.MouseEvent) {
-    e?.preventDefault();
-    e?.stopPropagation();
-    if (loading) return;
+  function handleLeave(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     router.push("/leave");
   }
 
@@ -96,7 +96,7 @@ export default function AgeGatePage() {
           <div className="mt-6 flex gap-3">
             <button
               type="button"
-              onClick={accept}
+              onClick={handleEnter}
               disabled={loading}
               className="flex-1 rounded-xl bg-white text-black font-medium py-3 hover:opacity-90 disabled:opacity-60"
             >
@@ -105,7 +105,7 @@ export default function AgeGatePage() {
 
             <button
               type="button"
-              onClick={leave}
+              onClick={handleLeave}
               disabled={loading}
               className="flex-1 rounded-xl border-2 border-pink-500 text-white font-medium py-3 hover:bg-white/5 disabled:opacity-60"
             >

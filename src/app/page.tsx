@@ -86,6 +86,24 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Featured Video */}
+        <section className="mt-6 neon-border rounded-2xl p-6 bg-black/30">
+          <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
+          <div className="flex justify-center">
+            <div className="w-full max-w-2xl aspect-video">
+              <iframe
+                src="https://www.pornhub.com/embed/691a4cb39fd5b"
+                frameBorder="0"
+                width="100%"
+                height="100%"
+                scrolling="no"
+                allowFullScreen
+                className="rounded-xl"
+              ></iframe>
+            </div>
+          </div>
+        </section>
+
         {/* Results grid */}
         <section className="mt-6">
           <div className="flex items-center justify-between">

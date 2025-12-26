@@ -9,6 +9,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/leave",
   "/privacy",
   "/terms",
+  "/api",
   "/_next",
   "/favicon.ico",
   "/robots.txt",
