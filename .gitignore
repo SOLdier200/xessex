@@ -38,3 +38,16 @@ coverage/
 .env.local
 .env.*
 ai-media/
+
+# Local databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+/data/
+
+# Large CSV files
+*.csv
+
+# Lock files
+.~lock.*

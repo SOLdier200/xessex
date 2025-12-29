@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  wallet    String   @unique
+  createdAt DateTime @default(now())
+
+  sessions     Session[]
+  subscription Subscription?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status    String   // "active" | "canceled" | "expired"
+  plan      String?  // "monthly" | "yearly" etc
+  expiresAt DateTime?
+
+  lastTxSig String?  // replay protection
+  paidSol   Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model Video {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  url       String
+
+  isPremium Boolean  @default(false)  // false = FREE, true = requires subscription
+
+  createdAt DateTime @default(now())
+}

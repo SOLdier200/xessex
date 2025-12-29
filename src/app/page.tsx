@@ -1,5 +1,6 @@
 import Link from "next/link";
 import TopNav from "./components/TopNav";
+import { LazyEmbed } from "./components/LazyEmbed";
 
 type Video = {
   id: string;
@@ -73,15 +74,50 @@ export default function HomePage() {
           </div>
 
           {/* Quick actions */}
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Link href="/signup" className="rounded-xl bg-white text-black font-medium px-4 py-2 hover:opacity-90">
-              Create account
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <Link
+              href="/categories"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-5 py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
+            >
+              <div>
+                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Discover</span>
+                <div className="mt-1 text-lg font-semibold">Categories</div>
+                <p className="mt-2 text-sm text-white/70">Browse curated topics and collections.</p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
+                Explore
+                <span className="text-white/60 transition-transform group-hover:translate-x-1">-&gt;</span>
+              </span>
             </Link>
-            <Link href="/login" className="neon-border rounded-xl px-4 py-2 hover:bg-white/5">
-              Login
+
+            <Link
+              href="/signup"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-pink-400/30 bg-gradient-to-br from-pink-500/25 via-black/0 to-pink-500/10 px-5 py-4 text-white shadow-[0_0_18px_rgba(255,43,214,0.18)] transition hover:-translate-y-0.5 hover:border-pink-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/70"
+            >
+              <div>
+                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Join</span>
+                <div className="mt-1 text-lg font-semibold">Sign up</div>
+                <p className="mt-2 text-sm text-white/70">Create your profile and save favorites.</p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
+                Get started
+                <span className="text-white/60 transition-transform group-hover:translate-x-1">-&gt;</span>
+              </span>
             </Link>
-            <Link href="/categories" className="neon-border rounded-xl px-4 py-2 hover:bg-white/5">
-              Browse categories
+
+            <Link
+              href="/login"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-5 py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+            >
+              <div>
+                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Welcome back</span>
+                <div className="mt-1 text-lg font-semibold">Login</div>
+                <p className="mt-2 text-sm text-white/70">Pick up where you left off.</p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
+                Continue
+                <span className="text-white/60 transition-transform group-hover:translate-x-1">-&gt;</span>
+              </span>
             </Link>
           </div>
         </section>
@@ -90,17 +126,7 @@ export default function HomePage() {
         <section className="mt-6 neon-border rounded-2xl p-6 bg-black/30">
           <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
           <div className="flex justify-center">
-            <div className="w-full max-w-2xl aspect-video">
-              <iframe
-                src="https://www.pornhub.com/embed/691a4cb39fd5b"
-                frameBorder="0"
-                width="100%"
-                height="100%"
-                scrolling="no"
-                allowFullScreen
-                className="rounded-xl"
-              ></iframe>
-            </div>
+            <LazyEmbed viewkey="691a4cb39fd5b" />
           </div>
         </section>
 
