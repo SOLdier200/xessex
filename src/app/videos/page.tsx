@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
 import TopNav from "../components/TopNav";
 
+// Force dynamic rendering - don't prerender at build time
+export const dynamic = 'force-dynamic';
+
 const prisma = new PrismaClient();
 
 export default async function VideosPage() {
