@@ -9,12 +9,11 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
 
   if (accept) {
-    // 30 days
+    // Session cookie - expires when browser closes (like Pornhub)
     res.cookies.set(AGE_COOKIE, "1", {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30,
       path: "/",
     });
   } else {

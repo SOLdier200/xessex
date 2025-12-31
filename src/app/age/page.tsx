@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function AgeGatePage() {
   const router = useRouter();
@@ -35,37 +36,21 @@ export default function AgeGatePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050a1a] text-white">
-      {/* Top bar */}
-      <header className="px-6 py-4 flex items-center justify-between">
-        <div className="font-semibold border-2 border-pink-500 rounded-xl px-3 py-1">
-          Xessex
-        </div>
+    <main className="min-h-screen bg-[#050a1a] text-white flex items-center justify-center relative overflow-hidden">
+      {/* Robot image - positioned higher */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 pointer-events-none">
+        <Image
+          src="/logos/robot.png"
+          alt=""
+          width={500}
+          height={500}
+          className="object-contain"
+          priority
+        />
+      </div>
 
-        <nav className="flex items-center gap-3">
-          <a
-            href="/categories"
-            className="border-2 border-pink-500 rounded-xl px-3 py-1.5 hover:bg-white/5"
-          >
-            Categories
-          </a>
-          <a
-            href="/signup"
-            className="border-2 border-pink-500 rounded-xl px-3 py-1.5 hover:bg-white/5"
-          >
-            Sign up
-          </a>
-          <a
-            href="/login"
-            className="border-2 border-pink-500 rounded-xl px-3 py-1.5 hover:bg-white/5"
-          >
-            Login
-          </a>
-        </nav>
-      </header>
-
-      {/* Card */}
-      <div className="px-6 pb-10 flex items-center justify-center">
+      {/* Card - translucent */}
+      <div className="px-6 py-10 relative z-10 mt-40">
         <div className="w-full max-w-2xl border-2 border-pink-500 rounded-2xl p-8 bg-black/30">
           <h1 className="text-2xl font-semibold border-2 border-pink-500 rounded-xl px-4 py-2 inline-block">
             Adults Only (18+)
@@ -74,12 +59,6 @@ export default function AgeGatePage() {
           <div className="mt-4 grid gap-3 text-sm leading-6">
             <p className="border-2 border-pink-500 rounded-xl px-4 py-3 text-white/90">
               You&apos;re visiting from the United States. This website is intended for adults aged 18 or older.
-            </p>
-
-            <p className="border-2 border-pink-500 rounded-xl px-4 py-3 text-white/90">
-              This platform is an informational + discovery experience. It does not host or embed third-party
-              explicit streams. Any external links (if present) may lead to websites containing sexually explicit
-              material and may require age verification based on your location.
             </p>
 
             <p className="border-2 border-pink-500 rounded-xl px-4 py-3 text-white/90">
@@ -98,7 +77,7 @@ export default function AgeGatePage() {
               type="button"
               onClick={handleEnter}
               disabled={loading}
-              className="flex-1 rounded-xl bg-white text-black font-medium py-3 hover:opacity-90 disabled:opacity-60"
+              className="flex-1 rounded-xl bg-white/30 text-white font-medium py-3 hover:bg-white/40 disabled:opacity-60"
             >
               {loading ? "Entering…" : "I am 18+ — Enter"}
             </button>

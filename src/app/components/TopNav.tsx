@@ -6,11 +6,11 @@ export default function TopNav() {
     <header className="px-6 py-5 flex items-center justify-between">
       <Link href="/">
         <Image
-          src="/logos/xessextrans.png"
+          src="/logos/neonmainlogo1.png"
           alt="Xessex"
-          width={150}
-          height={50}
-          className="h-[50px] w-auto"
+          width={285}
+          height={95}
+          className="h-[95px] w-auto"
           priority
         />
       </Link>
