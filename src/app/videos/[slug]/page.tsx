@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import Link from "next/link";
 import TopNav from "../../components/TopNav";
+import StarRating from "../../components/StarRating";
 
 type ApprovedVideo = {
   id: number;
@@ -127,6 +128,11 @@ export default async function VideoPage({ params }: VideoPageProps) {
                 ))}
               </div>
             )}
+
+            {/* Star Rating System */}
+            <div className="mt-6">
+              <StarRating viewkey={video.viewkey} />
+            </div>
           </div>
 
           {/* Sidebar - Related */}

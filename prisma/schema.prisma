@@ -58,3 +58,15 @@ model Video {
 
   createdAt DateTime @default(now())
 }
+
+model Rating {
+  id        String   @id @default(cuid())
+  userId    String
+  viewkey   String   // video viewkey from approved.json
+  stars     Int      // 1-5
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, viewkey])  // one rating per user per video
+  @@index([viewkey])
+}
