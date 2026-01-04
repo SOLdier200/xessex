@@ -50,12 +50,12 @@ export default function HomePage() {
     <main className="min-h-screen">
       <TopNav />
 
-      <div className="px-6 pb-10">
+      <div className="px-4 md:px-6 pb-10">
         <div className="mb-6">
           <WalletStatus />
         </div>
 
-        <section className="neon-border rounded-2xl p-6 bg-black/30">
+        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
           <div className="flex flex-col gap-2">
             <h1 className="text-2xl font-semibold neon-text">Browse Videos</h1>
             <p className="text-sm text-white/70">
@@ -64,19 +64,19 @@ export default function HomePage() {
           </div>
 
           {/* Filters Row */}
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-12 gap-3">
-            <div className="md:col-span-5">
+          <div className="mt-5 grid grid-cols-2 md:grid-cols-12 gap-3">
+            <div className="col-span-2 md:col-span-5">
               <label className="block text-xs text-white/70 mb-1">Search</label>
               <input
-                className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40"
+                className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm"
                 placeholder="Search titles, tags…"
                 defaultValue=""
               />
             </div>
 
-            <div className="md:col-span-3">
+            <div className="col-span-2 md:col-span-3">
               <label className="block text-xs text-white/70 mb-1">Collections</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white">
+              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
                 <option value="all">All</option>
                 <option value="blowjob">Blowjob</option>
                 <option value="threesome">Threesome</option>
@@ -87,9 +87,9 @@ export default function HomePage() {
               </select>
             </div>
 
-            <div className="md:col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <label className="block text-xs text-white/70 mb-1">Duration</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white">
+              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
                 <option value="any">Any</option>
                 <option value="short">0–10 min</option>
                 <option value="mid">10–30 min</option>
@@ -97,9 +97,9 @@ export default function HomePage() {
               </select>
             </div>
 
-            <div className="md:col-span-2">
+            <div className="col-span-1 md:col-span-2">
               <label className="block text-xs text-white/70 mb-1">Sort</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white">
+              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
                 <option value="new">Newest</option>
                 <option value="top">Top rated</option>
                 <option value="duration">Duration</option>
@@ -108,10 +108,10 @@ export default function HomePage() {
           </div>
 
           {/* Quick actions */}
-          <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
             <Link
               href="/categories"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-5 py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-white/60">Discover</span>
@@ -125,7 +125,7 @@ export default function HomePage() {
 
             <Link
               href="/signup"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/25 via-black/0 to-yellow-500/10 px-5 py-4 text-white shadow-[0_0_18px_rgba(234,179,8,0.18)] transition hover:-translate-y-0.5 hover:border-yellow-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/70"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/25 via-black/0 to-yellow-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(234,179,8,0.18)] transition hover:-translate-y-0.5 hover:border-yellow-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/70"
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-yellow-400/80">Earn Money</span>
@@ -139,7 +139,7 @@ export default function HomePage() {
 
             <Link
               href="/login"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-5 py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-white/60">Diamond Member</span>
@@ -153,7 +153,7 @@ export default function HomePage() {
 
             <Link
               href="/leaderboard"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-br from-purple-500/20 via-black/0 to-purple-500/10 px-5 py-4 text-white shadow-[0_0_18px_rgba(168,85,247,0.2)] transition hover:-translate-y-0.5 hover:border-purple-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300/70"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-br from-purple-500/20 via-black/0 to-purple-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(168,85,247,0.2)] transition hover:-translate-y-0.5 hover:border-purple-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300/70"
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-purple-400/80">Leaderboard</span>
@@ -168,12 +168,12 @@ export default function HomePage() {
         </section>
 
         {/* Featured & Top Ranked Videos */}
-        <div className="mt-6 flex flex-wrap gap-6">
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (
-            <section className="neon-border rounded-2xl p-6 bg-black/30">
+            <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
               <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
-              <Link href={`/videos/${videos[0].viewkey}`} className="block w-[480px]">
+              <Link href={`/videos/${videos[0].viewkey}`} className="block w-full">
                 <div className="relative aspect-video rounded-xl overflow-hidden">
                   {videos[0].primary_thumb && (
                     <img
@@ -203,9 +203,9 @@ export default function HomePage() {
           {videos.length > 0 && (() => {
             const topRanked = [...videos].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
             return (
-              <section className="neon-border rounded-2xl p-6 bg-black/30 border-yellow-400/30">
+              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30">
                 <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
-                <Link href={`/videos/${topRanked.viewkey}`} className="block w-[480px]">
+                <Link href={`/videos/${topRanked.viewkey}`} className="block w-full">
                   <div className="relative aspect-video rounded-xl overflow-hidden">
                     {topRanked.primary_thumb && (
                       <img
@@ -240,7 +240,7 @@ export default function HomePage() {
             <span className="text-sm text-white/60">{videos.length} videos</span>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {videos.map((v) => (
               <Link
                 key={v.viewkey}
@@ -269,16 +269,16 @@ export default function HomePage() {
                   )}
                 </div>
 
-                <div className="p-3">
-                  <div className="font-semibold text-white line-clamp-2 group-hover:text-pink-300 transition">
+                <div className="p-2 md:p-3">
+                  <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
                     {v.title}
                   </div>
-                  <div className="mt-2 text-xs text-white/60">
+                  <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
                     {v.performers || "Unknown"}
                   </div>
-                  <div className="mt-1 flex items-center justify-between text-xs text-white/50">
+                  <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
                     <span>{formatViews(v.views)} views</span>
-                    <span>{v.categories?.split(";")[0]}</span>
+                    <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
                   </div>
                 </div>
               </Link>

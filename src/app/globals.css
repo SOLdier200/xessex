@@ -8,6 +8,8 @@
 html, body {
   background: var(--bg-deep);
   color: var(--neon-pink);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
@@ -23,4 +25,27 @@ a {
   text-shadow:
     0 0 8px rgba(255, 43, 214, 0.55),
     0 0 20px rgba(255, 43, 214, 0.25);
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Safe area for iOS notch */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

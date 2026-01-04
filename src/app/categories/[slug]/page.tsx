@@ -78,16 +78,16 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     <main className="min-h-screen">
       <TopNav />
 
-      <div className="px-6 pb-10">
-        <Link href="/categories" className="text-gray-400 hover:text-white mb-6 inline-block">
+      <div className="px-4 md:px-6 pb-10">
+        <Link href="/categories" className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm">
           ← Back to Collections
         </Link>
 
-        <section className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 mb-4 md:mb-6">
           <div className="flex items-center gap-3">
-            <span className="text-4xl">{categoryInfo.icon}</span>
+            <span className="text-3xl md:text-4xl">{categoryInfo.icon}</span>
             <div>
-              <h1 className="text-2xl font-semibold neon-text">{categoryInfo.name}</h1>
+              <h1 className="text-xl md:text-2xl font-semibold neon-text">{categoryInfo.name}</h1>
               <p className="mt-1 text-sm text-white/70">
                 {videos.length} videos
               </p>
@@ -100,12 +100,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             No videos in this category yet
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {videos.map((v) => (
               <Link
                 key={v.viewkey}
                 href={`/videos/${v.viewkey}`}
-                className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
+                className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition group"
               >
                 <div className="relative aspect-video bg-black/60">
                   {v.primary_thumb ? (
@@ -115,28 +115,28 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/30">
+                    <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">
                       No Thumbnail
                     </div>
                   )}
-                  <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                  <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-white">
                     {formatDuration(v.duration)}
                   </div>
                   {v.favorite === 1 && (
-                    <div className="absolute top-2 left-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
+                    <div className="absolute top-1 left-1 md:top-2 md:left-2 bg-yellow-500/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-black font-semibold">
                       ★
                     </div>
                   )}
                 </div>
 
-                <div className="p-3">
-                  <div className="font-semibold text-white line-clamp-2 group-hover:text-pink-300 transition">
+                <div className="p-2 md:p-3">
+                  <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
                     {v.title}
                   </div>
-                  <div className="mt-2 text-xs text-white/60">
+                  <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
                     {v.performers || "Unknown"}
                   </div>
-                  <div className="mt-1 text-xs text-white/50">
+                  <div className="mt-1 text-[10px] md:text-xs text-white/50">
                     {formatViews(v.views)} views
                   </div>
                 </div>

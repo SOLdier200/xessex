@@ -85,10 +85,10 @@ export default function StarRating({ viewkey }: StarRatingProps) {
   }
 
   return (
-    <div className="neon-border rounded-xl p-4 bg-black/30">
-      <h3 className="text-lg font-semibold neon-text mb-3">Rate This Video</h3>
+    <div className="neon-border rounded-xl p-3 md:p-4 bg-black/30">
+      <h3 className="text-base md:text-lg font-semibold neon-text mb-2 md:mb-3">Rate This Video</h3>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((star) => (
             <button
@@ -97,10 +97,10 @@ export default function StarRating({ viewkey }: StarRatingProps) {
               onMouseEnter={() => !hasRated && setHovered(star)}
               onMouseLeave={() => setHovered(null)}
               disabled={hasRated || submitting}
-              className={`text-3xl transition-all ${
+              className={`text-2xl md:text-3xl transition-all ${
                 hasRated
                   ? "cursor-default"
-                  : "cursor-pointer hover:scale-110"
+                  : "cursor-pointer hover:scale-110 active:scale-95"
               } ${
                 star <= displayRating
                   ? "text-yellow-400"
@@ -112,7 +112,7 @@ export default function StarRating({ viewkey }: StarRatingProps) {
           ))}
         </div>
 
-        <div className="text-sm text-white/60">
+        <div className="text-xs md:text-sm text-white/60">
           {average > 0 ? (
             <>
               <span className="text-yellow-400 font-semibold">{average}</span>
@@ -127,7 +127,7 @@ export default function StarRating({ viewkey }: StarRatingProps) {
       </div>
 
       {hasRated && (
-        <p className="mt-2 text-sm text-green-400">
+        <p className="mt-2 text-xs md:text-sm text-green-400">
           You rated this video {rating} {rating === 1 ? "star" : "stars"}
         </p>
       )}

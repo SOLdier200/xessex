@@ -6,6 +6,12 @@ import { Toaster } from "sonner";
 export const metadata: Metadata = {
   title: "xessex",
   description: "Adults only content platform",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    viewportFit: "cover",
+  },
 };
 
 export default function RootLayout({

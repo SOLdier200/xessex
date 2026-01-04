@@ -48,28 +48,28 @@ export default function CategoriesPage() {
     <main className="min-h-screen">
       <TopNav />
 
-      <div className="px-6 pb-10">
-        <section className="neon-border rounded-2xl p-6 bg-black/30">
-          <h1 className="text-2xl font-semibold neon-text">Collections</h1>
+      <div className="px-4 md:px-6 pb-10">
+        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
+          <h1 className="text-xl md:text-2xl font-semibold neon-text">Collections</h1>
           <p className="mt-2 text-sm text-white/70">
             Browse videos by collection
           </p>
         </section>
 
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="mt-4 md:mt-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {CATEGORIES.map((c) => (
             <Link
               key={c.slug}
               href={`/categories/${c.slug}`}
-              className="neon-border rounded-2xl bg-black/30 p-5 hover:bg-white/5 transition group"
+              className="neon-border rounded-2xl bg-black/30 p-3 md:p-5 hover:bg-white/5 active:bg-white/10 transition group"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{c.icon}</span>
+              <div className="flex items-center gap-2 md:gap-3">
+                <span className="text-2xl md:text-3xl">{c.icon}</span>
                 <div>
-                  <div className="font-semibold text-lg text-white group-hover:text-pink-300 transition">
+                  <div className="font-semibold text-sm md:text-lg text-white group-hover:text-pink-300 transition">
                     {c.name}
                   </div>
-                  <div className="mt-1 text-xs text-white/60">
+                  <div className="mt-0.5 md:mt-1 text-[10px] md:text-xs text-white/60">
                     {getCategoryCount(c.slug)} videos
                   </div>
                 </div>

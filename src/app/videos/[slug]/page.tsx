@@ -74,12 +74,12 @@ export default async function VideoPage({ params }: VideoPageProps) {
   return (
     <main className="min-h-screen">
       <TopNav />
-      <div className="px-6 pb-10">
-        <Link href="/" className="text-gray-400 hover:text-white mb-6 inline-block">
+      <div className="px-4 md:px-6 pb-10">
+        <Link href="/" className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm">
           ← Back to Home
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Main Video */}
           <div className="lg:col-span-2">
             <div className="aspect-video bg-black rounded-xl overflow-hidden neon-border">
@@ -92,9 +92,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
               />
             </div>
 
-            <h1 className="mt-4 text-2xl font-bold text-white">{video.title}</h1>
+            <h1 className="mt-3 md:mt-4 text-lg md:text-2xl font-bold text-white">{video.title}</h1>
 
-            <div className="mt-2 flex items-center gap-4 text-sm text-white/60">
+            <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-white/60">
               <span>{formatViews(video.views)} views</span>
               <span>{formatDuration(video.duration)}</span>
               {video.favorite === 1 && (
@@ -103,25 +103,25 @@ export default async function VideoPage({ params }: VideoPageProps) {
             </div>
 
             {video.performers && (
-              <div className="mt-4">
-                <span className="text-white/50 text-sm">Performers: </span>
-                <span className="text-pink-300">{video.performers}</span>
+              <div className="mt-3 md:mt-4">
+                <span className="text-white/50 text-xs md:text-sm">Performers: </span>
+                <span className="text-pink-300 text-sm">{video.performers}</span>
               </div>
             )}
 
             {video.categories && (
               <div className="mt-2">
-                <span className="text-white/50 text-sm">Collections: </span>
-                <span className="text-white/70">{video.categories.replace(/;/g, ", ")}</span>
+                <span className="text-white/50 text-xs md:text-sm">Collections: </span>
+                <span className="text-white/70 text-sm">{video.categories.replace(/;/g, ", ")}</span>
               </div>
             )}
 
             {video.tags && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {video.tags.split(";").slice(0, 10).map((tag) => (
+              <div className="mt-3 md:mt-4 flex flex-wrap gap-1.5 md:gap-2">
+                {video.tags.split(";").slice(0, 8).map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-1 text-xs rounded-lg bg-white/10 text-white/70"
+                    className="px-2 py-1 text-[10px] md:text-xs rounded-lg bg-white/10 text-white/70"
                   >
                     {tag}
                   </span>
@@ -130,22 +130,22 @@ export default async function VideoPage({ params }: VideoPageProps) {
             )}
 
             {/* Star Rating System */}
-            <div className="mt-6">
+            <div className="mt-4 md:mt-6">
               <StarRating viewkey={video.viewkey} />
             </div>
           </div>
 
           {/* Sidebar - Related */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 mt-4 lg:mt-0">
             <h2 className="text-lg font-semibold neon-text mb-4">More Videos</h2>
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-4">
               {related.map((v) => (
                 <Link
                   key={v.viewkey}
                   href={`/videos/${v.viewkey}`}
-                  className="flex gap-3 group"
+                  className="flex flex-col lg:flex-row gap-2 lg:gap-3 group"
                 >
-                  <div className="relative w-32 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
+                  <div className="relative w-full lg:w-32 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
                     {v.primary_thumb && (
                       <img
                         src={v.primary_thumb}
@@ -158,10 +158,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white line-clamp-2 group-hover:text-pink-300 transition">
+                    <div className="text-xs lg:text-sm font-medium text-white line-clamp-2 group-hover:text-pink-300 transition">
                       {v.title}
                     </div>
-                    <div className="mt-1 text-xs text-white/50">
+                    <div className="mt-1 text-[10px] lg:text-xs text-white/50">
                       {formatViews(v.views)} views
                     </div>
                   </div>
