@@ -284,3 +284,31 @@ export function getApprovedVideos(): Omit<VideoWithCuration, "embed_html">[] {
     )
     .all() as Omit<VideoWithCuration, "embed_html">[];
 }
+
+/**
+ * Delete all rejected videos from database
+ */
+export function deleteRejectedVideos(): number {
+  const db = getDb();
+
+  // Get viewkeys of rejected videos
+  const rejected = db
+    .prepare("SELECT viewkey FROM curation WHERE status = 'rejected'")
+    .all() as { viewkey: string }[];
+
+  if (rejected.length === 0) return 0;
+
+  const viewkeys = rejected.map(r => r.viewkey);
+  const placeholders = viewkeys.map(() => '?').join(',');
+
+  // Delete from videos table
+  db.prepare(`DELETE FROM videos WHERE viewkey IN (${placeholders})`).run(...viewkeys);
+
+  // Delete from videos_fts table
+  db.prepare(`DELETE FROM videos_fts WHERE rowid IN (SELECT id FROM videos WHERE viewkey IN (${placeholders}))`).run(...viewkeys);
+
+  // Delete from curation table
+  db.prepare(`DELETE FROM curation WHERE status = 'rejected'`).run();
+
+  return rejected.length;
+}

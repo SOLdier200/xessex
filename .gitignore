@@ -44,7 +44,10 @@ ai-media/
 *.db-journal
 *.db-wal
 *.db-shm
-/data/
+
+# Data folder (except approved.json for production)
+/data/*
+!/data/approved.json
 
 # Large CSV files
 *.csv

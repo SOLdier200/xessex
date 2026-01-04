@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 
 type Video = {
@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, approved: 0, rejected: 0, pending: 0, favorites: 0 });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -59,6 +60,12 @@ export default function AdminPage() {
   // Modal state
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [editingNote, setEditingNote] = useState("");
+  const [modalSize, setModalSize] = useState({ width: 900, height: 700 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [minimizeState, setMinimizeState] = useState<"full" | "pip" | "micro">("full");
+  const [pipPosition, setPipPosition] = useState({ x: 20, y: 20 }); // bottom-right offset
+  const justResizedRef = useRef(false);
+  const isDraggingPip = useRef(false);
 
   const fetchVideos = useCallback(async (cursor: Cursor = null, resetStack = false) => {
     setLoading(true);
@@ -144,6 +151,23 @@ export default function AdminPage() {
     }
   };
 
+  const deleteRejected = async () => {
+    if (!confirm(`Are you sure you want to permanently delete all ${stats.rejected} rejected videos? This cannot be undone!`)) {
+      return;
+    }
+    setDeleting(true);
+    const res = await fetch("/api/admin/videos/rejected", { method: "DELETE" });
+    const data = await res.json();
+    setDeleting(false);
+
+    if (data.ok) {
+      alert(`Deleted ${data.deleted} rejected videos`);
+      fetchVideos(null, true); // Refresh the list
+    } else {
+      alert("Delete failed");
+    }
+  };
+
   const openModal = (video: Video) => {
     setSelectedVideo(video);
     setEditingNote(video.note || "");
@@ -152,6 +176,76 @@ export default function AdminPage() {
   const closeModal = () => {
     setSelectedVideo(null);
     setEditingNote("");
+    setMinimizeState("full");
+    setPipPosition({ x: 20, y: 20 });
+  };
+
+  const handlePipDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingPip.current = true;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startPosX = pipPosition.x;
+    const startPosY = pipPosition.y;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = startX - moveEvent.clientX;
+      const deltaY = startY - moveEvent.clientY;
+      setPipPosition({
+        x: Math.max(0, Math.min(window.innerWidth - 100, startPosX + deltaX)),
+        y: Math.max(0, Math.min(window.innerHeight - 50, startPosY + deltaY)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      isDraggingPip.current = false;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleResizeStart = (e: React.MouseEvent, direction: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = modalSize.width;
+    const startHeight = modalSize.height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+
+      if (direction.includes("e")) {
+        newWidth = Math.max(400, Math.min(window.innerWidth - 40, startWidth + (moveEvent.clientX - startX)));
+      }
+      if (direction.includes("w")) {
+        newWidth = Math.max(400, Math.min(window.innerWidth - 40, startWidth - (moveEvent.clientX - startX)));
+      }
+      if (direction.includes("s")) {
+        newHeight = Math.max(300, Math.min(window.innerHeight - 40, startHeight + (moveEvent.clientY - startY)));
+      }
+      if (direction.includes("n")) {
+        newHeight = Math.max(300, Math.min(window.innerHeight - 40, startHeight - (moveEvent.clientY - startY)));
+      }
+
+      setModalSize({ width: newWidth, height: newHeight });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      justResizedRef.current = true;
+      setTimeout(() => { justResizedRef.current = false; }, 100);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -179,6 +273,13 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen p-6">
+      {/* Version Banner */}
+      <div className="mb-4 py-3 px-6 bg-gradient-to-r from-pink-600 via-purple-600 to-pink-600 bg-[length:200%_100%] animate-pulse rounded-xl text-center border-4 border-yellow-400 shadow-[0_0_30px_rgba(236,72,153,0.8)]">
+        <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,1)] tracking-widest">
+          V1.4 - DELETE REJECTED BUTTON
+        </span>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -192,6 +293,13 @@ export default function AdminPage() {
             className="px-4 py-2 rounded-full border border-emerald-400/50 bg-emerald-500/20 text-white text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
           >
             {exporting ? "Exporting..." : "Export approved.json"}
+          </button>
+          <button
+            onClick={deleteRejected}
+            disabled={deleting || stats.rejected === 0}
+            className="px-4 py-2 rounded-full border border-red-400/50 bg-red-500/20 text-white text-sm font-semibold hover:bg-red-500/30 transition disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : `Delete Rejected (${stats.rejected})`}
           </button>
           <Link
             href="/"
@@ -399,42 +507,157 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* Modal */}
+      {/* Persistent Video Player - Always mounted when video selected */}
       {selectedVideo && (
+        <>
+          {/* The actual iframe - positioned based on minimize state */}
+          <div
+            className={`fixed z-50 ${
+              minimizeState === "micro"
+                ? "w-1 h-1 opacity-0 pointer-events-none"
+                : minimizeState === "pip"
+                ? "neon-border rounded-xl overflow-hidden bg-black shadow-2xl"
+                : "rounded-xl overflow-hidden"
+            }`}
+            style={
+              minimizeState === "full"
+                ? { top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: modalSize.width - 32, height: (modalSize.width - 32) * 9 / 16, maxWidth: "calc(95vw - 32px)", maxHeight: "50vh", zIndex: 51 }
+                : minimizeState === "pip"
+                ? { width: 320, height: 200, right: pipPosition.x, bottom: pipPosition.y }
+                : { right: pipPosition.x, bottom: pipPosition.y, width: 1, height: 1 }
+            }
+          >
+            <iframe
+              src={`https://www.pornhub.com/embed/${selectedVideo.viewkey}`}
+              frameBorder={0}
+              width="100%"
+              height="100%"
+              allowFullScreen
+            />
+            {/* PiP Controls Overlay */}
+            {minimizeState === "pip" && (
+              <>
+                {/* Drag handle - covers top portion */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-10 cursor-move"
+                  onMouseDown={handlePipDragStart}
+                />
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    onClick={() => setMinimizeState("full")}
+                    className="w-7 h-7 rounded bg-black/70 text-white hover:bg-pink-500/50 flex items-center justify-center text-lg"
+                    title="Maximize"
+                  >
+                    ⤢
+                  </button>
+                  <button
+                    onClick={() => setMinimizeState("micro")}
+                    className="w-7 h-7 rounded bg-black/70 text-white hover:bg-purple-500/50 flex items-center justify-center text-sm"
+                    title="Audio Only"
+                  >
+                    🔊
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    className="w-7 h-7 rounded bg-black/70 text-white hover:bg-red-500/50 flex items-center justify-center text-lg"
+                    title="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-black/80 px-2 py-1 text-xs text-white truncate pointer-events-none">
+                  {selectedVideo.title}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Micro Mode Controls */}
+          {minimizeState === "micro" && (
+            <div
+              className="fixed z-50 neon-border rounded-lg overflow-hidden bg-black/90 shadow-2xl cursor-move flex items-center gap-2 px-3 py-2"
+              style={{ right: pipPosition.x, bottom: pipPosition.y }}
+              onMouseDown={handlePipDragStart}
+            >
+              <div className="text-pink-400 animate-pulse text-lg">🔊</div>
+              <div className="text-white text-xs max-w-[150px] truncate">{selectedVideo.title}</div>
+              <div className="flex gap-1" onMouseDown={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => setMinimizeState("pip")}
+                  className="w-6 h-6 rounded bg-pink-500/30 text-white hover:bg-pink-500/50 flex items-center justify-center text-sm"
+                  title="Show Video"
+                >
+                  ▶
+                </button>
+                <button
+                  onClick={() => setMinimizeState("full")}
+                  className="w-6 h-6 rounded bg-purple-500/30 text-white hover:bg-purple-500/50 flex items-center justify-center text-sm"
+                  title="Maximize"
+                >
+                  ⤢
+                </button>
+                <button
+                  onClick={closeModal}
+                  className="w-6 h-6 rounded bg-red-500/30 text-white hover:bg-red-500/50 flex items-center justify-center text-sm"
+                  title="Close"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Full Modal */}
+      {selectedVideo && minimizeState === "full" && (
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
-          onClick={closeModal}
+          className={`fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 ${isResizing ? "cursor-se-resize select-none" : ""}`}
         >
           <div
-            className="bg-[#0a0f1e] neon-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-[#0a0f1e] neon-border rounded-2xl relative flex flex-col"
+            style={{ width: modalSize.width, height: modalSize.height, maxWidth: "95vw", maxHeight: "95vh" }}
           >
             {/* Modal Header */}
-            <div className="p-4 border-b border-pink-400/30 flex items-start justify-between">
+            <div className="p-4 border-b border-pink-400/30 flex items-start justify-between shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-white">{selectedVideo.title}</h2>
                 <div className="mt-1 text-sm text-white/60">
                   viewkey: {selectedVideo.viewkey}
                 </div>
               </div>
-              <button
-                onClick={closeModal}
-                className="text-white/60 hover:text-white text-2xl leading-none"
-              >
-                ×
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMinimizeState("pip")}
+                  className="text-white/60 hover:text-pink-400 text-xl leading-none px-1"
+                  title="Minimize to PiP"
+                >
+                  −
+                </button>
+                <button
+                  onClick={() => setMinimizeState("micro")}
+                  className="text-white/60 hover:text-purple-400 text-lg leading-none px-1"
+                  title="Audio Only"
+                >
+                  🔊
+                </button>
+                <button
+                  onClick={closeModal}
+                  className="text-white/60 hover:text-white text-2xl leading-none"
+                  title="Close"
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
-            {/* Video Embed */}
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto">
+
+            {/* Video Embed Placeholder - actual video is in persistent player above */}
             <div className="p-4">
               <div className="aspect-video bg-black rounded-xl overflow-hidden">
-                <iframe
-                  src={`https://www.pornhub.com/embed/${selectedVideo.viewkey}`}
-                  frameBorder={0}
-                  width="100%"
-                  height="100%"
-                  allowFullScreen
-                />
+                {/* Video plays in the persistent iframe above */}
               </div>
             </div>
 
@@ -524,6 +747,19 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+            </div>{/* End Scrollable Content */}
+
+            {/* Resize Handles - All Edges and Corners */}
+            {/* Edges */}
+            <div onMouseDown={(e) => handleResizeStart(e, "n")} className="absolute top-0 left-3 right-3 h-2 cursor-n-resize hover:bg-pink-400/20 transition" />
+            <div onMouseDown={(e) => handleResizeStart(e, "s")} className="absolute bottom-0 left-3 right-3 h-2 cursor-s-resize hover:bg-pink-400/20 transition" />
+            <div onMouseDown={(e) => handleResizeStart(e, "w")} className="absolute left-0 top-3 bottom-3 w-2 cursor-w-resize hover:bg-pink-400/20 transition" />
+            <div onMouseDown={(e) => handleResizeStart(e, "e")} className="absolute right-0 top-3 bottom-3 w-2 cursor-e-resize hover:bg-pink-400/20 transition" />
+            {/* Corners */}
+            <div onMouseDown={(e) => handleResizeStart(e, "nw")} className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize hover:bg-pink-400/30 transition" />
+            <div onMouseDown={(e) => handleResizeStart(e, "ne")} className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize hover:bg-pink-400/30 transition" />
+            <div onMouseDown={(e) => handleResizeStart(e, "sw")} className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize hover:bg-pink-400/30 transition" />
+            <div onMouseDown={(e) => handleResizeStart(e, "se")} className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-pink-400/30 transition" />
           </div>
         </div>
       )}
