@@ -3,6 +3,7 @@ import path from "path";
 import Link from "next/link";
 import TopNav from "../../components/TopNav";
 import StarRating from "../../components/StarRating";
+import Comments from "../../components/Comments";
 
 type ApprovedVideo = {
   id: number;
@@ -133,6 +134,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
             <div className="mt-4 md:mt-6">
               <StarRating viewkey={video.viewkey} />
             </div>
+
+            {/* Comments Section */}
+            <Comments viewkey={video.viewkey} />
           </div>
 
           {/* Sidebar - Related */}

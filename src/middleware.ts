@@ -1,54 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
-
-const AGE_COOKIE = "age_verified";
-const AGE_PATH = "/age";
-
-// Routes that should NOT be blocked
-const PUBLIC_PATH_PREFIXES = [
-  "/age",
-  "/leave",
-  "/privacy",
-  "/terms",
-  "/api",
-  "/_next",
-  "/favicon.ico",
-  "/robots.txt",
-  "/sitemap.xml",
-];
-
-// Also allow common static assets
-const PUBLIC_FILE = /\.(.*)$/;
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
 
-  // Allow public routes and files
+  // Allow the gate itself + the API that sets the cookie + assets
   if (
-    PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
-    PUBLIC_FILE.test(pathname)
+    pathname.startsWith("/age") ||
+    pathname.startsWith("/leave") ||
+    pathname.startsWith("/api/age") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/robots.txt") ||
+    pathname.startsWith("/sitemap.xml") ||
+    pathname.startsWith("/logos") ||
+    pathname.startsWith("/images")
   ) {
     return NextResponse.next();
   }
 
-  const ageVerified = req.cookies.get(AGE_COOKIE)?.value === "1";
+  const ageOk = req.cookies.get("age_ok")?.value === "1";
+  if (ageOk) return NextResponse.next();
 
-  if (!ageVerified) {
-    const url = req.nextUrl.clone();
-    url.pathname = AGE_PATH;
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
-  }
+  const url = req.nextUrl.clone();
+  url.pathname = "/age";
+  url.searchParams.set("next", pathname + search);
 
-  return NextResponse.next();
+  const res = NextResponse.redirect(url);
+  // Prevent caching weirdness
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }
 
 export const config = {
-  matcher: [
-    /*
-      Run middleware on all routes except:
-      - next internals (_next)
-      - static files
-    */
-    "/((?!_next/static|_next/image).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

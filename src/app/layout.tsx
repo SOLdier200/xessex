@@ -1,17 +1,21 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import Providers from "./providers";
+import { AgeGateEnforcer } from "./components/AgeGateEnforcer";
+import IncognitoButton from "./components/IncognitoButton";
 import { Toaster } from "sonner";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "xessex",
   description: "Adults only content platform",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    viewportFit: "cover",
-  },
 };
 
 export default function RootLayout({
@@ -22,6 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen">
+        <Suspense fallback={null}>
+          <AgeGateEnforcer />
+        </Suspense>
         <Providers>{children}</Providers>
         <Toaster
           position="top-center"
@@ -33,6 +40,7 @@ export default function RootLayout({
             },
           }}
         />
+        <IncognitoButton />
       </body>
     </html>
   );

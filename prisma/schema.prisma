@@ -70,3 +70,60 @@ model Rating {
   @@unique([userId, viewkey])  // one rating per user per video
   @@index([viewkey])
 }
+
+model Comment {
+  id         String   @id @default(cuid())
+  viewkey    String   // video viewkey
+  text       String
+  authorId   String?  // null for anonymous
+  authorName String   @default("Anonymous")
+  upCount    Int      @default(0)
+  downCount  Int      @default(0)
+
+  createdAt  DateTime @default(now())
+
+  votes      CommentVote[]
+
+  @@index([viewkey])
+}
+
+model CommentVote {
+  id        String   @id @default(cuid())
+  visitorId String   // browser visitorId for all users (free + diamond)
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  vote      Int      // 1 = thumbs up, -1 = thumbs down
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([visitorId, commentId])  // one vote per visitor per comment
+  @@index([commentId])
+  @@index([visitorId])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  scope       String   // 'vote:visitor' or 'vote:ip'
+  key         String   // visitorId or ip
+  windowStart Int      // unix timestamp / window_size
+  count       Int      @default(0)
+
+  @@unique([scope, key, windowStart])
+  @@index([scope, key, windowStart])
+}
+
+model VoteEvent {
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now())
+  visitorId  String
+  commentId  String
+  ip         String
+  userAgent  String?
+  action     String   // 'up', 'down', 'flip', 'noop', 'blocked'
+  vote       Int?     // +1/-1 when applicable
+  prevVote   Int?
+
+  @@index([ip, createdAt])
+  @@index([visitorId, createdAt])
+}

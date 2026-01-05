@@ -55,60 +55,8 @@ export default function HomePage() {
           <WalletStatus />
         </div>
 
-        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold neon-text">Browse Videos</h1>
-            <p className="text-sm text-white/70">
-              {videos.length} curated videos available
-            </p>
-          </div>
-
-          {/* Filters Row */}
-          <div className="mt-5 grid grid-cols-2 md:grid-cols-12 gap-3">
-            <div className="col-span-2 md:col-span-5">
-              <label className="block text-xs text-white/70 mb-1">Search</label>
-              <input
-                className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm"
-                placeholder="Search titles, tags…"
-                defaultValue=""
-              />
-            </div>
-
-            <div className="col-span-2 md:col-span-3">
-              <label className="block text-xs text-white/70 mb-1">Collections</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
-                <option value="all">All</option>
-                <option value="blowjob">Blowjob</option>
-                <option value="threesome">Threesome</option>
-                <option value="for-women">For Women</option>
-                <option value="anal">Anal</option>
-                <option value="highest-rated">Highest Rated</option>
-                <option value="newest">Newest</option>
-              </select>
-            </div>
-
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs text-white/70 mb-1">Duration</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
-                <option value="any">Any</option>
-                <option value="short">0–10 min</option>
-                <option value="mid">10–30 min</option>
-                <option value="long">30+ min</option>
-              </select>
-            </div>
-
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs text-white/70 mb-1">Sort</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
-                <option value="new">Newest</option>
-                <option value="top">Top rated</option>
-                <option value="duration">Duration</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
+        {/* Quick actions */}
+        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 mb-6">
             <Link
               href="/categories"
               className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
@@ -164,6 +112,58 @@ export default function HomePage() {
                 View Rankings
               </span>
             </Link>
+        </div>
+
+        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-semibold neon-text">Browse Videos</h1>
+            <p className="text-sm text-white/70">
+              {videos.length} curated videos available
+            </p>
+          </div>
+
+          {/* Filters Row */}
+          <div className="mt-5 grid grid-cols-2 md:grid-cols-12 gap-3">
+            <div className="col-span-2 md:col-span-5">
+              <label className="block text-xs text-white/70 mb-1">Search</label>
+              <input
+                className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm"
+                placeholder="Search titles, tags…"
+                defaultValue=""
+              />
+            </div>
+
+            <div className="col-span-2 md:col-span-3">
+              <label className="block text-xs text-white/70 mb-1">Collections</label>
+              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
+                <option value="all">All</option>
+                <option value="blowjob">Blowjob</option>
+                <option value="threesome">Threesome</option>
+                <option value="for-women">For Women</option>
+                <option value="anal">Anal</option>
+                <option value="highest-rated">Highest Rated</option>
+                <option value="newest">Newest</option>
+              </select>
+            </div>
+
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-xs text-white/70 mb-1">Duration</label>
+              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
+                <option value="any">Any</option>
+                <option value="short">0–10 min</option>
+                <option value="mid">10–30 min</option>
+                <option value="long">30+ min</option>
+              </select>
+            </div>
+
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-xs text-white/70 mb-1">Sort</label>
+              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
+                <option value="new">Newest</option>
+                <option value="top">Top rated</option>
+                <option value="duration">Duration</option>
+              </select>
+            </div>
           </div>
         </section>
 
