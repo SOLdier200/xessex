@@ -3,6 +3,8 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { truncWallet } from "@/lib/scoring";
 
+const FLIP_WINDOW_MS = 60_000;
+
 /**
  * GET /api/comments?videoId=...
  * List comments for a video (public counts, no mod vote details)
@@ -19,32 +21,66 @@ export async function GET(req: NextRequest) {
   }
 
   const access = await getAccessContext();
-  const userId = access.user?.id;
+  const userId = access.user?.id ?? null;
 
   const comments = await db.comment.findMany({
     where: { videoId, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
     include: {
       author: { select: { walletAddress: true } },
-      memberVotes: { select: { value: true, voterId: true } },
+      memberVotes: {
+        select: {
+          value: true,
+          voterId: true,
+          flipCount: true,
+          createdAt: true, // For 60s window calculation
+        },
+      },
     },
   });
 
+  const now = Date.now();
+
   const shaped = comments.map((c) => {
-    const memberLikes = c.memberVotes.filter((v) => v.value === 1).length;
-    const memberDislikes = c.memberVotes.filter((v) => v.value === -1).length;
-    const userVote = userId
-      ? c.memberVotes.find((v) => v.voterId === userId)?.value ?? null
+    // Use cached counters from Comment model
+    const { memberLikes, memberDislikes } = c;
+
+    const myVoteRow = userId
+      ? c.memberVotes.find((v) => v.voterId === userId) ?? null
       : null;
 
+    const userVote = myVoteRow ? myVoteRow.value : null;
+
+    // Lock logic for this user (only)
+    let voteLocked = false;
+    let secondsLeftToFlip = 0;
+
+    if (myVoteRow) {
+      const windowPassed = now - myVoteRow.createdAt.getTime() > FLIP_WINDOW_MS;
+      const flipUsed = (myVoteRow.flipCount ?? 0) >= 1;
+
+      voteLocked = flipUsed || windowPassed;
+
+      if (!voteLocked) {
+        secondsLeftToFlip = Math.max(
+          0,
+          Math.ceil(
+            (FLIP_WINDOW_MS - (now - myVoteRow.createdAt.getTime())) / 1000
+          )
+        );
+      }
+    }
+
     return {
-      id: c.id, // Source ID
+      id: c.id,
       body: c.body,
       createdAt: c.createdAt.toISOString(),
       authorWallet: truncWallet(c.author.walletAddress),
       memberLikes,
       memberDislikes,
       userVote,
+      voteLocked,
+      secondsLeftToFlip,
     };
   });
 
@@ -108,6 +144,8 @@ export async function POST(req: NextRequest) {
       videoId,
       authorId: access.user.id,
       body: text,
+      memberLikes: 0,
+      memberDislikes: 0,
     },
     include: {
       author: { select: { walletAddress: true } },
@@ -124,6 +162,8 @@ export async function POST(req: NextRequest) {
       memberLikes: 0,
       memberDislikes: 0,
       userVote: null,
+      voteLocked: false,
+      secondsLeftToFlip: 0,
     },
   });
 }

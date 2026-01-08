@@ -93,19 +93,17 @@ export async function POST(req: Request) {
     await prisma.subscription.upsert({
       where: { userId: user.id },
       update: {
-        status: "active",
-        plan: "monthly",
+        status: "ACTIVE",
+        tier: "MEMBER",
         expiresAt,
         lastTxSig: signature,
-        paidSol: received,
       },
       create: {
         userId: user.id,
-        status: "active",
-        plan: "monthly",
+        status: "ACTIVE",
+        tier: "MEMBER",
         expiresAt,
         lastTxSig: signature,
-        paidSol: received,
       },
     });
 

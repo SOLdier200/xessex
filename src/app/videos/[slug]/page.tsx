@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import TopNav from "../../components/TopNav";
 import StarRating from "../../components/StarRating";
 import Comments from "../../components/Comments";
 
-// Force dynamic rendering
 export const dynamic = "force-dynamic";
 
 interface VideoPageProps {
@@ -17,117 +16,30 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const { slug } = await params;
   const access = await getAccessContext();
 
-  // Get the video
   const video = await db.video.findFirst({
     where: { slug },
   });
 
-  if (!video) {
+  if (!video) notFound();
+
+  const canViewPremium = access.canViewAllVideos;
+
+  // Hard gate: premium videos 404 for free users (no title leak)
+  if (!video.isShowcase && !canViewPremium) {
     notFound();
   }
 
-  // If it's a showcase video, redirect to /free/[slug]
-  if (video.isShowcase) {
-    redirect(`/free/${slug}`);
-  }
+  // Tier-aware engagement permissions
+  const canRateStars = !!access.user && access.canRateStars; // diamond-only
+  const canPostComment = !!access.user && access.canComment; // diamond-only
+  const canVoteComments = !!access.user && access.canVoteComments; // paid+
 
-  // If user can't view premium content, show paywall
-  if (!access.canViewAllVideos) {
-    return (
-      <main className="min-h-screen">
-        <TopNav />
-        <div className="px-4 md:px-6 pb-10">
-          <Link
-            href="/videos"
-            className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm"
-          >
-            ← Back to Videos
-          </Link>
-
-          <div className="max-w-2xl mx-auto">
-            <div className="neon-border rounded-2xl p-8 bg-gradient-to-br from-pink-500/10 via-black/0 to-purple-500/10 text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-pink-500/20 flex items-center justify-center">
-                <svg
-                  className="w-10 h-10 text-pink-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              </div>
-
-              <h1 className="text-2xl font-bold text-white mb-2">
-                Premium Content
-              </h1>
-              <p className="text-white/70 mb-6">
-                This video is available to members only. Subscribe to unlock
-                unlimited access to our entire catalog.
-              </p>
-
-              <div className="p-4 rounded-xl bg-black/30 border border-white/10 mb-6">
-                <h2 className="font-semibold text-white">{video.title}</h2>
-                {video.avgStars > 0 && (
-                  <div className="text-sm text-yellow-400 mt-1">
-                    ★ {video.avgStars.toFixed(1)} ({video.starsCount} ratings)
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link
-                  href="/subscribe"
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-medium transition"
-                >
-                  Subscribe Now
-                </Link>
-                <Link
-                  href="/signup"
-                  className="px-6 py-3 rounded-xl bg-yellow-500/80 hover:bg-yellow-500 text-black font-medium transition"
-                >
-                  Become Diamond Member
-                </Link>
-              </div>
-
-              <p className="mt-6 text-xs text-white/40">
-                Already a member?{" "}
-                <Link href="/login" className="text-pink-400 hover:underline">
-                  Log in
-                </Link>
-              </p>
-            </div>
-
-            {/* Free preview section */}
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Free Videos
-              </h3>
-              <p className="text-white/60 text-sm mb-4">
-                Check out our free showcase videos while you decide:
-              </p>
-              <Link
-                href="/free"
-                className="inline-block px-4 py-2 rounded-xl bg-green-500/20 border border-green-400/30 text-green-400 text-sm font-medium hover:bg-green-500/30 transition"
-              >
-                View Free Videos →
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  // User has access - show the video
+  // Get related videos for sidebar
   const relatedVideos = await db.video.findMany({
     where: {
       id: { not: video.id },
-      isShowcase: false,
+      // Show showcase to everyone, premium only to paid
+      ...(canViewPremium ? {} : { isShowcase: true }),
     },
     take: 4,
     orderBy: { createdAt: "desc" },
@@ -136,53 +48,75 @@ export default async function VideoPage({ params }: VideoPageProps) {
   return (
     <main className="min-h-screen">
       <TopNav />
-      <div className="px-4 md:px-6 pb-10">
-        <Link
-          href="/videos"
-          className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm"
-        >
-          ← Back to Videos
-        </Link>
+
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-white">
+              {video.title}
+            </h1>
+            <div className="mt-1 text-xs text-white/50 font-mono break-all">
+              {video.slug}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span
+                className={`text-[10px] px-3 py-1 rounded-full border ${
+                  video.isShowcase
+                    ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-200"
+                    : "bg-pink-500/20 border-pink-400/30 text-pink-200"
+                }`}
+              >
+                {video.isShowcase ? "free" : "premium"}
+              </span>
+              {!!video.viewsCount && (
+                <span className="text-xs text-white/40">
+                  {video.viewsCount.toLocaleString()} views
+                </span>
+              )}
+              {video.starsCount > 0 && (
+                <span className="text-xs text-yellow-400">
+                  ★ {video.avgStars.toFixed(1)} ({video.starsCount})
+                </span>
+              )}
+            </div>
+          </div>
+
+          <Link
+            href="/videos"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
+          >
+            Back to Videos
+          </Link>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Main Video */}
           <div className="lg:col-span-2">
-            <div className="aspect-video bg-black rounded-xl overflow-hidden neon-border">
-              {video.embedUrl ? (
-                <iframe
-                  src={video.embedUrl}
-                  frameBorder={0}
-                  width="100%"
-                  height="100%"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/30">
-                  Video embed not configured
-                </div>
-              )}
-            </div>
-
-            <h1 className="mt-3 md:mt-4 text-lg md:text-2xl font-bold text-white">
-              {video.title}
-            </h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-white/60">
-              <span className="text-pink-400 font-medium">Premium</span>
-              {video.starsCount > 0 && (
-                <span>
-                  ★ {video.avgStars.toFixed(1)} ({video.starsCount} ratings)
-                </span>
-              )}
+            <div className="neon-border rounded-2xl overflow-hidden bg-black/30">
+              <div className="aspect-video bg-black">
+                {video.embedUrl ? (
+                  <iframe
+                    src={video.embedUrl}
+                    frameBorder={0}
+                    width="100%"
+                    height="100%"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/30">
+                    Video embed not configured
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Star Rating */}
             <div className="mt-4 md:mt-6">
-              <StarRating videoId={video.id} />
+              <StarRating videoId={video.id} readOnly={!canRateStars} />
             </div>
 
             {/* Comments Section */}
-            <Comments videoId={video.id} />
+            <Comments videoId={video.id} canPost={canPostComment} canVote={canVoteComments} />
           </div>
 
           {/* Sidebar - Related */}
@@ -232,6 +166,24 @@ export default async function VideoPage({ params }: VideoPageProps) {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+
+            {/* Upgrade CTA for free users */}
+            {!canViewPremium && (
+              <div className="mt-6 neon-border rounded-xl p-4 bg-black/30">
+                <h3 className="text-sm font-semibold text-white mb-2">
+                  Want more?
+                </h3>
+                <p className="text-xs text-white/60 mb-3">
+                  Upgrade to unlock the full premium catalog.
+                </p>
+                <Link
+                  href="/signup"
+                  className="block w-full text-center px-4 py-2 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 text-yellow-100 text-sm font-semibold transition"
+                >
+                  Upgrade
+                </Link>
               </div>
             )}
           </div>

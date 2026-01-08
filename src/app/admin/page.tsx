@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import ShowcaseModal from "./ShowcaseModal";
 
 type Video = {
   id: number;
@@ -43,8 +44,9 @@ export default function AdminPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, approved: 0, rejected: 0, pending: 0, favorites: 0 });
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showShowcaseModal, setShowShowcaseModal] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -138,16 +140,34 @@ export default function AdminPage() {
     }
   };
 
-  const exportApproved = async () => {
-    setExporting(true);
-    const res = await fetch("/api/admin/export", { method: "POST" });
-    const data = await res.json();
-    setExporting(false);
+  const publishToSupabase = async () => {
+    setPublishing(true);
+    try {
+      // 1) Export approved.json
+      const res1 = await fetch("/api/admin/export", { method: "POST" });
+      const data1 = await res1.json();
+      if (!data1.ok) {
+        alert(data1.error || "Export failed");
+        return;
+      }
 
-    if (data.ok) {
-      alert(`Exported ${data.exported} videos to ${data.file}`);
-    } else {
-      alert("Export failed");
+      // 2) Publish from approved.json to Supabase
+      const res2 = await fetch("/api/admin/publish-approved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data2 = await res2.json();
+      if (!data2.ok) {
+        alert(data2.error || "Publish failed");
+        return;
+      }
+
+      alert(
+        `Exported ${data1.exported} → Published ${data2.upserted} (skipped ${data2.skipped})`
+      );
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -286,13 +306,19 @@ export default function AdminPage() {
           <h1 className="text-3xl font-bold neon-text">Admin Panel</h1>
           <p className="text-white/60 text-sm mt-1">FTS5 search + keyset pagination</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button
-            onClick={exportApproved}
-            disabled={exporting}
+            onClick={publishToSupabase}
+            disabled={publishing}
             className="px-4 py-2 rounded-full border border-emerald-400/50 bg-emerald-500/20 text-white text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
           >
-            {exporting ? "Exporting..." : "Export approved.json"}
+            {publishing ? "Publishing..." : "Publish to Supabase"}
+          </button>
+          <button
+            onClick={() => setShowShowcaseModal(true)}
+            className="px-4 py-2 rounded-full border border-yellow-400/50 bg-yellow-500/20 text-white text-sm font-semibold hover:bg-yellow-500/30 transition"
+          >
+            Set 3 Free Videos
           </button>
           <button
             onClick={deleteRejected}
@@ -763,6 +789,12 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Showcase Modal */}
+      <ShowcaseModal
+        open={showShowcaseModal}
+        onClose={() => setShowShowcaseModal(false)}
+      />
     </main>
   );
 }

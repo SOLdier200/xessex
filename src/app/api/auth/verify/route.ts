@@ -30,9 +30,9 @@ export async function POST(req: Request) {
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401 });
 
     const user = await prisma.user.upsert({
-      where: { wallet: w },
+      where: { walletAddress: w },
       update: {},
-      create: { wallet: w },
+      create: { walletAddress: w },
     });
 
     const token = crypto.randomUUID() + crypto.randomUUID();

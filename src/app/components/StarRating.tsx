@@ -5,9 +5,10 @@ import { toast } from "sonner";
 
 interface StarRatingProps {
   videoId: string;
+  readOnly?: boolean;
 }
 
-export default function StarRating({ videoId }: StarRatingProps) {
+export default function StarRating({ videoId, readOnly = false }: StarRatingProps) {
   const [rating, setRating] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [average, setAverage] = useState<number>(0);
@@ -30,18 +31,20 @@ export default function StarRating({ videoId }: StarRatingProps) {
       })
       .finally(() => setLoading(false));
 
-    // Check if user can rate
-    fetch("/api/auth/status")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok) {
-          setCanRate(data.canRateStars);
-        }
-      });
-  }, [videoId]);
+    // Check if user can rate (only if not readOnly)
+    if (!readOnly) {
+      fetch("/api/auth/status")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok) {
+            setCanRate(data.canRateStars);
+          }
+        });
+    }
+  }, [videoId, readOnly]);
 
   const handleRate = async (stars: number) => {
-    if (submitting) return;
+    if (readOnly || submitting) return;
 
     if (!canRate) {
       toast.error("Diamond membership required to rate videos");
@@ -81,10 +84,11 @@ export default function StarRating({ videoId }: StarRatingProps) {
 
   const displayRating = hovered ?? rating ?? 0;
   const hasRated = rating !== null;
+  const isInteractive = !readOnly && canRate;
 
   if (loading) {
     return (
-      <div className="neon-border rounded-xl p-4 bg-black/30 animate-pulse">
+      <div className="animate-pulse">
         <div className="h-6 bg-white/10 rounded w-32 mb-3"></div>
         <div className="h-8 bg-white/10 rounded w-48"></div>
       </div>
@@ -92,24 +96,20 @@ export default function StarRating({ videoId }: StarRatingProps) {
   }
 
   return (
-    <div className="neon-border rounded-xl p-3 md:p-4 bg-black/30">
-      <h3 className="text-base md:text-lg font-semibold neon-text mb-2 md:mb-3">
-        Rate This Video
-      </h3>
-
+    <div>
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
               onClick={() => handleRate(star)}
-              onMouseEnter={() => canRate && setHovered(star)}
+              onMouseEnter={() => isInteractive && setHovered(star)}
               onMouseLeave={() => setHovered(null)}
-              disabled={!canRate || submitting}
+              disabled={!isInteractive || submitting}
               className={`text-2xl md:text-3xl transition-all ${
-                canRate
+                isInteractive
                   ? "cursor-pointer hover:scale-110 active:scale-95"
-                  : "cursor-not-allowed"
+                  : "cursor-default"
               } ${star <= displayRating ? "text-yellow-400" : "text-white/30"}`}
             >
               ★
@@ -135,15 +135,11 @@ export default function StarRating({ videoId }: StarRatingProps) {
         </div>
       </div>
 
-      {hasRated ? (
+      {hasRated && (
         <p className="mt-2 text-xs md:text-sm text-green-400">
           You rated this video {rating} {rating === 1 ? "star" : "stars"}
         </p>
-      ) : !canRate ? (
-        <p className="mt-2 text-xs md:text-sm text-yellow-400/70">
-          Diamond members can rate videos
-        </p>
-      ) : null}
+      )}
     </div>
   );
 }

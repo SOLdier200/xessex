@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Comment" ADD COLUMN     "memberDislikes" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "memberLikes" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "CommentMemberVote" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

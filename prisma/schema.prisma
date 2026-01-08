@@ -145,6 +145,10 @@ model Comment {
   createdAt DateTime      @default(now())
   status    CommentStatus @default(ACTIVE)
 
+  // Cached vote counts (updated atomically on vote)
+  memberLikes    Int @default(0)
+  memberDislikes Int @default(0)
+
   // Removal tracking (only mods can remove)
   removedById   String?
   removedAt     DateTime?
@@ -172,8 +176,9 @@ model CommentMemberVote {
   id            String   @id @default(cuid())
   commentId     String
   voterId       String
-  value         Int // +1 (like) or -1 (dislike)
-  flipCount     Int      @default(0) // max 3 flips allowed
+  value         Int      // +1 (like) or -1 (dislike)
+  createdAt     DateTime @default(now())   // First vote time (for 60s window)
+  flipCount     Int      @default(0)       // 0 or 1 (one flip allowed)
   lastChangedAt DateTime @default(now())
 
   comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
