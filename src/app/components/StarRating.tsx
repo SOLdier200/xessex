@@ -4,55 +4,64 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 interface StarRatingProps {
-  viewkey: string;
+  videoId: string;
 }
 
-export default function StarRating({ viewkey }: StarRatingProps) {
+export default function StarRating({ videoId }: StarRatingProps) {
   const [rating, setRating] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [average, setAverage] = useState<number>(0);
   const [count, setCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [hasRated, setHasRated] = useState(false);
+  const [canRate, setCanRate] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/ratings?viewkey=${viewkey}`)
+    fetch(`/api/ratings?videoId=${videoId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) {
-          setAverage(data.average);
-          setCount(data.count);
+          setAverage(data.avgStars);
+          setCount(data.starsCount);
           if (data.userRating) {
             setRating(data.userRating);
-            setHasRated(true);
           }
         }
       })
       .finally(() => setLoading(false));
-  }, [viewkey]);
+
+    // Check if user can rate
+    fetch("/api/auth/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) {
+          setCanRate(data.canRateStars);
+        }
+      });
+  }, [videoId]);
 
   const handleRate = async (stars: number) => {
-    if (hasRated || submitting) return;
+    if (submitting) return;
+
+    if (!canRate) {
+      toast.error("Diamond membership required to rate videos");
+      return;
+    }
 
     setSubmitting(true);
     try {
       const res = await fetch("/api/ratings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ viewkey, stars }),
+        body: JSON.stringify({ videoId, stars }),
       });
 
       const data = await res.json();
 
       if (data.ok) {
         setRating(stars);
-        setHasRated(true);
-        setCount((c) => c + 1);
-        setAverage((avg) => {
-          const newTotal = avg * count + stars;
-          return Math.round((newTotal / (count + 1)) * 10) / 10;
-        });
+        setAverage(data.avgStars);
+        setCount(data.starsCount);
         toast.success(
           "Thanks for your contribution to Xessex, you will be paid for your work after the Next Epoch"
         );
@@ -60,9 +69,6 @@ export default function StarRating({ viewkey }: StarRatingProps) {
         toast.error("Please log in to rate videos");
       } else if (res.status === 403) {
         toast.error("Diamond membership required to rate videos");
-      } else if (res.status === 409) {
-        toast.error("You have already rated this video");
-        setHasRated(true);
       } else {
         toast.error(data.error || "Failed to submit rating");
       }
@@ -74,6 +80,7 @@ export default function StarRating({ viewkey }: StarRatingProps) {
   };
 
   const displayRating = hovered ?? rating ?? 0;
+  const hasRated = rating !== null;
 
   if (loading) {
     return (
@@ -86,7 +93,9 @@ export default function StarRating({ viewkey }: StarRatingProps) {
 
   return (
     <div className="neon-border rounded-xl p-3 md:p-4 bg-black/30">
-      <h3 className="text-base md:text-lg font-semibold neon-text mb-2 md:mb-3">Rate This Video</h3>
+      <h3 className="text-base md:text-lg font-semibold neon-text mb-2 md:mb-3">
+        Rate This Video
+      </h3>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <div className="flex gap-1">
@@ -94,18 +103,14 @@ export default function StarRating({ viewkey }: StarRatingProps) {
             <button
               key={star}
               onClick={() => handleRate(star)}
-              onMouseEnter={() => !hasRated && setHovered(star)}
+              onMouseEnter={() => canRate && setHovered(star)}
               onMouseLeave={() => setHovered(null)}
-              disabled={hasRated || submitting}
+              disabled={!canRate || submitting}
               className={`text-2xl md:text-3xl transition-all ${
-                hasRated
-                  ? "cursor-default"
-                  : "cursor-pointer hover:scale-110 active:scale-95"
-              } ${
-                star <= displayRating
-                  ? "text-yellow-400"
-                  : "text-white/30"
-              }`}
+                canRate
+                  ? "cursor-pointer hover:scale-110 active:scale-95"
+                  : "cursor-not-allowed"
+              } ${star <= displayRating ? "text-yellow-400" : "text-white/30"}`}
             >
               ★
             </button>
@@ -115,10 +120,14 @@ export default function StarRating({ viewkey }: StarRatingProps) {
         <div className="text-xs md:text-sm text-white/60">
           {average > 0 ? (
             <>
-              <span className="text-yellow-400 font-semibold">{average}</span>
+              <span className="text-yellow-400 font-semibold">
+                {average.toFixed(1)}
+              </span>
               <span className="mx-1">/</span>
               <span>5</span>
-              <span className="ml-2">({count} {count === 1 ? "rating" : "ratings"})</span>
+              <span className="ml-2">
+                ({count} {count === 1 ? "rating" : "ratings"})
+              </span>
             </>
           ) : (
             <span>No ratings yet</span>
@@ -126,11 +135,15 @@ export default function StarRating({ viewkey }: StarRatingProps) {
         </div>
       </div>
 
-      {hasRated && (
+      {hasRated ? (
         <p className="mt-2 text-xs md:text-sm text-green-400">
           You rated this video {rating} {rating === 1 ? "star" : "stars"}
         </p>
-      )}
+      ) : !canRate ? (
+        <p className="mt-2 text-xs md:text-sm text-yellow-400/70">
+          Diamond members can rate videos
+        </p>
+      ) : null}
     </div>
   );
 }

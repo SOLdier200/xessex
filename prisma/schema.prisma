@@ -1,129 +1,270 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  USER
+  MOD
+  ADMIN
 }
 
-model User {
-  id        String   @id @default(cuid())
-  wallet    String   @unique
-  createdAt DateTime @default(now())
+enum SubscriptionTier {
+  MEMBER
+  DIAMOND
+}
 
-  sessions     Session[]
-  subscription Subscription?
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+  PENDING
+}
+
+enum CommentStatus {
+  ACTIVE
+  REMOVED
+}
+
+// ============================================================================
+// USER & AUTH
+// ============================================================================
+
+model User {
+  id            String   @id @default(cuid())
+  walletAddress String   @unique
+  role          UserRole @default(USER)
+  createdAt     DateTime @default(now())
+
+  sessions         Session[]
+  subscription     Subscription?
+  commentsAuthored Comment[]            @relation("CommentAuthor")
+  commentsRemoved  Comment[]            @relation("CommentRemovedBy")
+  starRatings      VideoStarRating[]
+  memberVotes      CommentMemberVote[]
+  modVotes         CommentModVote[]
+  scoreAdjustments VideoScoreAdjustment[]
+  integrityFlagsMod    ModeratorIntegrityFlag[] @relation("FlaggedMod")
+  integrityFlagsAuthor ModeratorIntegrityFlag[] @relation("FlaggedAuthor")
 }
 
 model Session {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   token     String   @unique
-  createdAt DateTime @default(now())
   expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
 model Subscription {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  status    String   // "active" | "canceled" | "expired"
-  plan      String?  // "monthly" | "yearly" etc
+  id        String             @id @default(cuid())
+  userId    String             @unique
+  tier      SubscriptionTier
+  status    SubscriptionStatus @default(PENDING)
   expiresAt DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  lastTxSig String?  // replay protection
-  paidSol   Float?
+  // Provider tracking
+  nowPaymentsPaymentId String?
+  nowPaymentsInvoiceId String?
+  lastTxSig            String? // replay protection for SOL payments
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([expiresAt])
 }
 
+// ============================================================================
+// VIDEO
+// ============================================================================
+
 model Video {
   id        String   @id @default(cuid())
-  title     String
   slug      String   @unique
-  url       String
-
-  isPremium Boolean  @default(false)  // false = FREE, true = requires subscription
-
+  title     String
+  embedUrl  String
+  tags      String[] @default([])
   createdAt DateTime @default(now())
+
+  isShowcase Boolean @default(false) // exactly 3 should be true
+
+  // Ranking inputs
+  adminScore Int   @default(50) // 0..100 clamp in code
+  viewsCount Int   @default(0)
+
+  // Cached star aggregates
+  avgStars   Float @default(0)
+  starsCount Int   @default(0)
+
+  comments    Comment[]
+  starRatings VideoStarRating[]
+  adjustments VideoScoreAdjustment[]
+
+  @@index([isShowcase])
 }
 
-model Rating {
+model VideoStarRating {
   id        String   @id @default(cuid())
+  videoId   String
   userId    String
-  viewkey   String   // video viewkey from approved.json
-  stars     Int      // 1-5
-
+  stars     Int // 1-5
   createdAt DateTime @default(now())
 
-  @@unique([userId, viewkey])  // one rating per user per video
-  @@index([viewkey])
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@index([userId])
 }
+
+// ============================================================================
+// COMMENTS (Diamond-only, permanent, Source ID)
+// ============================================================================
 
 model Comment {
-  id         String   @id @default(cuid())
-  viewkey    String   // video viewkey
-  text       String
-  authorId   String?  // null for anonymous
-  authorName String   @default("Anonymous")
-  upCount    Int      @default(0)
-  downCount  Int      @default(0)
+  id        String        @id @default(cuid()) // This is the SOURCE ID
+  videoId   String
+  authorId  String
+  body      String
+  createdAt DateTime      @default(now())
+  status    CommentStatus @default(ACTIVE)
 
-  createdAt  DateTime @default(now())
+  // Removal tracking (only mods can remove)
+  removedById   String?
+  removedAt     DateTime?
+  removedReason String?
 
-  votes      CommentVote[]
+  video     Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  author    User   @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  removedBy User?  @relation("CommentRemovedBy", fields: [removedById], references: [id], onDelete: SetNull)
 
-  @@index([viewkey])
+  memberVotes      CommentMemberVote[]
+  modVotes         CommentModVote[]
+  scoreAdjustments VideoScoreAdjustment[]
+
+  @@index([videoId])
+  @@index([authorId])
+  @@index([status])
 }
 
-model CommentVote {
+// ============================================================================
+// COMMENT VOTES
+// ============================================================================
+
+// Member/Diamond thumbs up/down (public counts)
+model CommentMemberVote {
+  id            String   @id @default(cuid())
+  commentId     String
+  voterId       String
+  value         Int // +1 (like) or -1 (dislike)
+  flipCount     Int      @default(0) // max 3 flips allowed
+  lastChangedAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  voter   User    @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, voterId])
+  @@index([voterId])
+}
+
+// Admin/Mod hidden votes (not displayed publicly, used for scoring)
+model CommentModVote {
+  id            String   @id @default(cuid())
+  commentId     String
+  modId         String
+  value         Int // +1 or -1
+  flipCount     Int      @default(0) // max 5 flips allowed
+  lastChangedAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mod     User    @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, modId])
+  @@index([modId])
+}
+
+// ============================================================================
+// VIDEO SCORE ADJUSTMENT (Source ID workflow)
+// ============================================================================
+
+model VideoScoreAdjustment {
   id        String   @id @default(cuid())
-  visitorId String   // browser visitorId for all users (free + diamond)
-  commentId String
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  vote      Int      // 1 = thumbs up, -1 = thumbs down
-
+  videoId   String
+  commentId String // Source ID - must reference valid comment
+  modId     String
+  direction Int // +1 or -1
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@unique([visitorId, commentId])  // one vote per visitor per comment
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mod     User    @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
   @@index([commentId])
-  @@index([visitorId])
+  @@index([modId])
 }
+
+// ============================================================================
+// HONEST MODERATORS DETECTION
+// ============================================================================
+
+model ModeratorIntegrityFlag {
+  id         String    @id @default(cuid())
+  modId      String
+  authorId   String
+  reason     String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  mod    User @relation("FlaggedMod", fields: [modId], references: [id], onDelete: Cascade)
+  author User @relation("FlaggedAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([modId])
+  @@index([authorId])
+}
+
+// ============================================================================
+// RATE LIMITING & LOGGING
+// ============================================================================
 
 model RateLimit {
   id          String @id @default(cuid())
-  scope       String   // 'vote:visitor' or 'vote:ip'
-  key         String   // visitorId or ip
-  windowStart Int      // unix timestamp / window_size
-  count       Int      @default(0)
+  scope       String // 'vote:user' or 'vote:ip'
+  key         String // userId or ip
+  windowStart Int    // unix timestamp / window_size
+  count       Int    @default(0)
 
   @@unique([scope, key, windowStart])
   @@index([scope, key, windowStart])
 }
 
 model VoteEvent {
-  id         Int      @id @default(autoincrement())
-  createdAt  DateTime @default(now())
-  visitorId  String
-  commentId  String
-  ip         String
-  userAgent  String?
-  action     String   // 'up', 'down', 'flip', 'noop', 'blocked'
-  vote       Int?     // +1/-1 when applicable
-  prevVote   Int?
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  userId    String?
+  commentId String
+  ip        String
+  userAgent String?
+  action    String // 'up', 'down', 'flip', 'noop', 'blocked'
+  vote      Int? // +1/-1 when applicable
+  prevVote  Int?
 
   @@index([ip, createdAt])
-  @@index([visitorId, createdAt])
+  @@index([userId, createdAt])
 }

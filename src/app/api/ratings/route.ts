@@ -1,105 +1,120 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
+import { db } from "@/lib/prisma";
+import { getAccessContext } from "@/lib/access";
+import { clampInt } from "@/lib/scoring";
 
-const prisma = new PrismaClient();
-
+/**
+ * POST /api/ratings
+ * 5-star rating (Diamond only)
+ */
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
+  const access = await getAccessContext();
 
-  if (!user) {
+  if (!access.user) {
     return NextResponse.json(
-      { ok: false, error: "Not authenticated" },
+      { ok: false, error: "UNAUTHORIZED" },
       { status: 401 }
     );
   }
 
-  if (!isSubscriptionActive(user)) {
+  if (!access.canRateStars) {
     return NextResponse.json(
-      { ok: false, error: "Diamond membership required" },
+      { ok: false, error: "DIAMOND_ONLY" },
       { status: 403 }
     );
   }
 
-  const body = await req.json();
-  const { viewkey, stars } = body;
+  const body = (await req.json().catch(() => null)) as {
+    videoId?: string;
+    stars?: number;
+  } | null;
 
-  if (!viewkey || typeof viewkey !== "string") {
+  const videoId = body?.videoId?.trim();
+  const stars = body?.stars;
+
+  if (!videoId || typeof stars !== "number") {
     return NextResponse.json(
-      { ok: false, error: "Missing viewkey" },
+      { ok: false, error: "BAD_REQUEST" },
       { status: 400 }
     );
   }
 
-  if (!stars || typeof stars !== "number" || stars < 1 || stars > 5) {
+  const s = clampInt(stars, 1, 5);
+
+  const video = await db.video.findUnique({ where: { id: videoId } });
+  if (!video) {
     return NextResponse.json(
-      { ok: false, error: "Stars must be 1-5" },
-      { status: 400 }
+      { ok: false, error: "VIDEO_NOT_FOUND" },
+      { status: 404 }
     );
   }
 
-  // Check if user already rated this video
-  const existing = await prisma.rating.findUnique({
+  // Upsert rating (allow updates)
+  await db.videoStarRating.upsert({
     where: {
-      userId_viewkey: {
-        userId: user.id,
-        viewkey,
-      },
+      videoId_userId: { videoId, userId: access.user.id },
     },
+    create: { videoId, userId: access.user.id, stars: s },
+    update: { stars: s },
   });
 
-  if (existing) {
-    return NextResponse.json(
-      { ok: false, error: "You have already rated this video" },
-      { status: 409 }
-    );
-  }
+  // Update cached aggregates on video
+  const agg = await db.videoStarRating.aggregate({
+    where: { videoId },
+    _avg: { stars: true },
+    _count: { stars: true },
+  });
 
-  // Create rating
-  await prisma.rating.create({
+  await db.video.update({
+    where: { id: videoId },
     data: {
-      userId: user.id,
-      viewkey,
-      stars,
+      avgStars: agg._avg.stars ?? 0,
+      starsCount: agg._count.stars ?? 0,
     },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    avgStars: agg._avg.stars ?? 0,
+    starsCount: agg._count.stars ?? 0,
+  });
 }
 
+/**
+ * GET /api/ratings?videoId=...
+ * Get rating stats for a video
+ */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const viewkey = searchParams.get("viewkey");
+  const videoId = searchParams.get("videoId");
 
-  if (!viewkey) {
+  if (!videoId) {
     return NextResponse.json(
-      { ok: false, error: "Missing viewkey" },
+      { ok: false, error: "MISSING_VIDEO_ID" },
       { status: 400 }
     );
   }
 
-  // Get average rating and count
-  const ratings = await prisma.rating.findMany({
-    where: { viewkey },
-    select: { stars: true },
+  const video = await db.video.findUnique({
+    where: { id: videoId },
+    select: { avgStars: true, starsCount: true },
   });
 
-  const count = ratings.length;
-  const average = count > 0
-    ? ratings.reduce((sum, r) => sum + r.stars, 0) / count
-    : 0;
+  if (!video) {
+    return NextResponse.json(
+      { ok: false, error: "VIDEO_NOT_FOUND" },
+      { status: 404 }
+    );
+  }
 
   // Check if current user has rated
-  const user = await getCurrentUser();
+  const access = await getAccessContext();
   let userRating: number | null = null;
 
-  if (user) {
-    const existing = await prisma.rating.findUnique({
+  if (access.user) {
+    const existing = await db.videoStarRating.findUnique({
       where: {
-        userId_viewkey: {
-          userId: user.id,
-          viewkey,
-        },
+        videoId_userId: { videoId, userId: access.user.id },
       },
     });
     userRating = existing?.stars ?? null;
@@ -107,8 +122,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    average: Math.round(average * 10) / 10,
-    count,
+    avgStars: video.avgStars,
+    starsCount: video.starsCount,
     userRating,
   });
 }

@@ -5,9 +5,9 @@ import { getAccessContext } from "@/lib/access";
 const ONE_MIN = 60_000;
 
 /**
- * POST /api/comments/vote
- * Member/Diamond thumbs up/down on comments
- * Rules: one at a time, flip ≤3, 1/min/comment
+ * POST /api/mod/comments/vote
+ * Admin/Mod hidden vote on comments (not displayed publicly)
+ * Rules: flip ≤5
  */
 export async function POST(req: NextRequest) {
   const access = await getAccessContext();
@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!access.canVoteComments) {
+  if (!access.isAdminOrMod) {
     return NextResponse.json(
-      { ok: false, error: "PAID_ONLY" },
+      { ok: false, error: "FORBIDDEN" },
       { status: 403 }
     );
   }
@@ -49,9 +49,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const existing = await db.commentMemberVote.findUnique({
+  const existing = await db.commentModVote.findUnique({
     where: {
-      commentId_voterId: { commentId, voterId: access.user.id },
+      commentId_modId: { commentId, modId: access.user.id },
     },
   });
 
@@ -59,50 +59,24 @@ export async function POST(req: NextRequest) {
 
   if (!existing) {
     // Create new vote
-    await db.commentMemberVote.create({
+    const created = await db.commentModVote.create({
       data: {
         commentId,
-        voterId: access.user.id,
+        modId: access.user.id,
         value,
         flipCount: 0,
         lastChangedAt: new Date(),
       },
     });
-
-    // Get updated counts
-    const allVotes = await db.commentMemberVote.findMany({
-      where: { commentId },
-      select: { value: true },
-    });
-    const memberLikes = allVotes.filter((v) => v.value === 1).length;
-    const memberDislikes = allVotes.filter((v) => v.value === -1).length;
-
-    return NextResponse.json({
-      ok: true,
-      userVote: value,
-      memberLikes,
-      memberDislikes,
-    });
+    return NextResponse.json({ ok: true, vote: created });
   }
 
-  // Same vote - no-op, return current counts
+  // Same vote - no-op
   if (existing.value === value) {
-    const allVotes = await db.commentMemberVote.findMany({
-      where: { commentId },
-      select: { value: true },
-    });
-    const memberLikes = allVotes.filter((v) => v.value === 1).length;
-    const memberDislikes = allVotes.filter((v) => v.value === -1).length;
-
-    return NextResponse.json({
-      ok: true,
-      userVote: value,
-      memberLikes,
-      memberDislikes,
-    });
+    return NextResponse.json({ ok: true, vote: existing });
   }
 
-  // Rate limit: 1/min/comment
+  // Optional rate limit for hygiene
   if (now - existing.lastChangedAt.getTime() < ONE_MIN) {
     return NextResponse.json(
       { ok: false, error: "RATE_LIMIT_1_PER_MINUTE" },
@@ -110,8 +84,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Flip limit: ≤3
-  if (existing.flipCount >= 3) {
+  // Flip limit: ≤5
+  if (existing.flipCount >= 5) {
     return NextResponse.json(
       { ok: false, error: "FLIP_LIMIT_REACHED" },
       { status: 403 }
@@ -119,7 +93,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Update vote (flip)
-  await db.commentMemberVote.update({
+  const updated = await db.commentModVote.update({
     where: { id: existing.id },
     data: {
       value,
@@ -128,18 +102,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Get updated counts
-  const allVotes = await db.commentMemberVote.findMany({
-    where: { commentId },
-    select: { value: true },
-  });
-  const memberLikes = allVotes.filter((v) => v.value === 1).length;
-  const memberDislikes = allVotes.filter((v) => v.value === -1).length;
-
-  return NextResponse.json({
-    ok: true,
-    userVote: value,
-    memberLikes,
-    memberDislikes,
-  });
+  return NextResponse.json({ ok: true, vote: updated });
 }

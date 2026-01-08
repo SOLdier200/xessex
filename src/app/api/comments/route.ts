@@ -1,60 +1,116 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
+import { db } from "@/lib/prisma";
+import { getAccessContext } from "@/lib/access";
+import { truncWallet } from "@/lib/scoring";
 
-const prisma = new PrismaClient();
+/**
+ * GET /api/comments?videoId=...
+ * List comments for a video (public counts, no mod vote details)
+ */
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const videoId = searchParams.get("videoId");
 
-export async function POST(req: NextRequest) {
-  // Only Diamond Members can post comments
-  const user = await getCurrentUser();
-
-  if (!user) {
+  if (!videoId) {
     return NextResponse.json(
-      { ok: false, error: "Not authenticated" },
+      { ok: false, error: "MISSING_VIDEO_ID" },
+      { status: 400 }
+    );
+  }
+
+  const access = await getAccessContext();
+  const userId = access.user?.id;
+
+  const comments = await db.comment.findMany({
+    where: { videoId, status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+    include: {
+      author: { select: { walletAddress: true } },
+      memberVotes: { select: { value: true, voterId: true } },
+    },
+  });
+
+  const shaped = comments.map((c) => {
+    const memberLikes = c.memberVotes.filter((v) => v.value === 1).length;
+    const memberDislikes = c.memberVotes.filter((v) => v.value === -1).length;
+    const userVote = userId
+      ? c.memberVotes.find((v) => v.voterId === userId)?.value ?? null
+      : null;
+
+    return {
+      id: c.id, // Source ID
+      body: c.body,
+      createdAt: c.createdAt.toISOString(),
+      authorWallet: truncWallet(c.author.walletAddress),
+      memberLikes,
+      memberDislikes,
+      userVote,
+    };
+  });
+
+  return NextResponse.json({ ok: true, comments: shaped });
+}
+
+/**
+ * POST /api/comments
+ * Create a comment (Diamond only, permanent - no edit/delete)
+ */
+export async function POST(req: NextRequest) {
+  const access = await getAccessContext();
+
+  if (!access.user) {
+    return NextResponse.json(
+      { ok: false, error: "UNAUTHORIZED" },
       { status: 401 }
     );
   }
 
-  if (!isSubscriptionActive(user)) {
+  if (!access.canComment) {
     return NextResponse.json(
-      { ok: false, error: "Diamond membership required to post comments" },
+      { ok: false, error: "DIAMOND_ONLY" },
       { status: 403 }
     );
   }
 
-  const body = await req.json();
-  const { viewkey, text, authorName } = body;
+  const body = (await req.json().catch(() => null)) as {
+    videoId?: string;
+    text?: string;
+  } | null;
 
-  if (!viewkey || typeof viewkey !== "string") {
+  const videoId = body?.videoId?.trim();
+  const text = body?.text?.trim();
+
+  if (!videoId || !text) {
     return NextResponse.json(
-      { ok: false, error: "Missing viewkey" },
+      { ok: false, error: "MISSING_FIELDS" },
       { status: 400 }
     );
   }
 
-  if (!text || typeof text !== "string" || text.trim().length === 0) {
+  if (text.length < 3 || text.length > 2000) {
     return NextResponse.json(
-      { ok: false, error: "Comment text is required" },
+      { ok: false, error: "BAD_LENGTH" },
       { status: 400 }
     );
   }
 
-  if (text.length > 1000) {
+  const video = await db.video.findUnique({ where: { id: videoId } });
+  if (!video) {
     return NextResponse.json(
-      { ok: false, error: "Comment too long (max 1000 characters)" },
-      { status: 400 }
+      { ok: false, error: "VIDEO_NOT_FOUND" },
+      { status: 404 }
     );
   }
 
-  // Use wallet address as author name if not provided
-  const displayName = authorName?.trim() || user.wallet.slice(0, 4) + "..." + user.wallet.slice(-4);
-
-  const comment = await prisma.comment.create({
+  // Create comment - permanent, no edit/delete routes exist
+  const comment = await db.comment.create({
     data: {
-      viewkey,
-      text: text.trim(),
-      authorId: user.id,
-      authorName: displayName,
+      videoId,
+      authorId: access.user.id,
+      body: text,
+    },
+    include: {
+      author: { select: { walletAddress: true } },
     },
   });
 
@@ -62,61 +118,12 @@ export async function POST(req: NextRequest) {
     ok: true,
     comment: {
       id: comment.id,
-      text: comment.text,
-      authorName: comment.authorName,
+      body: comment.body,
       createdAt: comment.createdAt.toISOString(),
-      upvotes: 0,
-      downvotes: 0,
+      authorWallet: truncWallet(comment.author.walletAddress),
+      memberLikes: 0,
+      memberDislikes: 0,
       userVote: null,
     },
-  });
-}
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const viewkey = searchParams.get("viewkey");
-  const visitorId = searchParams.get("visitorId");
-
-  if (!viewkey) {
-    return NextResponse.json(
-      { ok: false, error: "Missing viewkey" },
-      { status: 400 }
-    );
-  }
-
-  // Fetch comments with counts (fast - no aggregation needed)
-  const comments = await prisma.comment.findMany({
-    where: { viewkey },
-    orderBy: { createdAt: "desc" },
-    include: {
-      votes: visitorId
-        ? {
-            where: { visitorId },
-            select: { vote: true },
-          }
-        : false,
-    },
-  });
-
-  const formattedComments = comments.map((comment) => {
-    // User's vote from the filtered votes array (only their vote if visitorId provided)
-    const userVote = visitorId && comment.votes && comment.votes.length > 0
-      ? comment.votes[0].vote
-      : null;
-
-    return {
-      id: comment.id,
-      text: comment.text,
-      authorName: comment.authorName,
-      createdAt: comment.createdAt.toISOString(),
-      upvotes: comment.upCount,
-      downvotes: comment.downCount,
-      userVote,
-    };
-  });
-
-  return NextResponse.json({
-    ok: true,
-    comments: formattedComments,
   });
 }

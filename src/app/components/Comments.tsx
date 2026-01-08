@@ -6,29 +6,20 @@ import Link from "next/link";
 
 type Comment = {
   id: string;
-  text: string;
-  authorName: string;
+  body: string;
+  authorWallet: string;
   createdAt: string;
-  upvotes: number;
-  downvotes: number;
+  memberLikes: number;
+  memberDislikes: number;
   userVote: number | null;
 };
 
 type AuthStatus = {
   authenticated: boolean;
-  isDiamond: boolean;
+  tier: "free" | "member" | "diamond";
+  canComment: boolean;
+  canVoteComments: boolean;
 };
-
-function getVisitorId(): string {
-  if (typeof window === "undefined") return "";
-
-  let visitorId = localStorage.getItem("xessex_visitor_id");
-  if (!visitorId) {
-    visitorId = "v_" + Math.random().toString(36).substring(2) + Date.now().toString(36);
-    localStorage.setItem("xessex_visitor_id", visitorId);
-  }
-  return visitorId;
-}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -43,28 +34,33 @@ function formatDate(dateStr: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  }) + " at " + date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return (
+    date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    }) +
+    " at " +
+    date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  );
 }
 
-export default function Comments({ viewkey }: { viewkey: string }) {
+export default function Comments({ videoId }: { videoId: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState("");
-  const [authorName, setAuthorName] = useState("");
-  const [visitorId, setVisitorId] = useState("");
-  const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false, isDiamond: false });
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({
+    authenticated: false,
+    tier: "free",
+    canComment: false,
+    canVoteComments: false,
+  });
 
   useEffect(() => {
-    setVisitorId(getVisitorId());
-
     // Check auth status
     fetch("/api/auth/status")
       .then((res) => res.json())
@@ -72,7 +68,9 @@ export default function Comments({ viewkey }: { viewkey: string }) {
         if (data.ok) {
           setAuthStatus({
             authenticated: data.authenticated,
-            isDiamond: data.isDiamond,
+            tier: data.tier,
+            canComment: data.canComment,
+            canVoteComments: data.canVoteComments,
           });
         }
       })
@@ -80,9 +78,7 @@ export default function Comments({ viewkey }: { viewkey: string }) {
   }, []);
 
   useEffect(() => {
-    if (!visitorId) return;
-
-    fetch(`/api/comments?viewkey=${viewkey}&visitorId=${visitorId}`)
+    fetch(`/api/comments?videoId=${videoId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
@@ -91,7 +87,7 @@ export default function Comments({ viewkey }: { viewkey: string }) {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [viewkey, visitorId]);
+  }, [videoId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,9 +99,8 @@ export default function Comments({ viewkey }: { viewkey: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          viewkey,
+          videoId,
           text: text.trim(),
-          authorName: authorName.trim() || "Anonymous",
         }),
       });
 
@@ -114,6 +109,8 @@ export default function Comments({ viewkey }: { viewkey: string }) {
         setComments([data.comment, ...comments]);
         setText("");
         toast.success("Comment posted!");
+      } else if (data.error === "DIAMOND_ONLY") {
+        toast.error("Only Diamond Members can post comments");
       } else {
         toast.error(data.error || "Failed to post comment");
       }
@@ -124,8 +121,11 @@ export default function Comments({ viewkey }: { viewkey: string }) {
     }
   };
 
-  const handleVote = async (commentId: string, vote: 1 | -1) => {
-    if (!visitorId) return;
+  const handleVote = async (commentId: string, value: 1 | -1) => {
+    if (!authStatus.canVoteComments) {
+      toast.error("Only paid members can vote on comments");
+      return;
+    }
 
     try {
       const res = await fetch("/api/comments/vote", {
@@ -133,8 +133,7 @@ export default function Comments({ viewkey }: { viewkey: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           commentId,
-          visitorId,
-          vote,
+          value,
         }),
       });
 
@@ -145,13 +144,19 @@ export default function Comments({ viewkey }: { viewkey: string }) {
             c.id === commentId
               ? {
                   ...c,
-                  upvotes: data.upvotes,
-                  downvotes: data.downvotes,
+                  memberLikes: data.memberLikes,
+                  memberDislikes: data.memberDislikes,
                   userVote: data.userVote,
                 }
               : c
           )
         );
+      } else if (data.error === "RATE_LIMIT_1_PER_MINUTE") {
+        toast.error("Please wait 1 minute before changing your vote");
+      } else if (data.error === "FLIP_LIMIT_REACHED") {
+        toast.error("You've reached the maximum vote changes for this comment");
+      } else if (data.error === "PAID_ONLY") {
+        toast.error("Only paid members can vote on comments");
       }
     } catch {
       toast.error("Failed to vote");
@@ -165,31 +170,21 @@ export default function Comments({ viewkey }: { viewkey: string }) {
       </h3>
 
       {/* Comment Form - Diamond Members Only */}
-      {authStatus.isDiamond ? (
+      {authStatus.canComment ? (
         <form onSubmit={handleSubmit} className="mb-6">
-          <div className="flex flex-col sm:flex-row gap-2 mb-2">
-            <input
-              type="text"
-              placeholder="Name (optional)"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              className="flex-shrink-0 sm:w-40 rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm"
-              maxLength={50}
-            />
-            <textarea
-              placeholder="Write a comment..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="flex-1 rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm resize-none"
-              rows={2}
-              maxLength={1000}
-            />
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-white/40">{text.length}/1000</span>
+          <textarea
+            placeholder="Write a comment... (permanent, cannot be edited or deleted)"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm resize-none"
+            rows={3}
+            maxLength={2000}
+          />
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-xs text-white/40">{text.length}/2000</span>
             <button
               type="submit"
-              disabled={!text.trim() || submitting}
+              disabled={!text.trim() || text.length < 3 || submitting}
               className="px-4 py-2 rounded-xl bg-pink-500/80 hover:bg-pink-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium transition"
             >
               {submitting ? "Posting..." : "Post Comment"}
@@ -225,23 +220,31 @@ export default function Comments({ viewkey }: { viewkey: string }) {
               className="bg-black/20 rounded-xl p-3 md:p-4 border border-white/10"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                <span className="font-medium text-pink-300 text-sm">
-                  {comment.authorName}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-pink-300 text-sm">
+                    {comment.authorWallet}
+                  </span>
+                  <span className="text-[10px] text-white/30 font-mono">
+                    #{comment.id.slice(-6)}
+                  </span>
+                </div>
                 <span className="text-xs text-white/40">
                   {formatDate(comment.createdAt)}
                 </span>
               </div>
               <p className="text-white/90 text-sm mb-3 whitespace-pre-wrap break-words">
-                {comment.text}
+                {comment.body}
               </p>
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => handleVote(comment.id, 1)}
+                  disabled={!authStatus.canVoteComments}
                   className={`flex items-center gap-1 text-sm transition ${
                     comment.userVote === 1
                       ? "text-green-400"
-                      : "text-white/50 hover:text-green-400"
+                      : authStatus.canVoteComments
+                      ? "text-white/50 hover:text-green-400"
+                      : "text-white/30 cursor-not-allowed"
                   }`}
                 >
                   <svg
@@ -257,14 +260,17 @@ export default function Comments({ viewkey }: { viewkey: string }) {
                       d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
                     />
                   </svg>
-                  <span>{comment.upvotes}</span>
+                  <span>{comment.memberLikes}</span>
                 </button>
                 <button
                   onClick={() => handleVote(comment.id, -1)}
+                  disabled={!authStatus.canVoteComments}
                   className={`flex items-center gap-1 text-sm transition ${
                     comment.userVote === -1
                       ? "text-red-400"
-                      : "text-white/50 hover:text-red-400"
+                      : authStatus.canVoteComments
+                      ? "text-white/50 hover:text-red-400"
+                      : "text-white/30 cursor-not-allowed"
                   }`}
                 >
                   <svg
@@ -280,7 +286,7 @@ export default function Comments({ viewkey }: { viewkey: string }) {
                       d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
                     />
                   </svg>
-                  <span>{comment.downvotes}</span>
+                  <span>{comment.memberDislikes}</span>
                 </button>
               </div>
             </div>

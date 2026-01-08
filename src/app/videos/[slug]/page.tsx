@@ -1,48 +1,13 @@
-import fs from "fs";
-import path from "path";
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { db } from "@/lib/prisma";
+import { getAccessContext } from "@/lib/access";
 import TopNav from "../../components/TopNav";
 import StarRating from "../../components/StarRating";
 import Comments from "../../components/Comments";
 
-type ApprovedVideo = {
-  id: number;
-  viewkey: string;
-  title: string;
-  primary_thumb: string | null;
-  duration: number | null;
-  views: number | null;
-  tags: string | null;
-  categories: string | null;
-  performers: string | null;
-  status: string;
-  note: string | null;
-  favorite: number;
-};
-
-function getApprovedVideos(): ApprovedVideo[] {
-  try {
-    const filePath = path.join(process.cwd(), "data", "approved.json");
-    const data = fs.readFileSync(filePath, "utf8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return "--";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function formatViews(views: number | null): string {
-  if (!views) return "--";
-  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)}M`;
-  if (views >= 1_000) return `${(views / 1_000).toFixed(1)}K`;
-  return views.toString();
-}
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
 
 interface VideoPageProps {
   params: Promise<{ slug: string }>;
@@ -50,128 +15,225 @@ interface VideoPageProps {
 
 export default async function VideoPage({ params }: VideoPageProps) {
   const { slug } = await params;
-  const videos = getApprovedVideos();
-  const video = videos.find((v) => v.viewkey === slug);
+  const access = await getAccessContext();
+
+  // Get the video
+  const video = await db.video.findFirst({
+    where: { slug },
+  });
 
   if (!video) {
+    notFound();
+  }
+
+  // If it's a showcase video, redirect to /free/[slug]
+  if (video.isShowcase) {
+    redirect(`/free/${slug}`);
+  }
+
+  // If user can't view premium content, show paywall
+  if (!access.canViewAllVideos) {
     return (
       <main className="min-h-screen">
         <TopNav />
-        <div className="px-6 py-12 text-center">
-          <h1 className="text-2xl font-bold text-white">Video not found</h1>
-          <Link href="/" className="text-pink-400 hover:underline mt-4 inline-block">
-            Go back home
+        <div className="px-4 md:px-6 pb-10">
+          <Link
+            href="/videos"
+            className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm"
+          >
+            ← Back to Videos
           </Link>
+
+          <div className="max-w-2xl mx-auto">
+            <div className="neon-border rounded-2xl p-8 bg-gradient-to-br from-pink-500/10 via-black/0 to-purple-500/10 text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-pink-500/20 flex items-center justify-center">
+                <svg
+                  className="w-10 h-10 text-pink-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+
+              <h1 className="text-2xl font-bold text-white mb-2">
+                Premium Content
+              </h1>
+              <p className="text-white/70 mb-6">
+                This video is available to members only. Subscribe to unlock
+                unlimited access to our entire catalog.
+              </p>
+
+              <div className="p-4 rounded-xl bg-black/30 border border-white/10 mb-6">
+                <h2 className="font-semibold text-white">{video.title}</h2>
+                {video.avgStars > 0 && (
+                  <div className="text-sm text-yellow-400 mt-1">
+                    ★ {video.avgStars.toFixed(1)} ({video.starsCount} ratings)
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  href="/subscribe"
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-medium transition"
+                >
+                  Subscribe Now
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-6 py-3 rounded-xl bg-yellow-500/80 hover:bg-yellow-500 text-black font-medium transition"
+                >
+                  Become Diamond Member
+                </Link>
+              </div>
+
+              <p className="mt-6 text-xs text-white/40">
+                Already a member?{" "}
+                <Link href="/login" className="text-pink-400 hover:underline">
+                  Log in
+                </Link>
+              </p>
+            </div>
+
+            {/* Free preview section */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Free Videos
+              </h3>
+              <p className="text-white/60 text-sm mb-4">
+                Check out our free showcase videos while you decide:
+              </p>
+              <Link
+                href="/free"
+                className="inline-block px-4 py-2 rounded-xl bg-green-500/20 border border-green-400/30 text-green-400 text-sm font-medium hover:bg-green-500/30 transition"
+              >
+                View Free Videos →
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     );
   }
 
-  // Get related videos (same performer or category)
-  const related = videos
-    .filter((v) => v.viewkey !== video.viewkey)
-    .slice(0, 4);
+  // User has access - show the video
+  const relatedVideos = await db.video.findMany({
+    where: {
+      id: { not: video.id },
+      isShowcase: false,
+    },
+    take: 4,
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <main className="min-h-screen">
       <TopNav />
       <div className="px-4 md:px-6 pb-10">
-        <Link href="/" className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm">
-          ← Back to Home
+        <Link
+          href="/videos"
+          className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm"
+        >
+          ← Back to Videos
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Main Video */}
           <div className="lg:col-span-2">
             <div className="aspect-video bg-black rounded-xl overflow-hidden neon-border">
-              <iframe
-                src={`https://www.pornhub.com/embed/${video.viewkey}`}
-                frameBorder={0}
-                width="100%"
-                height="100%"
-                allowFullScreen
-              />
-            </div>
-
-            <h1 className="mt-3 md:mt-4 text-lg md:text-2xl font-bold text-white">{video.title}</h1>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-white/60">
-              <span>{formatViews(video.views)} views</span>
-              <span>{formatDuration(video.duration)}</span>
-              {video.favorite === 1 && (
-                <span className="text-yellow-400">★ Featured</span>
+              {video.embedUrl ? (
+                <iframe
+                  src={video.embedUrl}
+                  frameBorder={0}
+                  width="100%"
+                  height="100%"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white/30">
+                  Video embed not configured
+                </div>
               )}
             </div>
 
-            {video.performers && (
-              <div className="mt-3 md:mt-4">
-                <span className="text-white/50 text-xs md:text-sm">Performers: </span>
-                <span className="text-pink-300 text-sm">{video.performers}</span>
-              </div>
-            )}
+            <h1 className="mt-3 md:mt-4 text-lg md:text-2xl font-bold text-white">
+              {video.title}
+            </h1>
 
-            {video.categories && (
-              <div className="mt-2">
-                <span className="text-white/50 text-xs md:text-sm">Collections: </span>
-                <span className="text-white/70 text-sm">{video.categories.replace(/;/g, ", ")}</span>
-              </div>
-            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-white/60">
+              <span className="text-pink-400 font-medium">Premium</span>
+              {video.starsCount > 0 && (
+                <span>
+                  ★ {video.avgStars.toFixed(1)} ({video.starsCount} ratings)
+                </span>
+              )}
+            </div>
 
-            {video.tags && (
-              <div className="mt-3 md:mt-4 flex flex-wrap gap-1.5 md:gap-2">
-                {video.tags.split(";").slice(0, 8).map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 py-1 text-[10px] md:text-xs rounded-lg bg-white/10 text-white/70"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Star Rating System */}
+            {/* Star Rating */}
             <div className="mt-4 md:mt-6">
-              <StarRating viewkey={video.viewkey} />
+              <StarRating videoId={video.id} />
             </div>
 
             {/* Comments Section */}
-            <Comments viewkey={video.viewkey} />
+            <Comments videoId={video.id} />
           </div>
 
           {/* Sidebar - Related */}
           <div className="lg:col-span-1 mt-4 lg:mt-0">
-            <h2 className="text-lg font-semibold neon-text mb-4">More Videos</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-4">
-              {related.map((v) => (
-                <Link
-                  key={v.viewkey}
-                  href={`/videos/${v.viewkey}`}
-                  className="flex flex-col lg:flex-row gap-2 lg:gap-3 group"
-                >
-                  <div className="relative w-full lg:w-32 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
-                    {v.primary_thumb && (
-                      <img
-                        src={v.primary_thumb}
-                        alt={v.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    )}
-                    <div className="absolute bottom-1 right-1 bg-black/80 px-1 py-0.5 rounded text-xs text-white">
-                      {formatDuration(v.duration)}
+            <h2 className="text-lg font-semibold neon-text mb-4">
+              More Videos
+            </h2>
+
+            {relatedVideos.length === 0 ? (
+              <p className="text-white/50 text-sm">No other videos available.</p>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-4">
+                {relatedVideos.map((v) => (
+                  <Link
+                    key={v.id}
+                    href={`/videos/${v.slug}`}
+                    className="flex flex-col lg:flex-row gap-2 lg:gap-3 group"
+                  >
+                    <div className="relative w-full lg:w-32 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
+                      <div className="w-full h-full flex items-center justify-center text-white/30">
+                        <svg
+                          className="w-8 h-8"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                          />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs lg:text-sm font-medium text-white line-clamp-2 group-hover:text-pink-300 transition">
-                      {v.title}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs lg:text-sm font-medium text-white line-clamp-2 group-hover:text-pink-300 transition">
+                        {v.title}
+                      </div>
+                      <div className="mt-1 text-[10px] lg:text-xs text-white/50">
+                        {v.avgStars > 0 && (
+                          <span className="text-yellow-400">
+                            ★ {v.avgStars.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="mt-1 text-[10px] lg:text-xs text-white/50">
-                      {formatViews(v.views)} views
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
