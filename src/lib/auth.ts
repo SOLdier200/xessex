@@ -33,7 +33,7 @@ export function isSubscriptionActive(
 ) {
   if (!sub) return false;
   if (sub.status !== "ACTIVE") return false;
-  if (!sub.expiresAt) return false;
+  if (!sub.expiresAt) return true; // null = lifetime / admin
   return sub.expiresAt.getTime() > Date.now();
 }
 

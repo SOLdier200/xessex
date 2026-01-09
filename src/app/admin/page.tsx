@@ -140,36 +140,20 @@ export default function AdminPage() {
     }
   };
 
-  const publishToSupabase = async () => {
+  async function publishApprovedToSupabase() {
     setPublishing(true);
     try {
-      // 1) Export approved.json
-      const res1 = await fetch("/api/admin/export", { method: "POST" });
-      const data1 = await res1.json();
-      if (!data1.ok) {
-        alert(data1.error || "Export failed");
-        return;
+      const res = await fetch("/api/admin/publish", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (data?.ok) {
+        alert(`Published ${data.published} / ${data.approved} approved videos.`);
+      } else {
+        alert(data?.error || "Publish failed");
       }
-
-      // 2) Publish from approved.json to Supabase
-      const res2 = await fetch("/api/admin/publish-approved", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const data2 = await res2.json();
-      if (!data2.ok) {
-        alert(data2.error || "Publish failed");
-        return;
-      }
-
-      alert(
-        `Exported ${data1.exported} → Published ${data2.upserted} (skipped ${data2.skipped})`
-      );
     } finally {
       setPublishing(false);
     }
-  };
+  }
 
   const deleteRejected = async () => {
     if (!confirm(`Are you sure you want to permanently delete all ${stats.rejected} rejected videos? This cannot be undone!`)) {
@@ -308,17 +292,17 @@ export default function AdminPage() {
         </div>
         <div className="flex gap-3 flex-wrap">
           <button
-            onClick={publishToSupabase}
+            onClick={publishApprovedToSupabase}
             disabled={publishing}
             className="px-4 py-2 rounded-full border border-emerald-400/50 bg-emerald-500/20 text-white text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
           >
-            {publishing ? "Publishing..." : "Publish to Supabase"}
+            {publishing ? "Publishing..." : "Publish Approved → Live"}
           </button>
           <button
             onClick={() => setShowShowcaseModal(true)}
             className="px-4 py-2 rounded-full border border-yellow-400/50 bg-yellow-500/20 text-white text-sm font-semibold hover:bg-yellow-500/30 transition"
           >
-            Set 3 Free Videos
+            Select the 3 Free Page Vids
           </button>
           <button
             onClick={deleteRejected}
