@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 const Body = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(8).max(200),
+  password: z.string().min(5),
 });
 
 /**

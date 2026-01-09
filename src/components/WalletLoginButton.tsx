@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ConnectionProvider, WalletProvider, useWallet } from "@solana/wallet-adapter-react";
-import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-function InnerLogin() {
+export default function WalletLoginButton() {
   const wallet = useWallet();
   const [status, setStatus] = useState("");
 
@@ -59,20 +58,5 @@ function InnerLogin() {
       )}
       {status && <div className="text-sm text-white/70">{status}</div>}
     </div>
-  );
-}
-
-export default function WalletLoginButton() {
-  const wallets = [new PhantomWalletAdapter(), new SolflareWalletAdapter()];
-  const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
-
-  return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          <InnerLogin />
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
   );
 }

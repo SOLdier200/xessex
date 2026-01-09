@@ -28,6 +28,10 @@ export async function getAccessContext() {
     user?.role === "MOD" ||
     (user?.walletAddress && ADMIN_WALLETS.has(user.walletAddress));
 
+  // Diamond email users who haven't linked a wallet yet
+  const hasLinkedWallet = !!user?.walletAddress || !!user?.solWallet;
+  const needsSolWalletLink = tier === "diamond" && !!user?.email && !hasLinkedWallet;
+
   return {
     user,
     sub,
@@ -35,6 +39,7 @@ export async function getAccessContext() {
     tier,
     isAuthed: !!user,
     isAdminOrMod,
+    needsSolWalletLink,
     canViewAllVideos: isAdminOrMod || tier === "member" || tier === "diamond",
     canComment: isAdminOrMod || tier === "diamond",
     canRateStars: isAdminOrMod || tier === "diamond",

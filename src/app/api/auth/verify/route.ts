@@ -7,12 +7,6 @@ import { setSessionCookie } from "@/lib/authCookies";
 
 export const runtime = "nodejs";
 
-/**
- * POST /api/auth/verify
- *
- * Wallet authentication: verifies Solana signature and creates session.
- * Uses shared session/cookie helpers for consistency with email auth.
- */
 export async function POST(req: Request) {
   try {
     const { wallet, message, signature } = await req.json();
@@ -32,17 +26,23 @@ export async function POST(req: Request) {
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401 });
 
-    // Upsert user by wallet address
+    // Create or fetch wallet user (email fields stay null)
     const user = await db.user.upsert({
       where: { walletAddress: w },
       update: {},
       create: { walletAddress: w },
+      select: { id: true },
     });
 
-    // Create session using shared helper
-    const { token, expiresAt } = await createSession(user.id);
+    // Ensure 1:1 subscription row exists (helps NOWPayments upsert & access checks)
+    await db.subscription
+      .create({
+        data: { userId: user.id, tier: "MEMBER", status: "PENDING", expiresAt: null },
+      })
+      .catch(() => {});
 
-    // Set cookie using shared helper
+    // Create session using shared helper (TTL from env)
+    const { token, expiresAt } = await createSession(user.id);
     await setSessionCookie(token, expiresAt);
 
     return NextResponse.json({ ok: true });

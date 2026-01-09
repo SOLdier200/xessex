@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 const Body = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(8).max(200),
+  password: z.string().min(5),
 });
 
 /**
@@ -44,8 +44,13 @@ export async function POST(req: NextRequest) {
   const { token, expiresAt } = await createSession(user.id);
   await setSessionCookie(token, expiresAt);
 
-  return NextResponse.json({
-    ok: true,
-    user: { id: user.id, email: user.email, subscription: user.subscription },
-  });
+  // Determine membership for UI feedback
+  const sub = user.subscription;
+  const active = !!sub && sub.status === "ACTIVE" && (!sub.expiresAt || sub.expiresAt > new Date());
+
+  const membership =
+    active && sub?.tier === "DIAMOND" ? "DIAMOND" :
+    active ? "MEMBER" : "FREE";
+
+  return NextResponse.json({ ok: true, membership });
 }
