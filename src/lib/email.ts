@@ -9,7 +9,7 @@ if (!process.env.RESEND_API_KEY) {
 export async function sendPasswordResetEmail(to: string, resetLink: string) {
   const from = process.env.EMAIL_FROM || "Xessex <no-reply@xessex.me>";
 
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from,
     to,
     subject: "Reset your Xessex password",
@@ -40,4 +40,12 @@ export async function sendPasswordResetEmail(to: string, resetLink: string) {
       </div>
     `,
   });
+
+  // Resend SDK returns { data: { id }, error } style - be defensive
+  const id =
+    (result as { data?: { id?: string } })?.data?.id ||
+    (result as { id?: string })?.id ||
+    null;
+
+  return { id };
 }

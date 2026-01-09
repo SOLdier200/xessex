@@ -79,7 +79,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
-        <Link href="/categories" className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm">
+        <Link href="/collections" className="text-gray-400 hover:text-white mb-4 md:mb-6 inline-block text-sm">
           ← Back to Collections
         </Link>
 

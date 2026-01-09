@@ -100,10 +100,61 @@ model PasswordResetToken {
   usedAt    DateTime?
   createdAt DateTime @default(now())
 
+  // Tie token to outbound email for tracking
+  resendEmailId String?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([resendEmailId])
+}
+
+model PasswordResetAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  userAgent String?
+
+  // "REQUEST" = /forgot, "RESET" = /reset
+  action    String
+
+  // Whether we accepted the attempt (not whether email exists)
+  allowed   Boolean
+
+  // Reason like "RATE_LIMIT_IP", "RATE_LIMIT_EMAIL", "OK"
+  reason    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@index([action, createdAt])
+}
+
+model ResendWebhookEvent {
+  id            String   @id @default(cuid())
+
+  // Svix headers (used for dedupe / replay safety)
+  svixId        String   @unique
+  svixTimestamp String?
+  svixSignature String?
+
+  type          String
+  createdAt     DateTime @default(now())
+
+  // Resend email id (when present)
+  resendEmailId String?
+  to            String?
+  from          String?
+  subject       String?
+
+  // Keep full payload for debugging/reporting
+  payload       Json
+
+  @@index([type, createdAt])
+  @@index([resendEmailId])
+  @@index([to])
 }
 
 model Subscription {

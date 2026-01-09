@@ -50,7 +50,7 @@ export default function CategoriesPage() {
 
       <div className="px-4 md:px-6 pb-10">
         <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
-          <h1 className="text-xl md:text-2xl font-semibold neon-text">Collections</h1>
+          <img src="/logos/textlogo/collections.png" alt="Collections" className="h-[50px] md:h-[65px]" />
           <p className="mt-2 text-sm text-white/70">
             Browse videos by collection
           </p>
@@ -60,7 +60,7 @@ export default function CategoriesPage() {
           {CATEGORIES.map((c) => (
             <Link
               key={c.slug}
-              href={`/categories/${c.slug}`}
+              href={`/collections/${c.slug}`}
               className="neon-border rounded-2xl bg-black/30 p-3 md:p-5 hover:bg-white/5 active:bg-white/10 transition group"
             >
               <div className="flex items-center gap-2 md:gap-3">

@@ -30,7 +30,7 @@ export default function TopNav() {
             Admin
           </Link>
           <Link
-            href="/categories"
+            href="/collections"
             className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-emerald-300/70 hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
           >
             Collections
@@ -88,7 +88,7 @@ export default function TopNav() {
             Admin
           </Link>
           <Link
-            href="/categories"
+            href="/collections"
             onClick={() => setMenuOpen(false)}
             className="flex items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-emerald-500/30"
           >
