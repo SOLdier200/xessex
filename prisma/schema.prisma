@@ -95,12 +95,13 @@ model Subscription {
 // ============================================================================
 
 model Video {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  title     String
-  embedUrl  String
-  tags      String[] @default([])
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  embedUrl     String
+  thumbnailUrl String?
+  tags         String[] @default([])
+  createdAt    DateTime @default(now())
 
   isShowcase Boolean @default(false) // exactly 3 should be true
 

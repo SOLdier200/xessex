@@ -70,6 +70,13 @@ export default async function VideosPage() {
                   className="neon-border rounded-xl bg-black/30 overflow-hidden group"
                 >
                   <div className="aspect-video bg-black/60 relative">
+                    {v.thumbnailUrl && (
+                      <img
+                        src={v.thumbnailUrl}
+                        alt={v.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                     <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200">
                       FREE
                     </span>
@@ -107,6 +114,13 @@ export default async function VideosPage() {
                       className="neon-border rounded-xl bg-black/30 overflow-hidden group"
                     >
                       <div className="aspect-video bg-black/60 relative">
+                        {v.thumbnailUrl && (
+                          <img
+                            src={v.thumbnailUrl}
+                            alt={v.title}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
                         <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 border border-pink-400/30 text-pink-200">
                           PREMIUM
                         </span>

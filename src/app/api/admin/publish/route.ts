@@ -34,6 +34,7 @@ export async function POST() {
 
     const title = String(v.title || "(untitled)");
     const embedUrl = `https://www.pornhub.com/embed/${slug}`;
+    const thumbnailUrl = v.primary_thumb ? String(v.primary_thumb) : null;
     const viewsCount = asNumber(v.views, 0);
     const tags = tagsToArray(v.tags);
 
@@ -43,6 +44,7 @@ export async function POST() {
         slug,
         title,
         embedUrl,
+        thumbnailUrl,
         tags,
         viewsCount,
         isShowcase: false, // publish defaults to premium; ShowcaseModal sets showcase
@@ -50,6 +52,7 @@ export async function POST() {
       update: {
         title,
         embedUrl,
+        thumbnailUrl,
         tags,
         viewsCount,
       },

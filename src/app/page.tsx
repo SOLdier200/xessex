@@ -105,7 +105,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-purple-400/80">Leaderboard</span>
-                <div className="mt-1 text-lg font-semibold">Diamond Ladder</div>
+                <img src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" className="mt-1 h-6" />
                 <p className="mt-2 text-sm text-white/70">See top ranked Diamond Members!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">

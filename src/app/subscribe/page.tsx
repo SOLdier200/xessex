@@ -1,26 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ConnectionProvider,
-  WalletProvider,
-  useWallet,
-  useConnection,
-} from "@solana/wallet-adapter-react";
-import { WalletModalProvider, WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-import {
-  Transaction,
-  SystemProgram,
-  PublicKey,
-  LAMPORTS_PER_SOL,
-} from "@solana/web3.js";
 import TopNav from "../components/TopNav";
-import "@solana/wallet-adapter-react-ui/styles.css";
-
-const TREASURY = process.env.NEXT_PUBLIC_SUB_TREASURY_WALLET || "";
-const PRICE_SOL = parseFloat(process.env.NEXT_PUBLIC_SUB_PRICE_SOL || "0.05");
 
 // NOWPayments hosted invoice ids (your 4 buttons)
 const NOWPAYMENTS_IIDS = {
@@ -58,11 +40,9 @@ function SubscribeInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { connection } = useConnection();
-  const wallet = useWallet();
-
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   // waiting state
   const [waiting, setWaiting] = useState(false);
@@ -126,6 +106,7 @@ function SubscribeInner() {
 
   async function handleNowPayments(plan: keyof typeof NOWPAYMENTS_IIDS) {
     setLoading(true);
+    setLoadingPlan(plan);
     setStatus("");
 
     try {
@@ -149,6 +130,7 @@ function SubscribeInner() {
       window.location.href = `https://nowpayments.io/payment/?iid=${iid}`;
     } finally {
       setLoading(false);
+      setLoadingPlan(null);
     }
   }
 
@@ -204,64 +186,6 @@ function SubscribeInner() {
   useEffect(() => {
     return () => stopPolling();
   }, []);
-
-  async function handleSubscribeSOL() {
-    if (!wallet.publicKey || !wallet.signTransaction) {
-      setStatus("Please connect your wallet first.");
-      return;
-    }
-
-    if (!TREASURY) {
-      setStatus("Treasury wallet not configured.");
-      return;
-    }
-
-    setLoading(true);
-    setStatus("Preparing transaction...");
-
-    try {
-      const lamports = Math.round(PRICE_SOL * LAMPORTS_PER_SOL);
-      const treasuryPubkey = new PublicKey(TREASURY);
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-
-      const tx = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: wallet.publicKey,
-          toPubkey: treasuryPubkey,
-          lamports,
-        })
-      );
-
-      tx.recentBlockhash = blockhash;
-      tx.lastValidBlockHeight = lastValidBlockHeight;
-      tx.feePayer = wallet.publicKey;
-
-      setStatus("Please approve the transaction...");
-      const signed = await wallet.signTransaction(tx);
-
-      setStatus("Sending transaction...");
-      const sig = await connection.sendRawTransaction(signed.serialize());
-
-      setStatus("Confirming...");
-      await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight });
-
-      setStatus("Finalizing subscription...");
-      await fetch(`/subscribe/confirm?sig=${encodeURIComponent(sig)}`, { method: "POST" }).catch(
-        () => null
-      );
-
-      setStatus("");
-      setPollMsg("Verifying payment and activating membership...");
-      router.replace("/subscribe?waiting=1");
-      startPollingMembership();
-    } catch (err: unknown) {
-      console.error(err);
-      setStatus(err instanceof Error ? err.message : "Transaction failed");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function copyText(text: string) {
     try {
@@ -336,38 +260,6 @@ function SubscribeInner() {
         </div>
       )}
 
-      {/* SOL PAYMENT PANEL */}
-      <div className="w-full neon-border rounded-2xl p-6 bg-black/30">
-        <h1 className="text-2xl font-semibold neon-text">Subscribe with SOL</h1>
-        <p className="mt-2 text-sm text-white/70">
-          Pay {PRICE_SOL} SOL to unlock all premium videos for 30 days.
-        </p>
-
-        <div className="mt-6 space-y-4">
-          <WalletMultiButton />
-
-          {wallet.connected && (
-            <button
-              onClick={handleSubscribeSOL}
-              disabled={loading || waiting}
-              className="w-full rounded-xl bg-pink-500 px-4 py-3 font-semibold text-black hover:bg-pink-400 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Processing..." : waiting ? "Waiting..." : `Pay ${PRICE_SOL} SOL`}
-            </button>
-          )}
-
-          {status && (
-            <div className="text-sm text-white/70 bg-black/40 rounded-lg p-3 break-words">
-              {status}
-            </div>
-          )}
-        </div>
-
-        <p className="mt-6 text-xs text-white/50">
-          Your subscription will activate after confirmation and webhook processing.
-        </p>
-      </div>
-
       {/* NOWPAYMENTS PANEL */}
       <div className="neon-border rounded-2xl p-6 bg-black/30">
         <h2 className="text-xl font-semibold neon-text">Subscribe with Crypto (NOWPayments)</h2>
@@ -380,9 +272,9 @@ function SubscribeInner() {
             <button
               onClick={() => handleNowPayments("MM")}
               disabled={loading || waiting}
-              className="w-full py-3 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-semibold hover:bg-sky-500/30 transition disabled:opacity-50"
+              className={`w-full py-3 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-semibold hover:bg-sky-500/30 transition ${loadingPlan === "MM" ? "opacity-50" : ""} ${loading && loadingPlan !== "MM" ? "cursor-not-allowed" : ""}`}
             >
-              Member - $3/mo
+              {loadingPlan === "MM" ? "Redirecting..." : "Member - $3/mo"}
               <div className="text-[11px] text-white/50 font-normal mt-1">
                 Stablecoins recommended
               </div>
@@ -422,25 +314,25 @@ function SubscribeInner() {
           <button
             onClick={() => handleNowPayments("MY")}
             disabled={loading || waiting}
-            className="py-3 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-semibold hover:bg-sky-500/30 transition disabled:opacity-50"
+            className={`py-3 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-semibold hover:bg-sky-500/30 transition ${loadingPlan === "MY" ? "opacity-50" : ""}`}
           >
-            Member - $30/yr
+            {loadingPlan === "MY" ? "Redirecting..." : "Member - $30/yr"}
           </button>
 
           <button
             onClick={() => handleNowPayments("DM")}
             disabled={loading || waiting}
-            className="py-3 rounded-xl bg-yellow-500/20 border border-yellow-400/50 text-yellow-200 font-semibold hover:bg-yellow-500/30 transition disabled:opacity-50"
+            className={`py-3 rounded-xl bg-yellow-500/20 border border-yellow-400/50 text-yellow-200 font-semibold hover:bg-yellow-500/30 transition ${loadingPlan === "DM" ? "opacity-50" : ""}`}
           >
-            Diamond - $18.50/mo
+            {loadingPlan === "DM" ? "Redirecting..." : "Diamond - $18.50/mo"}
           </button>
 
           <button
             onClick={() => handleNowPayments("DY")}
             disabled={loading || waiting}
-            className="py-3 rounded-xl bg-yellow-500/20 border border-yellow-400/50 text-yellow-200 font-semibold hover:bg-yellow-500/30 transition disabled:opacity-50"
+            className={`py-3 rounded-xl bg-yellow-500/20 border border-yellow-400/50 text-yellow-200 font-semibold hover:bg-yellow-500/30 transition ${loadingPlan === "DY" ? "opacity-50" : ""}`}
           >
-            Diamond - $185/yr
+            {loadingPlan === "DY" ? "Redirecting..." : "Diamond - $185/yr"}
           </button>
         </div>
 
@@ -467,26 +359,13 @@ function SubscribeInner() {
 }
 
 export default function SubscribePage() {
-  const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    []
-  );
-  const endpoint =
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
-
   return (
     <main className="min-h-screen">
       <TopNav />
       <div className="px-6 pb-10 pt-8 flex justify-center">
-        <ConnectionProvider endpoint={endpoint}>
-          <WalletProvider wallets={wallets} autoConnect>
-            <WalletModalProvider>
-              <Suspense fallback={<div className="text-white/50">Loading...</div>}>
-                <SubscribeInner />
-              </Suspense>
-            </WalletModalProvider>
-          </WalletProvider>
-        </ConnectionProvider>
+        <Suspense fallback={<div className="text-white/50">Loading...</div>}>
+          <SubscribeInner />
+        </Suspense>
       </div>
     </main>
   );

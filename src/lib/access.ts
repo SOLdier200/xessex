@@ -35,9 +35,9 @@ export async function getAccessContext() {
     tier,
     isAuthed: !!user,
     isAdminOrMod,
-    canViewAllVideos: tier === "member" || tier === "diamond",
-    canComment: tier === "diamond",
-    canRateStars: tier === "diamond",
-    canVoteComments: tier === "member" || tier === "diamond",
+    canViewAllVideos: isAdminOrMod || tier === "member" || tier === "diamond",
+    canComment: isAdminOrMod || tier === "diamond",
+    canRateStars: isAdminOrMod || tier === "diamond",
+    canVoteComments: isAdminOrMod || tier === "member" || tier === "diamond",
   };
 }

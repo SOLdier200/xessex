@@ -4,6 +4,46 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import ShowcaseModal from "./ShowcaseModal";
 
+type Toast = {
+  id: number;
+  message: string;
+  type: "loading" | "success" | "error";
+};
+
+function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
+  return (
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg backdrop-blur-sm border transition-all duration-300 ${
+            toast.type === "loading"
+              ? "bg-purple-500/20 border-purple-400/50 text-purple-200"
+              : toast.type === "success"
+              ? "bg-emerald-500/20 border-emerald-400/50 text-emerald-200"
+              : "bg-red-500/20 border-red-400/50 text-red-200"
+          }`}
+        >
+          {toast.type === "loading" && (
+            <div className="w-5 h-5 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+          )}
+          {toast.type === "success" && <span className="text-lg">✓</span>}
+          {toast.type === "error" && <span className="text-lg">✗</span>}
+          <span className="text-sm font-medium">{toast.message}</span>
+          {toast.type !== "loading" && (
+            <button
+              onClick={() => onDismiss(toast.id)}
+              className="ml-2 text-white/50 hover:text-white transition"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type Video = {
   id: number;
   viewkey: string;
@@ -47,6 +87,32 @@ export default function AdminPage() {
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showShowcaseModal, setShowShowcaseModal] = useState(false);
+
+  // Toast state
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastIdRef = useRef(0);
+
+  const addToast = useCallback((message: string, type: Toast["type"]) => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    if (type !== "loading") {
+      setTimeout(() => dismissToast(id), 4000);
+    }
+    return id;
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const updateToast = useCallback((id: number, message: string, type: Toast["type"]) => {
+    setToasts((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, message, type } : t))
+    );
+    if (type !== "loading") {
+      setTimeout(() => dismissToast(id), 4000);
+    }
+  }, [dismissToast]);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -142,14 +208,17 @@ export default function AdminPage() {
 
   async function publishApprovedToSupabase() {
     setPublishing(true);
+    const toastId = addToast("Publishing videos to live site...", "loading");
     try {
       const res = await fetch("/api/admin/publish", { method: "POST" });
       const data = await res.json().catch(() => null);
       if (data?.ok) {
-        alert(`Published ${data.published} / ${data.approved} approved videos.`);
+        updateToast(toastId, `Published ${data.published} / ${data.approved} videos to live site`, "success");
       } else {
-        alert(data?.error || "Publish failed");
+        updateToast(toastId, data?.error || "Publish failed", "error");
       }
+    } catch {
+      updateToast(toastId, "Publish failed - network error", "error");
     } finally {
       setPublishing(false);
     }
@@ -779,6 +848,9 @@ export default function AdminPage() {
         open={showShowcaseModal}
         onClose={() => setShowShowcaseModal(false)}
       />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

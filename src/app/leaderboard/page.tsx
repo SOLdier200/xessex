@@ -68,13 +68,21 @@ export default function LeaderboardPage() {
         {/* Header */}
         <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 mb-6">
           <div className="flex items-center gap-4">
-            <span className="text-4xl md:text-5xl">💎</span>
+            <div className="relative">
+              <div
+                className="absolute inset-0 blur-xl scale-150 rounded-full"
+                style={{ background: "radial-gradient(circle, rgba(168,85,247,0.35) 0%, rgba(236,72,153,0.2) 50%, transparent 70%)" }}
+              />
+              <img
+                src="/logos/diamond2.png"
+                alt="Diamond"
+                className="relative w-[70px] h-[70px] md:w-[81px] md:h-[81px] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+              />
+            </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                Diamond Ladder
-              </h1>
+              <img src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" className="h-8 md:h-10" />
               <p className="mt-1 text-sm md:text-base text-white/70">
-                Top ranked Diamond Members earning rewards for contributions
+                Top ranked Diamond Members
               </p>
             </div>
           </div>
@@ -282,7 +290,7 @@ export default function LeaderboardPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-block mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:from-purple-400 hover:to-pink-400 transition"
+            className="inline-block mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-black font-semibold hover:from-purple-400 hover:to-pink-400 transition"
           >
             Become a Diamond Member
           </Link>
