@@ -26,12 +26,12 @@ export async function GET() {
 
   const mvmUsers = await db.user.findMany({
     where: { id: { in: [...utilizedByAuthor.keys()] } },
-    select: { id: true, walletAddress: true },
+    select: { id: true, walletAddress: true, email: true },
   });
 
   const mvm = mvmUsers
     .map((u) => ({
-      user: truncWallet(u.walletAddress),
+      user: truncWallet(u.walletAddress, u.email),
       utilizedComments: utilizedByAuthor.get(u.id) ?? 0,
     }))
     .sort((a, b) => b.utilizedComments - a.utilizedComments)
@@ -72,12 +72,12 @@ export async function GET() {
 
   const karatUsers = await db.user.findMany({
     where: { id: { in: [...likesByAuthor.keys()] } },
-    select: { id: true, walletAddress: true },
+    select: { id: true, walletAddress: true, email: true },
   });
 
   const karat = karatUsers
     .map((u) => ({
-      user: truncWallet(u.walletAddress),
+      user: truncWallet(u.walletAddress, u.email),
       memberLikes: likesByAuthor.get(u.id) ?? 0,
     }))
     .sort((a, b) => b.memberLikes - a.memberLikes)

@@ -27,6 +27,6 @@ export async function GET() {
     canComment: access.canComment,
     canVoteComments: access.canVoteComments,
     canRateStars: access.canRateStars,
-    wallet: truncWallet(access.user.walletAddress),
+    wallet: truncWallet(access.user.walletAddress, access.user.email),
   });
 }

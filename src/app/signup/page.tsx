@@ -4,20 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import TopNav from "../components/TopNav";
 
-type Plan = "MM" | "MY" | "DM" | "DY";
-
-const PLANS = {
-  MM: { price: "$3", period: "month", label: "Member Monthly" },
-  MY: { price: "$30", period: "year", label: "Member Yearly", savings: "Save $6" },
-  DM: { price: "$18.50", period: "month", label: "Diamond Monthly" },
-  DY: { price: "$185", period: "year", label: "Diamond Yearly", savings: "Save $37" },
-};
-
 export default function SignupPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [memberCycle, setMemberCycle] = useState<"monthly" | "yearly">("monthly");
+  const [diamondCycle, setDiamondCycle] = useState<"monthly" | "yearly">("monthly");
 
-  const memberPlan: Plan = billingCycle === "monthly" ? "MM" : "MY";
-  const diamondPlan: Plan = billingCycle === "monthly" ? "DM" : "DY";
+  const memberPlan = memberCycle === "monthly" ? "MM" : "MY";
+  const diamondPlan = diamondCycle === "monthly" ? "DM" : "DY";
 
   return (
     <main className="min-h-screen">
@@ -27,52 +19,57 @@ export default function SignupPage() {
           &larr; Back to Home
         </Link>
 
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-bold neon-text">Choose Your Membership</h1>
           <p className="mt-2 text-white/70">Select the plan that&apos;s right for you</p>
         </div>
 
-        {/* Billing Cycle Toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-black/40 rounded-full p-1 flex gap-1">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition ${
-                billingCycle === "monthly"
-                  ? "bg-white/20 text-white"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle("yearly")}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition ${
-                billingCycle === "yearly"
-                  ? "bg-white/20 text-white"
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              Yearly
-              <span className="ml-2 text-emerald-400 text-xs">Save 16%</span>
-            </button>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Member Tier */}
-          <div className="neon-border rounded-2xl p-6 bg-black/30 border-sky-400/30 flex flex-col">
-            <div className="text-center">
-              <span className="text-4xl">&#11088;</span>
-              <h2 className="mt-3 text-2xl font-bold text-sky-400">Member</h2>
-              <div className="mt-2">
-                <span className="text-3xl font-bold text-white">
-                  {PLANS[memberPlan].price}
-                </span>
-                <span className="text-white/60">/{PLANS[memberPlan].period}</span>
+          <div className="neon-border rounded-2xl p-6 bg-black/30 border-sky-400/30 flex flex-col relative overflow-hidden">
+            {memberCycle === "yearly" && (
+              <div className="absolute top-3 right-3 bg-emerald-500 text-black text-xs font-bold px-2 py-1 rounded">
+                BEST VALUE
               </div>
-              {billingCycle === "yearly" && (
-                <div className="mt-1 text-emerald-400 text-sm">{PLANS.MY.savings}</div>
+            )}
+
+            <div className="text-center">
+              <img src="/logos/textlogo/member.png" alt="Member" className="h-[58px] mx-auto" />
+
+              {/* Billing Toggle */}
+              <div className="flex justify-center mt-3">
+                <div className="bg-black/40 rounded-full p-1 flex gap-1">
+                  <button
+                    onClick={() => setMemberCycle("monthly")}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+                      memberCycle === "monthly"
+                        ? "bg-sky-500/30 text-sky-300"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setMemberCycle("yearly")}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+                      memberCycle === "yearly"
+                        ? "bg-sky-500/30 text-sky-300"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Yearly
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <span className="text-3xl font-bold text-white">
+                  {memberCycle === "monthly" ? "$3" : "$30"}
+                </span>
+                <span className="text-white/60">/{memberCycle === "monthly" ? "month" : "year"}</span>
+              </div>
+              {memberCycle === "yearly" && (
+                <div className="mt-1 text-emerald-400 text-sm">Save $6</div>
               )}
             </div>
 
@@ -100,7 +97,7 @@ export default function SignupPage() {
             </ul>
 
             {/* Stablecoin hint for low-cost monthly */}
-            {billingCycle === "monthly" && (
+            {memberCycle === "monthly" && (
               <div className="mt-4 p-3 bg-sky-500/10 rounded-lg text-xs text-sky-300/80">
                 Tip: Stablecoins (USDT/USDC on TRC20/BSC/Polygon) recommended for low-cost plans.
               </div>
@@ -116,23 +113,58 @@ export default function SignupPage() {
 
           {/* Diamond Member Tier */}
           <div className="neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden">
-            <div className="absolute top-3 right-3 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded">
-              BEST VALUE
+            {/* Diamond image positioned to right middle */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30">
+              <img
+                src="/logos/diamond3.png"
+                alt="Diamond"
+                className="w-24 h-24"
+              />
             </div>
 
-            <div className="text-center">
-              <span className="text-4xl">&#128142;</span>
-              <h2 className="mt-3 text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-purple-400">
-                Diamond Member
-              </h2>
-              <div className="mt-2">
-                <span className="text-3xl font-bold text-white">
-                  {PLANS[diamondPlan].price}
-                </span>
-                <span className="text-white/60">/{PLANS[diamondPlan].period}</span>
+            {diamondCycle === "yearly" && (
+              <div className="absolute top-3 right-3 bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded z-10">
+                BEST VALUE
               </div>
-              {billingCycle === "yearly" && (
-                <div className="mt-1 text-emerald-400 text-sm">{PLANS.DY.savings}</div>
+            )}
+
+            <div className="text-center relative z-10">
+              <img src="/logos/textlogo/diamonmember.png" alt="Diamond Member" className="h-[62px] mx-auto" />
+
+              {/* Billing Toggle */}
+              <div className="flex justify-center mt-3">
+                <div className="bg-black/40 rounded-full p-1 flex gap-1">
+                  <button
+                    onClick={() => setDiamondCycle("monthly")}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+                      diamondCycle === "monthly"
+                        ? "bg-yellow-500/30 text-yellow-300"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setDiamondCycle("yearly")}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+                      diamondCycle === "yearly"
+                        ? "bg-yellow-500/30 text-yellow-300"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Yearly
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <span className="text-3xl font-bold text-white">
+                  {diamondCycle === "monthly" ? "$18.50" : "$185"}
+                </span>
+                <span className="text-white/60">/{diamondCycle === "monthly" ? "month" : "year"}</span>
+              </div>
+              {diamondCycle === "yearly" && (
+                <div className="mt-1 text-emerald-400 text-sm">Save $37</div>
               )}
             </div>
 

@@ -28,6 +28,16 @@ function sortKeys(obj: unknown): unknown {
 }
 
 /**
+ * Timing-safe hex string comparison
+ */
+function safeEqualHex(aHex: string, bHex: string): boolean {
+  const a = Buffer.from(aHex, "hex");
+  const b = Buffer.from(bHex, "hex");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+/**
  * Verify NOWPayments IPN signature.
  * HMAC SHA-512 of sorted JSON payload compared to x-nowpayments-sig header.
  */
@@ -37,7 +47,7 @@ function verifySig(rawJson: string, sig: string, secret: string): boolean {
     const sorted = sortKeys(parsed);
     const payload = JSON.stringify(sorted);
     const digest = crypto.createHmac("sha512", secret).update(payload).digest("hex");
-    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(sig));
+    return safeEqualHex(digest, sig);
   } catch {
     return false;
   }
@@ -79,9 +89,10 @@ export async function POST(req: NextRequest) {
 
   const payload = JSON.parse(raw);
 
-  // IPN payload mirrors "get payment status" response
+  // IPN payload fields
   const paymentStatus = String(payload.payment_status || "").toLowerCase();
   const paymentId = payload.payment_id ? String(payload.payment_id) : null;
+  const orderId = payload.order_id ? String(payload.order_id) : null;
 
   // For hosted invoice links (iid=...), IPN includes invoice_id
   const invoiceId =
@@ -89,31 +100,41 @@ export async function POST(req: NextRequest) {
     payload.iid ? String(payload.iid) :
     null;
 
-  console.log(`[IPN] Received: status=${paymentStatus}, invoiceId=${invoiceId}, paymentId=${paymentId}`);
+  console.log(`[IPN] Received: status=${paymentStatus}, orderId=${orderId}, invoiceId=${invoiceId}, paymentId=${paymentId}`);
 
   if (!paymentStatus) {
     return NextResponse.json({ ok: true, ignored: true });
   }
 
-  // 1) Find subscription by invoiceId (best for static buttons)
+  // Correlate safely (priority order):
+  // 1) order_id (unique per checkout attempt - most reliable)
+  // 2) payment_id (unique per payment)
+  // 3) invoice_id (UNSAFE as fallback - multiple users share same iid)
   let sub = null as Awaited<ReturnType<typeof db.subscription.findFirst>>;
 
-  if (invoiceId) {
-    sub = await db.subscription.findFirst({
-      where: { nowPaymentsInvoiceId: invoiceId },
+  if (orderId) {
+    sub = await db.subscription.findUnique({
+      where: { nowPaymentsOrderId: orderId },
     });
   }
 
-  // 2) Fallback: by paymentId if using API-created payments
   if (!sub && paymentId) {
     sub = await db.subscription.findFirst({
       where: { nowPaymentsPaymentId: paymentId },
     });
   }
 
+  if (!sub && invoiceId) {
+    // Fallback only; log warning as this is not unique across users
+    console.warn("[IPN] Falling back to invoiceId correlation (not unique!)", { invoiceId });
+    sub = await db.subscription.findFirst({
+      where: { nowPaymentsInvoiceId: invoiceId },
+    });
+  }
+
   // If not found, acknowledge to prevent retries but log it
   if (!sub) {
-    console.warn(`[IPN] No subscription found for invoiceId=${invoiceId}, paymentId=${paymentId}`);
+    console.warn(`[IPN] No subscription found for orderId=${orderId}, invoiceId=${invoiceId}, paymentId=${paymentId}`);
     return NextResponse.json({ ok: true, unlinked: true });
   }
 
@@ -121,6 +142,7 @@ export async function POST(req: NextRequest) {
   await db.subscription.update({
     where: { id: sub.id },
     data: {
+      nowPaymentsOrderId: orderId ?? sub.nowPaymentsOrderId,
       nowPaymentsInvoiceId: invoiceId ?? sub.nowPaymentsInvoiceId,
       nowPaymentsPaymentId: paymentId ?? sub.nowPaymentsPaymentId,
       status:
@@ -133,11 +155,12 @@ export async function POST(req: NextRequest) {
 
   // Activate only on FINAL PAID status
   if (isFinalPaid(paymentStatus)) {
-    // Determine plan from invoice mapping
-    const plan = invoiceId ? IID_TO_PLAN.get(invoiceId) : null;
+    // Determine plan from invoice mapping (use stored invoiceId if IPN doesn't provide one)
+    const effectiveInvoiceId = invoiceId ?? sub.nowPaymentsInvoiceId;
+    const plan = effectiveInvoiceId ? IID_TO_PLAN.get(effectiveInvoiceId) : null;
 
     if (!plan) {
-      console.warn(`[IPN] Unknown invoice ${invoiceId}, not granting tier`);
+      console.warn(`[IPN] Unknown invoice ${effectiveInvoiceId}, not granting tier`);
       return NextResponse.json({ ok: true, paid_but_unknown_invoice: true });
     }
 

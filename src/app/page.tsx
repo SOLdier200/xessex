@@ -77,7 +77,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-yellow-400/80">Earn Money</span>
-                <div className="mt-1 text-lg font-semibold">Register as Diamond Member</div>
+                <img src="/logos/textlogo/membersignup.png" alt="Member Signup" className="mt-1 h-[30px]" />
                 <p className="mt-2 text-sm text-white/70">Start earning <span className="text-green-400 font-bold">$</span> for viewing and grading content!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -91,7 +91,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-white/60">Diamond Member</span>
-                <div className="mt-1 text-lg font-semibold">Diamond Member Login</div>
+                <img src="/logos/textlogo/memberlogin.png" alt="Member Login" className="mt-1 h-[30px]" />
                 <p className="mt-2 text-sm text-white/70">One-click sign in for Ultimate Access!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -105,7 +105,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-purple-400/80">Leaderboard</span>
-                <img src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" className="mt-1 h-6" />
+                <img src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" className="mt-1 h-[30px]" />
                 <p className="mt-2 text-sm text-white/70">See top ranked Diamond Members!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">

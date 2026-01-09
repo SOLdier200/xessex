@@ -25,9 +25,25 @@ export function clampInt(n: number, min: number, max: number): number {
 }
 
 /**
- * Truncate wallet address for display
+ * Truncate wallet address or email for display
+ * Returns "Anonymous" if both are empty/null
  */
-export function truncWallet(w: string): string {
-  if (w.length <= 10) return w;
-  return `${w.slice(0, 4)}…${w.slice(-4)}`;
+export function truncWallet(wallet: string | null | undefined, email?: string | null): string {
+  if (wallet && wallet.length > 0) {
+    if (wallet.length <= 10) return wallet;
+    return `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
+  }
+  if (email && email.length > 0) {
+    const atIndex = email.indexOf("@");
+    if (atIndex > 0) {
+      const local = email.slice(0, atIndex);
+      const domain = email.slice(atIndex);
+      if (local.length > 4) {
+        return `${local.slice(0, 2)}***${domain}`;
+      }
+      return `${local[0]}***${domain}`;
+    }
+    return email.slice(0, 4) + "***";
+  }
+  return "Anonymous";
 }

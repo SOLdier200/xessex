@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import bs58 from "bs58";
 import nacl from "tweetnacl";
+import { db } from "@/lib/prisma";
+import { createSession } from "@/lib/auth";
+import { setSessionCookie } from "@/lib/authCookies";
 
-const prisma = new PrismaClient();
+export const runtime = "nodejs";
 
-function cookieOpts() {
-  const prod = process.env.NODE_ENV === "production";
-  return { httpOnly: true, secure: prod, sameSite: "lax" as const, path: "/" };
-}
-
+/**
+ * POST /api/auth/verify
+ *
+ * Wallet authentication: verifies Solana signature and creates session.
+ * Uses shared session/cookie helpers for consistency with email auth.
+ */
 export async function POST(req: Request) {
   try {
     const { wallet, message, signature } = await req.json();
@@ -29,20 +32,20 @@ export async function POST(req: Request) {
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401 });
 
-    const user = await prisma.user.upsert({
+    // Upsert user by wallet address
+    const user = await db.user.upsert({
       where: { walletAddress: w },
       update: {},
       create: { walletAddress: w },
     });
 
-    const token = crypto.randomUUID() + crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 14);
+    // Create session using shared helper
+    const { token, expiresAt } = await createSession(user.id);
 
-    await prisma.session.create({ data: { userId: user.id, token, expiresAt } });
+    // Set cookie using shared helper
+    await setSessionCookie(token, expiresAt);
 
-    const res = NextResponse.json({ ok: true });
-    res.cookies.set("xessex_session", token, { ...cookieOpts(), expires: expiresAt });
-    return res;
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("Verify error:", err);
     return NextResponse.json({ ok: false, error: "Verify failed" }, { status: 500 });

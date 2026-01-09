@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
+
+function makeOrderId() {
+  // <= 30 chars, unique per checkout attempt
+  return "sx_" + crypto.randomBytes(10).toString("hex"); // 23 chars
+}
 
 type Plan = "MM" | "MY" | "DM" | "DY";
 
@@ -48,8 +54,10 @@ export async function POST(req: NextRequest) {
 
   const iid = PLAN_TO_IID[plan];
   const tier = PLAN_TO_TIER[plan];
+  const orderId = makeOrderId();
 
   // Ensure the user has a Subscription row (1:1)
+  // Generate unique orderId per checkout attempt for safe IPN correlation
   const sub = await db.subscription.upsert({
     where: { userId: access.user.id },
     create: {
@@ -57,19 +65,26 @@ export async function POST(req: NextRequest) {
       tier,
       status: "PENDING",
       nowPaymentsInvoiceId: iid,
+      nowPaymentsOrderId: orderId,
+      nowPaymentsPaymentId: null,
       expiresAt: null,
     },
     update: {
       tier,
       status: "PENDING",
       nowPaymentsInvoiceId: iid,
+      nowPaymentsOrderId: orderId, // rotate each checkout attempt
+      nowPaymentsPaymentId: null,  // clear old payment id
       // don't set expiresAt yet; only set on paid
     },
   });
 
+  // Include order_id in redirect URL for IPN correlation
+  const redirectUrl = `https://nowpayments.io/payment/?iid=${iid}&order_id=${encodeURIComponent(orderId)}`;
+
   return NextResponse.json({
     ok: true,
-    redirectUrl: `https://nowpayments.io/payment/?iid=${iid}`,
+    redirectUrl,
     plan,
     tier,
     subscriptionId: sub.id,

@@ -41,7 +41,9 @@ enum CommentStatus {
 
 model User {
   id            String   @id @default(cuid())
-  walletAddress String   @unique
+  walletAddress String?  @unique
+  email         String?  @unique
+  passHash      String?
   role          UserRole @default(USER)
   createdAt     DateTime @default(now())
 
@@ -82,6 +84,7 @@ model Subscription {
   // Provider tracking
   nowPaymentsPaymentId String?
   nowPaymentsInvoiceId String?
+  nowPaymentsOrderId   String?  @unique // unique per checkout attempt for safe IPN correlation
   lastTxSig            String? // replay protection for SOL payments
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

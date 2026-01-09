@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     where: { videoId, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
     include: {
-      author: { select: { walletAddress: true } },
+      author: { select: { walletAddress: true, email: true } },
       memberVotes: {
         select: {
           value: true,
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
       id: c.id,
       body: c.body,
       createdAt: c.createdAt.toISOString(),
-      authorWallet: truncWallet(c.author.walletAddress),
+      authorWallet: truncWallet(c.author.walletAddress, c.author.email),
       memberLikes,
       memberDislikes,
       userVote,
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       memberDislikes: 0,
     },
     include: {
-      author: { select: { walletAddress: true } },
+      author: { select: { walletAddress: true, email: true } },
     },
   });
 
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
       id: comment.id,
       body: comment.body,
       createdAt: comment.createdAt.toISOString(),
-      authorWallet: truncWallet(comment.author.walletAddress),
+      authorWallet: truncWallet(comment.author.walletAddress, comment.author.email),
       memberLikes: 0,
       memberDislikes: 0,
       userVote: null,

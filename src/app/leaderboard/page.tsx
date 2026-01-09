@@ -74,7 +74,7 @@ export default function LeaderboardPage() {
                 style={{ background: "radial-gradient(circle, rgba(168,85,247,0.35) 0%, rgba(236,72,153,0.2) 50%, transparent 70%)" }}
               />
               <img
-                src="/logos/diamond2.png"
+                src="/logos/diamond3.png"
                 alt="Diamond"
                 className="relative w-[70px] h-[70px] md:w-[81px] md:h-[81px] drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]"
               />
