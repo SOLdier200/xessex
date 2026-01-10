@@ -9,27 +9,19 @@ function AgeGateContent() {
   const next = sp.get("next") || "/";
   const [loading, setLoading] = useState(false);
 
-  async function handleAccept() {
+  function handleAccept() {
     if (loading) return;
     setLoading(true);
 
     try {
-      // Set per-tab sessionStorage flag
+      // Set all storage methods synchronously (bulletproof for mobile)
+      document.cookie = "age_ok=1; path=/; max-age=31536000";
+      localStorage.setItem("age_ok_tab", "1");
       sessionStorage.setItem("age_ok_tab", "1");
+    } catch {}
 
-      // Set session cookie via API
-      await fetch("/api/age/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ next }),
-      });
-
-      // Navigate to destination
-      window.location.href = next;
-    } catch (err) {
-      console.error("Age verification error:", err);
-      setLoading(false);
-    }
+    // Raw navigation - must be direct, no async
+    window.location.href = next;
   }
 
   function handleLeave() {

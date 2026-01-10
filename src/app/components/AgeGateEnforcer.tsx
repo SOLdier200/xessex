@@ -18,8 +18,12 @@ export function AgeGateEnforcer() {
       pathname.startsWith("/auth/callback")
     ) return;
 
-    const okTab = sessionStorage.getItem("age_ok_tab") === "1";
-    if (okTab) return;
+    // Check all storage methods (bulletproof for mobile)
+    const ok =
+      localStorage.getItem("age_ok_tab") === "1" ||
+      sessionStorage.getItem("age_ok_tab") === "1" ||
+      document.cookie.includes("age_ok=1");
+    if (ok) return;
 
     // Redirect to age gate with return URL
     const search = sp?.toString();
