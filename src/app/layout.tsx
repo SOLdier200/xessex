@@ -16,6 +16,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "xessex",
   description: "Adults only content platform",
+  other: {
+    "RATING": "RTA-5042-1996-1400-1577-RTA",
+  },
 };
 
 export default function RootLayout({

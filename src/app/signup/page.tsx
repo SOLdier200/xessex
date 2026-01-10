@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import TopNav from "../components/TopNav";
 
 export default function SignupPage() {
@@ -34,7 +35,7 @@ export default function SignupPage() {
             )}
 
             <div className="text-center">
-              <img src="/logos/textlogo/member.png" alt="Member" className="h-[58px] mx-auto" />
+              <Image src="/logos/textlogo/member.png" alt="Member" width={974} height={286} priority fetchPriority="high" className="h-[58px] w-auto mx-auto" />
 
               {/* Billing Toggle */}
               <div className="flex justify-center mt-3">
@@ -129,7 +130,7 @@ export default function SignupPage() {
             )}
 
             <div className="text-center relative z-10">
-              <img src="/logos/textlogo/diamonmember.png" alt="Diamond Member" className="h-[62px] mx-auto" />
+              <Image src="/logos/textlogo/diamonmember.png" alt="Diamond Member" width={1536} height={282} priority fetchPriority="high" className="h-[62px] w-auto mx-auto" />
 
               {/* Billing Toggle */}
               <div className="flex justify-center mt-3">

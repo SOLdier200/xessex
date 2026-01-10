@@ -1,8 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
 import fs from "fs";
 import path from "path";
 import TopNav from "./components/TopNav";
 import WalletStatus from "./components/WalletStatus";
+import VideoSearch from "./components/VideoSearch";
 
 type ApprovedVideo = {
   id: number;
@@ -43,6 +45,8 @@ function formatViews(views: number | null): string {
   return views.toString();
 }
 
+// These are still used by Featured/Top Ranked sections
+
 export default function HomePage() {
   const videos = getApprovedVideos();
 
@@ -51,10 +55,6 @@ export default function HomePage() {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
-        <div className="mb-6">
-          <WalletStatus />
-        </div>
-
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 mb-6">
             <Link
@@ -63,7 +63,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-white/60">Discover</span>
-                <img src="/logos/textlogo/collections.png" alt="Collections" className="mt-1 h-[30px]" />
+                <Image src="/logos/textlogo/collections.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">Evaluate content from different Collections.</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -77,7 +77,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-yellow-400/80">Earn Money</span>
-                <img src="/logos/textlogo/membersignup.png" alt="Member Signup" className="mt-1 h-[30px]" />
+                <Image src="/logos/textlogo/membersignup.png" alt="Member Signup" width={1230} height={238} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">Start earning <span className="text-green-400 font-bold">$</span> for viewing and grading content!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -91,7 +91,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-white/60">Diamond Member</span>
-                <img src="/logos/textlogo/memberlogin.png" alt="Member Login" className="mt-1 h-[30px]" />
+                <Image src="/logos/textlogo/memberlogin.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">One-click sign in for Ultimate Access!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -105,7 +105,7 @@ export default function HomePage() {
             >
               <div>
                 <span className="text-xs uppercase tracking-[0.22em] text-purple-400/80">Leaderboard</span>
-                <img src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" className="mt-1 h-[30px]" />
+                <Image src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">See top ranked Diamond Members!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -114,58 +114,7 @@ export default function HomePage() {
             </Link>
         </div>
 
-        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold neon-text">Browse Videos</h1>
-            <p className="text-sm text-white/70">
-              {videos.length} curated videos available
-            </p>
-          </div>
-
-          {/* Filters Row */}
-          <div className="mt-5 grid grid-cols-2 md:grid-cols-12 gap-3">
-            <div className="col-span-2 md:col-span-5">
-              <label className="block text-xs text-white/70 mb-1">Search</label>
-              <input
-                className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white placeholder:text-white/40 text-sm"
-                placeholder="Search titles, tags…"
-                defaultValue=""
-              />
-            </div>
-
-            <div className="col-span-2 md:col-span-3">
-              <label className="block text-xs text-white/70 mb-1">Collections</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
-                <option value="all">All</option>
-                <option value="blowjob">Blowjob</option>
-                <option value="threesome">Threesome</option>
-                <option value="for-women">For Women</option>
-                <option value="anal">Anal</option>
-                <option value="highest-rated">Highest Rated</option>
-                <option value="newest">Newest</option>
-              </select>
-            </div>
-
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs text-white/70 mb-1">Duration</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
-                <option value="any">Any</option>
-                <option value="short">0–10 min</option>
-                <option value="mid">10–30 min</option>
-                <option value="long">30+ min</option>
-              </select>
-            </div>
-
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs text-white/70 mb-1">Sort</label>
-              <select className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm">
-                <option value="new">Newest</option>
-                <option value="top">Top rated</option>
-                <option value="duration">Duration</option>
-              </select>
-            </div>
-          </div>
-        </section>
+        <VideoSearch videos={videos} />
 
         {/* Featured & Top Ranked Videos */}
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -233,58 +182,6 @@ export default function HomePage() {
           })()}
         </div>
 
-        {/* Results grid */}
-        <section className="mt-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold neon-text">All Videos</h2>
-            <span className="text-sm text-white/60">{videos.length} videos</span>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {videos.map((v) => (
-              <Link
-                key={v.viewkey}
-                href={`/videos/${v.viewkey}`}
-                className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
-              >
-                <div className="relative aspect-video bg-black/60">
-                  {v.primary_thumb ? (
-                    <img
-                      src={v.primary_thumb}
-                      alt={v.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/30">
-                      No Thumbnail
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
-                    {formatDuration(v.duration)}
-                  </div>
-                  {v.favorite === 1 && (
-                    <div className="absolute top-2 left-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
-                      ★
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-2 md:p-3">
-                  <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
-                    {v.title}
-                  </div>
-                  <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
-                    {v.performers || "Unknown"}
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
-                    <span>{formatViews(v.views)} views</span>
-                    <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
     </main>
   );

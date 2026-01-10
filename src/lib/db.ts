@@ -3,6 +3,7 @@ import path from "path";
 
 // Use DB_PATH env var if set, otherwise fallback to local path for dev
 const dbPath = process.env.DB_PATH || path.join(process.cwd(), "embeds.db");
+console.log("[db.ts] Using database path:", dbPath);
 
 let db: Database.Database | null = null;
 
@@ -53,6 +54,7 @@ export type VideoListResult = {
 export function getVideos(options: {
   search?: string;
   status?: CurationStatus;
+  excludeApproved?: boolean;
   favoriteOnly?: boolean;
   cursor?: Cursor;
   limit?: number;
@@ -93,6 +95,11 @@ export function getVideos(options: {
       }
     }
 
+    // Exclude approved filter (for main curation view)
+    if (options.excludeApproved) {
+      sql += ` AND (c.status IS NULL OR c.status != 'approved')`;
+    }
+
     // Favorite filter
     if (options.favoriteOnly) {
       sql += ` AND c.favorite = 1`;
@@ -125,6 +132,11 @@ export function getVideos(options: {
         sql += ` AND c.status = ?`;
         params.push(options.status);
       }
+    }
+
+    // Exclude approved filter (for main curation view)
+    if (options.excludeApproved) {
+      sql += ` AND (c.status IS NULL OR c.status != 'approved')`;
     }
 
     // Favorite filter

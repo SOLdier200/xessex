@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Extract event type and data
-    const type = (verified as { type?: string })?.type ?? "unknown";
-    const data = (verified as { data?: Record<string, unknown> })?.data ?? {};
+    const type = (verified as unknown as { type?: string })?.type ?? "unknown";
+    const data = (verified as unknown as { data?: Record<string, unknown> })?.data ?? {};
 
     // Extract common fields defensively
     const resendEmailId =
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         to: to as string | null,
         from,
         subject,
-        payload: verified as object,
+        payload: verified as unknown as object,
       },
     });
 

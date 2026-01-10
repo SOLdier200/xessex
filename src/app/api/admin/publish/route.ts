@@ -1,9 +1,28 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { db } from "@/lib/prisma";
-import { getApprovedVideos } from "@/lib/db";
 import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
+
+type ApprovedVideo = {
+  viewkey: string;
+  title: string | null;
+  primary_thumb: string | null;
+  views: number | null;
+  tags: string | null;
+};
+
+function getApprovedVideosFromJson(): ApprovedVideo[] {
+  try {
+    const filePath = path.join(process.cwd(), "data", "approved.json");
+    const data = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+}
 
 function tagsToArray(tags: string | null | undefined): string[] {
   if (!tags) return [];
@@ -24,7 +43,7 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const videos = getApprovedVideos(); // EXACT SAME SOURCE AS EXPORT
+  const videos = getApprovedVideosFromJson();
 
   let published = 0;
 

@@ -9,8 +9,13 @@ export function AgeGateEnforcer() {
   const sp = useSearchParams();
 
   useEffect(() => {
-    // Don't enforce on the gate itself or leave page
-    if (pathname.startsWith("/age") || pathname.startsWith("/leave")) return;
+    // Don't enforce on the gate itself, leave page, or legal pages
+    if (
+      pathname.startsWith("/age") ||
+      pathname.startsWith("/leave") ||
+      pathname.startsWith("/parental-controls") ||
+      pathname.startsWith("/terms")
+    ) return;
 
     const okTab = sessionStorage.getItem("age_ok_tab") === "1";
     if (okTab) return;

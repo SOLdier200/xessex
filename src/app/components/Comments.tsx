@@ -7,6 +7,7 @@ import Link from "next/link";
 type Comment = {
   id: string;
   body: string;
+  authorId: string;
   authorWallet: string;
   createdAt: string;
   memberLikes: number;
@@ -61,6 +62,8 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState("");
+  const [hasPostedComment, setHasPostedComment] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>({
     authenticated: false,
     tier: "free",
@@ -97,6 +100,14 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
       .then((data) => {
         if (data.ok) {
           setComments(data.comments);
+          // Check if user already has a comment (API returns hasUserComment)
+          if (data.hasUserComment) {
+            setHasPostedComment(true);
+          }
+          // Store current user ID for self-vote prevention
+          if (data.currentUserId) {
+            setCurrentUserId(data.currentUserId);
+          }
         }
       })
       .catch(console.error)
@@ -122,7 +133,11 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
       if (data.ok) {
         setComments([data.comment, ...comments]);
         setText("");
+        setHasPostedComment(true);
         toast.success("Comment posted!");
+      } else if (data.error === "ALREADY_COMMENTED") {
+        setHasPostedComment(true);
+        toast.error("Only 1 comment per Member per Video!");
       } else if (data.error === "DIAMOND_ONLY") {
         toast.error("Only Diamond Members can post comments");
       } else {
@@ -184,6 +199,8 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
         toast.error("You've reached the maximum vote changes for this comment");
       } else if (data.error === "PAID_ONLY") {
         toast.error("Only paid members can vote on comments");
+      } else if (data.error === "CANNOT_VOTE_OWN_COMMENT") {
+        toast.error("You can't rate your own comment");
       } else {
         toast.error(data.error || "Failed to vote");
       }
@@ -207,13 +224,21 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
           />
           <div className="flex justify-between items-center mt-2">
             <span className="text-xs text-white/40">{text.length}/2000</span>
-            <button
-              type="submit"
-              disabled={!text.trim() || text.length < 3 || submitting}
-              className="px-4 py-2 rounded-xl bg-pink-500/80 hover:bg-pink-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium transition"
-            >
-              {submitting ? "Posting..." : "Post Comment"}
-            </button>
+            <div className="relative group">
+              <button
+                type="submit"
+                disabled={!text.trim() || text.length < 3 || submitting || hasPostedComment}
+                className="px-4 py-2 rounded-xl bg-pink-500/80 hover:bg-pink-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium transition"
+              >
+                {submitting ? "Posting..." : "Post Comment"}
+              </button>
+              {hasPostedComment && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-black/90 border border-white/20 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  Only 1 comment per Member per Video!
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black/90" />
+                </div>
+              )}
+            </div>
           </div>
         </form>
       ) : null}
@@ -228,7 +253,8 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => {
-            const voteDisabled = !effectiveCanVote || comment.voteLocked;
+            const isOwnComment = !!(currentUserId && comment.authorId === currentUserId);
+            const voteDisabled = !effectiveCanVote || !!comment.voteLocked || isOwnComment;
 
             return (
               <div
@@ -256,7 +282,9 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
                     onClick={() => handleVote(comment.id, 1)}
                     disabled={voteDisabled}
                     title={
-                      !effectiveCanVote
+                      isOwnComment
+                        ? "You can't rate your own comment"
+                        : !effectiveCanVote
                         ? "Paid members can vote"
                         : comment.voteLocked
                         ? "Vote locked"
@@ -291,7 +319,9 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
                     onClick={() => handleVote(comment.id, -1)}
                     disabled={voteDisabled}
                     title={
-                      !effectiveCanVote
+                      isOwnComment
+                        ? "You can't rate your own comment"
+                        : !effectiveCanVote
                         ? "Paid members can vote"
                         : comment.voteLocked
                         ? "Vote locked"

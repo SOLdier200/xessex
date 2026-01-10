@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
 
   const search = searchParams.get("search") || undefined;
   const status = (searchParams.get("status") as CurationStatus) || undefined;
+  const excludeApproved = searchParams.get("excludeApproved") === "1";
   const favoriteOnly = searchParams.get("favorite") === "1";
   const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "50", 10)));
 
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
   const result = getVideos({
     search,
     status,
+    excludeApproved,
     favoriteOnly,
     cursor,
     limit,

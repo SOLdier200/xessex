@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import fs from "fs";
 import path from "path";
 import TopNav from "../components/TopNav";
@@ -50,7 +51,7 @@ export default function CategoriesPage() {
 
       <div className="px-4 md:px-6 pb-10">
         <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
-          <img src="/logos/textlogo/collections.png" alt="Collections" className="h-[50px] md:h-[65px]" />
+          <Image src="/logos/textlogo/collections.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="h-[50px] md:h-[65px] w-auto" />
           <p className="mt-2 text-sm text-white/70">
             Browse videos by collection
           </p>

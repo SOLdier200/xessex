@@ -43,11 +43,19 @@ export async function POST(req: NextRequest) {
 
   const comment = await db.comment.findUnique({
     where: { id: commentId },
-    select: { id: true, status: true, memberLikes: true, memberDislikes: true },
+    select: { id: true, authorId: true, status: true, memberLikes: true, memberDislikes: true },
   });
 
   if (!comment || comment.status !== "ACTIVE") {
     return NextResponse.json({ ok: false, error: "COMMENT_NOT_FOUND" }, { status: 404 });
+  }
+
+  // Prevent self-voting
+  if (comment.authorId === voterId) {
+    return NextResponse.json(
+      { ok: false, error: "CANNOT_VOTE_OWN_COMMENT" },
+      { status: 403 }
+    );
   }
 
   const existing = await db.commentMemberVote.findUnique({

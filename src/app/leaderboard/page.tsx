@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import TopNav from "../components/TopNav";
 
 type LeaderboardData = {
@@ -80,7 +81,7 @@ export default function LeaderboardPage() {
               />
             </div>
             <div>
-              <img src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" className="h-8 md:h-10" />
+              <Image src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="h-8 md:h-10 w-auto" />
               <p className="mt-1 text-sm md:text-base text-white/70">
                 Top ranked Diamond Members
               </p>

@@ -78,13 +78,12 @@ type ApiResponse = {
   categories: string[];
 };
 
-type StatusFilter = "all" | "pending" | "approved" | "rejected" | "maybe";
+type StatusFilter = "all" | "pending" | "rejected" | "maybe";
 
 export default function AdminPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, approved: 0, rejected: 0, pending: 0, favorites: 0 });
   const [loading, setLoading] = useState(true);
-  const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showShowcaseModal, setShowShowcaseModal] = useState(false);
 
@@ -139,7 +138,11 @@ export default function AdminPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (statusFilter === "all") {
+      params.set("excludeApproved", "1"); // Exclude approved from main curation view
+    } else {
+      params.set("status", statusFilter);
+    }
     if (favoriteOnly) params.set("favorite", "1");
     if (cursor) {
       params.set("cursorViews", String(cursor.views));
@@ -205,24 +208,6 @@ export default function AdminPage() {
       setSelectedVideo(updated);
     }
   };
-
-  async function publishApprovedToSupabase() {
-    setPublishing(true);
-    const toastId = addToast("Publishing videos to live site...", "loading");
-    try {
-      const res = await fetch("/api/admin/publish", { method: "POST" });
-      const data = await res.json().catch(() => null);
-      if (data?.ok) {
-        updateToast(toastId, `Published ${data.published} / ${data.approved} videos to live site`, "success");
-      } else {
-        updateToast(toastId, data?.error || "Publish failed", "error");
-      }
-    } catch {
-      updateToast(toastId, "Publish failed - network error", "error");
-    } finally {
-      setPublishing(false);
-    }
-  }
 
   const deleteRejected = async () => {
     if (!confirm(`Are you sure you want to permanently delete all ${stats.rejected} rejected videos? This cannot be undone!`)) {
@@ -360,13 +345,12 @@ export default function AdminPage() {
           <p className="text-white/60 text-sm mt-1">FTS5 search + keyset pagination</p>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <button
-            onClick={publishApprovedToSupabase}
-            disabled={publishing}
-            className="px-4 py-2 rounded-full border border-emerald-400/50 bg-emerald-500/20 text-white text-sm font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50"
+          <Link
+            href="/admin/review"
+            className="px-4 py-2 rounded-full border border-sky-400/50 bg-sky-500/20 text-white text-sm font-semibold hover:bg-sky-500/30 transition"
           >
-            {publishing ? "Publishing..." : "Publish Approved → Live"}
-          </button>
+            Review Approved ({stats.approved})
+          </Link>
           <button
             onClick={() => setShowShowcaseModal(true)}
             className="px-4 py-2 rounded-full border border-yellow-400/50 bg-yellow-500/20 text-white text-sm font-semibold hover:bg-yellow-500/30 transition"
@@ -445,9 +429,8 @@ export default function AdminPage() {
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               className="rounded-xl bg-black/40 neon-border px-3 py-2 text-white"
             >
-              <option value="all">All</option>
+              <option value="all">All (excl. Approved)</option>
               <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
               <option value="maybe">Maybe</option>
             </select>

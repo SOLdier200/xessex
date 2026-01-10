@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
       id: c.id,
       body: c.body,
       createdAt: c.createdAt.toISOString(),
+      authorId: c.authorId,
       authorWallet: truncWallet(c.author.walletAddress, c.author.email),
       memberLikes,
       memberDislikes,
@@ -84,7 +85,12 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ ok: true, comments: shaped });
+  // Check if user already has a comment on this video
+  const hasUserComment = userId
+    ? comments.some((c) => c.authorId === userId)
+    : false;
+
+  return NextResponse.json({ ok: true, comments: shaped, hasUserComment, currentUserId: userId });
 }
 
 /**
@@ -135,6 +141,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { ok: false, error: "VIDEO_NOT_FOUND" },
       { status: 404 }
+    );
+  }
+
+  // Check if user already has a comment on this video (1 per member per video)
+  const existingComment = await db.comment.findFirst({
+    where: { videoId, authorId: access.user.id },
+  });
+  if (existingComment) {
+    return NextResponse.json(
+      { ok: false, error: "ALREADY_COMMENTED" },
+      { status: 400 }
     );
   }
 
