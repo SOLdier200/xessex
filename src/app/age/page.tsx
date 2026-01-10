@@ -16,6 +16,22 @@ function AgeGateContent() {
 
   function handleCaptchaVerify(token: string) {
     setCaptchaToken(token);
+    // Auto-proceed after captcha verification
+    proceedToSite();
+  }
+
+  function proceedToSite() {
+    setLoading(true);
+
+    try {
+      // Set all storage methods synchronously (bulletproof for mobile)
+      document.cookie = "age_ok=1; path=/; max-age=31536000";
+      localStorage.setItem("age_ok_tab", "1");
+      sessionStorage.setItem("age_ok_tab", "1");
+    } catch {}
+
+    // Raw navigation - assign is more reliable on Android
+    window.location.assign(next);
   }
 
   function handleCaptchaExpire() {
@@ -31,17 +47,8 @@ function AgeGateContent() {
       return;
     }
 
-    setLoading(true);
-
-    try {
-      // Set all storage methods synchronously (bulletproof for mobile)
-      document.cookie = "age_ok=1; path=/; max-age=31536000";
-      localStorage.setItem("age_ok_tab", "1");
-      sessionStorage.setItem("age_ok_tab", "1");
-    } catch {}
-
-    // Raw navigation - assign is more reliable on Android
-    window.location.assign(next);
+    // Captcha verified or not required - proceed
+    proceedToSite();
   }
 
   function handleLeave() {
@@ -90,6 +97,19 @@ function AgeGateContent() {
           <p className="px-3 md:px-4 mt-4 text-white/90 text-base leading-6 text-center">
             By entering, you agree to our <a href="/terms" target="_blank" className="text-pink-400 underline hover:text-pink-300">Terms of Service</a>.
           </p>
+
+          {/* Invisible hCaptcha - triggered programmatically */}
+          {HCAPTCHA_SITE_KEY && (
+            <div className="flex justify-center">
+              <HCaptcha
+                ref={captchaRef}
+                sitekey={HCAPTCHA_SITE_KEY}
+                size="invisible"
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
+              />
+            </div>
+          )}
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
