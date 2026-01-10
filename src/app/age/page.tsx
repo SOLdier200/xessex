@@ -1,16 +1,36 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+
+const HCAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "";
 
 function AgeGateContent() {
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
+
+  function handleCaptchaVerify(token: string) {
+    setCaptchaToken(token);
+  }
+
+  function handleCaptchaExpire() {
+    setCaptchaToken(null);
+  }
 
   function handleAccept() {
     if (loading) return;
+
+    // Require captcha if site key is configured
+    if (HCAPTCHA_SITE_KEY && !captchaToken) {
+      captchaRef.current?.execute();
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -20,12 +40,12 @@ function AgeGateContent() {
       sessionStorage.setItem("age_ok_tab", "1");
     } catch {}
 
-    // Raw navigation - must be direct, no async
-    window.location.href = next;
+    // Raw navigation - assign is more reliable on Android
+    window.location.assign(next);
   }
 
   function handleLeave() {
-    window.location.href = "https://www.google.com";
+    window.location.assign("https://www.google.com");
   }
 
   return (
@@ -75,7 +95,7 @@ function AgeGateContent() {
             <button
               type="button"
               onClick={handleAccept}
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
                 handleAccept();
               }}
@@ -88,7 +108,7 @@ function AgeGateContent() {
             <button
               type="button"
               onClick={handleLeave}
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
                 handleLeave();
               }}
