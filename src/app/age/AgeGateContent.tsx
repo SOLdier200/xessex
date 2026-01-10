@@ -16,40 +16,28 @@ export default function AgeGateContent() {
 
   function handleCaptchaVerify(token: string) {
     setCaptchaToken(token);
+    // Auto-proceed after captcha - must be synchronous
+    proceedNow();
   }
 
   function handleCaptchaExpire() {
     setCaptchaToken(null);
   }
 
-  function proceed() {
+  // Synchronous proceed - no setTimeout, no async
+  function proceedNow() {
     setLoading(true);
 
     try {
       document.cookie = "age_ok=1; path=/; max-age=31536000";
       localStorage.setItem("age_ok_tab", "1");
       sessionStorage.setItem("age_ok_tab", "1");
+      // Temporary flag to bypass enforcer race on Android Chrome
+      sessionStorage.setItem("age_ok_redirect", "1");
     } catch {}
 
-    setTimeout(() => {
-      window.location.href = next;
-    }, 50);
-  }
-
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (loading) return;
-
-    if (HCAPTCHA_SITE_KEY && !captchaToken) {
-      captchaRef.current?.execute();
-      return;
-    }
-
-    proceed();
-  }
-
-  function handleLeave() {
-    window.location.href = "https://www.google.com";
+    // Synchronous navigation - no setTimeout
+    window.location.assign(next);
   }
 
   return (
@@ -95,12 +83,25 @@ export default function AgeGateContent() {
             </div>
           )}
 
-          <form onSubmit={onSubmit} className="mt-6 flex flex-col sm:flex-row gap-3">
+          {/* No form - raw div with pointer handlers for Android Chrome */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
 
             <button
-              type="submit"
+              type="button"
               disabled={loading}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px]"
+              onPointerUp={() => {
+                if (loading) return;
+
+                // If captcha required but not verified, trigger it
+                if (HCAPTCHA_SITE_KEY && !captchaToken) {
+                  captchaRef.current?.execute();
+                  return;
+                }
+
+                // Proceed synchronously in the same gesture
+                proceedNow();
+              }}
+              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] select-none touch-manipulation cursor-pointer"
             >
               {loading
                 ? "Entering..."
@@ -111,13 +112,15 @@ export default function AgeGateContent() {
 
             <button
               type="button"
-              onClick={handleLeave}
               disabled={loading}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px]"
+              onPointerUp={() => {
+                window.location.assign("https://www.google.com");
+              }}
+              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] select-none touch-manipulation cursor-pointer"
             >
               I am under 18 - Exit
             </button>
-          </form>
+          </div>
 
           <p className="mt-6 text-center text-white/90">
             Our{" "}

@@ -19,11 +19,18 @@ export function AgeGateEnforcer() {
     ) return;
 
     // Check all storage methods (bulletproof for mobile)
+    // Check redirect flag FIRST - bypasses Android Chrome storage race
     const ok =
+      sessionStorage.getItem("age_ok_redirect") === "1" ||
       localStorage.getItem("age_ok_tab") === "1" ||
       sessionStorage.getItem("age_ok_tab") === "1" ||
       document.cookie.includes("age_ok=1");
-    if (ok) return;
+
+    if (ok) {
+      // Clear the one-time redirect bypass flag
+      sessionStorage.removeItem("age_ok_redirect");
+      return;
+    }
 
     // Redirect to age gate with return URL
     const search = sp?.toString();
