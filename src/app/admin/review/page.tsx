@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import ShowcaseModal from "../ShowcaseModal";
 
 type Video = {
   id: number;
@@ -35,6 +36,7 @@ export default function ReviewApprovedPage() {
   const [publishing, setPublishing] = useState(false);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [showShowcaseModal, setShowShowcaseModal] = useState(false);
 
   // Cursor-based pagination
   const [cursorStack, setCursorStack] = useState<Cursor[]>([null]);
@@ -152,7 +154,13 @@ export default function ReviewApprovedPage() {
             {approvedCount.toLocaleString()} approved videos
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <button
+            onClick={() => setShowShowcaseModal(true)}
+            className="px-4 py-2 rounded-full border border-yellow-400/50 bg-yellow-500/20 text-white text-sm font-semibold hover:bg-yellow-500/30 transition"
+          >
+            Select the 3 Free Page Vids
+          </button>
           <button
             onClick={publishApprovedToLive}
             disabled={publishing || approvedCount === 0}
@@ -387,6 +395,12 @@ export default function ReviewApprovedPage() {
           </div>
         </div>
       )}
+
+      {/* Showcase Modal */}
+      <ShowcaseModal
+        open={showShowcaseModal}
+        onClose={() => setShowShowcaseModal(false)}
+      />
     </main>
   );
 }

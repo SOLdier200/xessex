@@ -4,12 +4,14 @@ import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { setSessionCookie } from "@/lib/authCookies";
+import { verify } from "hcaptcha";
 
 export const runtime = "nodejs";
 
 const Body = z.object({
   email: z.string().email().max(254),
   password: z.string().min(5),
+  captchaToken: z.string().min(10, "CAPTCHA_REQUIRED"),
 });
 
 /**
@@ -22,6 +24,23 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400 });
+  }
+
+  // hCaptcha verify (server-only)
+  const secret = process.env.HCAPTCHA_SECRET;
+  if (!secret) {
+    return NextResponse.json({ ok: false, error: "HCAPTCHA_NOT_CONFIGURED" }, { status: 500 });
+  }
+
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    undefined;
+
+  const captcha = await verify(secret, parsed.data.captchaToken, ip);
+
+  if (!captcha?.success) {
+    return NextResponse.json({ ok: false, error: "CAPTCHA_FAILED" }, { status: 403 });
   }
 
   const email = parsed.data.email.toLowerCase().trim();

@@ -2,27 +2,10 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { db } from "@/lib/prisma";
+import { getApprovedVideos } from "@/lib/db";
 import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
-
-type ApprovedVideo = {
-  viewkey: string;
-  title: string | null;
-  primary_thumb: string | null;
-  views: number | null;
-  tags: string | null;
-};
-
-function getApprovedVideosFromJson(): ApprovedVideo[] {
-  try {
-    const filePath = path.join(process.cwd(), "data", "approved.json");
-    const data = fs.readFileSync(filePath, "utf8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
 
 function tagsToArray(tags: string | null | undefined): string[] {
   if (!tags) return [];
@@ -43,8 +26,16 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const videos = getApprovedVideosFromJson();
+  // Step 1: Get approved videos from SQLite
+  const videos = getApprovedVideos();
 
+  // Step 2: Export to approved.json (for homepage/collections)
+  const outDir = path.join(process.cwd(), "data");
+  const outFile = path.join(outDir, "approved.json");
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(outFile, JSON.stringify(videos, null, 2), "utf8");
+
+  // Step 3: Publish to Supabase
   let published = 0;
 
   for (const v of videos as any[]) {
@@ -80,5 +71,5 @@ export async function POST() {
     published++;
   }
 
-  return NextResponse.json({ ok: true, approved: videos.length, published });
+  return NextResponse.json({ ok: true, approved: videos.length, exported: videos.length, published });
 }

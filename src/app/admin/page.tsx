@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import ShowcaseModal from "./ShowcaseModal";
 
 type Toast = {
   id: number;
@@ -85,7 +84,6 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, approved: 0, rejected: 0, pending: 0, favorites: 0 });
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
-  const [showShowcaseModal, setShowShowcaseModal] = useState(false);
 
   // Toast state
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -351,12 +349,6 @@ export default function AdminPage() {
           >
             Review Approved ({stats.approved})
           </Link>
-          <button
-            onClick={() => setShowShowcaseModal(true)}
-            className="px-4 py-2 rounded-full border border-yellow-400/50 bg-yellow-500/20 text-white text-sm font-semibold hover:bg-yellow-500/30 transition"
-          >
-            Select the 3 Free Page Vids
-          </button>
           <button
             onClick={deleteRejected}
             disabled={deleting || stats.rejected === 0}
@@ -825,12 +817,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-
-      {/* Showcase Modal */}
-      <ShowcaseModal
-        open={showShowcaseModal}
-        onClose={() => setShowShowcaseModal(false)}
-      />
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

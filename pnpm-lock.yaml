@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@hcaptcha/react-hcaptcha':
+        specifier: ^1.17.4
+        version: 1.17.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@prisma/client':
         specifier: ^6.19.1
         version: 6.19.1(prisma@6.19.1(typescript@5.9.3))(typescript@5.9.3)
@@ -32,6 +35,9 @@ importers:
       bs58:
         specifier: ^6.0.0
         version: 6.0.0
+      hcaptcha:
+        specifier: ^0.2.0
+        version: 0.2.0
       next:
         specifier: 16.1.1
         version: 16.1.1(@babel/core@7.28.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -346,6 +352,15 @@ packages:
 
   '@fractalwagmi/solana-wallet-adapter@0.1.1':
     resolution: {integrity: sha512-oTZLEuD+zLKXyhZC5tDRMPKPj8iaxKLxXiCjqRfOo4xmSbS2izGRWLJbKMYYsJysn/OI3UJ3P6CWP8WUWi0dZg==}
+
+  '@hcaptcha/loader@2.3.0':
+    resolution: {integrity: sha512-i4lnNxKBe+COf3R1nFZEWaZoHIoJjvDgWqvcNrdZq8ehoSNMN6KVZ56dcQ02qKie2h3+BkbkwlJA9DOIuLlK/g==}
+
+  '@hcaptcha/react-hcaptcha@1.17.4':
+    resolution: {integrity: sha512-rIvgesG1N7SS9sAYYHFoWm+nXqRrxq7RcA9z2pKkDWV+S1GdfmrTNYA1aPyVWVe3eowphTCwyDJvl97Swwy0mw==}
+    peerDependencies:
+      react: '>= 16.3.0'
+      react-dom: '>= 16.3.0'
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -3380,6 +3395,9 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
+  hcaptcha@0.2.0:
+    resolution: {integrity: sha512-x25z3RoEa9oqfyuQsgk2olc+LCNVDAJaGKUP1qFhpAybB6qjqOf4qB2y1E3LJpXDvM229JWEywc6iWnzWvGjNw==}
+
   hermes-compiler@0.14.0:
     resolution: {integrity: sha512-clxa193o+GYYwykWVFfpHduCATz8fR5jvU7ngXpfKHj+E9hr9vjLNtdLSEe8MUbObvVexV3wcyxQ00xTPIrB1Q==}
 
@@ -5686,6 +5704,15 @@ snapshots:
       - '@solana/web3.js'
       - react
       - react-dom
+
+  '@hcaptcha/loader@2.3.0': {}
+
+  '@hcaptcha/react-hcaptcha@1.17.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@babel/runtime': 7.28.4
+      '@hcaptcha/loader': 2.3.0
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   '@humanfs/core@0.19.1': {}
 
@@ -10238,6 +10265,8 @@ snapshots:
   hasown@2.0.2:
     dependencies:
       function-bind: 1.1.2
+
+  hcaptcha@0.2.0: {}
 
   hermes-compiler@0.14.0: {}
 
