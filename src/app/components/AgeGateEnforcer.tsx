@@ -3,13 +3,28 @@
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+function safeGetStorage(getter: () => string | null) {
+  try {
+    return getter();
+  } catch {
+    return null;
+  }
+}
+
+function safeCookieIncludes(needle: string) {
+  try {
+    return document.cookie.includes(needle);
+  } catch {
+    return false;
+  }
+}
+
 export function AgeGateEnforcer() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
 
   useEffect(() => {
-    // Don't enforce on the gate itself, leave page, legal pages, or auth callback
     if (
       pathname.startsWith("/age") ||
       pathname.startsWith("/leave") ||
@@ -18,21 +33,22 @@ export function AgeGateEnforcer() {
       pathname.startsWith("/auth/callback")
     ) return;
 
-    // Check all storage methods (bulletproof for mobile)
-    // Check redirect flag FIRST - bypasses Android Chrome storage race
+    const redirectFlag = safeGetStorage(() => sessionStorage.getItem("age_ok_redirect"));
+    const localOk = safeGetStorage(() => localStorage.getItem("age_ok_tab"));
+    const sessionOk = safeGetStorage(() => sessionStorage.getItem("age_ok_tab"));
+    const cookieOk = safeCookieIncludes("age_ok=1");
+
     const ok =
-      sessionStorage.getItem("age_ok_redirect") === "1" ||
-      localStorage.getItem("age_ok_tab") === "1" ||
-      sessionStorage.getItem("age_ok_tab") === "1" ||
-      document.cookie.includes("age_ok=1");
+      redirectFlag === "1" ||
+      localOk === "1" ||
+      sessionOk === "1" ||
+      cookieOk;
 
     if (ok) {
-      // Clear the one-time redirect bypass flag
-      sessionStorage.removeItem("age_ok_redirect");
+      try { sessionStorage.removeItem("age_ok_redirect"); } catch {}
       return;
     }
 
-    // Redirect to age gate with return URL
     const search = sp?.toString();
     const next = pathname + (search ? `?${search}` : "");
     router.replace(`/age?next=${encodeURIComponent(next)}`);
