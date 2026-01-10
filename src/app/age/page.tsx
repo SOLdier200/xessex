@@ -115,10 +115,6 @@ function AgeGateContent() {
             <button
               type="button"
               onClick={handleAccept}
-              onPointerUp={(e) => {
-                e.preventDefault();
-                handleAccept();
-              }}
               disabled={loading}
               className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold text-base py-4 min-h-[56px] hover:bg-pink-500/30 active:bg-pink-500/40 disabled:opacity-60 transition select-none touch-manipulation cursor-pointer"
             >
@@ -128,10 +124,6 @@ function AgeGateContent() {
             <button
               type="button"
               onClick={handleLeave}
-              onPointerUp={(e) => {
-                e.preventDefault();
-                handleLeave();
-              }}
               disabled={loading}
               className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold text-base py-4 min-h-[56px] hover:bg-pink-400 active:bg-pink-300 transition select-none touch-manipulation cursor-pointer"
             >
