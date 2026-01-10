@@ -1,0 +1,498 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
+-- CreateEnum
+DO $$ BEGIN
+  CREATE TYPE "public"."CommentStatus" AS ENUM ('ACTIVE', 'REMOVED');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+  CREATE TYPE "public"."SubscriptionStatus" AS ENUM ('ACTIVE', 'EXPIRED', 'CANCELED', 'PENDING');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+  CREATE TYPE "public"."SubscriptionTier" AS ENUM ('MEMBER', 'DIAMOND');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- CreateEnum
+DO $$ BEGIN
+  CREATE TYPE "public"."UserRole" AS ENUM ('USER', 'MOD', 'ADMIN');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropForeignKey
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropTable
+
+-- DropEnum
+
+-- DropEnum
+
+-- DropEnum
+
+-- DropEnum
+
+-- CreateTable
+CREATE TABLE "public"."Comment" (
+    "id" TEXT NOT NULL,
+    "videoId" TEXT NOT NULL,
+    "authorId" TEXT NOT NULL,
+    "body" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" "public"."CommentStatus" NOT NULL DEFAULT 'ACTIVE',
+    "removedById" TEXT,
+    "removedAt" TIMESTAMP(3),
+    "removedReason" TEXT,
+    "memberDislikes" INTEGER NOT NULL DEFAULT 0,
+    "memberLikes" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "Comment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."CommentMemberVote" (
+    "id" TEXT NOT NULL,
+    "commentId" TEXT NOT NULL,
+    "voterId" TEXT NOT NULL,
+    "value" INTEGER NOT NULL,
+    "flipCount" INTEGER NOT NULL DEFAULT 0,
+    "lastChangedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CommentMemberVote_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."CommentModVote" (
+    "id" TEXT NOT NULL,
+    "commentId" TEXT NOT NULL,
+    "modId" TEXT NOT NULL,
+    "value" INTEGER NOT NULL,
+    "flipCount" INTEGER NOT NULL DEFAULT 0,
+    "lastChangedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CommentModVote_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ModeratorIntegrityFlag" (
+    "id" TEXT NOT NULL,
+    "modId" TEXT NOT NULL,
+    "authorId" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP(3),
+
+    CONSTRAINT "ModeratorIntegrityFlag_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."PasswordResetAttempt" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "ip" TEXT NOT NULL,
+    "userAgent" TEXT,
+    "action" TEXT NOT NULL,
+    "allowed" BOOLEAN NOT NULL,
+    "reason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PasswordResetAttempt_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."PasswordResetToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resendEmailId" TEXT,
+
+    CONSTRAINT "PasswordResetToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."RateLimit" (
+    "id" TEXT NOT NULL,
+    "scope" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "windowStart" INTEGER NOT NULL,
+    "count" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "RateLimit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ResendWebhookEvent" (
+    "id" TEXT NOT NULL,
+    "svixId" TEXT NOT NULL,
+    "svixTimestamp" TEXT,
+    "svixSignature" TEXT,
+    "type" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resendEmailId" TEXT,
+    "to" TEXT,
+    "from" TEXT,
+    "subject" TEXT,
+    "payload" JSONB NOT NULL,
+
+    CONSTRAINT "ResendWebhookEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Session" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Subscription" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "tier" "public"."SubscriptionTier" NOT NULL,
+    "status" "public"."SubscriptionStatus" NOT NULL DEFAULT 'PENDING',
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "nowPaymentsPaymentId" TEXT,
+    "nowPaymentsInvoiceId" TEXT,
+    "lastTxSig" TEXT,
+    "nowPaymentsOrderId" TEXT,
+
+    CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."User" (
+    "id" TEXT NOT NULL,
+    "walletAddress" TEXT,
+    "role" "public"."UserRole" NOT NULL DEFAULT 'USER',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "email" TEXT,
+    "passHash" TEXT,
+    "solWallet" TEXT,
+    "solWalletLinkedAt" TIMESTAMP(3),
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Video" (
+    "id" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "embedUrl" TEXT NOT NULL,
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isShowcase" BOOLEAN NOT NULL DEFAULT false,
+    "adminScore" INTEGER NOT NULL DEFAULT 50,
+    "viewsCount" INTEGER NOT NULL DEFAULT 0,
+    "avgStars" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "starsCount" INTEGER NOT NULL DEFAULT 0,
+    "thumbnailUrl" TEXT,
+
+    CONSTRAINT "Video_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."VideoScoreAdjustment" (
+    "id" TEXT NOT NULL,
+    "videoId" TEXT NOT NULL,
+    "commentId" TEXT NOT NULL,
+    "modId" TEXT NOT NULL,
+    "direction" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "VideoScoreAdjustment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."VideoStarRating" (
+    "id" TEXT NOT NULL,
+    "videoId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "stars" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "VideoStarRating_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."VoteEvent" (
+    "id" SERIAL NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT,
+    "commentId" TEXT NOT NULL,
+    "ip" TEXT NOT NULL,
+    "userAgent" TEXT,
+    "action" TEXT NOT NULL,
+    "vote" INTEGER,
+    "prevVote" INTEGER,
+
+    CONSTRAINT "VoteEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."WalletLinkChallenge" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "nonce" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+
+    CONSTRAINT "WalletLinkChallenge_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "Comment_authorId_idx" ON "public"."Comment"("authorId" ASC);
+
+-- CreateIndex
+CREATE INDEX "Comment_status_idx" ON "public"."Comment"("status" ASC);
+
+-- CreateIndex
+CREATE INDEX "Comment_videoId_idx" ON "public"."Comment"("videoId" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CommentMemberVote_commentId_voterId_key" ON "public"."CommentMemberVote"("commentId" ASC, "voterId" ASC);
+
+-- CreateIndex
+CREATE INDEX "CommentMemberVote_voterId_idx" ON "public"."CommentMemberVote"("voterId" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CommentModVote_commentId_modId_key" ON "public"."CommentModVote"("commentId" ASC, "modId" ASC);
+
+-- CreateIndex
+CREATE INDEX "CommentModVote_modId_idx" ON "public"."CommentModVote"("modId" ASC);
+
+-- CreateIndex
+CREATE INDEX "ModeratorIntegrityFlag_authorId_idx" ON "public"."ModeratorIntegrityFlag"("authorId" ASC);
+
+-- CreateIndex
+CREATE INDEX "ModeratorIntegrityFlag_modId_idx" ON "public"."ModeratorIntegrityFlag"("modId" ASC);
+
+-- CreateIndex
+CREATE INDEX "PasswordResetAttempt_action_createdAt_idx" ON "public"."PasswordResetAttempt"("action" ASC, "createdAt" ASC);
+
+-- CreateIndex
+CREATE INDEX "PasswordResetAttempt_email_createdAt_idx" ON "public"."PasswordResetAttempt"("email" ASC, "createdAt" ASC);
+
+-- CreateIndex
+CREATE INDEX "PasswordResetAttempt_ip_createdAt_idx" ON "public"."PasswordResetAttempt"("ip" ASC, "createdAt" ASC);
+
+-- CreateIndex
+CREATE INDEX "PasswordResetToken_expiresAt_idx" ON "public"."PasswordResetToken"("expiresAt" ASC);
+
+-- CreateIndex
+CREATE INDEX "PasswordResetToken_resendEmailId_idx" ON "public"."PasswordResetToken"("resendEmailId" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PasswordResetToken_tokenHash_key" ON "public"."PasswordResetToken"("tokenHash" ASC);
+
+-- CreateIndex
+CREATE INDEX "PasswordResetToken_userId_idx" ON "public"."PasswordResetToken"("userId" ASC);
+
+-- CreateIndex
+CREATE INDEX "RateLimit_scope_key_windowStart_idx" ON "public"."RateLimit"("scope" ASC, "key" ASC, "windowStart" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RateLimit_scope_key_windowStart_key" ON "public"."RateLimit"("scope" ASC, "key" ASC, "windowStart" ASC);
+
+-- CreateIndex
+CREATE INDEX "ResendWebhookEvent_resendEmailId_idx" ON "public"."ResendWebhookEvent"("resendEmailId" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ResendWebhookEvent_svixId_key" ON "public"."ResendWebhookEvent"("svixId" ASC);
+
+-- CreateIndex
+CREATE INDEX "ResendWebhookEvent_to_idx" ON "public"."ResendWebhookEvent"("to" ASC);
+
+-- CreateIndex
+CREATE INDEX "ResendWebhookEvent_type_createdAt_idx" ON "public"."ResendWebhookEvent"("type" ASC, "createdAt" ASC);
+
+-- CreateIndex
+CREATE INDEX "Session_expiresAt_idx" ON "public"."Session"("expiresAt" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Session_token_key" ON "public"."Session"("token" ASC);
+
+-- CreateIndex
+CREATE INDEX "Session_userId_idx" ON "public"."Session"("userId" ASC);
+
+-- CreateIndex
+CREATE INDEX "Subscription_expiresAt_idx" ON "public"."Subscription"("expiresAt" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subscription_nowPaymentsOrderId_key" ON "public"."Subscription"("nowPaymentsOrderId" ASC);
+
+-- CreateIndex
+CREATE INDEX "Subscription_status_idx" ON "public"."Subscription"("status" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subscription_userId_key" ON "public"."Subscription"("userId" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_solWallet_key" ON "public"."User"("solWallet" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_walletAddress_key" ON "public"."User"("walletAddress" ASC);
+
+-- CreateIndex
+CREATE INDEX "Video_isShowcase_idx" ON "public"."Video"("isShowcase" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Video_slug_key" ON "public"."Video"("slug" ASC);
+
+-- CreateIndex
+CREATE INDEX "VideoScoreAdjustment_commentId_idx" ON "public"."VideoScoreAdjustment"("commentId" ASC);
+
+-- CreateIndex
+CREATE INDEX "VideoScoreAdjustment_modId_idx" ON "public"."VideoScoreAdjustment"("modId" ASC);
+
+-- CreateIndex
+CREATE INDEX "VideoScoreAdjustment_videoId_idx" ON "public"."VideoScoreAdjustment"("videoId" ASC);
+
+-- CreateIndex
+CREATE INDEX "VideoStarRating_userId_idx" ON "public"."VideoStarRating"("userId" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "VideoStarRating_videoId_userId_key" ON "public"."VideoStarRating"("videoId" ASC, "userId" ASC);
+
+-- CreateIndex
+CREATE INDEX "VoteEvent_ip_createdAt_idx" ON "public"."VoteEvent"("ip" ASC, "createdAt" ASC);
+
+-- CreateIndex
+CREATE INDEX "VoteEvent_userId_createdAt_idx" ON "public"."VoteEvent"("userId" ASC, "createdAt" ASC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "WalletLinkChallenge_nonce_key" ON "public"."WalletLinkChallenge"("nonce" ASC);
+
+-- CreateIndex
+CREATE INDEX "WalletLinkChallenge_userId_idx" ON "public"."WalletLinkChallenge"("userId" ASC);
+
+-- AddForeignKey
+ALTER TABLE "public"."Comment" ADD CONSTRAINT "Comment_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Comment" ADD CONSTRAINT "Comment_removedById_fkey" FOREIGN KEY ("removedById") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Comment" ADD CONSTRAINT "Comment_videoId_fkey" FOREIGN KEY ("videoId") REFERENCES "public"."Video"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."CommentMemberVote" ADD CONSTRAINT "CommentMemberVote_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."CommentMemberVote" ADD CONSTRAINT "CommentMemberVote_voterId_fkey" FOREIGN KEY ("voterId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."CommentModVote" ADD CONSTRAINT "CommentModVote_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."CommentModVote" ADD CONSTRAINT "CommentModVote_modId_fkey" FOREIGN KEY ("modId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ModeratorIntegrityFlag" ADD CONSTRAINT "ModeratorIntegrityFlag_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ModeratorIntegrityFlag" ADD CONSTRAINT "ModeratorIntegrityFlag_modId_fkey" FOREIGN KEY ("modId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."VideoScoreAdjustment" ADD CONSTRAINT "VideoScoreAdjustment_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES "public"."Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."VideoScoreAdjustment" ADD CONSTRAINT "VideoScoreAdjustment_modId_fkey" FOREIGN KEY ("modId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."VideoScoreAdjustment" ADD CONSTRAINT "VideoScoreAdjustment_videoId_fkey" FOREIGN KEY ("videoId") REFERENCES "public"."Video"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."VideoStarRating" ADD CONSTRAINT "VideoStarRating_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."VideoStarRating" ADD CONSTRAINT "VideoStarRating_videoId_fkey" FOREIGN KEY ("videoId") REFERENCES "public"."Video"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."WalletLinkChallenge" ADD CONSTRAINT "WalletLinkChallenge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

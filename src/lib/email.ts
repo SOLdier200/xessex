@@ -49,3 +49,48 @@ export async function sendPasswordResetEmail(to: string, resetLink: string) {
 
   return { id };
 }
+
+export async function sendWelcomeEmail(to: string, name?: string) {
+  const from = process.env.EMAIL_FROM || "Xessex <no-reply@xessex.me>";
+  const displayName = name || "there";
+
+  const result = await resend.emails.send({
+    from,
+    to,
+    subject: "Welcome to Xessex!",
+    html: `
+      <div style="font-family:Arial,sans-serif;background:#0b0b0f;padding:30px">
+        <div style="max-width:480px;margin:auto;background:#111;border-radius:16px;padding:28px;color:#fff">
+          <h2 style="color:#ff4fd8;margin-top:0">Welcome to Xessex!</h2>
+          <p>Hey ${displayName},</p>
+          <p>Thanks for signing up! Your account is now active.</p>
+          <p>Explore our content and enjoy everything Xessex has to offer.</p>
+
+          <a href="https://xessex.me" style="
+            display:inline-block;
+            margin-top:20px;
+            padding:14px 22px;
+            background:#ff4fd8;
+            color:#000;
+            font-weight:700;
+            border-radius:12px;
+            text-decoration:none;
+          ">
+            Visit Xessex
+          </a>
+
+          <p style="margin-top:24px;font-size:12px;color:#aaa">
+            If you have any questions, feel free to reach out.
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  const id =
+    (result as { data?: { id?: string } })?.data?.id ||
+    (result as { id?: string })?.id ||
+    null;
+
+  return { id };
+}

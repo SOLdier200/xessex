@@ -9,12 +9,13 @@ export function AgeGateEnforcer() {
   const sp = useSearchParams();
 
   useEffect(() => {
-    // Don't enforce on the gate itself, leave page, or legal pages
+    // Don't enforce on the gate itself, leave page, legal pages, or auth callback
     if (
       pathname.startsWith("/age") ||
       pathname.startsWith("/leave") ||
       pathname.startsWith("/parental-controls") ||
-      pathname.startsWith("/terms")
+      pathname.startsWith("/terms") ||
+      pathname.startsWith("/auth/callback")
     ) return;
 
     const okTab = sessionStorage.getItem("age_ok_tab") === "1";

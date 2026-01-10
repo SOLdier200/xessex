@@ -2,6 +2,7 @@ import TopNav from "../components/TopNav";
 import SolanaProviders from "@/components/SolanaProviders";
 import WalletLoginButton from "@/components/WalletLoginButton";
 import EmailLoginBox from "@/components/EmailLoginBox";
+import GoogleSignupButton from "../components/GoogleSignupButton";
 
 export default function LoginPage() {
   return (
@@ -22,6 +23,19 @@ export default function LoginPage() {
                 <WalletLoginButton />
               </div>
             </div>
+
+            {/* Google Login */}
+            <div className="neon-border rounded-2xl p-6 bg-black/30">
+              <h2 className="text-xl font-semibold neon-text">Sign in with Google</h2>
+              <p className="mt-2 text-sm text-white/70">
+                Quick sign in using your Google account.
+              </p>
+              <div className="mt-6">
+                <GoogleSignupButton />
+              </div>
+            </div>
+
+            <div className="text-center text-white/40 text-sm">or</div>
 
             {/* Email Login (Paid Members) */}
             <div className="neon-border rounded-2xl p-6 bg-black/30">
