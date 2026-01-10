@@ -1,50 +1,39 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
-
-const HCAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "";
 
 export default function AgeGateContent() {
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
   const [loading, setLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const captchaRef = useRef<HCaptcha>(null);
 
-  function handleCaptchaVerify(token: string) {
-    setCaptchaToken(token);
-    // Auto-proceed after captcha - must be synchronous
-    proceedNow();
-  }
-
-  function handleCaptchaExpire() {
-    setCaptchaToken(null);
-  }
-
-  // Synchronous proceed - no setTimeout, no async
-  function proceedNow() {
+  function accept() {
+    if (loading) return;
     setLoading(true);
 
     try {
-      document.cookie = "age_ok=1; path=/; max-age=31536000";
+      document.cookie = "age_ok=1; path=/; max-age=31536000; samesite=lax";
       localStorage.setItem("age_ok_tab", "1");
       sessionStorage.setItem("age_ok_tab", "1");
-      // Temporary flag to bypass enforcer race on Android Chrome
+
+      // One-load bypass for Android timing/race
       sessionStorage.setItem("age_ok_redirect", "1");
     } catch {}
 
-    // Synchronous navigation - no setTimeout
+    // MUST be synchronous + direct user gesture
     window.location.assign(next);
+  }
+
+  function leave() {
+    window.location.assign("https://www.google.com");
   }
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10">
       <div className="w-full max-w-2xl">
         <div className="rounded-2xl p-4 md:p-8 bg-black">
-
           <div className="flex justify-center mb-4">
             <Image
               src="/logos/neonmainlogo1.png"
@@ -71,52 +60,27 @@ export default function AgeGateContent() {
             </a>.
           </p>
 
-          {HCAPTCHA_SITE_KEY && (
-            <div className="flex justify-center mt-4">
-              <HCaptcha
-                ref={captchaRef}
-                sitekey={HCAPTCHA_SITE_KEY}
-                size="invisible"
-                onVerify={handleCaptchaVerify}
-                onExpire={handleCaptchaExpire}
-              />
-            </div>
-          )}
-
-          {/* No form - raw div with pointer handlers for Android Chrome */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-
             <button
               type="button"
               disabled={loading}
-              onPointerUp={() => {
-                if (loading) return;
-
-                // If captcha required but not verified, trigger it
-                if (HCAPTCHA_SITE_KEY && !captchaToken) {
-                  captchaRef.current?.execute();
-                  return;
-                }
-
-                // Proceed synchronously in the same gesture
-                proceedNow();
+              onPointerUp={(e) => {
+                e.preventDefault();
+                accept();
               }}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] select-none touch-manipulation cursor-pointer"
+              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation"
             >
-              {loading
-                ? "Entering..."
-                : captchaToken
-                ? "Tap to Enter"
-                : "I am 18 or older - Enter"}
+              {loading ? "Entering..." : "I am 18 or older - Enter"}
             </button>
 
             <button
               type="button"
               disabled={loading}
-              onPointerUp={() => {
-                window.location.assign("https://www.google.com");
+              onPointerUp={(e) => {
+                e.preventDefault();
+                leave();
               }}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] select-none touch-manipulation cursor-pointer"
+              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] touch-manipulation"
             >
               I am under 18 - Exit
             </button>

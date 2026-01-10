@@ -3,21 +3,17 @@
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-function safeGetStorage(getter: () => string | null) {
-  try {
-    return getter();
-  } catch {
-    return null;
-  }
-}
-
-function safeCookieIncludes(needle: string) {
-  try {
-    return document.cookie.includes(needle);
-  } catch {
-    return false;
-  }
-}
+const safe = {
+  get(getter: () => string | null) {
+    try { return getter(); } catch { return null; }
+  },
+  cookieIncludes(s: string) {
+    try { return document.cookie.includes(s); } catch { return false; }
+  },
+  removeRedirectFlag() {
+    try { sessionStorage.removeItem("age_ok_redirect"); } catch {}
+  },
+};
 
 export function AgeGateEnforcer() {
   const router = useRouter();
@@ -33,19 +29,14 @@ export function AgeGateEnforcer() {
       pathname.startsWith("/auth/callback")
     ) return;
 
-    const redirectFlag = safeGetStorage(() => sessionStorage.getItem("age_ok_redirect"));
-    const localOk = safeGetStorage(() => localStorage.getItem("age_ok_tab"));
-    const sessionOk = safeGetStorage(() => sessionStorage.getItem("age_ok_tab"));
-    const cookieOk = safeCookieIncludes("age_ok=1");
-
     const ok =
-      redirectFlag === "1" ||
-      localOk === "1" ||
-      sessionOk === "1" ||
-      cookieOk;
+      safe.get(() => sessionStorage.getItem("age_ok_redirect")) === "1" ||
+      safe.get(() => localStorage.getItem("age_ok_tab")) === "1" ||
+      safe.get(() => sessionStorage.getItem("age_ok_tab")) === "1" ||
+      safe.cookieIncludes("age_ok=1");
 
     if (ok) {
-      try { sessionStorage.removeItem("age_ok_redirect"); } catch {}
+      safe.removeRedirectFlag();
       return;
     }
 

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 type Membership = "FREE" | "MEMBER" | "DIAMOND";
 
@@ -37,10 +36,6 @@ export default function EmailLoginBox() {
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkedOk, setLinkedOk] = useState(false);
-
-  // hCaptcha state
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaKey, setCaptchaKey] = useState(0);
 
   // Auto-hide toast
   useEffect(() => {
@@ -116,12 +111,6 @@ export default function EmailLoginBox() {
     e.preventDefault();
     if (busy) return;
 
-    if (!captchaToken) {
-      setToastType("error");
-      setToast("Please complete the captcha.");
-      return;
-    }
-
     setBusy(true);
     setToastType("info");
     setToast("Logging in...");
@@ -131,7 +120,7 @@ export default function EmailLoginBox() {
       const res = await fetch("/api/auth/email/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, captchaToken }),
+        body: JSON.stringify({ email, password }),
       });
 
       const j = await res.json().catch(() => ({}));
@@ -139,9 +128,6 @@ export default function EmailLoginBox() {
       if (!res.ok || !j.ok) {
         setToastType("error");
         setToast(j.error || "Login failed");
-        // Reset captcha on failure
-        setCaptchaToken(null);
-        setCaptchaKey((k) => k + 1);
         return;
       }
 
@@ -159,9 +145,6 @@ export default function EmailLoginBox() {
     } catch {
       setToastType("error");
       setToast("Login failed");
-      // Reset captcha on failure
-      setCaptchaToken(null);
-      setCaptchaKey((k) => k + 1);
     } finally {
       setBusy(false);
     }
@@ -241,18 +224,8 @@ export default function EmailLoginBox() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {/* hCaptcha widget */}
-        <div className="flex justify-center">
-          <HCaptcha
-            key={captchaKey}
-            sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY as string}
-            onVerify={(token) => setCaptchaToken(token)}
-            onExpire={() => setCaptchaToken(null)}
-          />
-        </div>
-
         <button
-          disabled={busy || !captchaToken}
+          disabled={busy}
           className="w-full rounded-xl bg-white/10 px-3 py-2 font-semibold hover:bg-white/15 disabled:opacity-50"
         >
           {busy ? "Logging in..." : "Login with Email"}
