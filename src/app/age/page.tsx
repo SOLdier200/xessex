@@ -16,8 +16,7 @@ function AgeGateContent() {
 
   function handleCaptchaVerify(token: string) {
     setCaptchaToken(token);
-    // Auto-proceed after captcha verification
-    proceedToSite();
+    // Don't auto-proceed - user must click again (trusted gesture for mobile Chrome)
   }
 
   function proceedToSite() {
@@ -118,7 +117,7 @@ function AgeGateContent() {
               disabled={loading}
               className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold text-base py-4 min-h-[56px] hover:bg-pink-500/30 active:bg-pink-500/40 disabled:opacity-60 transition select-none touch-manipulation cursor-pointer"
             >
-              {loading ? "Entering…" : "I am 18 or older - Enter"}
+              {loading ? "Entering…" : captchaToken ? "Tap to Enter" : "I am 18 or older - Enter"}
             </button>
 
             <button
