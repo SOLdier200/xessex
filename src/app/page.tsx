@@ -5,6 +5,8 @@ import path from "path";
 import TopNav from "./components/TopNav";
 import WalletStatus from "./components/WalletStatus";
 import VideoSearch from "./components/VideoSearch";
+import { getAccessContext } from "@/lib/access";
+import { db } from "@/lib/prisma";
 
 type ApprovedVideo = {
   id: number;
@@ -47,8 +49,17 @@ function formatViews(views: number | null): string {
 
 // These are still used by Featured/Top Ranked sections
 
-export default function HomePage() {
+export default async function HomePage() {
   const videos = getApprovedVideos();
+  const access = await getAccessContext();
+  const canViewPremium = access.canViewAllVideos;
+
+  // Get showcase video slugs from database
+  const showcaseVideos = await db.video.findMany({
+    where: { isShowcase: true },
+    select: { slug: true },
+  });
+  const showcaseSlugs = showcaseVideos.map((v) => v.slug);
 
   return (
     <main className="min-h-screen">
@@ -90,7 +101,7 @@ export default function HomePage() {
               className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
             >
               <div>
-                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Diamond Member</span>
+                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Xessex Member Login</span>
                 <Image src="/logos/textlogo/memberlogin.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">One-click sign in for Ultimate Access!</p>
               </div>
@@ -114,43 +125,118 @@ export default function HomePage() {
             </Link>
         </div>
 
-        <VideoSearch videos={videos} />
+        <VideoSearch videos={videos} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
 
         {/* Featured & Top Ranked Videos */}
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Featured Video */}
-          {videos.length > 0 && videos[0].favorite === 1 && (
-            <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
-              <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
-              <Link href={`/videos/${videos[0].viewkey}`} className="block w-full">
-                <div className="relative aspect-video rounded-xl overflow-hidden">
-                  {videos[0].primary_thumb && (
-                    <img
-                      src={videos[0].primary_thumb}
-                      alt={videos[0].title}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform"
-                    />
-                  )}
-                  <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-sm text-white">
-                    {formatDuration(videos[0].duration)}
+          {videos.length > 0 && videos[0].favorite === 1 && (() => {
+            const featured = videos[0];
+            const isFeaturedShowcase = showcaseSlugs.includes(featured.viewkey);
+            const isFeaturedLocked = !canViewPremium && !isFeaturedShowcase;
+
+            if (isFeaturedLocked) {
+              return (
+                <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
+                  <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
+                  <div className="block w-full">
+                    <div className="relative aspect-video rounded-xl overflow-hidden">
+                      {featured.primary_thumb && (
+                        <img
+                          src={featured.primary_thumb}
+                          alt=""
+                          className="w-full h-full object-cover blur-lg scale-110"
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div className="text-center">
+                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm text-yellow-300 font-semibold mt-2 block">PREMIUM</span>
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="mt-3 text-lg font-semibold text-white/40 blur-sm select-none">
+                      {featured.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-white/30 blur-sm">
+                      {featured.performers || "Unknown"}
+                    </p>
                   </div>
-                  <div className="absolute bottom-2 left-2 bg-pink-500/80 px-2 py-1 rounded text-sm text-white font-semibold">
-                    Featured
+                </section>
+              );
+            }
+
+            return (
+              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
+                <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
+                <Link href={`/videos/${featured.viewkey}`} className="block w-full">
+                  <div className="relative aspect-video rounded-xl overflow-hidden">
+                    {featured.primary_thumb && (
+                      <img
+                        src={featured.primary_thumb}
+                        alt={featured.title}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform"
+                      />
+                    )}
+                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-sm text-white">
+                      {formatDuration(featured.duration)}
+                    </div>
+                    <div className="absolute bottom-2 left-2 bg-pink-500/80 px-2 py-1 rounded text-sm text-white font-semibold">
+                      Featured
+                    </div>
                   </div>
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-white hover:text-pink-300 transition">
-                  {videos[0].title}
-                </h3>
-                <p className="mt-1 text-sm text-white/60">
-                  {videos[0].performers || "Unknown"} • {formatViews(videos[0].views)} views
-                </p>
-              </Link>
-            </section>
-          )}
+                  <h3 className="mt-3 text-lg font-semibold text-white hover:text-pink-300 transition">
+                    {featured.title}
+                  </h3>
+                  <p className="mt-1 text-sm text-white/60">
+                    {featured.performers || "Unknown"} • {formatViews(featured.views)} views
+                  </p>
+                </Link>
+              </section>
+            );
+          })()}
 
           {/* Top Ranked Video */}
           {videos.length > 0 && (() => {
             const topRanked = [...videos].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
+            const isTopShowcase = showcaseSlugs.includes(topRanked.viewkey);
+            const isTopLocked = !canViewPremium && !isTopShowcase;
+
+            if (isTopLocked) {
+              return (
+                <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30">
+                  <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
+                  <div className="block w-full">
+                    <div className="relative aspect-video rounded-xl overflow-hidden">
+                      {topRanked.primary_thumb && (
+                        <img
+                          src={topRanked.primary_thumb}
+                          alt=""
+                          className="w-full h-full object-cover blur-lg scale-110"
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div className="text-center">
+                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm text-yellow-300 font-semibold mt-2 block">PREMIUM</span>
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="mt-3 text-lg font-semibold text-white/40 blur-sm select-none">
+                      {topRanked.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-white/30 blur-sm">
+                      {topRanked.performers || "Unknown"}
+                    </p>
+                  </div>
+                </section>
+              );
+            }
+
             return (
               <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30">
                 <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>

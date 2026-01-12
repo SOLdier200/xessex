@@ -31,9 +31,11 @@ function formatViews(views: number | null): string {
 
 interface VideoSearchProps {
   videos: Video[];
+  canViewPremium?: boolean;
+  showcaseSlugs?: string[];
 }
 
-export default function VideoSearch({ videos }: VideoSearchProps) {
+export default function VideoSearch({ videos, canViewPremium = true, showcaseSlugs = [] }: VideoSearchProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [duration, setDuration] = useState("any");
@@ -81,8 +83,20 @@ export default function VideoSearch({ videos }: VideoSearchProps) {
     }
     // "new" keeps original order (already sorted by newest from data source)
 
+    // For free users, put showcase (free) videos at the top
+    if (!canViewPremium && showcaseSlugs.length > 0) {
+      const showcaseSet = new Set(showcaseSlugs);
+      result.sort((a, b) => {
+        const aIsShowcase = showcaseSet.has(a.viewkey);
+        const bIsShowcase = showcaseSet.has(b.viewkey);
+        if (aIsShowcase && !bIsShowcase) return -1;
+        if (!aIsShowcase && bIsShowcase) return 1;
+        return 0;
+      });
+    }
+
     return result;
-  }, [videos, search, category, duration, sort]);
+  }, [videos, search, category, duration, sort, canViewPremium, showcaseSlugs]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,48 +185,100 @@ export default function VideoSearch({ videos }: VideoSearchProps) {
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {filteredVideos.map((v) => (
-              <Link
-                key={v.viewkey}
-                href={`/videos/${v.viewkey}`}
-                className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
-              >
-                <div className="relative aspect-video bg-black/60">
-                  {v.primary_thumb ? (
-                    <img
-                      src={v.primary_thumb}
-                      alt={v.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/30">
-                      No Thumbnail
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
-                    {formatDuration(v.duration)}
-                  </div>
-                  {v.favorite === 1 && (
-                    <div className="absolute top-2 left-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
-                      ★
-                    </div>
-                  )}
-                </div>
+            {filteredVideos.map((v) => {
+              const isShowcase = showcaseSlugs.includes(v.viewkey);
+              const isLocked = !canViewPremium && !isShowcase;
 
-                <div className="p-2 md:p-3">
-                  <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
-                    {v.title}
+              if (isLocked) {
+                return (
+                  <div
+                    key={v.viewkey}
+                    className="neon-border rounded-2xl bg-black/30 overflow-hidden relative"
+                  >
+                    <div className="relative aspect-video bg-black/60">
+                      {v.primary_thumb ? (
+                        <img
+                          src={v.primary_thumb}
+                          alt=""
+                          className="w-full h-full object-cover blur-lg scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/30 blur-md">
+                          No Thumbnail
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div className="text-center">
+                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs text-yellow-300 font-semibold mt-1 block">PREMIUM</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 md:p-3">
+                      <div className="font-semibold text-white/40 text-xs md:text-sm line-clamp-2 blur-sm select-none">
+                        {v.title}
+                      </div>
+                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/30 truncate blur-sm">
+                        {v.performers || "Unknown"}
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/30">
+                        <span>{formatDuration(v.duration)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
-                    {v.performers || "Unknown"}
+                );
+              }
+
+              return (
+                <Link
+                  key={v.viewkey}
+                  href={`/videos/${v.viewkey}`}
+                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
+                >
+                  <div className="relative aspect-video bg-black/60">
+                    {v.primary_thumb ? (
+                      <img
+                        src={v.primary_thumb}
+                        alt={v.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/30">
+                        No Thumbnail
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                      {formatDuration(v.duration)}
+                    </div>
+                    {v.favorite === 1 && (
+                      <div className="absolute top-2 left-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
+                        ★
+                      </div>
+                    )}
+                    {isShowcase && !canViewPremium && (
+                      <div className="absolute top-2 left-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
+                        FREE
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
-                    <span>{formatViews(v.views)} views</span>
-                    <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
+
+                  <div className="p-2 md:p-3">
+                    <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
+                      {v.title}
+                    </div>
+                    <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
+                      {v.performers || "Unknown"}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
+                      <span>{formatViews(v.views)} views</span>
+                      <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>

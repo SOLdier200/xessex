@@ -16,7 +16,7 @@ const Body = z.object({
  * POST /api/auth/email/register-for-checkout
  *
  * Creates an email account ONLY during checkout flow.
- * This is NOT a general signup - it's only exposed on /subscribe.
+ * This is NOT a general signup - it's only exposed on /signup during checkout.
  * User starts with PENDING subscription until payment completes.
  */
 export async function POST(req: NextRequest) {

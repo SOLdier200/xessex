@@ -1,93 +1,132 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import LogoutModal from "./LogoutModal";
 
 type AuthData = {
   authed: boolean;
   membership: "DIAMOND" | "MEMBER" | "FREE";
   walletAddress: string | null;
+  needsSolWalletLink: boolean;
 };
 
 export default function WalletStatus() {
-  const { publicKey, connected } = useWallet();
   const pathname = usePathname();
+  const router = useRouter();
   const [auth, setAuth] = useState<AuthData | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchAuth = useCallback(() => {
-    // Add cache buster to prevent stale responses
     fetch(`/api/auth/me?_=${Date.now()}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && d.authed) {
-          setAuth({ authed: true, membership: d.membership, walletAddress: d.walletAddress });
+          setAuth({
+            authed: true,
+            membership: d.membership,
+            walletAddress: d.walletAddress,
+            needsSolWalletLink: d.needsSolWalletLink ?? false,
+          });
         } else {
           setAuth(null);
         }
       })
-      .catch(() => setAuth(null));
+      .catch(() => setAuth(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Fetch on mount, wallet change, and navigation
   useEffect(() => {
     fetchAuth();
-  }, [connected, pathname, fetchAuth]);
+  }, [pathname, fetchAuth]);
 
-  const showWallet = connected && publicKey;
-  const showMembership = auth?.authed && auth.membership !== "FREE";
+  const handleLogoutComplete = () => {
+    setAuth(null);
+    router.refresh();
+  };
 
-  if (!showWallet && !showMembership) {
-    return null;
+  const shortAddress = auth?.walletAddress
+    ? `${auth.walletAddress.slice(0, 4)}...${auth.walletAddress.slice(-4)}`
+    : null;
+
+  // Don't show anything while loading
+  if (loading) return null;
+
+  // Determine display state
+  const isFreeOrNoUser = !auth?.authed || auth.membership === "FREE";
+  const isMember = auth?.authed && auth.membership === "MEMBER";
+  const isDiamondNoWallet = auth?.authed && auth.membership === "DIAMOND" && auth.needsSolWalletLink;
+  const isDiamondWithWallet = auth?.authed && auth.membership === "DIAMOND" && !auth.needsSolWalletLink;
+
+  // Handle click based on state
+  const handleClick = () => {
+    if (isFreeOrNoUser) {
+      router.push("/signup");
+    } else if (isDiamondNoWallet) {
+      router.push("/link-wallet");
+    } else {
+      // Member or Diamond with wallet - show logout modal
+      setShowLogoutModal(true);
+    }
+  };
+
+  // Determine styles and content based on state
+  let bgClass = "";
+  let borderClass = "";
+  let dotColor = "";
+  let textColor = "";
+  let title = "";
+  let subtitle = "";
+
+  if (isFreeOrNoUser) {
+    bgClass = "bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/30 hover:to-pink-500/30";
+    borderClass = "border-red-400/50";
+    dotColor = "bg-red-400";
+    textColor = "text-red-400";
+    title = "Free User--Sign up Now!";
+    subtitle = "Get full access";
+  } else if (isMember) {
+    bgClass = "bg-gradient-to-r from-emerald-500/20 to-green-500/20 hover:from-emerald-500/30 hover:to-green-500/30";
+    borderClass = "border-emerald-400/50";
+    dotColor = "bg-emerald-400";
+    textColor = "text-emerald-400";
+    title = "Member Connected";
+    subtitle = "Full Access";
+  } else if (isDiamondNoWallet) {
+    bgClass = "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30";
+    borderClass = "border-yellow-400/50";
+    dotColor = "bg-yellow-400";
+    textColor = "text-yellow-400";
+    title = "Diamond Member--Needs Linked Wallet!";
+    subtitle = "Click to link wallet";
+  } else if (isDiamondWithWallet) {
+    bgClass = "bg-gradient-to-r from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30";
+    borderClass = "border-sky-400/50";
+    dotColor = "bg-sky-400";
+    textColor = "text-sky-400";
+    title = "Diamond Member with Wallet";
+    subtitle = shortAddress ?? "Premium Access";
   }
 
-  const shortAddress = publicKey
-    ? `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`
-    : auth?.walletAddress
-      ? `${auth.walletAddress.slice(0, 4)}...${auth.walletAddress.slice(-4)}`
-      : null;
-
   return (
-    <div className="flex flex-wrap gap-3">
-      {/* Wallet Connected Box */}
-      {showWallet && (
-        <div className="neon-border rounded-2xl p-4 bg-gradient-to-r from-sky-500/20 to-purple-500/20 flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-sky-400 animate-pulse" />
-          <div>
-            <div className="text-sm font-semibold text-sky-400">Wallet Connected</div>
-            <div className="text-xs text-white/60">{shortAddress}</div>
-          </div>
+    <>
+      <button
+        onClick={handleClick}
+        className={`neon-border rounded-2xl p-4 flex items-center gap-3 cursor-pointer transition ${bgClass} ${borderClass}`}
+      >
+        <div className={`w-3 h-3 rounded-full animate-pulse ${dotColor}`} />
+        <div className="text-left">
+          <div className={`text-sm font-semibold ${textColor}`}>{title}</div>
+          <div className="text-xs text-white/60">{subtitle}</div>
         </div>
-      )}
+      </button>
 
-      {/* Membership Box */}
-      {showMembership && (
-        <div
-          className={`neon-border rounded-2xl p-4 flex items-center gap-3 ${
-            auth.membership === "DIAMOND"
-              ? "bg-gradient-to-r from-yellow-500/20 to-purple-500/20 border-yellow-400/50"
-              : "bg-gradient-to-r from-sky-500/20 to-emerald-500/20 border-sky-400/50"
-          }`}
-        >
-          <div
-            className={`w-3 h-3 rounded-full animate-pulse ${
-              auth.membership === "DIAMOND" ? "bg-yellow-400" : "bg-emerald-400"
-            }`}
-          />
-          <div>
-            <div
-              className={`text-sm font-semibold ${
-                auth.membership === "DIAMOND" ? "text-yellow-400" : "text-emerald-400"
-              }`}
-            >
-              {auth.membership === "DIAMOND" ? "Diamond Member" : "Member"}
-            </div>
-            <div className="text-xs text-white/60">
-              {auth.membership === "DIAMOND" ? "Premium Access" : "Full Access"}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <LogoutModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onLogoutComplete={handleLogoutComplete}
+      />
+    </>
   );
 }
