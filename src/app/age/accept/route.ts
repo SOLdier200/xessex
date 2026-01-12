@@ -10,9 +10,7 @@ function sanitizeNext(nextValue: string | null) {
   return "/";
 }
 
-export function GET(request: NextRequest) {
-  const nextValue = request.nextUrl.searchParams.get("next");
-  const nextPath = sanitizeNext(nextValue);
+function resolveOrigin(request: NextRequest) {
   const forwardedHostHeader = request.headers.get("x-forwarded-host");
   const forwardedProtoHeader = request.headers.get("x-forwarded-proto");
   const forwardedPortHeader = request.headers.get("x-forwarded-port");
@@ -35,8 +33,13 @@ export function GET(request: NextRequest) {
     origin = envOrigin;
   }
 
+  return { origin, proto };
+}
+
+function buildAcceptResponse(request: NextRequest, nextPath: string) {
+  const { origin, proto } = resolveOrigin(request);
   const redirectUrl = new URL(nextPath, origin);
-  const response = NextResponse.redirect(redirectUrl);
+  const response = NextResponse.redirect(redirectUrl, 303);
 
   response.cookies.set({
     name: "age_ok",
@@ -58,4 +61,21 @@ export function GET(request: NextRequest) {
   });
 
   return response;
+}
+
+export async function POST(request: NextRequest) {
+  let nextValue: string | null = null;
+  try {
+    const form = await request.formData();
+    const raw = form.get("next");
+    nextValue = typeof raw === "string" ? raw : null;
+  } catch {}
+  const nextPath = sanitizeNext(nextValue);
+  return buildAcceptResponse(request, nextPath);
+}
+
+export function GET(request: NextRequest) {
+  const { origin } = resolveOrigin(request);
+  const redirectUrl = new URL("/age", origin);
+  return NextResponse.redirect(redirectUrl, 303);
 }

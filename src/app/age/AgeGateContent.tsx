@@ -1,35 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 export default function AgeGateContent() {
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
-  const [loading, setLoading] = useState(false);
-
-  function accept(event?: FormEvent<HTMLFormElement>) {
-    if (loading) {
-      event?.preventDefault();
-      return;
-    }
-    setLoading(true);
-
-    try {
-      document.cookie = "age_ok=1; path=/; max-age=31536000; samesite=lax";
-      document.cookie = "age_verified=true; path=/; max-age=31536000; samesite=lax";
-    } catch {}
-
-    try {
-      localStorage.setItem("age_ok_tab", "1");
-    } catch {}
-
-    try {
-      sessionStorage.setItem("age_ok_tab", "1");
-      sessionStorage.setItem("age_ok_redirect", "1");
-    } catch {}
-  }
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10">
@@ -62,19 +38,13 @@ export default function AgeGateContent() {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <form
-              action="/age/accept"
-              method="GET"
-              onSubmit={accept}
-              className="flex-1"
-            >
+            <form action="/age/accept" method="POST" className="flex-1">
               <input type="hidden" name="next" value={next} />
               <button
                 type="submit"
-                disabled={loading}
                 className="w-full rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
               >
-                {loading ? "Entering..." : "I am 18 or older - Enter"}
+                I am 18 or older - Enter
               </button>
             </form>
 
