@@ -6,9 +6,9 @@ export const supabase = createClient(
   {
     auth: {
       flowType: "pkce",
-      persistSession: false,       // you use your own Prisma Session cookie
+      persistSession: true,        // keep verifier in localStorage until exchange
       autoRefreshToken: false,     // don't refresh Supabase tokens
-      detectSessionInUrl: false,   // your server /auth/callback handles the exchange
+      detectSessionInUrl: true,    // let client exchange PKCE code
     },
   }
 );
