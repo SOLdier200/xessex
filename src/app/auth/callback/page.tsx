@@ -1,7 +1,7 @@
 // src/app/auth/callback/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -11,7 +11,7 @@ function sanitizeNext(nextValue: string | null) {
   return nextValue;
 }
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -70,5 +70,19 @@ export default function AuthCallbackPage() {
     <div style={{ padding: 24 }}>
       <p>Signing you in…</p>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: 24 }}>
+          <p>Loading…</p>
+        </div>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
