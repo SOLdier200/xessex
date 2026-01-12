@@ -113,12 +113,12 @@ export default function WalletStatus() {
     <>
       <button
         onClick={handleClick}
-        className={`neon-border rounded-2xl p-4 flex items-center gap-3 cursor-pointer transition ${bgClass} ${borderClass}`}
+        className={`neon-border rounded-xl md:rounded-2xl px-3 py-2 md:p-4 flex items-center gap-2 md:gap-3 cursor-pointer transition shrink-0 max-w-[200px] md:max-w-none ${bgClass} ${borderClass}`}
       >
-        <div className={`w-3 h-3 rounded-full animate-pulse ${dotColor}`} />
-        <div className="text-left">
-          <div className={`text-sm font-semibold ${textColor}`}>{title}</div>
-          <div className="text-xs text-white/60">{subtitle}</div>
+        <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full animate-pulse shrink-0 ${dotColor}`} />
+        <div className="text-left min-w-0">
+          <div className={`text-xs md:text-sm font-semibold truncate ${textColor}`}>{title}</div>
+          <div className="text-[10px] md:text-xs text-white/60 truncate">{subtitle}</div>
         </div>
       </button>
 
