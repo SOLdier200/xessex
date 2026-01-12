@@ -26,6 +26,8 @@ export default function GoogleSignupButton({
       ? new URL(redirectTo, origin).toString()
       : `${origin}/auth/callback`;
 
+    console.log("OAuth redirectTo:", target);
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: target },
