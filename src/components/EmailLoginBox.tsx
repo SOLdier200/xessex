@@ -98,6 +98,14 @@ export default function EmailLoginBox() {
       setLinkedOk(true);
       setNeedsWalletLink(false);
 
+      // Show success toast with wallet name
+      const walletName = wallet.wallet?.adapter?.name || "Wallet";
+      setToastType("success");
+      setToast(`${walletName} linked and connected!`);
+
+      // Close the modal after successful wallet link
+      setShowModal(false);
+
       // Refresh banner state
       await fetchMeAndSetBanner();
     } catch (e: unknown) {
@@ -187,6 +195,10 @@ export default function EmailLoginBox() {
 
             {linkError && <div className="text-xs text-red-300">{linkError}</div>}
             {linkedOk && <div className="text-xs text-emerald-300">Wallet linked</div>}
+          </div>
+
+          <div className="mt-3 text-xs text-white/50 italic">
+            Tip: You may have to switch back and forth between browser and wallet a few times to get the connect prompt to pop up.
           </div>
         </div>
       )}
@@ -293,24 +305,50 @@ export default function EmailLoginBox() {
             {/* Diamond wallet link in modal */}
             {membership === "DIAMOND" && needsWalletLink && (
               <div className="mt-4 rounded-xl border border-pink-500/30 bg-black/40 p-4">
-                <div className="text-sm text-pink-200">
-                  Note: If you signed up with email, you need to now link your SOL wallet for payments in Xess and other
-                  Xess interactions.
-                </div>
+                {!wallet.connected ? (
+                  <>
+                    <div className="text-sm font-semibold text-pink-200">
+                      Step 1: Connect your wallet
+                    </div>
+                    <div className="mt-1 text-xs text-white/75">
+                      Link your SOL wallet to receive your payments in Xess and enable other Xess interactions.
+                    </div>
 
-                <div className="mt-3 space-y-3">
-                  <WalletMultiButton />
-                  <button
-                    onClick={linkSolWallet}
-                    disabled={linking}
-                    className="w-full rounded-xl bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-500 disabled:opacity-60"
-                  >
-                    {linking ? "Linking..." : "Link SOL Wallet to receive your payments as Diamond Member"}
-                  </button>
+                    <div className="mt-3">
+                      <WalletMultiButton />
+                    </div>
 
-                  {linkError && <div className="text-xs text-red-300">{linkError}</div>}
-                  {linkedOk && <div className="text-xs text-emerald-300">Wallet linked</div>}
-                </div>
+                    <div className="mt-3 text-xs text-white/50 italic">
+                      Tip: You may have to switch back and forth between browser and wallet a few times to get the connect prompt to pop up.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold text-emerald-300">
+                      Step 2: Sign message to verify ownership
+                    </div>
+                    <div className="mt-1 text-xs text-white/75">
+                      Wallet connected! Now sign a message to link it to your account.
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      <button
+                        onClick={linkSolWallet}
+                        disabled={linking}
+                        className="w-full rounded-xl bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-500 disabled:opacity-60"
+                      >
+                        {linking ? "Signing..." : "Sign Message to Link Wallet"}
+                      </button>
+
+                      {linkError && <div className="text-xs text-red-300">{linkError}</div>}
+                      {linkedOk && <div className="text-xs text-emerald-300">Wallet linked</div>}
+                    </div>
+
+                    <div className="mt-3 text-xs text-white/50">
+                      Connected: {wallet.publicKey?.toBase58().slice(0, 4)}...{wallet.publicKey?.toBase58().slice(-4)}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
