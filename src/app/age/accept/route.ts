@@ -75,6 +75,21 @@ export async function POST(request: NextRequest) {
 }
 
 export function GET(request: NextRequest) {
+  const purpose = request.headers.get("purpose") ?? request.headers.get("sec-purpose");
+  const secFetchMode = request.headers.get("sec-fetch-mode");
+  const secFetchDest = request.headers.get("sec-fetch-dest");
+  const secFetchUser = request.headers.get("sec-fetch-user");
+  const isPrefetch = purpose?.toLowerCase().includes("prefetch") ?? false;
+  const isNavigate = secFetchMode === "navigate" && (!secFetchDest || secFetchDest === "document");
+  const isUser = secFetchUser === "?1";
+  const allow = !isPrefetch && (isUser || isNavigate || !secFetchMode);
+
+  if (allow) {
+    const nextValue = request.nextUrl.searchParams.get("next");
+    const nextPath = sanitizeNext(nextValue);
+    return buildAcceptResponse(request, nextPath);
+  }
+
   const { origin } = resolveOrigin(request);
   const redirectUrl = new URL("/age", origin);
   return NextResponse.redirect(redirectUrl, 303);

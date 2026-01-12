@@ -1,11 +1,11 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 
-export default function AgeGateContent() {
-  const sp = useSearchParams();
-  const next = sp.get("next") || "/";
+type AgeGateContentProps = {
+  next?: string;
+};
+
+export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
+  const acceptHref = `/age/accept?next=${encodeURIComponent(next)}`;
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10">
@@ -38,15 +38,12 @@ export default function AgeGateContent() {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <form action="/age/accept" method="POST" className="flex-1">
-              <input type="hidden" name="next" value={next} />
-              <button
-                type="submit"
-                className="w-full rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
-              >
-                I am 18 or older - Enter
-              </button>
-            </form>
+            <a
+              href={acceptHref}
+              className="flex-1 inline-flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+            >
+              I am 18 or older - Enter
+            </a>
 
             <a
               href="https://www.google.com"

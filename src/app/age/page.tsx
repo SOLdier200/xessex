@@ -1,18 +1,11 @@
-"use client";
-
-import { Suspense } from "react";
 import AgeGateContent from "./AgeGateContent";
 
-export default function AgeGatePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-black flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <AgeGateContent />
-    </Suspense>
-  );
+type AgeGatePageProps = {
+  searchParams?: { next?: string | string[] };
+};
+
+export default function AgeGatePage({ searchParams }: AgeGatePageProps) {
+  const nextValue = searchParams?.next;
+  const next = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+  return <AgeGateContent next={next} />;
 }
