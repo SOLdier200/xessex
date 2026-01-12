@@ -13,21 +13,26 @@ export default function GoogleSignupButton({
 }: GoogleSignupButtonProps) {
   const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    try {
-      const target = redirectTo
-        ? new URL(redirectTo, window.location.origin).toString()
-        : `${window.location.origin}/auth/callback`;
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: target },
-      });
+    const isLocal =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
 
-      if (error) console.error("OAuth start error:", error);
-      else console.log("OAuth started:", data);
-    } catch (err) {
-      console.error("OAuth start exception:", err);
-    }
+    const origin = isLocal
+      ? `http://${window.location.host}` // force HTTP locally
+      : window.location.origin;
+
+    const target = redirectTo
+      ? new URL(redirectTo, origin).toString()
+      : `${origin}/auth/callback`;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: target },
+    });
+
+    if (error) console.error("OAuth start error:", error);
+    else console.log("OAuth started:", data);
   };
 
   return (
