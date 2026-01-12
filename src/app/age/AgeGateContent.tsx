@@ -6,8 +6,19 @@ type AgeGateContentProps = {
 
 export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10">
-      <div className="w-full max-w-2xl">
+    <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10 relative overflow-hidden">
+      {/* Background logo */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <Image
+          src="/logos/xessexcoinlogo2.png"
+          alt=""
+          width={800}
+          height={800}
+          className="w-[80vmin] h-[80vmin] object-contain opacity-20"
+          priority
+        />
+      </div>
+      <div className="w-full max-w-2xl relative z-10">
         <div className="rounded-2xl p-4 md:p-8 bg-black">
           <div className="flex justify-center mb-4">
             <Image

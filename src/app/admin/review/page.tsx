@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import ShowcaseModal from "../ShowcaseModal";
 
 type Video = {
@@ -129,16 +130,17 @@ export default function ReviewApprovedPage() {
 
   const publishApprovedToLive = async () => {
     setPublishing(true);
+    const toastId = toast.loading("Publishing Pimp Daddy..uno momento");
     try {
       const res = await fetch("/api/admin/publish", { method: "POST" });
       const data = await res.json().catch(() => null);
       if (data?.ok) {
-        alert(`Published ${data.published} / ${data.approved} videos to live site`);
+        toast.success("Great Work Soldier, you did the dirty work noone wants to do.", { id: toastId });
       } else {
-        alert(data?.error || "Publish failed");
+        toast.error(data?.error || "Publish failed", { id: toastId });
       }
     } catch {
-      alert("Publish failed - network error");
+      toast.error("Publish failed - network error", { id: toastId });
     } finally {
       setPublishing(false);
     }

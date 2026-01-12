@@ -27,6 +27,7 @@ const CATEGORIES = [
   { slug: "threesome", name: "Threesome", icon: "👥" },
   { slug: "for-women", name: "For Women", icon: "♀️" },
   { slug: "anal", name: "Anal", icon: "🍑" },
+  { slug: "2d", name: "2D Animated", icon: "🎨" },
   { slug: "highest-rated", name: "Highest Rated", icon: "⭐" },
   { slug: "newest", name: "Newest", icon: "🆕" },
 ];

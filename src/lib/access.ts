@@ -22,9 +22,12 @@ export async function getAccessContext() {
         ? "member"
         : "free";
 
-  // Check env allowlist only (wallet must be in ADMIN_WALLETS)
-  const isAdminOrMod =
-    !!(user?.walletAddress && ADMIN_WALLETS.has(user.walletAddress));
+  // Check user role from database OR env allowlist
+  const hasAdminRole = user?.role === "ADMIN" || user?.role === "MOD";
+  const walletInAllowlist =
+    !!(user?.walletAddress && ADMIN_WALLETS.has(user.walletAddress)) ||
+    !!(user?.solWallet && ADMIN_WALLETS.has(user.solWallet));
+  const isAdminOrMod = hasAdminRole || walletInAllowlist;
 
   // Diamond email users who haven't linked a wallet yet
   const hasLinkedWallet = !!user?.walletAddress || !!user?.solWallet;

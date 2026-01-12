@@ -329,10 +329,10 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen p-6">
-      {/* Version Banner */}
-      <div className="mb-4 py-3 px-6 bg-gradient-to-r from-pink-600 via-purple-600 to-pink-600 bg-[length:200%_100%] animate-pulse rounded-xl text-center border-4 border-yellow-400 shadow-[0_0_30px_rgba(236,72,153,0.8)]">
-        <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,1)] tracking-widest">
-          V1.4 - DELETE REJECTED BUTTON
+      {/* Progress Banner */}
+      <div className="mb-4 py-3 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 rounded-xl text-center border border-emerald-400/50 shadow-lg">
+        <span className="text-xl font-bold text-white">
+          Keep it up! Only <span className="text-yellow-300">{stats.pending.toLocaleString()}</span> videos left to curate
         </span>
       </div>
 
