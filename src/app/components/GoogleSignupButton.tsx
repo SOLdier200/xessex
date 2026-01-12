@@ -42,11 +42,17 @@ export default function GoogleSignupButton({
     if (error) console.error("OAuth start error:", error);
     else console.log("OAuth started:", data);
 
-    // Debug: verify PKCE verifier was stored
+    // Debug: verify PKCE verifier was stored (check all storage backends)
     setTimeout(() => {
-      const keys = Object.keys(sessionStorage);
-      const hit = keys.find(k => k.includes("code-verifier") || k.includes("code_verifier"));
-      console.log("PKCE verifier key present?", !!hit, hit);
+      const ssKeys = Object.keys(sessionStorage);
+      const lsKeys = Object.keys(localStorage);
+
+      const ssHit = ssKeys.find(k => k.includes("code-verifier") || k.includes("code_verifier") || k.includes("pkce"));
+      const lsHit = lsKeys.find(k => k.includes("code-verifier") || k.includes("code_verifier") || k.includes("pkce"));
+
+      console.log("PKCE key sessionStorage?", !!ssHit, ssHit);
+      console.log("PKCE key localStorage?", !!lsHit, lsHit);
+      console.log("cookie has sb-?", document.cookie.includes("sb-"));
     }, 50);
   };
 
