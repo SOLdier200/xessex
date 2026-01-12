@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 
 export default function AgeGateContent() {
   const sp = useSearchParams();
   const next = sp.get("next") || "/";
   const [loading, setLoading] = useState(false);
 
-  function accept() {
-    if (loading) return;
+  function accept(event?: FormEvent<HTMLFormElement>) {
+    if (loading) {
+      event?.preventDefault();
+      return;
+    }
     setLoading(true);
 
     try {
@@ -26,13 +28,6 @@ export default function AgeGateContent() {
       sessionStorage.setItem("age_ok_tab", "1");
       sessionStorage.setItem("age_ok_redirect", "1");
     } catch {}
-
-    // Use href for Safari compatibility - direct navigation
-    window.location.href = next;
-  }
-
-  function leave() {
-    window.location.href = "https://www.google.com";
   }
 
   return (
@@ -60,41 +55,47 @@ export default function AgeGateContent() {
 
           <p className="mt-4 text-center text-white/90">
             By entering, you agree to our{" "}
-            <Link href="/terms" className="text-pink-400 underline">
+            <a href="/terms" className="text-pink-400 underline">
               Terms of Service
-            </Link>.
+            </a>.
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => accept()}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+            <form
+              action="/age/accept"
+              method="GET"
+              onSubmit={accept}
+              className="flex-1"
             >
-              {loading ? "Entering..." : "I am 18 or older - Enter"}
-            </button>
+              <input type="hidden" name="next" value={next} />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+              >
+                {loading ? "Entering..." : "I am 18 or older - Enter"}
+              </button>
+            </form>
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => leave()}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+            <a
+              href="https://www.google.com"
+              className="flex-1 inline-flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
             >
               I am under 18 - Exit
-            </button>
+            </a>
           </div>
 
           <p className="mt-6 text-center text-white/90">
             Our{" "}
-            <Link href="/parental-controls" className="text-pink-400 underline">
+            <a href="/parental-controls" className="text-pink-400 underline">
               parental controls page
-            </Link>{" "}
+            </a>{" "}
             explains how to block access.
           </p>
 
-          <div className="mt-6 text-center text-white/50 text-sm">
-            © Xessex.me 2026
+          <div className="mt-6 flex items-center justify-center gap-3 text-white/50 text-sm">
+            <span>© Xessex.me 2026</span>
+            <img src="/logos/rta.gif" alt="RTA - Restricted to Adults" width={88} height={31} />
           </div>
         </div>
       </div>
