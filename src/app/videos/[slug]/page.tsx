@@ -68,11 +68,9 @@ export default async function VideoPage({ params }: VideoPageProps) {
               >
                 {video.isShowcase ? "free" : "premium"}
               </span>
-              {!!video.viewsCount && (
-                <span className="text-xs text-white/40">
-                  {video.viewsCount.toLocaleString()} views
-                </span>
-              )}
+              <span className="text-xs text-white/40">
+                Xessex Views: {video.viewsCount.toLocaleString()}
+              </span>
               {video.starsCount > 0 && (
                 <span className="text-xs text-yellow-400">
                   ★ {video.avgStars.toFixed(1)} ({video.starsCount})

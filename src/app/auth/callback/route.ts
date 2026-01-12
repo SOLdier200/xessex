@@ -7,6 +7,12 @@ import { sendWelcomeEmail } from "@/lib/email/sendWelcomeEmail";
 
 type EffectiveTier = "FREE" | "MEMBER" | "DIAMOND";
 
+function sanitizeNext(nextValue: string | null) {
+  if (!nextValue) return "/";
+  if (!nextValue.startsWith("/") || nextValue.startsWith("//")) return "/";
+  return nextValue;
+}
+
 function getEffectiveTier(sub?: { status: any; expiresAt: Date | null; tier: any }): EffectiveTier {
   if (!sub) return "FREE";
 
@@ -23,6 +29,8 @@ function getEffectiveTier(sub?: { status: any; expiresAt: Date | null; tier: any
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const nextParam = searchParams.get("next");
+  const next = sanitizeNext(nextParam);
 
   if (!code) {
     return NextResponse.redirect(new URL("/login?error=missing_code", req.url));
@@ -101,5 +109,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/", req.url));
+  return NextResponse.redirect(new URL(next, req.url));
 }

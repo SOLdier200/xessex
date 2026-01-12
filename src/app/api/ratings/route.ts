@@ -3,6 +3,10 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 
+// Rate limit: 20 seconds between rating changes per user
+const RATE_LIMIT_MS = 20 * 1000;
+const ratingCooldowns = new Map<string, number>();
+
 /**
  * POST /api/ratings
  * 5-star rating (Diamond only)
@@ -39,6 +43,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Check rate limit for this user
+  const now = Date.now();
+  const cooldownKey = access.user.id;
+  const lastRating = ratingCooldowns.get(cooldownKey);
+
+  // Clean up old entries periodically
+  if (ratingCooldowns.size > 10000) {
+    const cutoff = now - RATE_LIMIT_MS;
+    for (const [key, time] of ratingCooldowns) {
+      if (time < cutoff) ratingCooldowns.delete(key);
+    }
+  }
+
+  if (lastRating && now - lastRating < RATE_LIMIT_MS) {
+    const waitSeconds = Math.ceil((RATE_LIMIT_MS - (now - lastRating)) / 1000);
+    return NextResponse.json(
+      { ok: false, error: "RATE_LIMITED", waitSeconds },
+      { status: 429 }
+    );
+  }
+
   const s = clampInt(stars, 1, 5);
 
   const video = await db.video.findUnique({ where: { id: videoId } });
@@ -48,6 +73,9 @@ export async function POST(req: NextRequest) {
       { status: 404 }
     );
   }
+
+  // Update cooldown timestamp
+  ratingCooldowns.set(cooldownKey, now);
 
   // Upsert rating (allow updates)
   await db.videoStarRating.upsert({

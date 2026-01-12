@@ -32,8 +32,15 @@ export function isSubscriptionActive(
   sub?: { status: SubscriptionStatus; expiresAt: Date | null } | null
 ) {
   if (!sub) return false;
-  if (sub.status !== "ACTIVE") return false;
-  if (!sub.expiresAt) return true; // null = lifetime / admin
+
+  // ACTIVE = fully paid membership
+  // PENDING + future expiresAt = provisional access window (instant access)
+  const statusOk = sub.status === "ACTIVE" || sub.status === "PENDING";
+  if (!statusOk) return false;
+
+  // Keep lifetime semantics ONLY for ACTIVE (prevents "lifetime provisional")
+  if (!sub.expiresAt) return sub.status === "ACTIVE";
+
   return sub.expiresAt.getTime() > Date.now();
 }
 

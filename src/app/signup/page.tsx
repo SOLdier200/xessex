@@ -4,7 +4,9 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import TopNav from "../components/TopNav";
+import GoogleSignupButton from "../components/GoogleSignupButton";
 
 // NOWPayments hosted invoice ids
 const NOWPAYMENTS_IIDS = {
@@ -40,6 +42,18 @@ function SignupInner() {
   const [waiting, setWaiting] = useState(false);
   const [pollMsg, setPollMsg] = useState<string>("");
 
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [signupPlan, setSignupPlan] = useState<keyof typeof NOWPAYMENTS_IIDS | null>(null);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupBusy, setSignupBusy] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [signupRegistered, setSignupRegistered] = useState(false);
+
+  const memberPlan = memberCycle === "monthly" ? "MM" : "MY";
+  const diamondPlan = diamondCycle === "monthly" ? "DM" : "DY";
+
   const pollTimerRef = useRef<number | null>(null);
   const pollStartRef = useRef<number>(0);
 
@@ -60,10 +74,31 @@ function SignupInner() {
     }
   }
 
+  async function checkMembershipOnce() {
+    const auth = await fetchAuthStatus();
+    if (!auth?.ok) {
+      setPollMsg("Checking your membership...");
+      return false;
+    }
+
+    if (auth.isMember === true) {
+      stopPolling();
+      setPollMsg("Membership active! Redirecting...");
+      setTimeout(() => router.push("/videos"), 800);
+      return true;
+    }
+
+    setPollMsg("Still waiting for confirmation...");
+    return false;
+  }
+
   function startPollingMembership() {
     stopPolling();
     pollStartRef.current = Date.now();
     setWaiting(true);
+    setPollMsg("Checking your membership...");
+    toast("Checking status...");
+    void checkMembershipOnce();
 
     pollTimerRef.current = window.setInterval(async () => {
       const elapsed = Date.now() - pollStartRef.current;
@@ -75,20 +110,7 @@ function SignupInner() {
         return;
       }
 
-      const auth = await fetchAuthStatus();
-      if (!auth?.ok) {
-        setPollMsg("Checking your membership...");
-        return;
-      }
-
-      if (auth.isMember === true) {
-        stopPolling();
-        setPollMsg("Membership active! Redirecting...");
-        setTimeout(() => router.push("/videos"), 800);
-        return;
-      }
-
-      setPollMsg("Still waiting for confirmation...");
+      await checkMembershipOnce();
     }, POLL_EVERY_MS);
   }
 
@@ -105,19 +127,111 @@ function SignupInner() {
 
       const data = await res.json().catch(() => null);
 
-      if (!data?.ok || !data?.redirectUrl) {
-        const iid = NOWPAYMENTS_IIDS[plan];
-        window.location.href = `https://nowpayments.io/payment/?iid=${iid}`;
-        return;
+      if (!res.ok || !data?.ok || !data?.redirectUrl) {
+        toast.error("Payment start failed. Please try again.");
+        return false;
       }
 
       window.location.href = data.redirectUrl as string;
+      return true;
     } catch {
-      const iid = NOWPAYMENTS_IIDS[plan];
-      window.location.href = `https://nowpayments.io/payment/?iid=${iid}`;
+      toast.error("Payment start failed. Please try again.");
+      return false;
     } finally {
       setLoading(false);
       setLoadingPlan(null);
+    }
+  }
+
+  function closeSignupModal() {
+    if (signupBusy) return;
+    setSignupOpen(false);
+    setSignupError(null);
+    setSignupRegistered(false);
+  }
+
+  async function beginCheckout(plan: keyof typeof NOWPAYMENTS_IIDS) {
+    const auth = await fetchAuthStatus();
+    if (auth?.ok && auth.authenticated) {
+      await handleNowPayments(plan);
+      return;
+    }
+
+    setSignupPlan(plan);
+    setSignupError(null);
+    setSignupOpen(true);
+  }
+
+  async function ensureAuthReady() {
+    for (let i = 0; i < 4; i += 1) {
+      const auth = await fetchAuthStatus();
+      if (auth?.ok && auth.authenticated) return true;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return false;
+  }
+
+  async function handleEmailSignup(e: React.FormEvent) {
+    e.preventDefault();
+    if (signupBusy) return;
+    const plan = signupPlan ?? memberPlan;
+
+    setSignupBusy(true);
+    setSignupError(null);
+
+    try {
+      if (!signupRegistered) {
+        const email = signupEmail.trim();
+        const password = signupPassword;
+
+        if (!email) {
+          setSignupError("Please enter your email.");
+          return;
+        }
+        if (!password || password.length < 5) {
+          setSignupError("Please create a password (min 5 characters).");
+          return;
+        }
+
+        const res = await fetch("/api/auth/email/register-for-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data?.ok) {
+          if (data?.error === "EMAIL_EXISTS") {
+            setSignupError("Email already exists. Please log in to continue.");
+          } else if (data?.error === "INVALID_INPUT") {
+            setSignupError("Please enter a valid email and password.");
+          } else {
+            setSignupError("Signup failed. Please try again.");
+          }
+          return;
+        }
+
+        setSignupRegistered(true);
+      }
+
+      const authed = await ensureAuthReady();
+      if (!authed) {
+        setSignupError("Account created, but login is not ready yet. Please refresh and try again.");
+        return;
+      }
+
+      const started = await handleNowPayments(plan);
+      if (started) {
+        setSignupOpen(false);
+        setSignupEmail("");
+        setSignupPassword("");
+        setShowSignupPassword(false);
+        setSignupRegistered(false);
+      }
+    } catch {
+      setSignupError("Signup failed. Please try again.");
+    } finally {
+      setSignupBusy(false);
     }
   }
 
@@ -164,16 +278,13 @@ function SignupInner() {
       sessionStorage.setItem(key, "1");
     }
 
-    handleNowPayments(plan);
+    beginCheckout(plan);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   useEffect(() => {
     return () => stopPolling();
   }, []);
-
-  const memberPlan = memberCycle === "monthly" ? "MM" : "MY";
-  const diamondPlan = diamondCycle === "monthly" ? "DM" : "DY";
 
   return (
     <>
@@ -196,18 +307,6 @@ function SignupInner() {
               className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
             >
               Refresh status
-            </button>
-
-            <button
-              onClick={() => {
-                stopPolling();
-                setWaiting(false);
-                setPollMsg("");
-                router.replace("/signup");
-              }}
-              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
-            >
-              Exit
             </button>
           </div>
 
@@ -303,7 +402,7 @@ function SignupInner() {
           )}
 
           <button
-            onClick={() => handleNowPayments(memberPlan)}
+            onClick={() => beginCheckout(memberPlan)}
             disabled={loading || waiting}
             className={`mt-6 w-full py-3 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-400 font-semibold hover:bg-sky-500/30 transition text-center block ${loading ? "opacity-50" : ""}`}
           >
@@ -460,6 +559,79 @@ function SignupInner() {
           Login Here
         </Link>
       </p>
+
+      {signupOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/80"
+            onClick={closeSignupModal}
+          />
+          <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Sign up with your Email</h2>
+            <p className="text-sm text-white/60 mb-5">
+              Enter your email to create your membership account.
+            </p>
+
+            <form onSubmit={handleEmailSignup} className="space-y-3">
+              <div>
+                <label className="text-xs text-white/60">Email</label>
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  disabled={signupBusy || signupRegistered}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-pink-400/70"
+                  placeholder="you@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/60">Create password</label>
+                <div className="mt-1 flex items-center rounded-xl border border-white/10 bg-black/50 px-3 py-2 focus-within:border-pink-400/70">
+                  <input
+                    type={showSignupPassword ? "text" : "password"}
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    disabled={signupBusy || signupRegistered}
+                    className="w-full bg-transparent text-white outline-none"
+                    placeholder="Minimum 5 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignupPassword((v) => !v)}
+                    className="text-xs text-white/50 hover:text-white"
+                  >
+                    {showSignupPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              {signupError && <div className="text-xs text-red-300">{signupError}</div>}
+
+              <button
+                type="submit"
+                disabled={signupBusy}
+                className="w-full rounded-xl bg-pink-500/20 border border-pink-400/40 py-3 text-pink-100 font-semibold hover:bg-pink-500/30 transition disabled:opacity-50"
+              >
+                {signupBusy
+                  ? signupRegistered
+                    ? "Redirecting to payment..."
+                    : "Creating account..."
+                  : "Continue to Payment"}
+              </button>
+            </form>
+
+            <div className="my-4 text-center text-xs text-white/40">or</div>
+
+            <GoogleSignupButton
+              label="Sign up with Google"
+              redirectTo={`/auth/callback?next=${encodeURIComponent(
+                signupPlan ? `/signup?plan=${signupPlan}` : "/signup"
+              )}`}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -74,11 +74,15 @@ function addDays(from: Date, days: number): Date {
 }
 
 /**
- * Only grant access on "finished" status (safest).
- * Other statuses: waiting, confirming, confirmed, sending, partially_paid, finished, failed, refunded, expired
+ * Grant access as soon as funds are detected / confirming.
+ * Statuses: waiting, confirming, confirmed, sending, partially_paid, finished, failed, refunded, expired
  */
-function isFinalPaid(status: string): boolean {
-  return status === "finished";
+function isPaidEnough(status: string): boolean {
+  return status === "confirming" || status === "confirmed" || status === "finished";
+}
+
+function isBad(status: string): boolean {
+  return status === "expired" || status === "failed" || status === "refunded";
 }
 
 /**
@@ -161,16 +165,21 @@ export async function POST(req: NextRequest) {
       nowPaymentsOrderId: orderId ?? sub.nowPaymentsOrderId,
       nowPaymentsInvoiceId: invoiceId ?? sub.nowPaymentsInvoiceId,
       nowPaymentsPaymentId: paymentId ?? sub.nowPaymentsPaymentId,
-      status:
-        paymentStatus === "expired" ? "EXPIRED" :
-        paymentStatus === "failed" ? "CANCELED" :
-        paymentStatus === "refunded" ? "CANCELED" :
-        sub.status, // keep PENDING until finished
+      // Revoke immediately on bad outcomes (also removes provisional access window)
+      ...(isBad(paymentStatus)
+        ? { status: paymentStatus === "expired" ? "EXPIRED" : "CANCELED", expiresAt: null }
+        : {}),
     },
   });
 
-  // Activate only on FINAL PAID status
-  if (isFinalPaid(paymentStatus)) {
+  // If payment failed/expired/refunded, we've already revoked above
+  if (isBad(paymentStatus)) {
+    console.log(`[IPN] Revoked subscription ${sub.id}: status=${paymentStatus}`);
+    return NextResponse.json({ ok: true, revoked: true });
+  }
+
+  // Activate as soon as funds detected (don't wait only for finished)
+  if (isPaidEnough(paymentStatus)) {
     // Determine plan from orderId first (embedded plan code), then invoice mapping as fallback
     const planCode = planFromOrderId(orderId) || planFromOrderId(sub.nowPaymentsOrderId);
     const planFromCode = planCode ? PLAN_META[planCode] : null;
@@ -186,9 +195,12 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date();
-    // If user already active and expires in future, extend from current expiry
+    // Only extend from existing expiry if already ACTIVE (not provisional PENDING)
+    // This prevents giving "bonus time" from the provisional window
     const base =
-      sub.expiresAt && sub.expiresAt.getTime() > now.getTime() ? sub.expiresAt : now;
+      sub.status === "ACTIVE" && sub.expiresAt && sub.expiresAt.getTime() > now.getTime()
+        ? sub.expiresAt
+        : now;
 
     const newExpiry = addDays(base, plan.days);
 

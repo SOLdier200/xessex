@@ -43,6 +43,10 @@ export default function WalletStatus() {
 
   const handleLogoutComplete = () => {
     setAuth(null);
+    if (pathname.startsWith("/videos/")) {
+      router.replace("/videos");
+      return;
+    }
     router.refresh();
   };
 

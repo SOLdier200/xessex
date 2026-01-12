@@ -54,6 +54,10 @@ function makeOrderId(plan: Plan) {
   return `sx_${plan}_` + crypto.randomBytes(8).toString("hex"); // 22 chars
 }
 
+function addMinutes(from: Date, minutes: number) {
+  return new Date(from.getTime() + minutes * 60 * 1000);
+}
+
 function resolveBaseUrl(req: NextRequest) {
   const envBase =
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -182,6 +186,10 @@ export async function POST(req: NextRequest) {
   const orderId = makeOrderId(plan);
   const baseUrl = resolveBaseUrl(req);
 
+  // Provisional access window (instant access while payment confirms)
+  const now = new Date();
+  const provisionalExpiresAt = addMinutes(now, 45);
+
   // Ensure the user has a Subscription row (1:1)
   // Generate unique orderId per checkout attempt for safe IPN correlation
   const sub = await db.subscription.upsert({
@@ -193,7 +201,7 @@ export async function POST(req: NextRequest) {
       nowPaymentsInvoiceId: null,
       nowPaymentsOrderId: orderId,
       nowPaymentsPaymentId: null,
-      expiresAt: null,
+      expiresAt: provisionalExpiresAt, // instant access window
     },
     update: {
       tier,
@@ -201,7 +209,7 @@ export async function POST(req: NextRequest) {
       nowPaymentsInvoiceId: null,
       nowPaymentsOrderId: orderId, // rotate each checkout attempt
       nowPaymentsPaymentId: null,  // clear old payment id
-      // don't set expiresAt yet; only set on paid
+      expiresAt: provisionalExpiresAt, // refresh provisional each checkout attempt
     },
   });
 
@@ -241,6 +249,7 @@ export async function POST(req: NextRequest) {
       plan,
       tier,
       subscriptionId: sub.id,
+      provisionalUntil: provisionalExpiresAt.toISOString(),
       stablecoinHint:
         plan === "MM"
           ? "Stablecoins (USDT/USDC on TRC20/BSC/Polygon) recommended for low-cost plans."
@@ -262,6 +271,7 @@ export async function POST(req: NextRequest) {
     plan,
     tier,
     subscriptionId: sub.id,
+    provisionalUntil: provisionalExpiresAt.toISOString(),
     // Stablecoin hint for low-cost plans (NOWPayments minimums vary by coin)
     stablecoinHint: plan === "MM"
       ? "Stablecoins (USDT/USDC on TRC20/BSC/Polygon) recommended for low-cost plans."

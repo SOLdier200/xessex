@@ -68,6 +68,9 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
         toast.success(
           "Thanks for your contribution to Xessex, you will be paid for your work after the Next Epoch"
         );
+      } else if (res.status === 429) {
+        // Rate limited
+        toast.error(`Please wait ${data.waitSeconds} seconds before changing your rating`);
       } else if (res.status === 401) {
         toast.error("Please log in to rate videos");
       } else if (res.status === 403) {

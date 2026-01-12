@@ -211,6 +211,26 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
 
   return (
     <div className="space-y-4">
+      {/* Commented badge for Diamond members who have commented */}
+      {hasPostedComment && effectiveCanPost && (
+        <div className="inline-flex items-center gap-2 rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-2">
+          <svg
+            className="w-5 h-5 text-green-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span className="text-sm font-semibold text-green-400">Commented</span>
+        </div>
+      )}
+
       {/* Comment Form - Only if canPost */}
       {effectiveCanPost ? (
         <form onSubmit={handleSubmit}>
