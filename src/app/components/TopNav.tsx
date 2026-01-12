@@ -18,7 +18,7 @@ export default function TopNav() {
 
   return (
     <header className="px-4 md:px-6 py-4 md:py-5 safe-top">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/" onClick={() => setMenuOpen(false)}>
           <Image
             src="/logos/neonmainlogo1.png"
@@ -31,7 +31,7 @@ export default function TopNav() {
         </Link>
 
         {/* Right side - Wallet Status and Admin */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <WalletStatus />
           {isAdmin && (
             <Link

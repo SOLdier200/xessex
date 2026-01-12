@@ -13,19 +13,21 @@ export default function GoogleSignupButton({
 }: GoogleSignupButtonProps) {
   const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    try {
+      const target = redirectTo
+        ? new URL(redirectTo, window.location.origin).toString()
+        : `${window.location.origin}/auth/callback`;
 
-    const target = redirectTo
-      ? new URL(redirectTo, window.location.origin).toString()
-      : `${window.location.origin}/auth/callback`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: target },
+      });
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: target },
-    });
-
-    // If you're not reaching Google, THIS will tell us why.
-    if (error) console.error("signInWithOAuth error:", error);
-    else console.log("OAuth started:", data);
+      if (error) console.error("OAuth start error:", error);
+      else console.log("OAuth started:", data);
+    } catch (err) {
+      console.error("OAuth start exception:", err);
+    }
   };
 
   return (

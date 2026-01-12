@@ -3,6 +3,7 @@ import SolanaProviders from "@/components/SolanaProviders";
 import WalletLoginButton from "@/components/WalletLoginButton";
 import EmailLoginBox from "@/components/EmailLoginBox";
 import GoogleSignupButton from "../components/GoogleSignupButton";
+import ClearSupabaseSession from "../components/ClearSupabaseSession";
 
 export default function LoginPage() {
   return (
@@ -32,6 +33,9 @@ export default function LoginPage() {
               </p>
               <div className="mt-6">
                 <GoogleSignupButton />
+              </div>
+              <div className="mt-3 text-center">
+                <ClearSupabaseSession />
               </div>
             </div>
 
