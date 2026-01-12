@@ -34,6 +34,7 @@ function SignupInner() {
   const [diamondCycle, setDiamondCycle] = useState<"monthly" | "yearly">("monthly");
   const [loading, setLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const diamondDisabled = true;
 
   // Payment waiting state
   const [waiting, setWaiting] = useState(false);
@@ -311,7 +312,11 @@ function SignupInner() {
         </div>
 
         {/* Diamond Member Tier */}
-        <div className="neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden">
+        <div
+          className={`neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden ${
+            diamondDisabled ? "opacity-60 grayscale" : ""
+          }`}
+        >
           {/* Diamond image positioned to right middle */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30">
             <img
@@ -335,21 +340,23 @@ function SignupInner() {
               <div className="bg-black/40 rounded-full p-1 flex gap-1">
                 <button
                   onClick={() => setDiamondCycle("monthly")}
+                  disabled={diamondDisabled}
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
                     diamondCycle === "monthly"
                       ? "bg-yellow-500/30 text-yellow-300"
                       : "text-white/60 hover:text-white"
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   Monthly
                 </button>
                 <button
                   onClick={() => setDiamondCycle("yearly")}
+                  disabled={diamondDisabled}
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
                     diamondCycle === "yearly"
                       ? "bg-yellow-500/30 text-yellow-300"
                       : "text-white/60 hover:text-white"
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   Yearly
                 </button>
@@ -400,12 +407,22 @@ function SignupInner() {
             </li>
           </ul>
 
+          {diamondDisabled && (
+            <div className="mt-4 text-center text-white/70 text-sm">
+              Coming Very Soon....
+            </div>
+          )}
+
           <button
             onClick={() => handleNowPayments(diamondPlan)}
-            disabled={loading || waiting}
-            className={`mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block ${loading ? "opacity-50" : ""}`}
+            disabled={loading || waiting || diamondDisabled}
+            className={`mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block disabled:opacity-50 disabled:cursor-not-allowed ${loading ? "opacity-50" : ""}`}
           >
-            {loadingPlan === diamondPlan ? "Redirecting to payment..." : "Become a Diamond Member"}
+            {diamondDisabled
+              ? "Coming Very Soon...."
+              : loadingPlan === diamondPlan
+                ? "Redirecting to payment..."
+                : "Become a Diamond Member"}
           </button>
         </div>
       </div>
