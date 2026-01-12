@@ -15,6 +15,20 @@ function sanitizeNext(nextValue: string | null) {
   return nextValue;
 }
 
+function getPublicOrigin(req: Request) {
+  const h = req.headers;
+
+  // Cloudflare + Nginx will set these
+  const xfProto = h.get("x-forwarded-proto");
+  const xfHost = h.get("x-forwarded-host");
+
+  const proto = (xfProto || "https").split(",")[0].trim();
+  const host = (xfHost || h.get("host") || "").split(",")[0].trim();
+
+  if (!host) return "https://xessex.me"; // safe fallback
+  return `${proto}://${host}`;
+}
+
 function getEffectiveTier(sub?: { status: any; expiresAt: Date | null; tier: any }): EffectiveTier {
   if (!sub) return "FREE";
 
@@ -38,6 +52,7 @@ function getEffectiveTier(sub?: { status: any; expiresAt: Date | null; tier: any
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  const origin = getPublicOrigin(req);
   const code = url.searchParams.get("code");
   const nextParam = url.searchParams.get("next");
   const next = sanitizeNext(nextParam);
@@ -49,13 +64,13 @@ export async function GET(req: Request) {
   if (oauthError) {
     console.error("Supabase OAuth callback error:", oauthError, oauthErrorDesc);
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(oauthError)}`, url.origin)
+      new URL(`/login?error=${encodeURIComponent(oauthError)}`, origin)
     );
   }
 
   if (!code) {
     console.error("Callback missing code. Full callback URL:", url.toString());
-    return NextResponse.redirect(new URL("/login?error=missing_code", url.origin));
+    return NextResponse.redirect(new URL("/login?error=missing_code", origin));
   }
 
   const supabase = createClient(
@@ -68,7 +83,7 @@ export async function GET(req: Request) {
 
   if (error || !data.user) {
     console.error("OAuth error:", error);
-    return NextResponse.redirect(new URL("/login?error=auth_failed", url.origin));
+    return NextResponse.redirect(new URL("/login?error=auth_failed", origin));
   }
 
   const supabaseUser = data.user;
@@ -77,7 +92,7 @@ export async function GET(req: Request) {
   const name = supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name;
 
   if (!email) {
-    return NextResponse.redirect(new URL("/login?error=no_email", url.origin));
+    return NextResponse.redirect(new URL("/login?error=no_email", origin));
   }
 
   // Upsert user in Prisma
@@ -113,7 +128,7 @@ export async function GET(req: Request) {
   const { token, expiresAt } = await createSession(user.id);
 
   // IMPORTANT: set cookie on the response object
-  const res = NextResponse.redirect(new URL(next, url.origin));
+  const res = NextResponse.redirect(new URL(next, origin));
   setSessionCookieOnResponse(res, token, expiresAt);
 
   // Send welcome email ONCE (race-safe), tier-aware
