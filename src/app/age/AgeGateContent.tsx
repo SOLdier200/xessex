@@ -47,7 +47,7 @@ export default function AgeGateContent() {
           </div>
 
           <h1 className="text-xl md:text-3xl font-semibold text-center">
-            THIS IS AN <span className="text-pink-400">ADULT WEBSITE</span>
+            THIS IS AN <span className="text-pink-400 animate-pulse">ADULT WEBSITE</span>
           </h1>
 
           <p className="mt-4 text-center text-white/90">
