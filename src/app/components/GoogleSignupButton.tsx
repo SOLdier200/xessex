@@ -7,30 +7,31 @@ type GoogleSignupButtonProps = {
   redirectTo?: string;
 };
 
-export default function GoogleSignupButton({ label = "Sign in with Google", redirectTo }: GoogleSignupButtonProps) {
-  async function handleGoogle(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault(); // stops form submit navigation
+export default function GoogleSignupButton({
+  label = "Sign in with Google",
+  redirectTo,
+}: GoogleSignupButtonProps) {
+  const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
 
     const target = redirectTo
       ? new URL(redirectTo, window.location.origin).toString()
       : `${window.location.origin}/auth/callback`;
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: target,
-      },
+      options: { redirectTo: target },
     });
 
-    if (error) {
-      console.error("Google OAuth start error:", error);
-    }
-  }
+    // If you're not reaching Google, THIS will tell us why.
+    if (error) console.error("signInWithOAuth error:", error);
+    else console.log("OAuth started:", data);
+  };
 
   return (
     <button
       type="button"
-      onClick={handleGoogle}
+      onClick={signIn}
       className="w-full flex items-center justify-center gap-3
         bg-white text-black font-semibold py-3 rounded-xl
         hover:bg-gray-100 transition shadow-lg"

@@ -42,7 +42,19 @@ export async function GET(req: Request) {
   const nextParam = url.searchParams.get("next");
   const next = sanitizeNext(nextParam);
 
+  // Supabase can send these when OAuth fails
+  const oauthError = url.searchParams.get("error");
+  const oauthErrorDesc = url.searchParams.get("error_description");
+
+  if (oauthError) {
+    console.error("Supabase OAuth callback error:", oauthError, oauthErrorDesc);
+    return NextResponse.redirect(
+      new URL(`/login?error=${encodeURIComponent(oauthError)}`, url.origin)
+    );
+  }
+
   if (!code) {
+    console.error("Callback missing code. Full callback URL:", url.toString());
     return NextResponse.redirect(new URL("/login?error=missing_code", url.origin));
   }
 
