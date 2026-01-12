@@ -4,6 +4,8 @@ import { db } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
+type PlanCode = "MM" | "MY" | "DM" | "DY";
+
 // Static invoice mapping (source of truth for tier + duration)
 const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }>([
   ["4346120539", { tier: "MEMBER", days: 30 }],   // Member monthly $3
@@ -11,6 +13,20 @@ const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }
   ["6120974427", { tier: "DIAMOND", days: 30 }],  // Diamond monthly $18.5
   ["4296776562", { tier: "DIAMOND", days: 365 }], // Diamond yearly $185
 ]);
+
+const PLAN_META: Record<PlanCode, { tier: "MEMBER" | "DIAMOND"; days: number }> = {
+  MM: { tier: "MEMBER", days: 30 },
+  MY: { tier: "MEMBER", days: 365 },
+  DM: { tier: "DIAMOND", days: 30 },
+  DY: { tier: "DIAMOND", days: 365 },
+};
+
+function planFromOrderId(orderId: string | null): PlanCode | null {
+  if (!orderId) return null;
+  const match = orderId.match(/^sx_(MM|MY|DM|DY)_/i);
+  if (!match) return null;
+  return match[1].toUpperCase() as PlanCode;
+}
 
 /**
  * Recursively sort object keys for HMAC verification.
@@ -155,12 +171,17 @@ export async function POST(req: NextRequest) {
 
   // Activate only on FINAL PAID status
   if (isFinalPaid(paymentStatus)) {
-    // Determine plan from invoice mapping (use stored invoiceId if IPN doesn't provide one)
+    // Determine plan from orderId first (embedded plan code), then invoice mapping as fallback
+    const planCode = planFromOrderId(orderId) || planFromOrderId(sub.nowPaymentsOrderId);
+    const planFromCode = planCode ? PLAN_META[planCode] : null;
     const effectiveInvoiceId = invoiceId ?? sub.nowPaymentsInvoiceId;
-    const plan = effectiveInvoiceId ? IID_TO_PLAN.get(effectiveInvoiceId) : null;
+    const planFromInvoice = effectiveInvoiceId ? IID_TO_PLAN.get(effectiveInvoiceId) : null;
+    const plan = planFromCode || planFromInvoice;
 
     if (!plan) {
-      console.warn(`[IPN] Unknown invoice ${effectiveInvoiceId}, not granting tier`);
+      console.warn(
+        `[IPN] Unknown plan for orderId=${orderId} invoice=${effectiveInvoiceId}, not granting tier`
+      );
       return NextResponse.json({ ok: true, paid_but_unknown_invoice: true });
     }
 

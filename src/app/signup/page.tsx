@@ -8,7 +8,7 @@ import TopNav from "../components/TopNav";
 
 // NOWPayments hosted invoice ids
 const NOWPAYMENTS_IIDS = {
-  MM: "4346120539", // Member monthly $3
+  MM: "4855364671", // Member monthly $3
   MY: "4770954653", // Member yearly $30
   DM: "6120974427", // Diamond monthly $18.5
   DY: "4296776562", // Diamond yearly $185

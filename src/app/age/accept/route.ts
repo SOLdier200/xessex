@@ -20,7 +20,8 @@ function resolveOrigin(request: NextRequest) {
   const forwardedPort = forwardedPortHeader?.split(",")[0].trim();
   const rawHost = (forwardedHost || hostHeader || "").split(",")[0].trim();
   const proto = forwardedProto || request.nextUrl.protocol.replace(":", "");
-  const envOrigin = process.env.NEXT_PUBLIC_BASE_URL;
+  // Use SITE_URL (production) over BASE_URL to avoid localhost:3001 issues
+  const envOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
   let origin = request.nextUrl.origin;
 
   if (rawHost) {
@@ -90,19 +91,24 @@ function buildAcceptResponse(request: NextRequest, nextPath: string) {
   return response;
 }
 
-export async function POST(request: NextRequest) {
-  let nextValue: string | null = null;
+async function getNextFromForm(request: NextRequest) {
   try {
     const form = await request.formData();
     const raw = form.get("next");
-    nextValue = typeof raw === "string" ? raw : null;
-  } catch {}
+    return typeof raw === "string" ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const nextValue = await getNextFromForm(request);
   const nextPath = sanitizeNext(nextValue);
   return buildAcceptResponse(request, nextPath);
 }
 
 export function GET(request: NextRequest) {
-  const { origin } = resolveOrigin(request);
-  const redirectUrl = new URL("/age", origin);
-  return NextResponse.redirect(redirectUrl, 303);
+  const nextValue = request.nextUrl.searchParams.get("next");
+  const nextPath = sanitizeNext(nextValue);
+  return buildAcceptResponse(request, nextPath);
 }

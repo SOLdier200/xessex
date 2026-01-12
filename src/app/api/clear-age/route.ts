@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  const response = NextResponse.redirect(new URL("/age", process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001"));
+export async function GET(request: NextRequest) {
+  // Use request URL origin to avoid hardcoded port issues
+  const origin = request.nextUrl.origin;
+  const response = NextResponse.redirect(new URL("/age", origin));
 
   // Clear the age verification cookie
   response.cookies.set("age_verified", "", {

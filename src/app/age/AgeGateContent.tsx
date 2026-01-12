@@ -36,7 +36,7 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <form action="/age/accept" method="POST" className="flex-1">
+            <form action="/age/accept" method="GET" className="flex-1">
               <input type="hidden" name="next" value={next} />
               <button
                 type="submit"
