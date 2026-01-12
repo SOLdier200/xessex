@@ -5,7 +5,7 @@ type AgeAcceptPageProps = {
   searchParams?: { next?: string | string[] };
 };
 
-function sanitizeNext(nextValue: string | null) {
+function sanitizeNext(nextValue: string | null | undefined) {
   if (!nextValue) return "/";
   if (!nextValue.startsWith("/") || nextValue.startsWith("//")) return "/";
   if (nextValue.startsWith("/age")) return "/";
