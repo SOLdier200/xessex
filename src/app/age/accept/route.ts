@@ -39,7 +39,34 @@ function resolveOrigin(request: NextRequest) {
 function buildAcceptResponse(request: NextRequest, nextPath: string) {
   const { origin, proto } = resolveOrigin(request);
   const redirectUrl = new URL(nextPath, origin);
-  const response = NextResponse.redirect(redirectUrl, 303);
+  const cookieSuffix = `; path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax${proto === "https" ? "; secure" : ""}`;
+  const redirectHref = redirectUrl.toString();
+  const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="0; url=${redirectHref}" />
+    <title>Entering...</title>
+  </head>
+  <body>
+    <p>Continuing...</p>
+    <p><a href="${redirectHref}">Continue</a></p>
+    <script>
+      try {
+        document.cookie = "age_ok=1${cookieSuffix}";
+        document.cookie = "age_verified=true${cookieSuffix}";
+      } catch {}
+      window.location.replace(${JSON.stringify(redirectHref)});
+    </script>
+  </body>
+</html>`;
+  const response = new NextResponse(html, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
 
   response.cookies.set({
     name: "age_ok",
@@ -75,21 +102,6 @@ export async function POST(request: NextRequest) {
 }
 
 export function GET(request: NextRequest) {
-  const purpose = request.headers.get("purpose") ?? request.headers.get("sec-purpose");
-  const secFetchMode = request.headers.get("sec-fetch-mode");
-  const secFetchDest = request.headers.get("sec-fetch-dest");
-  const secFetchUser = request.headers.get("sec-fetch-user");
-  const isPrefetch = purpose?.toLowerCase().includes("prefetch") ?? false;
-  const isNavigate = secFetchMode === "navigate" && (!secFetchDest || secFetchDest === "document");
-  const isUser = secFetchUser === "?1";
-  const allow = !isPrefetch && (isUser || isNavigate || !secFetchMode);
-
-  if (allow) {
-    const nextValue = request.nextUrl.searchParams.get("next");
-    const nextPath = sanitizeNext(nextValue);
-    return buildAcceptResponse(request, nextPath);
-  }
-
   const { origin } = resolveOrigin(request);
   const redirectUrl = new URL("/age", origin);
   return NextResponse.redirect(redirectUrl, 303);

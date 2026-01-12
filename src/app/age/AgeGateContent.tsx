@@ -5,8 +5,6 @@ type AgeGateContentProps = {
 };
 
 export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
-  const acceptHref = `/age/accept?next=${encodeURIComponent(next)}`;
-
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10">
       <div className="w-full max-w-2xl">
@@ -38,12 +36,15 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <a
-              href={acceptHref}
-              className="flex-1 inline-flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
-            >
-              I am 18 or older - Enter
-            </a>
+            <form action="/age/accept" method="POST" className="flex-1">
+              <input type="hidden" name="next" value={next} />
+              <button
+                type="submit"
+                className="w-full rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+              >
+                I am 18 or older - Enter
+              </button>
+            </form>
 
             <a
               href="https://www.google.com"
