@@ -15,13 +15,16 @@ const PUBLIC_PATH_PREFIXES = [
   "/favicon.ico",
   "/robots.txt",
   "/sitemap.xml",
+  "/icons",
+  "/manifest",
+  "/site.webmanifest",
 ];
 
 // Also allow common static assets
 const PUBLIC_FILE = /\.(.*)$/;
 
 export default function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, search } = req.nextUrl;
 
   // Allow public routes and files
   if (
@@ -39,7 +42,7 @@ export default function proxy(req: NextRequest) {
   if (!ageVerified) {
     const url = req.nextUrl.clone();
     url.pathname = AGE_PATH;
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", pathname + (search ? search : ""));
     return NextResponse.redirect(url);
   }
 
