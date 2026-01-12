@@ -63,9 +63,9 @@ export function AgeGateEnforcer() {
       return;
     }
 
-    const search = sp?.toString();
-    const next = pathname + (search ? `?${search}` : "");
-    router.replace(`/age?next=${encodeURIComponent(next)}`);
+    const searchStr = sp?.toString();
+    const redirectTo = pathname + (searchStr ? `?${searchStr}` : "");
+    router.replace(`/age?next=${encodeURIComponent(redirectTo)}`);
   }, [pathname, sp, router]);
 
   return null;
