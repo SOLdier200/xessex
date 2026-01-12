@@ -4,44 +4,21 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 function sanitizeNext(nextValue: string | null) {
   if (!nextValue) return "/";
+  // Only allow relative paths starting with / (not //)
   if (nextValue.startsWith("/") && !nextValue.startsWith("//")) {
     return nextValue;
   }
   return "/";
 }
 
-function resolveOrigin(request: NextRequest) {
-  const forwardedHostHeader = request.headers.get("x-forwarded-host");
-  const forwardedProtoHeader = request.headers.get("x-forwarded-proto");
-  const forwardedPortHeader = request.headers.get("x-forwarded-port");
-  const hostHeader = request.headers.get("host");
-  const forwardedHost = forwardedHostHeader?.split(",")[0].trim();
-  const forwardedProto = forwardedProtoHeader?.split(",")[0].trim();
-  const forwardedPort = forwardedPortHeader?.split(",")[0].trim();
-  const rawHost = (forwardedHost || hostHeader || "").split(",")[0].trim();
-  const proto = forwardedProto || request.nextUrl.protocol.replace(":", "");
-  // Use SITE_URL (production) over BASE_URL to avoid localhost:3001 issues
-  const envOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
-  let origin = request.nextUrl.origin;
-
-  if (rawHost) {
-    const host =
-      forwardedPort && !rawHost.includes(":")
-        ? `${rawHost}:${forwardedPort}`
-        : rawHost;
-    origin = `${proto}://${host}`;
-  } else if (envOrigin) {
-    origin = envOrigin;
-  }
-
-  return { origin, proto };
-}
-
 function buildAcceptResponse(request: NextRequest, nextPath: string) {
-  const { origin, proto } = resolveOrigin(request);
-  const redirectUrl = new URL(nextPath, origin);
-  const cookieSuffix = `; path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax${proto === "https" ? "; secure" : ""}`;
-  const redirectHref = redirectUrl.toString();
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  const isSecure = proto === "https";
+  const cookieSuffix = `; path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax${isSecure ? "; secure" : ""}`;
+
+  // Use relative URL - browser will resolve correctly
+  const redirectHref = nextPath;
+
   const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -62,6 +39,7 @@ function buildAcceptResponse(request: NextRequest, nextPath: string) {
     </script>
   </body>
 </html>`;
+
   const response = new NextResponse(html, {
     headers: {
       "content-type": "text/html; charset=utf-8",
@@ -75,7 +53,7 @@ function buildAcceptResponse(request: NextRequest, nextPath: string) {
     path: "/",
     maxAge: ONE_YEAR_SECONDS,
     sameSite: "lax",
-    secure: proto === "https",
+    secure: isSecure,
     httpOnly: false,
   });
   response.cookies.set({
@@ -84,7 +62,7 @@ function buildAcceptResponse(request: NextRequest, nextPath: string) {
     path: "/",
     maxAge: ONE_YEAR_SECONDS,
     sameSite: "lax",
-    secure: proto === "https",
+    secure: isSecure,
     httpOnly: false,
   });
 
