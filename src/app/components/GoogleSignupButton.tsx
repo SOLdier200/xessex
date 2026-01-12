@@ -28,6 +28,12 @@ export default function GoogleSignupButton({
 
     console.log("OAuth redirectTo:", target);
 
+    // Store plan in localStorage before OAuth (survives the redirect)
+    if (redirectTo?.includes("plan=")) {
+      const m = redirectTo.match(/plan=(MM|MY|DM|DY)/);
+      if (m?.[1]) localStorage.setItem("selected_plan", m[1]);
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: target },
