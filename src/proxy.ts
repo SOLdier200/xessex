@@ -11,6 +11,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/privacy",
   "/terms",
   "/api",
+  "/auth/callback",  // OAuth callback - must not be gated
   "/_next",
   "/favicon.ico",
   "/robots.txt",
