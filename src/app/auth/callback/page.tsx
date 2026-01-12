@@ -25,6 +25,10 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     (async () => {
+      // Debug: verify cookie is visible on callback page
+      console.log("callback cookie has sb-?", document.cookie.includes("sb-"));
+      console.log("callback url:", window.location.href);
+
       const next = sanitizeNext(sp.get("next"));
       const code = sp.get("code");
       const oauthError = sp.get("error");
