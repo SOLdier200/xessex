@@ -29,13 +29,20 @@ export function AgeGateEnforcer() {
       pathname.startsWith("/auth/callback")
     ) return;
 
-    const ok =
-      safe.get(() => sessionStorage.getItem("age_ok_redirect")) === "1" ||
-      safe.get(() => localStorage.getItem("age_ok_tab")) === "1" ||
-      safe.get(() => sessionStorage.getItem("age_ok_tab")) === "1" ||
-      safe.cookieIncludes("age_ok=1");
+    const redirectOk = safe.get(() => sessionStorage.getItem("age_ok_redirect")) === "1";
+    const localOk = safe.get(() => localStorage.getItem("age_ok_tab")) === "1";
+    const sessionOk = safe.get(() => sessionStorage.getItem("age_ok_tab")) === "1";
+    const ageOkCookie = safe.cookieIncludes("age_ok=1");
+    const ageVerifiedCookie =
+      safe.cookieIncludes("age_verified=true") || safe.cookieIncludes("age_verified=1");
+    const ok = redirectOk || localOk || sessionOk || ageOkCookie || ageVerifiedCookie;
 
     if (ok) {
+      if (!ageVerifiedCookie && (redirectOk || localOk || sessionOk || ageOkCookie)) {
+        try {
+          document.cookie = "age_verified=true; path=/; max-age=31536000; samesite=lax";
+        } catch {}
+      }
       safe.removeRedirectFlag();
       return;
     }

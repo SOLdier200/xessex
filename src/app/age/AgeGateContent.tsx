@@ -18,6 +18,7 @@ export default function AgeGateContent() {
 
     try {
       document.cookie = "age_ok=1; path=/; max-age=31536000; samesite=lax";
+      document.cookie = "age_verified=true; path=/; max-age=31536000; samesite=lax";
     } catch {}
 
     try {
@@ -79,7 +80,8 @@ export default function AgeGateContent() {
 
             <a
               href="https://www.google.com"
-              className="flex-1 inline-flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500 font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
+              style={{ color: "black" }}
             >
               I am under 18 - Exit
             </a>

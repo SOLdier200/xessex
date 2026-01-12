@@ -12,6 +12,12 @@ export async function POST(req: Request) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });
+  res.cookies.set("age_verified", "true", {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   // Avoid caching
   res.headers.set("Cache-Control", "no-store");

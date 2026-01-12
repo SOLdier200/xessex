@@ -11,6 +11,13 @@ export async function GET() {
     maxAge: 0, // Expire immediately
     path: "/",
   });
+  response.cookies.set("age_ok", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
 
   return response;
 }

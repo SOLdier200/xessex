@@ -7,6 +7,7 @@ const AGE_PATH = "/age";
 const PUBLIC_PATH_PREFIXES = [
   "/age",
   "/leave",
+  "/parental-controls",
   "/privacy",
   "/terms",
   "/api",
@@ -30,7 +31,10 @@ export default function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const ageVerified = req.cookies.get(AGE_COOKIE)?.value === "1";
+  const ageVerifiedValue = req.cookies.get(AGE_COOKIE)?.value;
+  const ageOkValue = req.cookies.get("age_ok")?.value;
+  const ageVerified =
+    ageVerifiedValue === "true" || ageVerifiedValue === "1" || ageOkValue === "1";
 
   if (!ageVerified) {
     const url = req.nextUrl.clone();
