@@ -3,7 +3,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type PlanCode = "MM" | "MY" | "DM" | "DY";
 
@@ -25,37 +25,18 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     (async () => {
-      // Debug: verify cookie is visible on callback page
-      console.log("callback cookie has sb-?", document.cookie.includes("sb-"));
-      console.log("callback url:", window.location.href);
-
       const next = sanitizeNext(sp.get("next"));
-      const code = sp.get("code");
-      const oauthError = sp.get("error");
-      const oauthErrorDesc = sp.get("error_description");
+      const supabase = supabaseBrowser();
 
-      if (oauthError) {
-        console.error("Supabase OAuth callback error:", oauthError, oauthErrorDesc);
-        router.replace(`/login?error=${encodeURIComponent(oauthError)}`);
-        return;
-      }
+      // Server already did the PKCE exchange - just get the session from cookies
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
 
-      if (!code) {
-        console.error("Callback missing code. Full URL:", window.location.href);
-        router.replace(`/login?error=missing_code`);
-        return;
-      }
-
-      // PKCE exchange MUST happen in the browser (code_verifier lives here)
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (error || !data.session?.access_token) {
-        console.error("exchangeCodeForSession error:", error);
+      if (!accessToken) {
+        console.error("No supabase session after server exchange");
         router.replace(`/login?error=auth_failed`);
         return;
       }
-
-      const accessToken = data.session.access_token;
 
       // Create Prisma session cookie (your real auth)
       setStatus("Creating your account…");

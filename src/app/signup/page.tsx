@@ -51,9 +51,17 @@ function SignupInner() {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [signupRegistered, setSignupRegistered] = useState(false);
 
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
   const memberPlan = memberCycle === "monthly" ? "MM" : "MY";
   const diamondPlan = diamondCycle === "monthly" ? "DM" : "DY";
 
+  const autoPromptedRef = useRef(false);
   const pollTimerRef = useRef<number | null>(null);
   const pollStartRef = useRef<number>(0);
 
@@ -67,6 +75,16 @@ function SignupInner() {
   async function fetchAuthStatus() {
     try {
       const r = await fetch("/api/auth/status", { cache: "no-store" });
+      const data = await r.json();
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchAccountStatus() {
+    try {
+      const r = await fetch("/api/auth/me", { cache: "no-store" });
       const data = await r.json();
       return data;
     } catch {
@@ -143,16 +161,27 @@ function SignupInner() {
     }
   }
 
-  function closeSignupModal() {
+  function openLoginModal() {
     if (signupBusy) return;
+    setLoginError(null);
+    setLoginOpen(true);
     setSignupOpen(false);
-    setSignupError(null);
-    setSignupRegistered(false);
+  }
+
+  function closeLoginModal() {
+    if (loginBusy) return;
+    setLoginOpen(false);
+    setLoginError(null);
+    setSignupOpen(true);
   }
 
   async function beginCheckout(plan: keyof typeof NOWPAYMENTS_IIDS) {
-    const auth = await fetchAuthStatus();
-    if (auth?.ok && auth.authenticated) {
+    const account = await fetchAccountStatus();
+    const authed = account?.ok && account.authed;
+    const membership = account?.membership ?? "FREE";
+    const hasEmail = account?.hasEmail ?? false;
+
+    if (authed && (membership !== "FREE" || hasEmail)) {
       await handleNowPayments(plan);
       return;
     }
@@ -164,8 +193,8 @@ function SignupInner() {
 
   async function ensureAuthReady() {
     for (let i = 0; i < 4; i += 1) {
-      const auth = await fetchAuthStatus();
-      if (auth?.ok && auth.authenticated) return true;
+      const account = await fetchAccountStatus();
+      if (account?.ok && account.authed) return true;
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
     return false;
@@ -174,7 +203,7 @@ function SignupInner() {
   async function handleEmailSignup(e: React.FormEvent) {
     e.preventDefault();
     if (signupBusy) return;
-    const plan = signupPlan ?? memberPlan;
+    const plan = signupPlan;
 
     setSignupBusy(true);
     setSignupError(null);
@@ -220,6 +249,16 @@ function SignupInner() {
         return;
       }
 
+      if (!plan) {
+        toast.success("Account created. Choose a plan to continue.");
+        setSignupOpen(false);
+        setSignupEmail("");
+        setSignupPassword("");
+        setShowSignupPassword(false);
+        setSignupRegistered(false);
+        return;
+      }
+
       const started = await handleNowPayments(plan);
       if (started) {
         setSignupOpen(false);
@@ -232,6 +271,61 @@ function SignupInner() {
       setSignupError("Signup failed. Please try again.");
     } finally {
       setSignupBusy(false);
+    }
+  }
+
+  async function handleEmailLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (loginBusy) return;
+
+    const email = loginEmail.trim();
+    const password = loginPassword;
+
+    if (!email) {
+      setLoginError("Please enter your email.");
+      return;
+    }
+    if (!password || password.length < 5) {
+      setLoginError("Please enter your password.");
+      return;
+    }
+
+    setLoginBusy(true);
+    setLoginError(null);
+
+    try {
+      const res = await fetch("/api/auth/email/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data?.ok) {
+        if (data?.error === "INVALID_PASSWORD") {
+          setLoginError("Incorrect password, please try again.");
+        } else if (data?.error === "USER_NOT_FOUND") {
+          setLoginError("No account found with this email.");
+        } else if (data?.error === "RATE_LIMITED") {
+          setLoginError(`Too many attempts. Try again in ${data.retryAfter || 60} seconds.`);
+        } else if (data?.error === "INVALID_INPUT") {
+          setLoginError("Please enter a valid email and password.");
+        } else {
+          setLoginError("Login failed. Please try again.");
+        }
+        return;
+      }
+
+      toast.success("Logged in. Choose a plan to continue.");
+      setLoginOpen(false);
+      setSignupOpen(false);
+      setLoginEmail("");
+      setLoginPassword("");
+      setShowLoginPassword(false);
+    } catch {
+      setLoginError("Login failed. Please try again.");
+    } finally {
+      setLoginBusy(false);
     }
   }
 
@@ -263,6 +357,30 @@ function SignupInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (autoPromptedRef.current) return;
+    if (searchParams.get("waiting") === "1") return;
+    if (waiting) return;
+
+    autoPromptedRef.current = true;
+
+    fetchAccountStatus()
+      .then((account) => {
+        const authed = account?.ok && account.authed;
+        const membership = account?.membership ?? "FREE";
+        const hasEmail = account?.hasEmail ?? false;
+
+        if (!authed || (membership === "FREE" && !hasEmail)) {
+          setSignupPlan(null);
+          setSignupOpen(true);
+        }
+      })
+      .catch(() => {
+        setSignupPlan(null);
+        setSignupOpen(true);
+      });
+  }, [searchParams, waiting]);
 
   // Autolaunch NOWPayments if /signup?plan=MM|MY|DM|DY
   useEffect(() => {
@@ -558,14 +676,14 @@ function SignupInner() {
         <Link href="/login" className="text-sky-400 hover:underline">
           Login Here
         </Link>
+        <span className="ml-2 text-white/50">
+          Create Account with Email here first before purchasing membership.
+        </span>
       </p>
 
       {signupOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/80"
-            onClick={closeSignupModal}
-          />
+          <div className="absolute inset-0 bg-black/80" />
           <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
             <h2 className="text-lg font-semibold text-white mb-2">Sign up with your Email</h2>
             <p className="text-sm text-white/60 mb-5">
@@ -617,7 +735,9 @@ function SignupInner() {
                   ? signupRegistered
                     ? "Redirecting to payment..."
                     : "Creating account..."
-                  : "Continue to Payment"}
+                  : signupPlan
+                    ? "Continue to Payment"
+                    : "Create Account"}
               </button>
             </form>
 
@@ -629,6 +749,89 @@ function SignupInner() {
                 signupPlan ? `/signup?plan=${signupPlan}` : "/signup"
               )}`}
             />
+
+            <button
+              type="button"
+              onClick={openLoginModal}
+              className="mt-4 text-xs text-white/60 hover:text-white"
+            >
+              Already have an account? Login here.
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loginOpen && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/80" />
+          <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
+            <h2 className="text-lg font-semibold text-white mb-2">Login with your Email</h2>
+            <p className="text-sm text-white/60 mb-5">
+              Enter the email you used to create your account.
+            </p>
+
+            <form onSubmit={handleEmailLogin} className="space-y-3">
+              <div>
+                <label className="text-xs text-white/60">Email</label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  disabled={loginBusy}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-pink-400/70"
+                  placeholder="you@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/60">Password</label>
+                <div className="mt-1 flex items-center rounded-xl border border-white/10 bg-black/50 px-3 py-2 focus-within:border-pink-400/70">
+                  <input
+                    type={showLoginPassword ? "text" : "password"}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    disabled={loginBusy}
+                    className="w-full bg-transparent text-white outline-none"
+                    placeholder="Your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((v) => !v)}
+                    className="text-xs text-white/50 hover:text-white"
+                  >
+                    {showLoginPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              {loginError && <div className="text-xs text-red-300">{loginError}</div>}
+
+              <button
+                type="submit"
+                disabled={loginBusy}
+                className="w-full rounded-xl bg-pink-500/20 border border-pink-400/40 py-3 text-pink-100 font-semibold hover:bg-pink-500/30 transition disabled:opacity-50"
+              >
+                {loginBusy ? "Logging in..." : "Login"}
+              </button>
+            </form>
+
+            <div className="my-4 text-center text-xs text-white/40">or</div>
+
+            <GoogleSignupButton
+              label="Login with Google"
+              redirectTo={`/auth/callback?next=${encodeURIComponent(
+                signupPlan ? `/signup?plan=${signupPlan}` : "/signup"
+              )}`}
+            />
+
+            <button
+              type="button"
+              onClick={closeLoginModal}
+              disabled={loginBusy}
+              className="mt-4 text-xs text-white/60 hover:text-white disabled:opacity-50"
+            >
+              Back to create account
+            </button>
           </div>
         </div>
       )}

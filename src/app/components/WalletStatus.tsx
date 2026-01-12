@@ -9,6 +9,7 @@ type AuthData = {
   membership: "DIAMOND" | "MEMBER" | "FREE";
   walletAddress: string | null;
   needsSolWalletLink: boolean;
+  hasEmail: boolean;
 };
 
 export default function WalletStatus() {
@@ -28,6 +29,7 @@ export default function WalletStatus() {
             membership: d.membership,
             walletAddress: d.walletAddress,
             needsSolWalletLink: d.needsSolWalletLink ?? false,
+            hasEmail: d.hasEmail ?? false,
           });
         } else {
           setAuth(null);
@@ -58,14 +60,19 @@ export default function WalletStatus() {
   if (loading) return null;
 
   // Determine display state
-  const isFreeOrNoUser = !auth?.authed || auth.membership === "FREE";
-  const isMember = auth?.authed && auth.membership === "MEMBER";
-  const isDiamondNoWallet = auth?.authed && auth.membership === "DIAMOND" && auth.needsSolWalletLink;
-  const isDiamondWithWallet = auth?.authed && auth.membership === "DIAMOND" && !auth.needsSolWalletLink;
+  const authed = !!auth?.authed;
+  const membership = auth?.membership ?? "FREE";
+  const hasEmail = !!auth?.hasEmail;
+
+  const isAuthedFree = authed && membership === "FREE" && hasEmail;
+  const isFreeOrNoUser = !authed || (membership === "FREE" && !hasEmail);
+  const isMember = authed && membership === "MEMBER";
+  const isDiamondNoWallet = authed && membership === "DIAMOND" && auth?.needsSolWalletLink;
+  const isDiamondWithWallet = authed && membership === "DIAMOND" && !auth?.needsSolWalletLink;
 
   // Handle click based on state
   const handleClick = () => {
-    if (isFreeOrNoUser) {
+    if (isAuthedFree || isFreeOrNoUser) {
       router.push("/signup");
     } else if (isDiamondNoWallet) {
       router.push("/link-wallet");
@@ -90,6 +97,13 @@ export default function WalletStatus() {
     textColor = "text-red-400";
     title = "Free User--Sign up Now!";
     subtitle = "Get full access";
+  } else if (isAuthedFree) {
+    bgClass = "bg-gradient-to-r from-orange-500/20 to-amber-500/20 hover:from-orange-500/30 hover:to-amber-500/30";
+    borderClass = "border-orange-400/50";
+    dotColor = "bg-orange-400";
+    textColor = "text-orange-300";
+    title = "Account Created and signed in--Purchase MEmbership now!";
+    subtitle = "Click to choose a plan";
   } else if (isMember) {
     bgClass = "bg-gradient-to-r from-emerald-500/20 to-green-500/20 hover:from-emerald-500/30 hover:to-green-500/30";
     borderClass = "border-emerald-400/50";

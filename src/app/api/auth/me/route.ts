@@ -27,6 +27,7 @@ export async function GET() {
     authed: true,
     membership,
     walletAddress: user.walletAddress ?? user.solWallet ?? null,
+    hasEmail: !!user.email,
     needsSolWalletLink,
     sub: sub
       ? { tier: sub.tier, status: sub.status, expiresAt: sub.expiresAt }

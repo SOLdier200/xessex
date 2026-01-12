@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type GoogleSignupButtonProps = {
   label?: string;
@@ -22,18 +22,30 @@ export default function GoogleSignupButton({
       ? `http://${window.location.host}` // force HTTP locally
       : window.location.origin;
 
-    const target = redirectTo
-      ? new URL(redirectTo, origin).toString()
-      : `${origin}/auth/callback`;
+    // Build the "next" parameter (where to go after auth completes)
+    let nextPath = "/";
+    if (redirectTo) {
+      // Extract the path from redirectTo (e.g., /signup?plan=MM)
+      try {
+        const redirectUrl = new URL(redirectTo, origin);
+        nextPath = redirectUrl.pathname + redirectUrl.search;
+      } catch {
+        nextPath = redirectTo;
+      }
+    }
+
+    // Store plan in localStorage before OAuth (survives the redirect)
+    const planMatch = nextPath.match(/plan=(MM|MY|DM|DY)/);
+    if (planMatch?.[1]) {
+      localStorage.setItem("selected_plan", planMatch[1]);
+    }
+
+    // Redirect to server exchange route (handles PKCE exchange server-side)
+    const target = `${origin}/api/auth/supabase/exchange?next=${encodeURIComponent(nextPath)}`;
 
     console.log("OAuth redirectTo:", target);
 
-    // Store plan in localStorage before OAuth (survives the redirect)
-    if (redirectTo?.includes("plan=")) {
-      const m = redirectTo.match(/plan=(MM|MY|DM|DY)/);
-      if (m?.[1]) localStorage.setItem("selected_plan", m[1]);
-    }
-
+    const supabase = supabaseBrowser();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: target },
@@ -41,19 +53,6 @@ export default function GoogleSignupButton({
 
     if (error) console.error("OAuth start error:", error);
     else console.log("OAuth started:", data);
-
-    // Debug: verify PKCE verifier was stored (check all storage backends)
-    setTimeout(() => {
-      const ssKeys = Object.keys(sessionStorage);
-      const lsKeys = Object.keys(localStorage);
-
-      const ssHit = ssKeys.find(k => k.includes("code-verifier") || k.includes("code_verifier") || k.includes("pkce"));
-      const lsHit = lsKeys.find(k => k.includes("code-verifier") || k.includes("code_verifier") || k.includes("pkce"));
-
-      console.log("PKCE key sessionStorage?", !!ssHit, ssHit);
-      console.log("PKCE key localStorage?", !!lsHit, lsHit);
-      console.log("cookie has sb-?", document.cookie.includes("sb-"));
-    }, 50);
   };
 
   return (
