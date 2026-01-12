@@ -10,7 +10,13 @@ html, body {
   background: var(--bg-deep);
   color: var(--neon-pink);
   -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safari touch fix - ensure buttons and links are tappable */
+button, a {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 a {

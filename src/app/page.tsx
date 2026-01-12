@@ -101,7 +101,7 @@ export default async function HomePage() {
               className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
             >
               <div>
-                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Xessex Member Login</span>
+                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Xessex Login</span>
                 <Image src="/logos/textlogo/memberlogin.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">One-click sign in for Ultimate Access!</p>
               </div>

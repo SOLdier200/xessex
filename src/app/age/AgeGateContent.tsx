@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function AgeGateContent() {
   const sp = useSearchParams();
@@ -15,19 +16,23 @@ export default function AgeGateContent() {
 
     try {
       document.cookie = "age_ok=1; path=/; max-age=31536000; samesite=lax";
-      localStorage.setItem("age_ok_tab", "1");
-      sessionStorage.setItem("age_ok_tab", "1");
+    } catch {}
 
-      // One-load bypass for Android timing/race
+    try {
+      localStorage.setItem("age_ok_tab", "1");
+    } catch {}
+
+    try {
+      sessionStorage.setItem("age_ok_tab", "1");
       sessionStorage.setItem("age_ok_redirect", "1");
     } catch {}
 
-    // MUST be synchronous + direct user gesture
-    window.location.assign(next);
+    // Use href for Safari compatibility - direct navigation
+    window.location.href = next;
   }
 
   function leave() {
-    window.location.assign("https://www.google.com");
+    window.location.href = "https://www.google.com";
   }
 
   return (
@@ -55,20 +60,17 @@ export default function AgeGateContent() {
 
           <p className="mt-4 text-center text-white/90">
             By entering, you agree to our{" "}
-            <a href="/terms" target="_blank" className="text-pink-400 underline">
+            <Link href="/terms" className="text-pink-400 underline">
               Terms of Service
-            </a>.
+            </Link>.
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               disabled={loading}
-              onPointerUp={(e) => {
-                e.preventDefault();
-                accept();
-              }}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation"
+              onClick={() => accept()}
+              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
             >
               {loading ? "Entering..." : "I am 18 or older - Enter"}
             </button>
@@ -76,11 +78,8 @@ export default function AgeGateContent() {
             <button
               type="button"
               disabled={loading}
-              onPointerUp={(e) => {
-                e.preventDefault();
-                leave();
-              }}
-              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] touch-manipulation"
+              onClick={() => leave()}
+              className="flex-1 rounded-xl border-2 border-pink-500 bg-pink-500 text-black font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"
             >
               I am under 18 - Exit
             </button>
@@ -88,9 +87,9 @@ export default function AgeGateContent() {
 
           <p className="mt-6 text-center text-white/90">
             Our{" "}
-            <a href="/parental-controls" target="_blank" className="text-pink-400 underline">
+            <Link href="/parental-controls" className="text-pink-400 underline">
               parental controls page
-            </a>{" "}
+            </Link>{" "}
             explains how to block access.
           </p>
 

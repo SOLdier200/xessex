@@ -438,9 +438,9 @@ function SignupInner() {
       </div>
 
       <p className="text-center mt-6 text-white/50 text-sm">
-        Already have an account?{" "}
+        Already Signed Up?{" "}
         <Link href="/login" className="text-sky-400 hover:underline">
-          Connect your wallet
+          Login Here
         </Link>
       </p>
     </>
