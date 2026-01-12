@@ -35,6 +35,13 @@ export default function GoogleSignupButton({
 
     if (error) console.error("OAuth start error:", error);
     else console.log("OAuth started:", data);
+
+    // Debug: verify PKCE verifier was stored
+    setTimeout(() => {
+      const keys = Object.keys(sessionStorage);
+      const hit = keys.find(k => k.includes("code-verifier") || k.includes("code_verifier"));
+      console.log("PKCE verifier key present?", !!hit, hit);
+    }, 50);
   };
 
   return (

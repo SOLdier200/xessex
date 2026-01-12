@@ -6,9 +6,13 @@ export const supabase = createClient(
   {
     auth: {
       flowType: "pkce",
-      persistSession: true,        // keep verifier in localStorage until exchange
-      autoRefreshToken: false,     // don't refresh Supabase tokens
-      detectSessionInUrl: true,    // let client exchange PKCE code
+      persistSession: true,
+      autoRefreshToken: false,
+      detectSessionInUrl: true,
+
+      // Force storage that survives the OAuth redirect in-tab
+      storage:
+        typeof window !== "undefined" ? window.sessionStorage : undefined,
     },
   }
 );
