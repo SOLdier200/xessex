@@ -5,7 +5,7 @@ import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 
-type Plan = "MM" | "MY" | "DM" | "DY";
+type Plan = "M60" | "MY" | "D1" | "D2" | "DY";
 
 const NOWPAYMENTS_API_BASE = "https://api.nowpayments.io/v1";
 
@@ -17,41 +17,48 @@ const PLAN_META: Record<
     days: number;
     price: number;
     description: string;
+    preferLowMinCoins?: boolean;
   }
 > = {
-  MM: {
-    iid: "4689777585",
+  M60: {
+    iid: "1094581819",
     tier: "MEMBER",
-    days: 30,
-    price: 5,
-    description: "Member monthly",
+    days: 60,
+    price: 10,
+    description: "Member 60 days",
   },
   MY: {
-    iid: "4770954653",
+    iid: "429715526",
     tier: "MEMBER",
     days: 365,
-    price: 30,
+    price: 40,
     description: "Member yearly",
   },
-  DM: {
-    iid: "6120974427",
+  D1: {
+    iid: "1754587706",
     tier: "DIAMOND",
     days: 30,
-    price: 18.5,
-    description: "Diamond monthly",
+    price: 18,
+    description: "Diamond 1 month",
+  },
+  D2: {
+    iid: "552457287",
+    tier: "DIAMOND",
+    days: 60,
+    price: 30,
+    description: "Diamond 2 months",
   },
   DY: {
-    iid: "4296776562",
+    iid: "1689634405",
     tier: "DIAMOND",
     days: 365,
-    price: 185,
+    price: 100,
     description: "Diamond yearly",
   },
 };
 
 function makeOrderId(plan: Plan) {
-  // <= 30 chars, unique per checkout attempt
-  return `sx_${plan}_` + crypto.randomBytes(8).toString("hex"); // 22 chars
+  return `sx_${plan}_` + crypto.randomBytes(8).toString("hex");
 }
 
 function addMinutes(from: Date, minutes: number) {
@@ -77,10 +84,7 @@ function resolveBaseUrl(req: NextRequest) {
   return req.nextUrl.origin;
 }
 
-type InvoiceResult = {
-  invoiceUrl: string;
-  invoiceId: string | null;
-};
+type InvoiceResult = { invoiceUrl: string; invoiceId: string | null };
 
 async function createNowPaymentsInvoice(options: {
   apiKey: string;
@@ -90,14 +94,26 @@ async function createNowPaymentsInvoice(options: {
   description: string;
   preferLowMinCoins?: boolean;
 }): Promise<InvoiceResult | null> {
+  // Put order_id into redirect URLs so the pages can display status
+  const successUrl = `${options.baseUrl}/billing/nowpayments/success?order_id=${encodeURIComponent(
+    options.orderId
+  )}`;
+  const cancelUrl = `${options.baseUrl}/billing/nowpayments/failed?order_id=${encodeURIComponent(
+    options.orderId
+  )}`;
+  const partialUrl = `${options.baseUrl}/billing/nowpayments/partial?order_id=${encodeURIComponent(
+    options.orderId
+  )}`;
+
   const basePayload = {
     price_amount: options.price,
     price_currency: "usd",
     order_id: options.orderId,
     order_description: options.description,
     ipn_callback_url: `${options.baseUrl}/api/billing/nowpayments/ipn`,
-    success_url: `${options.baseUrl}/signup?waiting=1`,
-    cancel_url: `${options.baseUrl}/signup`,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    partially_paid_url: partialUrl,
   } as Record<string, unknown>;
 
   async function send(payload: Record<string, unknown>) {
@@ -113,18 +129,9 @@ async function createNowPaymentsInvoice(options: {
     return { res, data };
   }
 
-  // For low-price plans ($5), try coins with historically low minimums
-  // NOWPayments tickers are lowercase
   const candidates = options.preferLowMinCoins
-    ? [
-        "usdttrc20",      // first choice - stablecoin on TRC20
-        "trx",            // very low mins often
-        "xlm",            // stellar
-        "xrp",            // ripple
-        "ltc",            // litecoin
-        "bnbmainnet",     // BNB mainnet
-      ]
-    : [null]; // default behavior for bigger plans (let user pick)
+    ? ["usdttrc20", "trx", "xlm", "xrp", "ltc", "bnbmainnet"]
+    : [null];
 
   let last: { res: Response; data: unknown } | null = null;
 
@@ -151,7 +158,6 @@ async function createNowPaymentsInvoice(options: {
         (attempt.data as Record<string, unknown>)?.id as string | undefined ||
         null;
 
-      // Try to extract invoiceId from URL if not in response
       if (!invoiceId) {
         try {
           const parsed = new URL(invoiceUrl);
@@ -166,23 +172,20 @@ async function createNowPaymentsInvoice(options: {
       return { invoiceUrl, invoiceId };
     }
 
-    // Check if it's a minimum-related error
     const msg = JSON.stringify(attempt.data || {});
     const isMinErr =
       msg.toLowerCase().includes("less than minimal") ||
       msg.toLowerCase().includes("minimum");
 
-    console.warn("[NOWPayments] Invoice create failed, retrying", {
+    console.warn("[NOWPayments] Invoice create failed", {
       pay_currency: coin,
       status: attempt.res.status,
       body: attempt.data,
     });
 
-    // Non-minimum error - don't spam retries with other coins
     if (!isMinErr) break;
   }
 
-  // All attempts failed
   console.error("[NOWPayments] Invoice create failed (all attempts)", {
     status: last?.res.status,
     body: last?.data,
@@ -198,7 +201,6 @@ async function createNowPaymentsInvoice(options: {
  */
 export async function POST(req: NextRequest) {
   const access = await getAccessContext();
-
   if (!access.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
@@ -211,41 +213,37 @@ export async function POST(req: NextRequest) {
   }
 
   const meta = PLAN_META[plan];
-  const tier = meta.tier;
   const orderId = makeOrderId(plan);
   const baseUrl = resolveBaseUrl(req);
 
-  // Provisional access window (instant access while payment confirms)
   const now = new Date();
   const provisionalExpiresAt = addMinutes(now, 45);
 
-  // Ensure the user has a Subscription row (1:1)
-  // Generate unique orderId per checkout attempt for safe IPN correlation
   const sub = await db.subscription.upsert({
     where: { userId: access.user.id },
     create: {
       userId: access.user.id,
-      tier,
+      tier: meta.tier,
       status: "PENDING",
       nowPaymentsInvoiceId: null,
       nowPaymentsOrderId: orderId,
       nowPaymentsPaymentId: null,
-      expiresAt: provisionalExpiresAt, // instant access window
+      expiresAt: provisionalExpiresAt,
     },
     update: {
-      tier,
+      tier: meta.tier,
       status: "PENDING",
       nowPaymentsInvoiceId: null,
-      nowPaymentsOrderId: orderId, // rotate each checkout attempt
-      nowPaymentsPaymentId: null,  // clear old payment id
-      expiresAt: provisionalExpiresAt, // refresh provisional each checkout attempt
+      nowPaymentsOrderId: orderId,
+      nowPaymentsPaymentId: null,
+      expiresAt: provisionalExpiresAt,
     },
   });
 
   let redirectUrl: string | null = null;
   let invoiceId: string | null = null;
-  const apiKey = process.env.NOWPAYMENTS_API_KEY || "";
 
+  const apiKey = process.env.NOWPAYMENTS_API_KEY || "";
   if (apiKey) {
     const invoice = await createNowPaymentsInvoice({
       apiKey,
@@ -253,7 +251,7 @@ export async function POST(req: NextRequest) {
       orderId,
       price: meta.price,
       description: meta.description,
-      preferLowMinCoins: plan === "MM", // $5 plan needs low-minimum coins
+      preferLowMinCoins: !!meta.preferLowMinCoins,
     });
 
     if (invoice?.invoiceUrl) {
@@ -276,17 +274,13 @@ export async function POST(req: NextRequest) {
       ok: true,
       redirectUrl,
       plan,
-      tier,
+      tier: meta.tier,
       subscriptionId: sub.id,
       provisionalUntil: provisionalExpiresAt.toISOString(),
-      lowMinCoinHint:
-        plan === "MM"
-          ? "Low-minimum coins (USDT TRC20, TRX, XLM, XRP, LTC) used for $5 plans."
-          : null,
     });
   }
 
-  // Fallback to hosted invoice link if API creation fails
+  // Fallback to hosted invoice link using iid
   const fallbackUrl = `https://nowpayments.io/payment/?iid=${meta.iid}&order_id=${encodeURIComponent(orderId)}`;
 
   await db.subscription.update({
@@ -298,12 +292,8 @@ export async function POST(req: NextRequest) {
     ok: true,
     redirectUrl: fallbackUrl,
     plan,
-    tier,
+    tier: meta.tier,
     subscriptionId: sub.id,
     provisionalUntil: provisionalExpiresAt.toISOString(),
-    // Fallback to hosted invoice - user picks coin (may hit minimums)
-    lowMinCoinHint: plan === "MM"
-      ? "For $5 plans, choose low-minimum coins like USDT TRC20, TRX, XLM, XRP, or LTC."
-      : null,
   });
 }

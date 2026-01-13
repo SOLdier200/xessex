@@ -283,6 +283,7 @@ enum SubscriptionStatus {
   EXPIRED
   CANCELED
   PENDING
+  PARTIAL
 }
 
 enum CommentStatus {

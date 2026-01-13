@@ -4,27 +4,32 @@ import { db } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-type PlanCode = "MM" | "MY" | "DM" | "DY";
+type PlanCode = "M60" | "MY" | "D1" | "D2" | "DY";
 
 // Static invoice mapping (source of truth for tier + duration)
+// These are NOWPayments hosted "iid" values
 const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }>([
-  ["4689777585", { tier: "MEMBER", days: 30 }],   // Member monthly $5 (current)
-  ["4346120539", { tier: "MEMBER", days: 30 }],   // Member monthly $3 (legacy)
-  ["4770954653", { tier: "MEMBER", days: 365 }],  // Member yearly $30
-  ["6120974427", { tier: "DIAMOND", days: 30 }],  // Diamond monthly $18.5
-  ["4296776562", { tier: "DIAMOND", days: 365 }], // Diamond yearly $185
+  // MEMBER
+  ["1094581819", { tier: "MEMBER", days: 60 }],   // Member 60 days $10
+  ["429715526",  { tier: "MEMBER", days: 365 }],  // Member 1 year $40
+
+  // DIAMOND
+  ["1754587706", { tier: "DIAMOND", days: 30 }],  // Diamond 1 month $18
+  ["552457287",  { tier: "DIAMOND", days: 60 }],  // Diamond 2 months $30
+  ["1689634405", { tier: "DIAMOND", days: 365 }], // Diamond 1 year $100
 ]);
 
 const PLAN_META: Record<PlanCode, { tier: "MEMBER" | "DIAMOND"; days: number }> = {
-  MM: { tier: "MEMBER", days: 30 },
-  MY: { tier: "MEMBER", days: 365 },
-  DM: { tier: "DIAMOND", days: 30 },
-  DY: { tier: "DIAMOND", days: 365 },
+  M60: { tier: "MEMBER", days: 60 },
+  MY:  { tier: "MEMBER", days: 365 },
+  D1:  { tier: "DIAMOND", days: 30 },
+  D2:  { tier: "DIAMOND", days: 60 },
+  DY:  { tier: "DIAMOND", days: 365 },
 };
 
 function planFromOrderId(orderId: string | null): PlanCode | null {
   if (!orderId) return null;
-  const match = orderId.match(/^sx_(MM|MY|DM|DY)_/i);
+  const match = orderId.match(/^sx_(M60|MY|D1|D2|DY)_/i);
   if (!match) return null;
   return match[1].toUpperCase() as PlanCode;
 }
@@ -74,12 +79,43 @@ function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
+function num(x: unknown): number | null {
+  const n = typeof x === "number" ? x : typeof x === "string" ? Number(x) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
- * Grant access as soon as funds are detected / confirming.
- * Statuses: waiting, confirming, confirmed, sending, partially_paid, finished, failed, refunded, expired
+ * Decide whether to grant access for a "partially_paid" status.
+ * Rule: grant if they've paid at least (price_amount * tolerance).
+ *
+ * - Uses actually_paid_at_fiat if available (best).
+ * - Falls back to actually_paid/pay_amount ratio if fiat isn't present.
+ */
+function partialIsGood(payload: Record<string, unknown>, tolerance = 0.93): boolean {
+  const priceAmount = num(payload.price_amount);
+  const paidFiat = num(payload.actually_paid_at_fiat);
+
+  if (priceAmount != null && paidFiat != null) {
+    return paidFiat >= priceAmount * tolerance;
+  }
+
+  const payAmount = num(payload.pay_amount);
+  const actuallyPaid = num(payload.actually_paid);
+
+  if (payAmount != null && actuallyPaid != null && payAmount > 0) {
+    return actuallyPaid / payAmount >= tolerance;
+  }
+
+  return false;
+}
+
+/**
+ * NOWPayments statuses per docs:
+ * waiting, confirming, confirmed, sending, partially_paid, finished, failed, refunded, expired
+ * We treat sending as paid (confirmed & payout in progress).
  */
 function isPaidEnough(status: string): boolean {
-  return status === "confirming" || status === "confirmed" || status === "finished";
+  return status === "confirming" || status === "confirmed" || status === "sending" || status === "finished";
 }
 
 function isBad(status: string): boolean {
@@ -180,7 +216,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Activate as soon as funds detected (don't wait only for finished)
-  if (isPaidEnough(paymentStatus)) {
+  // Also handle partially_paid if they've paid at least 93% (fee slippage tolerance)
+  const shouldGrant =
+    isPaidEnough(paymentStatus) ||
+    (paymentStatus === "partially_paid" && partialIsGood(payload, 0.93));
+
+  if (shouldGrant) {
     // Determine plan from orderId first (embedded plan code), then invoice mapping as fallback
     const planCode = planFromOrderId(orderId) || planFromOrderId(sub.nowPaymentsOrderId);
     const planFromCode = planCode ? PLAN_META[planCode] : null;
@@ -214,7 +255,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[IPN] Activated subscription ${sub.id}: tier=${plan.tier}, expiresAt=${newExpiry.toISOString()}`);
+    console.log(
+      `[IPN] Activated subscription ${sub.id}: tier=${plan.tier}, expiresAt=${newExpiry.toISOString()}, status=${paymentStatus}`
+    );
+
+    return NextResponse.json({ ok: true, activated: true });
+  }
+
+  // Underpaid partial — record as PARTIAL but do NOT grant access
+  if (paymentStatus === "partially_paid") {
+    await db.subscription.update({
+      where: { id: sub.id },
+      data: { status: "PARTIAL" },
+    });
+    console.warn(`[IPN] Partial underpayment for ${sub.id}, awaiting completion`);
+    return NextResponse.json({ ok: true, partial: true });
   }
 
   return NextResponse.json({ ok: true });
