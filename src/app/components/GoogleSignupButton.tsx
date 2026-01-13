@@ -14,13 +14,14 @@ export default function GoogleSignupButton({
   const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
-    const isLocal =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
+    const host = window.location.hostname;
 
-    const origin = isLocal
-      ? `http://${window.location.host}` // force HTTP locally
-      : window.location.origin;
+    // Treat both xessex.me and www.xessex.me as prod
+    const isProd = host === "xessex.me" || host === "www.xessex.me";
+
+    const origin = isProd
+      ? "https://xessex.me" // Force canonical prod origin
+      : `http://${window.location.host}`; // Local dev only
 
     // Build the "next" parameter (where to go after auth completes)
     let nextPath = "/";
@@ -43,7 +44,7 @@ export default function GoogleSignupButton({
     // Redirect to server exchange route (handles PKCE exchange server-side)
     const target = `${origin}/api/auth/supabase/exchange?next=${encodeURIComponent(nextPath)}`;
 
-    console.log("OAuth redirectTo:", target);
+    console.log("OAuth redirectTo target:", target);
 
     const supabase = supabaseBrowser();
     const { data, error } = await supabase.auth.signInWithOAuth({
