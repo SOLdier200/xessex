@@ -18,6 +18,10 @@ export async function GET(req: NextRequest) {
     const code = url.searchParams.get("code");
     const next = sanitizeNext(url.searchParams.get("next"));
 
+    // Debug: log cookies received from browser
+    const cookieHeader = req.headers.get("cookie") || "";
+    console.log("exchange cookies header:", cookieHeader.slice(0, 500));
+
     if (!code) {
       return NextResponse.redirect(`${ORIGIN}/login?error=missing_code`);
     }

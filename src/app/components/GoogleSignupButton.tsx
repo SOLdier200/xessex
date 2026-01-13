@@ -47,13 +47,17 @@ export default function GoogleSignupButton({
     console.log("OAuth redirectTo target:", target);
 
     const supabase = supabaseBrowser();
+
+    // Debug: cookie BEFORE redirect
+    console.log("Before OAuth, cookie has sb-?", document.cookie.includes("sb-"));
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: target },
     });
 
+    console.log("OAuth started:", data);
     if (error) console.error("OAuth start error:", error);
-    else console.log("OAuth started:", data);
   };
 
   return (
