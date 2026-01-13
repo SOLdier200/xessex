@@ -677,7 +677,19 @@ function SignupInner() {
           Login Here
         </Link>
         <span className="ml-2 text-white/50">
-          Create Account with Email here first before purchasing membership.
+          Create Account with Email{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setSignupPlan(null);
+              setSignupError(null);
+              setSignupOpen(true);
+            }}
+            className="text-sky-400 hover:underline"
+          >
+            here
+          </button>{" "}
+          first before purchasing membership.
         </span>
       </p>
 

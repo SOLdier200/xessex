@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import LogoutModal from "./LogoutModal";
+import FreeUserModal from "./FreeUserModal";
 
 type AuthData = {
   authed: boolean;
@@ -17,6 +18,7 @@ export default function WalletStatus() {
   const router = useRouter();
   const [auth, setAuth] = useState<AuthData | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showFreeUserModal, setShowFreeUserModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchAuth = useCallback(() => {
@@ -72,8 +74,11 @@ export default function WalletStatus() {
 
   // Handle click based on state
   const handleClick = () => {
-    if (isAuthedFree || isFreeOrNoUser) {
+    if (isFreeOrNoUser) {
       router.push("/signup");
+    } else if (isAuthedFree) {
+      // Authenticated free user - show modal with Logout/Purchase options
+      setShowFreeUserModal(true);
     } else if (isDiamondNoWallet) {
       router.push("/link-wallet");
     } else {
@@ -102,7 +107,7 @@ export default function WalletStatus() {
     borderClass = "border-orange-400/50";
     dotColor = "bg-orange-400";
     textColor = "text-orange-300";
-    title = "Account Created and signed in--Purchase MEmbership now!";
+    title = "Account Created and signed in--Purchase Membership now!";
     subtitle = "Click to choose a plan";
   } else if (isMember) {
     bgClass = "bg-gradient-to-r from-emerald-500/20 to-green-500/20 hover:from-emerald-500/30 hover:to-green-500/30";
@@ -143,6 +148,12 @@ export default function WalletStatus() {
       <LogoutModal
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
+        onLogoutComplete={handleLogoutComplete}
+      />
+
+      <FreeUserModal
+        open={showFreeUserModal}
+        onClose={() => setShowFreeUserModal(false)}
         onLogoutComplete={handleLogoutComplete}
       />
     </>
