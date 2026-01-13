@@ -11,6 +11,7 @@ type AuthData = {
   walletAddress: string | null;
   needsSolWalletLink: boolean;
   hasEmail: boolean;
+  email: string | null;
 };
 
 export default function WalletStatus() {
@@ -32,6 +33,7 @@ export default function WalletStatus() {
             walletAddress: d.walletAddress,
             needsSolWalletLink: d.needsSolWalletLink ?? false,
             hasEmail: d.hasEmail ?? false,
+            email: d.email ?? null,
           });
         } else {
           setAuth(null);
@@ -108,28 +110,28 @@ export default function WalletStatus() {
     dotColor = "bg-orange-400";
     textColor = "text-orange-300";
     title = "Account Created and signed in--Purchase Membership now!";
-    subtitle = "Click to choose a plan";
+    subtitle = auth?.email ? `Logged in as ${auth.email}` : "Click to choose a plan";
   } else if (isMember) {
     bgClass = "bg-gradient-to-r from-emerald-500/20 to-green-500/20 hover:from-emerald-500/30 hover:to-green-500/30";
     borderClass = "border-emerald-400/50";
     dotColor = "bg-emerald-400";
     textColor = "text-emerald-400";
     title = "Member Connected";
-    subtitle = "Full Access";
+    subtitle = auth?.email ? `Logged in as ${auth.email}` : "Full Access";
   } else if (isDiamondNoWallet) {
     bgClass = "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30";
     borderClass = "border-yellow-400/50";
     dotColor = "bg-yellow-400";
     textColor = "text-yellow-400";
     title = "Diamond Member--Needs Linked Wallet!";
-    subtitle = "Click to link wallet";
+    subtitle = auth?.email ? `Logged in as ${auth.email}` : "Click to link wallet";
   } else if (isDiamondWithWallet) {
     bgClass = "bg-gradient-to-r from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30";
     borderClass = "border-sky-400/50";
     dotColor = "bg-sky-400";
     textColor = "text-sky-400";
     title = "Diamond Member with Wallet";
-    subtitle = shortAddress ?? "Premium Access";
+    subtitle = auth?.email ? `Logged in as ${auth.email}` : (shortAddress ?? "Premium Access");
   }
 
   return (

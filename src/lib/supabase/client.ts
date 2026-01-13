@@ -6,5 +6,12 @@ export function supabaseBrowser() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    auth: {
+      flowType: "pkce",
+      persistSession: false,      // you still use your Prisma session cookie
+      autoRefreshToken: false,
+      detectSessionInUrl: false,  // your server exchange route handles it
+    },
+  });
 }
