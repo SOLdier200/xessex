@@ -10,7 +10,7 @@ import GoogleSignupButton from "../components/GoogleSignupButton";
 
 // NOWPayments hosted invoice ids
 const NOWPAYMENTS_IIDS = {
-  MM: "4855364671", // Member monthly $3
+  MM: "4689777585", // Member monthly $5
   MY: "4770954653", // Member yearly $30
   DM: "6120974427", // Diamond monthly $18.5
   DY: "4296776562", // Diamond yearly $185
@@ -482,12 +482,12 @@ function SignupInner() {
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {memberCycle === "monthly" ? "$3" : "$30"}
+                {memberCycle === "monthly" ? "$5" : "$30"}
               </span>
               <span className="text-white/60">/{memberCycle === "monthly" ? "month" : "year"}</span>
             </div>
             {memberCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $6</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $30</div>
             )}
           </div>
 
@@ -514,10 +514,10 @@ function SignupInner() {
             </li>
           </ul>
 
-          {/* Blockchain fee warning for $3 monthly */}
+          {/* Blockchain fee tip for monthly */}
           {memberCycle === "monthly" && (
-            <div className="mt-4 p-3 bg-orange-500/10 border border-orange-400/30 rounded-lg text-xs text-orange-300/90">
-              <strong>Note:</strong> For $3 payments, blockchain fees may apply. We recommend using stablecoins (USDT/USDC) on low-fee networks like TRC20, BSC, or Polygon to minimize transaction costs.
+            <div className="mt-4 p-3 bg-sky-500/10 border border-sky-400/30 rounded-lg text-xs text-sky-300/90">
+              <strong>Tip:</strong> For faster confirmations, we recommend stablecoins (USDT/USDC) on low-fee networks like TRC20, BSC, or Polygon.
             </div>
           )}
 

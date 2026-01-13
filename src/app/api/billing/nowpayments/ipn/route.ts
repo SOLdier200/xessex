@@ -8,7 +8,8 @@ type PlanCode = "MM" | "MY" | "DM" | "DY";
 
 // Static invoice mapping (source of truth for tier + duration)
 const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }>([
-  ["4346120539", { tier: "MEMBER", days: 30 }],   // Member monthly $3
+  ["4689777585", { tier: "MEMBER", days: 30 }],   // Member monthly $5 (current)
+  ["4346120539", { tier: "MEMBER", days: 30 }],   // Member monthly $3 (legacy)
   ["4770954653", { tier: "MEMBER", days: 365 }],  // Member yearly $30
   ["6120974427", { tier: "DIAMOND", days: 30 }],  // Diamond monthly $18.5
   ["4296776562", { tier: "DIAMOND", days: 365 }], // Diamond yearly $185

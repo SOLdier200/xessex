@@ -23,7 +23,7 @@ const PLAN_META: Record<
     iid: "4689777585",
     tier: "MEMBER",
     days: 30,
-    price: 3,
+    price: 5,
     description: "Member monthly",
   },
   MY: {
@@ -113,7 +113,7 @@ async function createNowPaymentsInvoice(options: {
     return { res, data };
   }
 
-  // For low-price plans ($3), try coins with historically low minimums
+  // For low-price plans ($5), try coins with historically low minimums
   // NOWPayments tickers are lowercase
   const candidates = options.preferLowMinCoins
     ? [
@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
       orderId,
       price: meta.price,
       description: meta.description,
-      preferLowMinCoins: plan === "MM", // $3 plan needs low-minimum coins
+      preferLowMinCoins: plan === "MM", // $5 plan needs low-minimum coins
     });
 
     if (invoice?.invoiceUrl) {
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
       provisionalUntil: provisionalExpiresAt.toISOString(),
       lowMinCoinHint:
         plan === "MM"
-          ? "Low-minimum coins (USDT TRC20, TRX, XLM, XRP, LTC) used for $3 plans."
+          ? "Low-minimum coins (USDT TRC20, TRX, XLM, XRP, LTC) used for $5 plans."
           : null,
     });
   }
@@ -303,7 +303,7 @@ export async function POST(req: NextRequest) {
     provisionalUntil: provisionalExpiresAt.toISOString(),
     // Fallback to hosted invoice - user picks coin (may hit minimums)
     lowMinCoinHint: plan === "MM"
-      ? "For $3 plans, choose low-minimum coins like USDT TRC20, TRX, XLM, XRP, or LTC."
+      ? "For $5 plans, choose low-minimum coins like USDT TRC20, TRX, XLM, XRP, or LTC."
       : null,
   });
 }
