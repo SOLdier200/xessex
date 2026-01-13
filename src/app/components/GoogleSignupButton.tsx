@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type GoogleSignupButtonProps = {
@@ -11,8 +12,12 @@ export default function GoogleSignupButton({
   label = "Sign in with Google",
   redirectTo,
 }: GoogleSignupButtonProps) {
+  const [busy, setBusy] = useState(false);
+
   const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
 
     // Use current origin so PKCE cookies match the redirect host
     // (www.xessex.me cookies won't be sent to xessex.me)
@@ -64,12 +69,13 @@ export default function GoogleSignupButton({
     <button
       type="button"
       onClick={signIn}
+      disabled={busy}
       className="w-full flex items-center justify-center gap-3
         bg-white text-black font-semibold py-3 rounded-xl
-        hover:bg-gray-100 transition shadow-lg"
+        hover:bg-gray-100 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <img src="/google.svg" alt="Google" className="w-5 h-5" />
-      {label}
+      {busy ? "Redirecting..." : label}
     </button>
   );
 }
