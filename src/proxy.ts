@@ -5,20 +5,26 @@ const AGE_PATH = "/age";
 
 // Routes that should NOT be blocked
 const PUBLIC_PATH_PREFIXES = [
-  "/age",
-  "/leave",
-  "/parental-controls",
-  "/privacy",
-  "/terms",
-  "/api",
-  "/auth/callback",  // OAuth callback - must not be gated
+  // Auth paths - NEVER gate these
+  "/api/auth",
+  "/auth/callback",
+  // Static/system paths
   "/_next",
+  "/logos",
   "/favicon.ico",
   "/robots.txt",
   "/sitemap.xml",
   "/icons",
   "/manifest",
   "/site.webmanifest",
+  // Public pages
+  "/age",
+  "/leave",
+  "/parental-controls",
+  "/privacy",
+  "/terms",
+  // Other API routes
+  "/api",
 ];
 
 // Also allow common static assets
