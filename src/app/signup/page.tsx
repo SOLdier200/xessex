@@ -8,12 +8,13 @@ import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import GoogleSignupButton from "../components/GoogleSignupButton";
 
-// NOWPayments hosted invoice ids
+// NOWPayments hosted invoice ids (must match IPN route IID_TO_PLAN)
 const NOWPAYMENTS_IIDS = {
-  MM: "4689777585", // Member monthly $5
-  MY: "4770954653", // Member yearly $30
-  DM: "6120974427", // Diamond monthly $18.5
-  DY: "4296776562", // Diamond yearly $185
+  M60: "1094581819", // Member 60 days $10
+  MY:  "429715526",  // Member 1 year $40
+  D1:  "1754587706", // Diamond 30 days $18
+  D2:  "552457287",  // Diamond 60 days $30
+  DY:  "1689634405", // Diamond 1 year $100
 } as const;
 
 const POLL_EVERY_MS = 3000;
@@ -32,8 +33,8 @@ function SignupInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [memberCycle, setMemberCycle] = useState<"monthly" | "yearly">("monthly");
-  const [diamondCycle, setDiamondCycle] = useState<"monthly" | "yearly">("monthly");
+  const [memberCycle, setMemberCycle] = useState<"60days" | "yearly">("60days");
+  const [diamondCycle, setDiamondCycle] = useState<"30days" | "60days" | "yearly">("30days");
   const [loading, setLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const diamondDisabled = true;
@@ -58,8 +59,8 @@ function SignupInner() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
-  const memberPlan = memberCycle === "monthly" ? "MM" : "MY";
-  const diamondPlan = diamondCycle === "monthly" ? "DM" : "DY";
+  const memberPlan = memberCycle === "60days" ? "M60" : "MY";
+  const diamondPlan = diamondCycle === "30days" ? "D1" : diamondCycle === "60days" ? "D2" : "DY";
 
   const autoPromptedRef = useRef(false);
   const pollTimerRef = useRef<number | null>(null);
@@ -390,7 +391,7 @@ function SignupInner() {
     if (!planParam) return;
 
     const plan = planParam.toUpperCase() as keyof typeof NOWPAYMENTS_IIDS;
-    if (!["MM", "MY", "DM", "DY"].includes(plan)) return;
+    if (!["M60", "MY", "D1", "D2", "DY"].includes(plan)) return;
 
     const key = `np_autolaunch_${plan}`;
     if (typeof window !== "undefined" && window.sessionStorage) {
@@ -458,14 +459,14 @@ function SignupInner() {
             <div className="flex justify-center mt-3">
               <div className="bg-black/40 rounded-full p-1 flex gap-1">
                 <button
-                  onClick={() => setMemberCycle("monthly")}
+                  onClick={() => setMemberCycle("60days")}
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-                    memberCycle === "monthly"
+                    memberCycle === "60days"
                       ? "bg-sky-500/30 text-sky-300"
                       : "text-white/60 hover:text-white"
                   }`}
                 >
-                  Monthly
+                  60 Days
                 </button>
                 <button
                   onClick={() => setMemberCycle("yearly")}
@@ -475,19 +476,19 @@ function SignupInner() {
                       : "text-white/60 hover:text-white"
                   }`}
                 >
-                  Yearly
+                  1 Year
                 </button>
               </div>
             </div>
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {memberCycle === "monthly" ? "$5" : "$30"}
+                {memberCycle === "60days" ? "$10" : "$40"}
               </span>
-              <span className="text-white/60">/{memberCycle === "monthly" ? "month" : "year"}</span>
+              <span className="text-white/60">/{memberCycle === "60days" ? "60 days" : "year"}</span>
             </div>
             {memberCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $30</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $20/year</div>
             )}
           </div>
 
@@ -514,8 +515,8 @@ function SignupInner() {
             </li>
           </ul>
 
-          {/* Blockchain fee tip for monthly */}
-          {memberCycle === "monthly" && (
+          {/* Blockchain fee tip for 60 days */}
+          {memberCycle === "60days" && (
             <div className="mt-4 p-3 bg-sky-500/10 border border-sky-400/30 rounded-lg text-xs text-sky-300/90">
               <strong>Tip:</strong> For faster confirmations, we recommend stablecoins (USDT/USDC) on low-fee networks like TRC20, BSC, or Polygon.
             </div>
@@ -558,38 +559,51 @@ function SignupInner() {
             <div className="flex justify-center mt-3">
               <div className="bg-black/40 rounded-full p-1 flex gap-1">
                 <button
-                  onClick={() => setDiamondCycle("monthly")}
+                  onClick={() => setDiamondCycle("30days")}
                   disabled={diamondDisabled}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-                    diamondCycle === "monthly"
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                    diamondCycle === "30days"
                       ? "bg-yellow-500/30 text-yellow-300"
                       : "text-white/60 hover:text-white"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  Monthly
+                  30 Days
+                </button>
+                <button
+                  onClick={() => setDiamondCycle("60days")}
+                  disabled={diamondDisabled}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                    diamondCycle === "60days"
+                      ? "bg-yellow-500/30 text-yellow-300"
+                      : "text-white/60 hover:text-white"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  60 Days
                 </button>
                 <button
                   onClick={() => setDiamondCycle("yearly")}
                   disabled={diamondDisabled}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
                     diamondCycle === "yearly"
                       ? "bg-yellow-500/30 text-yellow-300"
                       : "text-white/60 hover:text-white"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  Yearly
+                  1 Year
                 </button>
               </div>
             </div>
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {diamondCycle === "monthly" ? "$18.50" : "$185"}
+                {diamondCycle === "30days" ? "$18" : diamondCycle === "60days" ? "$30" : "$100"}
               </span>
-              <span className="text-white/60">/{diamondCycle === "monthly" ? "month" : "year"}</span>
+              <span className="text-white/60">
+                /{diamondCycle === "30days" ? "30 days" : diamondCycle === "60days" ? "60 days" : "year"}
+              </span>
             </div>
             {diamondCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $37</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $116/year</div>
             )}
           </div>
 
@@ -731,9 +745,20 @@ function SignupInner() {
                   <button
                     type="button"
                     onClick={() => setShowSignupPassword((v) => !v)}
-                    className="text-xs text-white/50 hover:text-white"
+                    className="text-white/50 hover:text-white/80 transition"
+                    aria-label={showSignupPassword ? "Hide password" : "Show password"}
                   >
-                    {showSignupPassword ? "Hide" : "Show"}
+                    {showSignupPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
@@ -811,9 +836,20 @@ function SignupInner() {
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword((v) => !v)}
-                    className="text-xs text-white/50 hover:text-white"
+                    className="text-white/50 hover:text-white/80 transition"
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
                   >
-                    {showLoginPassword ? "Hide" : "Show"}
+                    {showLoginPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
