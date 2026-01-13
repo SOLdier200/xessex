@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseRoute } from "@/lib/supabase/route";
 import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { setSessionCookieOnResponse } from "@/lib/authCookies";
@@ -14,24 +14,18 @@ function sanitizeNext(nextValue: unknown) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  const accessToken = String(body?.accessToken ?? "");
-  const next = sanitizeNext(body?.next);
+  const body = await req.json().catch(() => ({}));
+  const next = sanitizeNext((body as { next?: string }).next);
 
-  if (!accessToken) {
-    return NextResponse.json({ ok: false, error: "MISSING_TOKEN" }, { status: 400 });
-  }
+  const { supabase, res: sbRes } = supabaseRoute(req);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const { data, error } = await supabase.auth.getUser(accessToken);
-
+  const { data, error } = await supabase.auth.getUser();
   if (error || !data?.user) {
-    console.error("supabase getUser failed:", error);
-    return NextResponse.json({ ok: false, error: "INVALID_TOKEN" }, { status: 401 });
+    console.error("supabase getUser (cookie) failed:", error);
+    return NextResponse.json(
+      { ok: false, error: "NO_SUPABASE_USER" },
+      { status: 401, headers: sbRes.headers }
+    );
   }
 
   const sbUser = data.user;
@@ -58,8 +52,7 @@ export async function POST(req: NextRequest) {
       });
 
   const session = await createSession(user.id);
-  const res = NextResponse.json({ ok: true, redirectTo: next });
-
-  setSessionCookieOnResponse(res, session.token, session.expiresAt);
-  return res;
+  const out = NextResponse.json({ ok: true, redirectTo: next }, { headers: sbRes.headers });
+  setSessionCookieOnResponse(out, session.token, session.expiresAt);
+  return out;
 }

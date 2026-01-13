@@ -17,10 +17,9 @@ function sanitizeNext(v: string | null) {
 }
 
 export async function GET(req: NextRequest) {
-  console.log("=== EXCHANGE ROUTE HIT v5 ===");
+  console.log("=== EXCHANGE ROUTE HIT v6 ===");
 
   const origin = getOrigin(req);
-  console.log("origin:", origin);
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -36,6 +35,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 
+  // IMPORTANT: response we can attach cookies to
+  const res = NextResponse.redirect(
+    `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+  );
+
   // Create server client that reads cookies from request
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -45,8 +49,10 @@ export async function GET(req: NextRequest) {
       getAll() {
         return req.cookies.getAll();
       },
-      setAll() {
-        // We don't need to set cookies here - just reading for exchange
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          res.cookies.set(name, value, options);
+        });
       },
     },
   });
@@ -58,8 +64,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
-  console.log("exchangeCodeForSession SUCCESS!");
+  console.log("exchangeCodeForSession SUCCESS! wrote cookies to redirect response");
 
-  // IMPORTANT: redirect, don't NextResponse.next()
-  return NextResponse.redirect(`${origin}/auth/callback?next=${encodeURIComponent(next)}`);
+  // Return the redirect response that now includes Set-Cookie headers
+  return res;
 }
