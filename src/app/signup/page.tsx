@@ -256,6 +256,7 @@ function SignupInner() {
         setSignupPassword("");
         setShowSignupPassword(false);
         setSignupRegistered(false);
+        router.refresh(); // Refresh to update WalletStatus display
         return;
       }
 
@@ -322,6 +323,7 @@ function SignupInner() {
       setLoginEmail("");
       setLoginPassword("");
       setShowLoginPassword(false);
+      router.refresh(); // Refresh to update WalletStatus display
     } catch {
       setLoginError("Login failed. Please try again.");
     } finally {
