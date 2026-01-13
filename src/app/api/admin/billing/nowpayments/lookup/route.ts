@@ -20,12 +20,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "MISSING_QUERY" }, { status: 400 });
   }
 
-  const orConditions = [
-    orderId ? { nowPaymentsOrderId: orderId } : null,
-    tx ? { lastTxSig: tx } : null,
-    paymentId ? { nowPaymentsPaymentId: paymentId } : null,
-    invoiceId ? { nowPaymentsInvoiceId: invoiceId } : null,
-  ].filter(Boolean) as { [key: string]: string }[];
+  // Build OR conditions for Prisma query
+  const orConditions: Parameters<typeof db.subscription.findFirst>[0]["where"][] = [];
+  if (orderId) orConditions.push({ nowPaymentsOrderId: orderId });
+  if (tx) orConditions.push({ lastTxSig: tx });
+  if (paymentId) orConditions.push({ nowPaymentsPaymentId: paymentId });
+  if (invoiceId) orConditions.push({ nowPaymentsInvoiceId: invoiceId });
 
   const sub = await db.subscription.findFirst({
     where: { OR: orConditions },
