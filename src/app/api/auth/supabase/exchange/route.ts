@@ -3,7 +3,12 @@ import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-const ORIGIN = process.env.PUBLIC_ORIGIN || "https://xessex.me";
+function getOrigin(req: NextRequest) {
+  // Use x-forwarded headers if behind proxy, otherwise use request URL
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "xessex.me";
+  return `${proto}://${host.split(",")[0].trim()}`;
+}
 
 function sanitizeNext(v: string | null) {
   if (!v) return "/signup";
@@ -12,7 +17,10 @@ function sanitizeNext(v: string | null) {
 }
 
 export async function GET(req: NextRequest) {
-  console.log("=== EXCHANGE ROUTE HIT v4 ===");
+  console.log("=== EXCHANGE ROUTE HIT v5 ===");
+
+  const origin = getOrigin(req);
+  console.log("origin:", origin);
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -25,7 +33,7 @@ export async function GET(req: NextRequest) {
   console.log("has code-verifier cookie?", keys.some(k => k.includes("code-verifier")));
 
   if (!code) {
-    return NextResponse.redirect(`${ORIGIN}/login?error=missing_code`);
+    return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 
   // Create server client that reads cookies from request
@@ -47,11 +55,11 @@ export async function GET(req: NextRequest) {
 
   if (error || !data.session) {
     console.error("server exchangeCodeForSession failed:", error);
-    return NextResponse.redirect(`${ORIGIN}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
   console.log("exchangeCodeForSession SUCCESS!");
 
   // IMPORTANT: redirect, don't NextResponse.next()
-  return NextResponse.redirect(`${ORIGIN}/auth/callback?next=${encodeURIComponent(next)}`);
+  return NextResponse.redirect(`${origin}/auth/callback?next=${encodeURIComponent(next)}`);
 }

@@ -14,14 +14,9 @@ export default function GoogleSignupButton({
   const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
-    const host = window.location.hostname;
-
-    // Treat both xessex.me and www.xessex.me as prod
-    const isProd = host === "xessex.me" || host === "www.xessex.me";
-
-    const origin = isProd
-      ? "https://xessex.me" // Force canonical prod origin
-      : `http://${window.location.host}`; // Local dev only
+    // Use current origin so PKCE cookies match the redirect host
+    // (www.xessex.me cookies won't be sent to xessex.me)
+    const origin = window.location.origin;
 
     // Build the "next" parameter (where to go after auth completes)
     let nextPath = "/";
