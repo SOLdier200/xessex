@@ -17,7 +17,7 @@ function sanitizeNext(v: string | null) {
 }
 
 export async function GET(req: NextRequest) {
-  console.log("=== EXCHANGE ROUTE HIT v6 ===");
+  console.log("=== EXCHANGE ROUTE HIT v7 ===");
 
   const origin = getOrigin(req);
 
@@ -33,6 +33,16 @@ export async function GET(req: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
+  }
+
+  // If we already have auth cookies, don't re-exchange (avoids flow_state_not_found on duplicate requests)
+  const hasAuthTokenCookie = req.cookies
+    .getAll()
+    .some(c => c.name.includes("auth-token.0") || c.name.includes("auth-token.1"));
+
+  if (hasAuthTokenCookie) {
+    console.log("exchange: auth-token cookie already present; skipping exchange");
+    return NextResponse.redirect(`${origin}/auth/callback?next=${encodeURIComponent(next)}`);
   }
 
   // IMPORTANT: response we can attach cookies to
