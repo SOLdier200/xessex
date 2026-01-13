@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseRoute } from "@/lib/supabase/route";
+import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
@@ -12,7 +12,7 @@ function sanitizeNext(v: string | null) {
 }
 
 export async function GET(req: NextRequest) {
-  console.log("=== EXCHANGE ROUTE HIT v3 ===");
+  console.log("=== EXCHANGE ROUTE HIT v4 ===");
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -28,22 +28,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${ORIGIN}/login?error=missing_code`);
   }
 
-  const { supabase, res } = supabaseRoute(req);
+  // Create server client that reads cookies from request
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll() {
+        // We don't need to set cookies here - just reading for exchange
+      },
+    },
+  });
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.session) {
     console.error("server exchangeCodeForSession failed:", error);
-    // IMPORTANT: return redirect *with res cookies* so state cleanup persists
-    res.headers.set("Location", `${ORIGIN}/login?error=auth_failed`);
-    return new NextResponse(null, { status: 307, headers: res.headers });
+    return NextResponse.redirect(`${ORIGIN}/login?error=auth_failed`);
   }
 
   console.log("exchangeCodeForSession SUCCESS!");
 
-  res.headers.set(
-    "Location",
-    `${ORIGIN}/auth/callback?next=${encodeURIComponent(next)}`
-  );
-  return new NextResponse(null, { status: 307, headers: res.headers });
+  // IMPORTANT: redirect, don't NextResponse.next()
+  return NextResponse.redirect(`${ORIGIN}/auth/callback?next=${encodeURIComponent(next)}`);
 }
