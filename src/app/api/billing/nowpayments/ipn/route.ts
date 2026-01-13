@@ -123,6 +123,25 @@ function isBad(status: string): boolean {
 }
 
 /**
+ * Extract transaction hash from IPN payload.
+ * NOWPayments uses different field names depending on the chain.
+ */
+function extractTxHash(payload: Record<string, unknown>): string | null {
+  const candidates = [
+    payload.payin_hash,
+    payload.payout_hash,
+    payload.txid,
+    payload.transaction_id,
+    payload.hash,
+    payload.tx_hash,
+  ]
+    .map((x) => (x == null ? "" : String(x).trim()))
+    .filter(Boolean);
+
+  return candidates[0] || null;
+}
+
+/**
  * POST /api/billing/nowpayments/ipn
  * Receives IPN callbacks from NOWPayments when payment status changes.
  * Verifies signature, then updates subscription status.
@@ -195,13 +214,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, unlinked: true });
   }
 
-  // Store latest provider ids for debugging
+  // Extract tx hash from payload (chain-dependent field names)
+  const txHash = extractTxHash(payload);
+
+  // Store latest provider ids + tx hash for debugging/admin lookup
   await db.subscription.update({
     where: { id: sub.id },
     data: {
       nowPaymentsOrderId: orderId ?? sub.nowPaymentsOrderId,
       nowPaymentsInvoiceId: invoiceId ?? sub.nowPaymentsInvoiceId,
       nowPaymentsPaymentId: paymentId ?? sub.nowPaymentsPaymentId,
+      lastTxSig: txHash ?? sub.lastTxSig,
       // Revoke immediately on bad outcomes (also removes provisional access window)
       ...(isBad(paymentStatus)
         ? { status: paymentStatus === "expired" ? "EXPIRED" : "CANCELED", expiresAt: null }
