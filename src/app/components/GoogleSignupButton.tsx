@@ -48,13 +48,18 @@ export default function GoogleSignupButton({
 
     const supabase = supabaseBrowser();
 
-    // Debug: cookie BEFORE redirect
-    console.log("Before OAuth, cookie has sb-?", document.cookie.includes("sb-"));
+    // Debug: cookie BEFORE OAuth
+    console.log("BEFORE OAuth - document.cookie:", document.cookie);
+    console.log("BEFORE OAuth - has code-verifier?", document.cookie.includes("code-verifier"));
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: target },
     });
+
+    // Debug: cookie AFTER OAuth starts (before redirect)
+    console.log("AFTER signInWithOAuth - document.cookie:", document.cookie);
+    console.log("AFTER signInWithOAuth - has code-verifier?", document.cookie.includes("code-verifier"));
 
     console.log("OAuth started:", data);
     if (error) console.error("OAuth start error:", error);

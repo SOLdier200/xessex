@@ -14,9 +14,14 @@ function sanitizeNext(v: string | null) {
 
 export async function GET(req: NextRequest) {
   console.log("=== EXCHANGE ROUTE HIT v2 ===");
-  const cookieHdr = req.headers.get("cookie") || "";
-  console.log("cookie hdr:", cookieHdr.slice(0, 400));
-  console.log("has flow state cookie?", cookieHdr.includes("code-verifier") || cookieHdr.includes("pkce"));
+  const cookie = req.headers.get("cookie") || "";
+  console.log("cookie hdr:", cookie.slice(0, 400));
+
+  const keys = cookie.split(";").map(s => s.trim().split("=")[0]);
+  console.log("cookie keys:", keys);
+
+  const hasVerifierCookie = keys.some(k => k.includes("code-verifier"));
+  console.log("has code-verifier cookie?", hasVerifierCookie);
 
   try {
     const url = new URL(req.url);
