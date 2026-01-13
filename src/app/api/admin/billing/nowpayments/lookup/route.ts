@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Build OR conditions for Prisma query
-  const orConditions: Parameters<typeof db.subscription.findFirst>[0]["where"][] = [];
+  const orConditions: Prisma.SubscriptionWhereInput[] = [];
   if (orderId) orConditions.push({ nowPaymentsOrderId: orderId });
   if (tx) orConditions.push({ lastTxSig: tx });
   if (paymentId) orConditions.push({ nowPaymentsPaymentId: paymentId });
