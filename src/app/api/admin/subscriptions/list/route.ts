@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Number(sp.get("limit") || 50), 200);
   const cursor = sp.get("cursor") || "";
 
-  const where: Parameters<typeof db.subscription.findMany>[0]["where"] = {};
+  const where: Prisma.SubscriptionWhereInput = {};
 
   if (partialOnly) {
     where.status = "PARTIAL";
