@@ -3,6 +3,9 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 
+// Force canonical external origin (never localhost from proxy)
+const ORIGIN = process.env.PUBLIC_ORIGIN || "https://xessex.me";
+
 function sanitizeNext(v: string | null) {
   if (!v) return "/signup";
   if (!v.startsWith("/") || v.startsWith("//")) return "/signup";
@@ -16,7 +19,7 @@ export async function GET(req: NextRequest) {
     const next = sanitizeNext(url.searchParams.get("next"));
 
     if (!code) {
-      return NextResponse.redirect(new URL(`/login?error=missing_code`, url.origin));
+      return NextResponse.redirect(`${ORIGIN}/login?error=missing_code`);
     }
 
     const supabase = await supabaseServer();
@@ -25,14 +28,11 @@ export async function GET(req: NextRequest) {
 
     if (error || !data.session) {
       console.error("server exchangeCodeForSession failed:", error);
-      return NextResponse.redirect(new URL(`/login?error=auth_failed`, url.origin));
+      return NextResponse.redirect(`${ORIGIN}/login?error=auth_failed`);
     }
 
     // Redirect to callback page (no code), carry next through
-    const redirectUrl = new URL(`/auth/callback`, url.origin);
-    redirectUrl.searchParams.set("next", next);
-
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(`${ORIGIN}/auth/callback?next=${encodeURIComponent(next)}`);
   } catch (e) {
     console.error("exchange route fatal:", e);
     return NextResponse.json(
