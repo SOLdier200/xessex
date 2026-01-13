@@ -88,7 +88,7 @@ async function createNowPaymentsInvoice(options: {
   orderId: string;
   price: number;
   description: string;
-  preferStablecoin?: boolean;
+  preferLowMinCoins?: boolean;
 }): Promise<InvoiceResult | null> {
   const basePayload = {
     price_amount: options.price,
@@ -113,53 +113,82 @@ async function createNowPaymentsInvoice(options: {
     return { res, data };
   }
 
-  const payload = { ...basePayload };
-  if (options.preferStablecoin) {
-    payload.pay_currency = "USDTTRC20";
-  }
+  // For low-price plans ($3), try coins with historically low minimums
+  // NOWPayments tickers are lowercase
+  const candidates = options.preferLowMinCoins
+    ? [
+        "usdttrc20",      // first choice - stablecoin on TRC20
+        "trx",            // very low mins often
+        "xlm",            // stellar
+        "xrp",            // ripple
+        "ltc",            // litecoin
+        "bnbmainnet",     // BNB mainnet
+      ]
+    : [null]; // default behavior for bigger plans (let user pick)
 
-  let result = await send(payload);
+  let last: { res: Response; data: unknown } | null = null;
 
-  if (!result.res.ok && options.preferStablecoin) {
-    result = await send(basePayload);
-  }
+  for (const coin of candidates) {
+    const attemptPayload = { ...basePayload } as Record<string, unknown>;
+    if (coin) attemptPayload.pay_currency = coin;
 
-  if (!result.res.ok) {
-    console.error("[NOWPayments] Invoice create failed", {
-      status: result.res.status,
-      body: result.data,
-    });
-    return null;
-  }
+    const attempt = await send(attemptPayload);
+    last = attempt;
 
-  const invoiceUrl =
-    (result.data?.invoice_url as string | undefined) ||
-    (result.data?.invoiceUrl as string | undefined) ||
-    null;
+    if (attempt.res.ok) {
+      const invoiceUrl =
+        (attempt.data as Record<string, unknown>)?.invoice_url as string | undefined ||
+        (attempt.data as Record<string, unknown>)?.invoiceUrl as string | undefined ||
+        null;
 
-  if (!invoiceUrl) {
-    console.error("[NOWPayments] Missing invoice_url", result.data);
-    return null;
-  }
-
-  const invoiceId =
-    (result.data?.invoice_id as string | undefined) ||
-    (result.data?.id as string | undefined) ||
-    null;
-
-  if (!invoiceId) {
-    try {
-      const parsed = new URL(invoiceUrl);
-      const fromUrl = parsed.searchParams.get("iid") || parsed.searchParams.get("invoice_id");
-      if (fromUrl) {
-        return { invoiceUrl, invoiceId: fromUrl };
+      if (!invoiceUrl) {
+        console.error("[NOWPayments] Missing invoice_url", attempt.data);
+        return null;
       }
-    } catch {
-      // ignore parsing failures
+
+      let invoiceId =
+        (attempt.data as Record<string, unknown>)?.invoice_id as string | undefined ||
+        (attempt.data as Record<string, unknown>)?.id as string | undefined ||
+        null;
+
+      // Try to extract invoiceId from URL if not in response
+      if (!invoiceId) {
+        try {
+          const parsed = new URL(invoiceUrl);
+          const fromUrl = parsed.searchParams.get("iid") || parsed.searchParams.get("invoice_id");
+          if (fromUrl) invoiceId = fromUrl;
+        } catch {
+          // ignore parsing failures
+        }
+      }
+
+      console.log(`[NOWPayments] Invoice created with pay_currency=${coin || "user-choice"}`);
+      return { invoiceUrl, invoiceId };
     }
+
+    // Check if it's a minimum-related error
+    const msg = JSON.stringify(attempt.data || {});
+    const isMinErr =
+      msg.toLowerCase().includes("less than minimal") ||
+      msg.toLowerCase().includes("minimum");
+
+    console.warn("[NOWPayments] Invoice create failed, retrying", {
+      pay_currency: coin,
+      status: attempt.res.status,
+      body: attempt.data,
+    });
+
+    // Non-minimum error - don't spam retries with other coins
+    if (!isMinErr) break;
   }
 
-  return { invoiceUrl, invoiceId };
+  // All attempts failed
+  console.error("[NOWPayments] Invoice create failed (all attempts)", {
+    status: last?.res.status,
+    body: last?.data,
+  });
+
+  return null;
 }
 
 /**
@@ -224,7 +253,7 @@ export async function POST(req: NextRequest) {
       orderId,
       price: meta.price,
       description: meta.description,
-      preferStablecoin: plan === "MM",
+      preferLowMinCoins: plan === "MM", // $3 plan needs low-minimum coins
     });
 
     if (invoice?.invoiceUrl) {
@@ -250,9 +279,9 @@ export async function POST(req: NextRequest) {
       tier,
       subscriptionId: sub.id,
       provisionalUntil: provisionalExpiresAt.toISOString(),
-      stablecoinHint:
+      lowMinCoinHint:
         plan === "MM"
-          ? "Stablecoins (USDT/USDC on TRC20/BSC/Polygon) recommended for low-cost plans."
+          ? "Low-minimum coins (USDT TRC20, TRX, XLM, XRP, LTC) used for $3 plans."
           : null,
     });
   }
@@ -272,9 +301,9 @@ export async function POST(req: NextRequest) {
     tier,
     subscriptionId: sub.id,
     provisionalUntil: provisionalExpiresAt.toISOString(),
-    // Stablecoin hint for low-cost plans (NOWPayments minimums vary by coin)
-    stablecoinHint: plan === "MM"
-      ? "Stablecoins (USDT/USDC on TRC20/BSC/Polygon) recommended for low-cost plans."
+    // Fallback to hosted invoice - user picks coin (may hit minimums)
+    lowMinCoinHint: plan === "MM"
+      ? "For $3 plans, choose low-minimum coins like USDT TRC20, TRX, XLM, XRP, or LTC."
       : null,
   });
 }
