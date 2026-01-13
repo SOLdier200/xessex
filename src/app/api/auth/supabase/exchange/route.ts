@@ -14,7 +14,9 @@ function sanitizeNext(v: string | null) {
 
 export async function GET(req: NextRequest) {
   console.log("=== EXCHANGE ROUTE HIT v2 ===");
-  console.log("cookie hdr:", (req.headers.get("cookie") || "").slice(0, 400));
+  const cookieHdr = req.headers.get("cookie") || "";
+  console.log("cookie hdr:", cookieHdr.slice(0, 400));
+  console.log("has flow state cookie?", cookieHdr.includes("code-verifier") || cookieHdr.includes("pkce"));
 
   try {
     const url = new URL(req.url);
