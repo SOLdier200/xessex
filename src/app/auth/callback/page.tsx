@@ -3,7 +3,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 type PlanCode = "MM" | "MY" | "DM" | "DY";
 
