@@ -34,6 +34,7 @@ type VideoPlaybackProps = {
   canPostComment: boolean;
   canVoteComments: boolean;
   canViewPremium: boolean;
+  isAdminOrMod?: boolean;
 };
 
 const ENDED_EVENT_TOKENS = new Set([
@@ -84,6 +85,7 @@ export default function VideoPlayback({
   canPostComment,
   canVoteComments,
   canViewPremium,
+  isAdminOrMod,
 }: VideoPlaybackProps) {
   const [currentVideo, setCurrentVideo] = useState<VideoPayload>(initialVideo);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -231,6 +233,7 @@ export default function VideoPlayback({
             videoId={currentVideo.id}
             canPost={canPostComment}
             canVote={canVoteComments}
+            isAdminOrMod={isAdminOrMod}
           />
         </div>
 

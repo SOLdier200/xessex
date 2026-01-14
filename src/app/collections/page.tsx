@@ -22,14 +22,15 @@ function getApprovedVideos(): ApprovedVideo[] {
   }
 }
 
+const R2_BASE = "https://pub-77b523433fb04971ba656a572f298a11.r2.dev";
+
 const CATEGORIES = [
-  { slug: "blowjob", name: "Blowjob", icon: "💋" },
-  { slug: "threesome", name: "Threesome", icon: "👥" },
-  { slug: "for-women", name: "For Women", icon: "♀️" },
-  { slug: "anal", name: "Anal", icon: "🍑" },
-  { slug: "2d", name: "2D Animated", icon: "🎨" },
-  { slug: "highest-rated", name: "Highest Rated", icon: "⭐" },
-  { slug: "newest", name: "Newest", icon: "🆕" },
+  { slug: "blonde", name: "Blonde", image: `${R2_BASE}/blonde.jpg` },
+  { slug: "brunette", name: "Brunette", image: `${R2_BASE}/brunette.jpg` },
+  { slug: "blowjob", name: "Blowjob", image: `${R2_BASE}/blowjob.jpg` },
+  { slug: "threesome", name: "Threesome" },
+  { slug: "anal", name: "Anal", image: `${R2_BASE}/anal23.png` },
+  { slug: "2d", name: "2D Animated" },
 ];
 
 export default function CategoriesPage() {
@@ -37,9 +38,6 @@ export default function CategoriesPage() {
 
   // Count videos per category
   const getCategoryCount = (slug: string): number => {
-    if (slug === "highest-rated" || slug === "newest") {
-      return videos.length; // These show all videos sorted differently
-    }
     const categoryName = slug.replace("-", " ");
     return videos.filter((v) =>
       v.categories?.toLowerCase().includes(categoryName)
@@ -58,24 +56,39 @@ export default function CategoriesPage() {
           </p>
         </section>
 
-        <div className="mt-4 md:mt-6 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div className="mt-4 md:mt-6 flex flex-wrap items-start gap-3 md:gap-4">
           {CATEGORIES.map((c) => (
             <Link
               key={c.slug}
               href={`/collections/${c.slug}`}
-              className="neon-border rounded-2xl bg-black/30 p-3 md:p-5 hover:bg-white/5 active:bg-white/10 transition group"
+              className={`neon-border rounded-xl bg-black/30 hover:bg-white/5 active:bg-white/10 transition group ${c.image ? "inline-block" : "inline-flex items-center px-4 py-3 md:px-6 md:py-4"}`}
             >
-              <div className="flex items-center gap-2 md:gap-3">
-                <span className="text-2xl md:text-3xl">{c.icon}</span>
-                <div>
+              {c.image ? (
+                <div className="p-2">
+                  <img
+                    src={c.image}
+                    alt={c.name}
+                    className="w-28 md:w-36 h-auto rounded-lg"
+                  />
+                  <div className="mt-2 text-center">
+                    <div className="font-semibold text-sm text-white group-hover:text-pink-300 transition">
+                      {c.name}
+                    </div>
+                    <div className="text-[10px] text-white/60">
+                      {getCategoryCount(c.slug)}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
                   <div className="font-semibold text-sm md:text-lg text-white group-hover:text-pink-300 transition">
                     {c.name}
                   </div>
-                  <div className="mt-0.5 md:mt-1 text-[10px] md:text-xs text-white/60">
-                    {getCategoryCount(c.slug)} videos
+                  <div className="ml-3 text-[10px] md:text-xs text-white/60">
+                    {getCategoryCount(c.slug)}
                   </div>
-                </div>
-              </div>
+                </>
+              )}
             </Link>
           ))}
         </div>

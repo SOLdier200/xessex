@@ -90,7 +90,15 @@ export async function GET(req: NextRequest) {
     ? comments.some((c) => c.authorId === userId)
     : false;
 
-  return NextResponse.json({ ok: true, comments: shaped, hasUserComment, currentUserId: userId });
+  const isAdminOrMod = !!access.isAdminOrMod;
+
+  return NextResponse.json({
+    ok: true,
+    comments: shaped,
+    hasUserComment,
+    currentUserId: userId,
+    isAdminOrMod,
+  });
 }
 
 /**

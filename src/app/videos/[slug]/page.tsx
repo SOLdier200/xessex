@@ -69,6 +69,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
         canPostComment={canPostComment}
         canVoteComments={canVoteComments}
         canViewPremium={canViewPremium}
+        isAdminOrMod={access.isAdminOrMod}
       />
     </main>
   );

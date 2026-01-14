@@ -40,13 +40,14 @@ function formatViews(views: number | null): string {
 }
 
 const CATEGORY_INFO: Record<string, { name: string; icon: string }> = {
-  "blowjob": { name: "Blowjob", icon: "💋" },
-  "threesome": { name: "Threesome", icon: "👥" },
+  "blonde": { name: "Blonde", icon: "" },
+  "brunette": { name: "Brunette", icon: "" },
+  "blowjob": { name: "Blowjob", icon: "" },
+  "threesome": { name: "Threesome", icon: "" },
   "for-women": { name: "For Women", icon: "♀️" },
-  "anal": { name: "Anal", icon: "🍑" },
-  "2d": { name: "2D Animated", icon: "🎨" },
+  "anal": { name: "Anal", icon: "" },
+  "2d": { name: "2D Animated", icon: "" },
   "highest-rated": { name: "Highest Rated", icon: "⭐" },
-  "newest": { name: "Newest", icon: "🆕" },
 };
 
 interface CategoryPageProps {
@@ -64,9 +65,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   if (slug === "highest-rated") {
     // Sort by views (as proxy for rating)
     videos = [...allVideos].sort((a, b) => (b.views || 0) - (a.views || 0));
-  } else if (slug === "newest") {
-    // Reverse order (assuming newer = later in list, or just show all)
-    videos = [...allVideos].reverse();
   } else {
     // Filter by category name
     const categoryName = slug.replace(/-/g, " ");

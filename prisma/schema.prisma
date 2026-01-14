@@ -20,6 +20,7 @@ model User {
   solWallet            String?                  @unique
   solWalletLinkedAt    DateTime?
   welcomeEmailSentAt   DateTime?
+  mvmPoints            Int                      @default(0)
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
   memberVotes          CommentMemberVote[]
@@ -32,6 +33,8 @@ model User {
   scoreAdjustments     VideoScoreAdjustment[]
   starRatings          VideoStarRating[]
   walletLinkChallenges WalletLinkChallenge[]
+  sourceGradesMade     CommentSourceGrade[]   @relation("CommentSourceGradeMod")
+  sourceGradesEarned   CommentSourceGrade[]   @relation("CommentSourceGradeAuthor")
 }
 
 model Session {
@@ -133,7 +136,7 @@ model Video {
   tags         String[]               @default([])
   createdAt    DateTime               @default(now())
   isShowcase   Boolean                @default(false)
-  adminScore   Int                    @default(50)
+  adminScore   Int                    @default(75)
   sourceViews  Int                    @default(0) // Original views from source platform
   viewsCount   Int                    @default(0) // Xessex page views
   avgStars     Float                  @default(0)
@@ -142,6 +145,7 @@ model Video {
   comments     Comment[]
   adjustments  VideoScoreAdjustment[]
   starRatings  VideoStarRating[]
+  sourceGrades CommentSourceGrade[]
 
   @@index([isShowcase])
 }
@@ -177,6 +181,7 @@ model Comment {
   memberVotes      CommentMemberVote[]
   modVotes         CommentModVote[]
   scoreAdjustments VideoScoreAdjustment[]
+  sourceGrades     CommentSourceGrade[]
 
   @@index([videoId])
   @@index([authorId])
@@ -266,6 +271,26 @@ model VoteEvent {
 
   @@index([ip, createdAt])
   @@index([userId, createdAt])
+}
+
+model CommentSourceGrade {
+  id        String   @id @default(cuid())
+  commentId String
+  videoId   String
+  modId     String
+  authorId  String
+  direction Int
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  mod     User    @relation("CommentSourceGradeMod", fields: [modId], references: [id], onDelete: Cascade)
+  author  User    @relation("CommentSourceGradeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, modId])
+  @@index([authorId, createdAt])
+  @@index([videoId, createdAt])
+  @@index([modId, createdAt])
 }
 
 enum UserRole {
