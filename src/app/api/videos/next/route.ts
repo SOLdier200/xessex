@@ -52,8 +52,9 @@ async function pickApprovedFromSqlite(excludeViewkey: string | null) {
       `
     );
 
-    const row = excludeViewkey ? stmt.get(excludeViewkey) : stmt.get();
-    return row?.viewkey as string | undefined;
+    type Row = { viewkey: string } | undefined;
+    const row = (excludeViewkey ? stmt.get(excludeViewkey) : stmt.get()) as Row;
+    return row?.viewkey;
   } catch {
     return undefined;
   }

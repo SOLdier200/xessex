@@ -36,11 +36,31 @@ type VideoPlaybackProps = {
   canViewPremium: boolean;
 };
 
+const ENDED_EVENT_TOKENS = new Set([
+  "ended",
+  "videoended",
+  "playerended",
+  "ph5playerended",
+  "ph5ended",
+  "playbackended",
+]);
+
+function normalizeEventToken(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isEndedToken(token: string) {
+  if (!token) return false;
+  if (ENDED_EVENT_TOKENS.has(token)) return true;
+  if (token.includes("suspend")) return false;
+  return token.endsWith("ended");
+}
+
 function isVideoEndedMessage(data: unknown): boolean {
   if (!data) return false;
   if (data === "ended") return true;
   if (typeof data === "string") {
-    if (data === "ended") return true;
+    if (isEndedToken(normalizeEventToken(data))) return true;
     try {
       return isVideoEndedMessage(JSON.parse(data));
     } catch {
@@ -50,9 +70,9 @@ function isVideoEndedMessage(data: unknown): boolean {
   if (typeof data === "object") {
     const obj = data as Record<string, unknown>;
     const eventValue =
-      obj.event ?? obj.type ?? obj.state ?? obj.message ?? obj.action;
-    if (eventValue === "ended" || eventValue === "videoEnded") return true;
-    if (obj.data === "ended") return true;
+      obj.event ?? obj.type ?? obj.state ?? obj.message ?? obj.action ?? obj.name ?? obj.status;
+    if (isVideoEndedMessage(eventValue)) return true;
+    if (isVideoEndedMessage(obj.data)) return true;
   }
   return false;
 }
@@ -118,7 +138,6 @@ export default function VideoPlayback({
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      if (event.source !== iframeRef.current?.contentWindow) return;
       if (!isVideoEndedMessage(event.data)) return;
       if (loadingRef.current) return;
       setCountdown((prev) => (prev === null ? COUNTDOWN_SECONDS : prev));

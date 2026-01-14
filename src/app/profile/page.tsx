@@ -423,6 +423,7 @@ export default function ProfilePage() {
                             <tr className="text-left text-white/50 border-b border-white/10">
                               <th className="pb-3 font-medium">ID</th>
                               <th className="pb-3 font-medium">Comment</th>
+                              <th className="pb-3 font-medium text-center">Score</th>
                               <th className="pb-3 font-medium text-center">Likes</th>
                               <th className="pb-3 font-medium text-center">Status</th>
                               <th className="pb-3 font-medium">Date</th>
@@ -439,6 +440,20 @@ export default function ProfilePage() {
                                 </td>
                                 <td className="py-3 max-w-[150px] truncate text-white/80">
                                   {c.body}
+                                </td>
+                                <td className="py-3 text-center">
+                                  <span
+                                    className={`font-semibold ${
+                                      c.score > 0
+                                        ? "text-green-400"
+                                        : c.score < 0
+                                        ? "text-red-400"
+                                        : "text-white/50"
+                                    }`}
+                                  >
+                                    {c.score > 0 ? "+" : ""}
+                                    {c.score}
+                                  </span>
                                 </td>
                                 <td className="py-3 text-center">
                                   <span className="text-green-400">{c.memberLikes}</span>
