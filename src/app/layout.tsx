@@ -14,8 +14,29 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "xessex",
-  description: "Adults only content platform",
+  title: "Xessex – Premium Adult Video Membership",
+  description:
+    "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
+  metadataBase: new URL("https://xessex.com"),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: "https://xessex.com",
+    title: "Xessex – Premium Adult Video Membership",
+    description:
+      "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
+    siteName: "Xessex",
+  },
   other: {
     "RATING": "RTA-5042-1996-1400-1577-RTA",
   },
@@ -34,6 +55,22 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/logos/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/logos/favicon-16x16.png" />
         <link rel="manifest" href="/logos/site.webmanifest" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "AdultEntertainment",
+              "name": "Xessex",
+              "url": "https://xessex.com",
+              "description": "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
+              "publisher": {
+                "@type": "Organization",
+                "name": "Xessex"
+              }
+            })
+          }}
+        />
       </head>
       <body className="antialiased min-h-screen">
         <Suspense fallback={null}>

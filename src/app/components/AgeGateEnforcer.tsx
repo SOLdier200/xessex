@@ -10,6 +10,12 @@ export function AgeGateEnforcer() {
   const sp = useSearchParams();
 
   useEffect(() => {
+    // Allow search engine crawlers to access content without age gate
+    const isBot = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandex/i.test(
+      navigator.userAgent
+    );
+    if (isBot) return;
+
     const ok = getAgeGateOk();
 
     if (pathname.startsWith("/age")) return;
