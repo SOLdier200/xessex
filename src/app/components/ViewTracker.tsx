@@ -7,12 +7,11 @@ interface ViewTrackerProps {
 }
 
 export default function ViewTracker({ videoId }: ViewTrackerProps) {
-  const tracked = useRef(false);
+  const tracked = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // Only track once per page load
-    if (tracked.current) return;
-    tracked.current = true;
+    if (tracked.current.has(videoId)) return;
+    tracked.current.add(videoId);
 
     // Track the view after a short delay (to avoid counting bounces)
     const timer = setTimeout(() => {

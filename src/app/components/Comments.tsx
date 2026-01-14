@@ -95,6 +95,13 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
   }, [canPost, canVote]);
 
   useEffect(() => {
+    setLoading(true);
+    setComments([]);
+    setHasPostedComment(false);
+    setCurrentUserId(null);
+    setSubmitting(false);
+    setText("");
+
     fetch(`/api/comments?videoId=${videoId}`)
       .then((res) => res.json())
       .then((data) => {

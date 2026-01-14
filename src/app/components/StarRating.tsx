@@ -18,6 +18,12 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
   const [canRate, setCanRate] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
+    setRating(null);
+    setHovered(null);
+    setAverage(0);
+    setCount(0);
+
     fetch(`/api/ratings?videoId=${videoId}`)
       .then((r) => r.json())
       .then((data) => {
