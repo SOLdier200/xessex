@@ -5,6 +5,7 @@ import { getAccessContext } from "@/lib/access";
 import TopNav from "../../components/TopNav";
 import StarRating from "../../components/StarRating";
 import Comments from "../../components/Comments";
+import ViewTracker from "../../components/ViewTracker";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
   return (
     <main className="min-h-screen">
       <TopNav />
+      <ViewTracker videoId={video.id} />
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -69,7 +71,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
                 {video.isShowcase ? "free" : "premium"}
               </span>
               <span className="text-xs text-white/40">
-                Xessex Views: {video.viewsCount.toLocaleString()}
+                Views: {video.viewsCount.toLocaleString()}
               </span>
               {video.starsCount > 0 && (
                 <span className="text-xs text-yellow-400">
