@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Tier = "MEMBER" | "DIAMOND";
 type Status = "ACTIVE" | "PENDING" | "PARTIAL" | "EXPIRED" | "CANCELED";
@@ -169,7 +170,15 @@ export default function AdminSubscriptionsPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-7xl p-6">
-        <h1 className="mb-6 text-2xl font-bold">Admin: Subscriptions</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Admin: Subscriptions</h1>
+          <Link
+            href="/admin"
+            className="rounded-full border border-pink-400/50 bg-pink-500/20 px-4 py-2 text-sm font-semibold hover:bg-pink-500/30 transition"
+          >
+            Back to Admin Panel
+          </Link>
+        </div>
 
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-400">

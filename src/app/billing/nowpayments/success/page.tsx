@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 type StatusResp =
   | { ok: false; error: string }
@@ -49,6 +50,16 @@ function SuccessContent() {
 
   return (
     <div className="mx-auto max-w-xl p-6">
+      <div className="flex justify-center mb-6">
+        <Image
+          src="/logos/neonmainlogo1.png"
+          alt="Xessex"
+          width={180}
+          height={60}
+          priority
+          className="h-14 w-auto"
+        />
+      </div>
       <h1 className="text-2xl font-semibold">Payment received</h1>
       <p className="mt-2 text-sm opacity-80">
         We're confirming your payment now. You should have access immediately
@@ -75,7 +86,7 @@ function SuccessContent() {
 
       <a
         className="mt-6 inline-block rounded-lg bg-white/10 px-4 py-2"
-        href="/content"
+        href="/videos"
       >
         Enter Xessex
       </a>

@@ -49,6 +49,9 @@ function AuthCallbackContent() {
         return;
       }
 
+      // Notify other components (like WalletStatus) that auth changed
+      window.dispatchEvent(new Event("auth-changed"));
+
       let plan = extractPlan(next);
       if (!plan) {
         const stored = localStorage.getItem("selected_plan");

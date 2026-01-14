@@ -344,6 +344,12 @@ export default function AdminPage() {
         </div>
         <div className="flex gap-3 flex-wrap">
           <Link
+            href="/admin/subscriptions"
+            className="px-4 py-2 rounded-full border border-emerald-400/50 bg-emerald-500/20 text-white text-sm font-semibold hover:bg-emerald-500/30 transition"
+          >
+            Manage Subscriptions
+          </Link>
+          <Link
             href="/admin/review"
             className="px-4 py-2 rounded-full border border-sky-400/50 bg-sky-500/20 text-white text-sm font-semibold hover:bg-sky-500/30 transition"
           >

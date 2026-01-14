@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import TopNav from "../components/TopNav";
 
 type ProfileData = {
@@ -374,7 +375,13 @@ export default function ProfilePage() {
                             {analyticsData.totals.totalXessPaid.toLocaleString()} XESS
                           </div>
                         </div>
-                        <div className="text-yellow-400/50 text-3xl">💰</div>
+                        <Image
+                          src="/logos/favicon-32x32.png"
+                          alt="XESS"
+                          width={32}
+                          height={32}
+                          className="opacity-50"
+                        />
                       </div>
                     </div>
 
@@ -388,7 +395,13 @@ export default function ProfilePage() {
                             {analyticsData.totals.pendingXess.toLocaleString()} XESS
                           </div>
                         </div>
-                        <div className="text-green-400/50 text-3xl">⏳</div>
+                        <Image
+                          src="/logos/favicon-32x32.png"
+                          alt="XESS"
+                          width={32}
+                          height={32}
+                          className="opacity-50"
+                        />
                       </div>
                     </div>
                   </div>
@@ -410,7 +423,6 @@ export default function ProfilePage() {
                             <tr className="text-left text-white/50 border-b border-white/10">
                               <th className="pb-3 font-medium">ID</th>
                               <th className="pb-3 font-medium">Comment</th>
-                              <th className="pb-3 font-medium text-center">Score</th>
                               <th className="pb-3 font-medium text-center">Likes</th>
                               <th className="pb-3 font-medium text-center">Status</th>
                               <th className="pb-3 font-medium">Date</th>
@@ -427,20 +439,6 @@ export default function ProfilePage() {
                                 </td>
                                 <td className="py-3 max-w-[150px] truncate text-white/80">
                                   {c.body}
-                                </td>
-                                <td className="py-3 text-center">
-                                  <span
-                                    className={`font-semibold ${
-                                      c.score > 0
-                                        ? "text-green-400"
-                                        : c.score < 0
-                                        ? "text-red-400"
-                                        : "text-white/50"
-                                    }`}
-                                  >
-                                    {c.score > 0 ? "+" : ""}
-                                    {c.score}
-                                  </span>
                                 </td>
                                 <td className="py-3 text-center">
                                   <span className="text-green-400">{c.memberLikes}</span>
@@ -473,9 +471,6 @@ export default function ProfilePage() {
                   <div className="mt-4 text-xs text-white/40">
                     <p>
                       <strong>MVM</strong> = Most Valuable Member - your comment was used to adjust a video&apos;s score
-                    </p>
-                    <p className="mt-1">
-                      <strong>Score</strong> = (+5 × member likes) + (+35 × mod likes) + (-1 × member dislikes) + (-20 × mod dislikes)
                     </p>
                   </div>
                 </>

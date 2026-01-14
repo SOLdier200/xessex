@@ -134,7 +134,8 @@ model Video {
   createdAt    DateTime               @default(now())
   isShowcase   Boolean                @default(false)
   adminScore   Int                    @default(50)
-  viewsCount   Int                    @default(0)
+  sourceViews  Int                    @default(0) // Original views from source platform
+  viewsCount   Int                    @default(0) // Xessex page views
   avgStars     Float                  @default(0)
   starsCount   Int                    @default(0)
   thumbnailUrl String?

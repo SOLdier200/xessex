@@ -257,7 +257,8 @@ function SignupInner() {
         setSignupPassword("");
         setShowSignupPassword(false);
         setSignupRegistered(false);
-        router.refresh(); // Refresh to update WalletStatus display
+        // Notify WalletStatus and other components that auth changed
+        window.dispatchEvent(new Event("auth-changed"));
         return;
       }
 
@@ -324,7 +325,8 @@ function SignupInner() {
       setLoginEmail("");
       setLoginPassword("");
       setShowLoginPassword(false);
-      router.refresh(); // Refresh to update WalletStatus display
+      // Notify WalletStatus and other components that auth changed
+      window.dispatchEvent(new Event("auth-changed"));
     } catch {
       setLoginError("Login failed. Please try again.");
     } finally {

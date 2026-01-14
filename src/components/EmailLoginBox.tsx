@@ -160,6 +160,9 @@ export default function EmailLoginBox() {
       // Confirm session/cookie worked and show the banner
       await fetchMeAndSetBanner();
 
+      // Notify other components (like WalletStatus) that auth changed
+      window.dispatchEvent(new Event("auth-changed"));
+
       // Show success modal
       setShowModal(true);
     } catch {

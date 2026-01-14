@@ -47,6 +47,15 @@ export default function WalletStatus() {
     fetchAuth();
   }, [pathname, fetchAuth]);
 
+  // Listen for auth-changed custom event (dispatched after login/logout)
+  useEffect(() => {
+    const handleAuthChange = () => {
+      fetchAuth();
+    };
+    window.addEventListener("auth-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-changed", handleAuthChange);
+  }, [fetchAuth]);
+
   const handleLogoutComplete = () => {
     setAuth(null);
     if (pathname.startsWith("/videos/")) {

@@ -55,10 +55,10 @@ export default function IncognitoButton() {
 
   return (
     <>
-      {/* Floating Incognito Button - 50% smaller */}
+      {/* Floating Incognito Button - bottom right */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-2 right-2 z-[100] px-1.5 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-white text-[10px] font-medium border border-gray-600/50 shadow-lg backdrop-blur-sm transition-all hover:scale-105 flex items-center gap-1"
+        className="fixed bottom-2 right-2 z-[100] px-1.5 py-0.5 rounded-full bg-gray-800/80 hover:bg-gray-700 text-white text-[10px] font-medium border border-gray-600/50 shadow-lg backdrop-blur-sm transition-all hover:scale-105 flex items-center gap-1"
         title="Quickly Hide this screen with a Generic Search Page"
       >
         <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
