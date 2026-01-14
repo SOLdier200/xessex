@@ -19,7 +19,7 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
         />
       </div>
       <div className="w-full max-w-2xl relative z-10">
-        <div className="rounded-2xl p-4 md:p-8 bg-black">
+        <div className="rounded-2xl p-4 md:p-8 bg-black/60 backdrop-blur-sm">
           <div className="flex justify-center mb-4">
             <Image
               src="/logos/neonmainlogo1.png"
