@@ -28,7 +28,7 @@ const CATEGORIES = [
   { slug: "blonde", name: "Blonde", image: `${R2_BASE}/blonde.jpg` },
   { slug: "brunette", name: "Brunette", image: `${R2_BASE}/brunette.jpg` },
   { slug: "blowjob", name: "Blowjob", image: `${R2_BASE}/blowjob.jpg` },
-  { slug: "threesome", name: "Threesome", image: `${R2_BASE}/threesome.png` },
+  { slug: "threesome", name: "Threesome", image: `${R2_BASE}/threesome2.png` },
   { slug: "anal", name: "Anal", image: `${R2_BASE}/anal23.png` },
   { slug: "2d", name: "2D Animated" },
 ];
