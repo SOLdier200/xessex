@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Xessex – Premium Adult Video Membership",
   description:
     "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
-  metadataBase: new URL("https://xessex.com"),
+  metadataBase: new URL("https://xessex.me"),
   robots: {
     index: true,
     follow: true,
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://xessex.com",
+    url: "https://xessex.me",
     title: "Xessex – Premium Adult Video Membership",
     description:
       "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
@@ -62,7 +62,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "AdultEntertainment",
               "name": "Xessex",
-              "url": "https://xessex.com",
+              "url": "https://xessex.me",
               "description": "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
               "publisher": {
                 "@type": "Organization",

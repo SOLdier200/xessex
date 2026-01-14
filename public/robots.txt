@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://xessex.com/sitemap.xml
+Sitemap: https://xessex.me/sitemap.xml
 
