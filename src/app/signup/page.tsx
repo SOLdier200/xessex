@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import GoogleSignupButton from "../components/GoogleSignupButton";
+import ReferralCapture from "../components/ReferralCapture";
 
 // NOWPayments hosted invoice ids (must match IPN route IID_TO_PLAN)
 const NOWPAYMENTS_IIDS = {
@@ -47,6 +48,7 @@ function SignupInner() {
   const [signupPlan, setSignupPlan] = useState<keyof typeof NOWPAYMENTS_IIDS | null>(null);
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupRefCode, setSignupRefCode] = useState("");
   const [signupBusy, setSignupBusy] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -223,10 +225,15 @@ function SignupInner() {
           return;
         }
 
+        // Get referral code - prefer form input, fall back to localStorage
+        const refCode = signupRefCode.trim() ||
+          (typeof window !== "undefined" ? localStorage.getItem("ref_code") : null) ||
+          undefined;
+
         const res = await fetch("/api/auth/email/register-for-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, refCode }),
         });
         const data = await res.json().catch(() => null);
 
@@ -255,6 +262,7 @@ function SignupInner() {
         setSignupOpen(false);
         setSignupEmail("");
         setSignupPassword("");
+        setSignupRefCode("");
         setShowSignupPassword(false);
         setSignupRegistered(false);
         // Notify WalletStatus and other components that auth changed
@@ -267,6 +275,7 @@ function SignupInner() {
         setSignupOpen(false);
         setSignupEmail("");
         setSignupPassword("");
+        setSignupRefCode("");
         setShowSignupPassword(false);
         setSignupRegistered(false);
       }
@@ -411,6 +420,9 @@ function SignupInner() {
 
   return (
     <>
+      {/* Capture referral code from URL */}
+      <ReferralCapture />
+
       {/* WAITING PANEL */}
       {waiting && (
         <div className="max-w-2xl mx-auto mb-8 neon-border rounded-2xl p-6 bg-black/30">
@@ -775,6 +787,18 @@ function SignupInner() {
                     )}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-white/60">Referral code (optional)</label>
+                <input
+                  type="text"
+                  value={signupRefCode}
+                  onChange={(e) => setSignupRefCode(e.target.value.toUpperCase())}
+                  disabled={signupBusy || signupRegistered}
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-purple-400/70 font-mono placeholder:font-sans"
+                  placeholder="e.g., XESS-ABC123"
+                />
               </div>
 
               {signupError && <div className="text-xs text-red-300">{signupError}</div>}

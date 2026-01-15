@@ -25,6 +25,25 @@ export async function GET() {
     where: { userId: user.id },
   });
 
+  // Get referral data
+  const referralCount = await db.user.count({
+    where: { referredById: user.id },
+  });
+
+  // Get referrer info if user was referred
+  let referredByEmail: string | null = null;
+  if (user.referredById) {
+    const referrer = await db.user.findUnique({
+      where: { id: user.referredById },
+      select: { email: true },
+    });
+    if (referrer?.email) {
+      // Mask the email for privacy
+      const [local, domain] = referrer.email.split("@");
+      referredByEmail = `${local.slice(0, 2)}***@${domain}`;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     authed: true,
@@ -41,6 +60,12 @@ export async function GET() {
     stats: {
       videosWatched,
       accountCreated: user.createdAt.toISOString(),
+    },
+    referral: {
+      code: user.referralCode ?? null,
+      referralCount,
+      referredById: user.referredById ?? null,
+      referredByEmail,
     },
   });
 }

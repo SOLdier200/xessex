@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { truncWallet } from "@/lib/scoring";
+import { weekKeyUTC } from "@/lib/weekKey";
 
 const FLIP_WINDOW_MS = 60_000;
 
@@ -181,6 +182,16 @@ export async function POST(req: NextRequest) {
       author: { select: { walletAddress: true, email: true } },
     },
   });
+
+  // Track Diamond comment activity for weekly rewards (min 20 chars quality gate)
+  if (text.length >= 20) {
+    const wk = weekKeyUTC(new Date());
+    await db.weeklyUserStat.upsert({
+      where: { weekKey_userId: { weekKey: wk, userId: access.user.id } },
+      create: { weekKey: wk, userId: access.user.id, diamondComments: 1, mvmPoints: 0, likesReceived: 0 },
+      update: { diamondComments: { increment: 1 } },
+    }).catch(() => {});
+  }
 
   return NextResponse.json({
     ok: true,

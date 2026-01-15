@@ -21,6 +21,14 @@ model User {
   solWalletLinkedAt    DateTime?
   welcomeEmailSentAt   DateTime?
   mvmPoints            Int                      @default(0)
+
+  // Referrals
+  referralCode         String?                  @unique
+  referredById         String?
+  referredBy           User?                    @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals            User[]                   @relation("UserReferrals")
+  referredAt           DateTime?
+
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
   memberVotes          CommentMemberVote[]
@@ -33,8 +41,12 @@ model User {
   scoreAdjustments     VideoScoreAdjustment[]
   starRatings          VideoStarRating[]
   walletLinkChallenges WalletLinkChallenge[]
-  sourceGradesMade     CommentSourceGrade[]   @relation("CommentSourceGradeMod")
-  sourceGradesEarned   CommentSourceGrade[]   @relation("CommentSourceGradeAuthor")
+  sourceGradesMade     CommentSourceGrade[]     @relation("CommentSourceGradeMod")
+  sourceGradesEarned   CommentSourceGrade[]     @relation("CommentSourceGradeAuthor")
+  rewardEvents         RewardEvent[]
+  weeklyStats          WeeklyUserStat[]
+
+  @@index([referredById])
 }
 
 model Session {
@@ -321,4 +333,65 @@ model SiteStat {
   key       String   @id
   value     BigInt   @default(0)
   updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// REWARDS SYSTEM
+// ============================================
+
+enum RewardStatus {
+  PENDING
+  PAID
+  VOID
+}
+
+enum RewardType {
+  WEEKLY_LIKES
+  WEEKLY_MVM
+  WEEKLY_COMMENTS
+  REF_L1
+  REF_L2
+  REF_L3
+}
+
+model RewardEvent {
+  id        String       @id @default(cuid())
+  userId    String
+  type      RewardType
+  amount    BigInt
+  status    RewardStatus @default(PENDING)
+
+  weekKey   String       // e.g. "2024-W03"
+
+  refType   String       // e.g. "like", "mvm", "ref"
+  refId     String       // e.g. comment ID or user ID
+
+  txSig     String?      // Solana transaction signature
+  createdAt DateTime     @default(now())
+  paidAt    DateTime?
+
+  user      User         @relation(fields: [userId], references: [id])
+
+  @@unique([refType, refId])
+  @@index([weekKey, status])
+  @@index([userId, status])
+  @@index([type, status])
+}
+
+model WeeklyUserStat {
+  id              String   @id @default(cuid())
+  weekKey         String
+  userId          String
+
+  diamondComments Int      @default(0)
+  mvmPoints       Int      @default(0)
+  likesReceived   Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([weekKey, userId])
+  @@index([weekKey])
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import { weekKeyUTC } from "@/lib/weekKey";
 
 const FLIP_WINDOW_MS = 60_000;
 
@@ -64,6 +65,8 @@ export async function POST(req: NextRequest) {
 
   // First vote
   if (!existing) {
+    const wk = weekKeyUTC(new Date());
+
     const updated = await db.$transaction(async (tx) => {
       await tx.commentMemberVote.create({
         data: {
@@ -72,7 +75,6 @@ export async function POST(req: NextRequest) {
           value,
           flipCount: 0,
           lastChangedAt: new Date(),
-          // createdAt defaults to now()
         },
       });
 
@@ -82,8 +84,23 @@ export async function POST(req: NextRequest) {
           memberLikes: { increment: value === 1 ? 1 : 0 },
           memberDislikes: { increment: value === -1 ? 1 : 0 },
         },
-        select: { memberLikes: true, memberDislikes: true },
+        select: { memberLikes: true, memberDislikes: true, authorId: true },
       });
+
+      // Track weekly likes received (author gets credit) — LIKE only, first vote only
+      if (value === 1) {
+        await tx.weeklyUserStat.upsert({
+          where: { weekKey_userId: { weekKey: wk, userId: c.authorId } },
+          create: {
+            weekKey: wk,
+            userId: c.authorId,
+            likesReceived: 1,
+            diamondComments: 0,
+            mvmPoints: 0,
+          },
+          update: { likesReceived: { increment: 1 } },
+        });
+      }
 
       return c;
     });

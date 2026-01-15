@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import TopNav from "../components/TopNav";
+import RewardsTab from "../components/RewardsTab";
 
 type ProfileData = {
   ok: boolean;
@@ -20,6 +21,12 @@ type ProfileData = {
   stats: {
     videosWatched: number;
     accountCreated: string;
+  };
+  referral: {
+    code: string | null;
+    referralCount: number;
+    referredById: string | null;
+    referredByEmail: string | null;
   };
 };
 
@@ -84,12 +91,19 @@ export default function ProfilePage() {
   const router = useRouter();
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "analytics">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "analytics" | "referrals" | "rewards">("profile");
 
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+
+  // Referral state
+  const [showBenefitsModal, setShowBenefitsModal] = useState(false);
+  const [refCodeInput, setRefCodeInput] = useState("");
+  const [refCodeLoading, setRefCodeLoading] = useState(false);
+  const [refCodeError, setRefCodeError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -171,7 +185,7 @@ export default function ProfilePage() {
             <div className="inline-flex rounded-xl border border-white/10 bg-black/40 p-1">
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`px-6 py-2 rounded-lg text-sm font-semibold transition ${
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                   activeTab === "profile"
                     ? "bg-white/10 text-white"
                     : "text-white/50 hover:text-white"
@@ -179,10 +193,30 @@ export default function ProfilePage() {
               >
                 Profile
               </button>
+              <button
+                onClick={() => setActiveTab("referrals")}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                  activeTab === "referrals"
+                    ? "bg-white/10 text-white"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
+                Referrals
+              </button>
+              <button
+                onClick={() => setActiveTab("rewards")}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                  activeTab === "rewards"
+                    ? "bg-white/10 text-white"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
+                Rewards
+              </button>
               {isDiamond && (
                 <button
                   onClick={() => setActiveTab("analytics")}
-                  className={`px-6 py-2 rounded-lg text-sm font-semibold transition ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
                     activeTab === "analytics"
                       ? "bg-white/10 text-white"
                       : "text-white/50 hover:text-white"
@@ -312,6 +346,247 @@ export default function ProfilePage() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* Referrals Tab Content */}
+          {activeTab === "referrals" && (
+            <>
+              {/* Your Referral Link Card */}
+              <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-white">Your Referral Link</h2>
+                  <button
+                    onClick={() => setShowBenefitsModal(true)}
+                    className="text-sm text-purple-400 hover:text-purple-300 underline transition"
+                  >
+                    View Benefits
+                  </button>
+                </div>
+
+                {data.referral.code ? (
+                  <>
+                    <div className="bg-black/50 rounded-xl p-4 mb-4">
+                      <div className="text-xs text-white/50 mb-2">Your referral code:</div>
+                      <div className="text-xl font-bold text-purple-400 font-mono">
+                        {data.referral.code}
+                      </div>
+                    </div>
+
+                    <div className="bg-black/50 rounded-xl p-4 mb-4">
+                      <div className="text-xs text-white/50 mb-2">Share this link:</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${typeof window !== "undefined" ? window.location.origin : ""}/signup?ref=${data.referral.code}`}
+                          className="flex-1 bg-black/30 rounded-lg px-3 py-2 text-white/80 text-sm font-mono truncate"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              `${window.location.origin}/signup?ref=${data.referral.code}`
+                            );
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          className="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition text-sm whitespace-nowrap"
+                        >
+                          {copied ? "Copied!" : "Copy"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="bg-black/40 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-purple-400">
+                          {data.referral.referralCount}
+                        </div>
+                        <div className="text-xs text-white/60 mt-1">People Referred</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-white/60 text-center py-4">
+                    No referral code available. Contact support if you believe this is an error.
+                  </div>
+                )}
+              </div>
+
+              {/* Your Referrer Card */}
+              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                <h2 className="text-lg font-semibold text-white mb-4">Your Referrer</h2>
+
+                {data.referral.referredById ? (
+                  <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-emerald-400 font-semibold">Referred by</div>
+                        <div className="text-white/70 text-sm">
+                          {data.referral.referredByEmail || "A fellow member"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-white/60 text-sm mb-4">
+                      Were you referred by someone? Enter their referral code to link your account.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter referral code (e.g., XESS-ABC123)"
+                        value={refCodeInput}
+                        onChange={(e) => {
+                          setRefCodeInput(e.target.value.toUpperCase());
+                          setRefCodeError(null);
+                        }}
+                        className="flex-1 rounded-xl border border-white/10 bg-black/50 px-4 py-2 text-white placeholder:text-white/30 focus:border-purple-400/50 focus:outline-none font-mono"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!refCodeInput.trim()) return;
+                          setRefCodeLoading(true);
+                          setRefCodeError(null);
+                          try {
+                            const res = await fetch("/api/profile/set-referrer", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ refCode: refCodeInput.trim() }),
+                            });
+                            const json = await res.json();
+                            if (json.ok) {
+                              // Refresh profile data
+                              const profileRes = await fetch("/api/profile");
+                              const profileJson = await profileRes.json();
+                              if (profileJson.ok) setData(profileJson);
+                              setRefCodeInput("");
+                            } else {
+                              if (json.error === "INVALID_CODE") {
+                                setRefCodeError("Invalid referral code. Please check and try again.");
+                              } else if (json.error === "CANNOT_REFER_SELF") {
+                                setRefCodeError("You cannot refer yourself.");
+                              } else if (json.error === "ALREADY_REFERRED") {
+                                setRefCodeError("You already have a referrer set.");
+                              } else {
+                                setRefCodeError("Failed to set referrer. Please try again.");
+                              }
+                            }
+                          } catch {
+                            setRefCodeError("Failed to set referrer. Please try again.");
+                          } finally {
+                            setRefCodeLoading(false);
+                          }
+                        }}
+                        disabled={refCodeLoading || !refCodeInput.trim()}
+                        className="px-6 py-2 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {refCodeLoading ? "..." : "Submit"}
+                      </button>
+                    </div>
+                    {refCodeError && (
+                      <p className="text-red-400 text-sm mt-2">{refCodeError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* How It Works Card */}
+              <div className="neon-border rounded-2xl p-6 bg-black/30">
+                <h2 className="text-lg font-semibold text-white mb-4">How Referrals Work</h2>
+                <div className="space-y-4 text-sm text-white/70">
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-400 font-bold">1</span>
+                    </div>
+                    <p>Share your unique referral link with friends</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-400 font-bold">2</span>
+                    </div>
+                    <p>When they sign up using your link, they become your referral</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-400 font-bold">3</span>
+                    </div>
+                    <p>Earn XESS rewards when your referrals earn rewards!</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Rewards Tab Content */}
+          {activeTab === "rewards" && (
+            <div className="neon-border rounded-2xl p-6 bg-black/30">
+              <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
+              <RewardsTab />
+            </div>
+          )}
+
+          {/* Benefits Modal */}
+          {showBenefitsModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <div
+                className="absolute inset-0 bg-black/80"
+                onClick={() => setShowBenefitsModal(false)}
+              />
+              <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/95 p-6">
+                <button
+                  onClick={() => setShowBenefitsModal(false)}
+                  className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                <h3 className="text-xl font-bold text-purple-400 mb-4">Referral Benefits</h3>
+
+                <div className="space-y-4">
+                  <div className="bg-purple-500/10 border border-purple-400/30 rounded-xl p-4">
+                    <div className="text-lg font-bold text-purple-400">Level 1 (L1)</div>
+                    <div className="text-white/70 text-sm mt-1">
+                      Earn <span className="text-green-400 font-semibold">10%</span> of what your direct referrals earn
+                    </div>
+                  </div>
+
+                  <div className="bg-pink-500/10 border border-pink-400/30 rounded-xl p-4">
+                    <div className="text-lg font-bold text-pink-400">Level 2 (L2)</div>
+                    <div className="text-white/70 text-sm mt-1">
+                      Earn <span className="text-green-400 font-semibold">3%</span> of what their referrals earn
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-xl p-4">
+                    <div className="text-lg font-bold text-yellow-400">Level 3 (L3)</div>
+                    <div className="text-white/70 text-sm mt-1">
+                      Earn <span className="text-green-400 font-semibold">1%</span> of what the third level earns
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-400/30 rounded-xl">
+                  <p className="text-emerald-300 text-sm">
+                    Build your network and earn passive XESS rewards every week when your referrals are active on Xessex!
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowBenefitsModal(false)}
+                  className="mt-6 w-full py-3 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition"
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Analytics Tab Content */}
