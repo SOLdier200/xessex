@@ -30,7 +30,7 @@ const CATEGORIES = [
   { slug: "blowjob", name: "Blowjob", image: `${R2_BASE}/blowjob.jpg` },
   { slug: "threesome", name: "Threesome", image: `${R2_BASE}/threesome2.png` },
   { slug: "anal", name: "Anal", image: `${R2_BASE}/anal23.png` },
-  { slug: "2d", name: "2D Animated" },
+  { slug: "2d", name: "2D Animated", image: `${R2_BASE}/anime.png` },
 ];
 
 export default function CategoriesPage() {
@@ -68,7 +68,7 @@ export default function CategoriesPage() {
                   <img
                     src={c.image}
                     alt={c.name}
-                    className="w-28 md:w-36 h-auto rounded-lg"
+                    className="w-28 md:w-36 h-36 md:h-44 object-cover rounded-lg"
                   />
                   <div className="mt-2 text-center">
                     <div className="font-semibold text-sm text-white group-hover:text-pink-300 transition">

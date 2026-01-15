@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { computeCommentScore, truncWallet } from "@/lib/scoring";

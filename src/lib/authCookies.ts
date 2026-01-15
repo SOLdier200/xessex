@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 

@@ -47,6 +47,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "COMMENT_NOT_FOUND" }, { status: 404 });
   }
 
+  // Prevent admins/mods from grading their own comments
+  if (comment.authorId === access.user.id) {
+    return NextResponse.json({ ok: false, error: "CANNOT_GRADE_OWN_COMMENT" }, { status: 403 });
+  }
+
   const video = await db.video.findUnique({
     where: { id: comment.videoId },
     select: { id: true, adminScore: true },

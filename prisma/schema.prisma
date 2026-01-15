@@ -316,3 +316,9 @@ enum CommentStatus {
   ACTIVE
   REMOVED
 }
+
+model SiteStat {
+  key       String   @id
+  value     BigInt   @default(0)
+  updatedAt DateTime @updatedAt
+}

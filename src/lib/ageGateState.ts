@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 "use client";
 
 const AGE_OK_KEY = "__xessexAgeOk";

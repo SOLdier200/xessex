@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { db } from "@/lib/prisma";

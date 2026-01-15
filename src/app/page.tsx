@@ -268,20 +268,6 @@ export default async function HomePage() {
           })()}
         </div>
 
-        {/* Donation Button */}
-        <div className="mt-10 flex justify-center">
-          <a
-            href="https://nowpayments.io/donation?api_key=MF8F5CP-PZZM46H-NKRW6NQ-682CJ2K"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            <img
-              src="https://nowpayments.io/images/embeds/donation-button-black.svg"
-              alt="Crypto donation button by NOWPayments"
-            />
-          </a>
-        </div>
-
       </div>
     </main>
   );

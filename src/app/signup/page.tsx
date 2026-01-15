@@ -713,8 +713,20 @@ function SignupInner() {
 
       {signupOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/80" />
+          <div className="absolute inset-0 bg-black/80" onClick={() => !signupBusy && setSignupOpen(false)} />
           <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
+            <button
+              type="button"
+              onClick={() => setSignupOpen(false)}
+              disabled={signupBusy}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition disabled:opacity-50"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
             <h2 className="text-lg font-semibold text-white mb-2">Sign up with your Email</h2>
             <p className="text-sm text-white/60 mb-5">
               Enter your email to create your membership account.
@@ -804,8 +816,20 @@ function SignupInner() {
 
       {loginOpen && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/80" />
+          <div className="absolute inset-0 bg-black/80" onClick={() => !loginBusy && setLoginOpen(false)} />
           <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
+            <button
+              type="button"
+              onClick={() => setLoginOpen(false)}
+              disabled={loginBusy}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition disabled:opacity-50"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
             <h2 className="text-lg font-semibold text-white mb-2">Login with your Email</h2>
             <p className="text-sm text-white/60 mb-5">
               Enter the email you used to create your account.

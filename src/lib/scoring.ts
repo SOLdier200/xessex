@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 /**
  * Comment Scoring Formula (exact weights from spec):
  * score = (+5 * memberLikes) + (+35 * modLikes) + (-1 * memberDislikes) + (-20 * modDislikes)

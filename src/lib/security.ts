@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 export function getClientIp(req: Request): string {
   // Common reverse-proxy headers
   const xf = req.headers.get("x-forwarded-for");

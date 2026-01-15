@@ -88,6 +88,8 @@ export default function AdminPage() {
   // Toast state
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastIdRef = useRef(0);
+  const [siteViews, setSiteViews] = useState<string | null>(null);
+  const [showSiteStats, setShowSiteStats] = useState(false);
 
   const addToast = useCallback((message: string, type: Toast["type"]) => {
     const id = ++toastIdRef.current;
@@ -166,6 +168,19 @@ export default function AdminPage() {
   useEffect(() => {
     fetchVideos(null, true);
   }, [fetchVideos]);
+
+  const fetchSiteStats = async () => {
+    const res = await fetch("/api/admin/site-stats");
+    const data = await res.json();
+    setSiteViews(data.pageViews);
+  };
+
+  const toggleSiteStats = () => {
+    if (!showSiteStats && siteViews === null) {
+      fetchSiteStats();
+    }
+    setShowSiteStats(!showSiteStats);
+  };
 
   const handleSearch = () => {
     setSearch(searchInput);
@@ -368,6 +383,12 @@ export default function AdminPage() {
           >
             {deleting ? "Deleting..." : `Delete Rejected (${stats.rejected})`}
           </button>
+          <button
+            onClick={toggleSiteStats}
+            className="px-4 py-2 rounded-full border border-cyan-400/50 bg-cyan-500/20 text-white text-sm font-semibold hover:bg-cyan-500/30 transition"
+          >
+            Site Stats
+          </button>
           <Link
             href="/"
             className="px-4 py-2 rounded-full border border-pink-400/50 bg-pink-500/20 text-white text-sm font-semibold hover:bg-pink-500/30 transition"
@@ -376,6 +397,21 @@ export default function AdminPage() {
           </Link>
         </div>
       </div>
+
+      {/* Site Stats Panel */}
+      {showSiteStats && (
+        <div className="mb-6 neon-border rounded-xl p-4 bg-black/30 border-cyan-400/50">
+          <h3 className="text-lg font-semibold text-cyan-400 mb-3">Site Stats</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="rounded-xl p-4 bg-black/40 border border-cyan-400/30">
+              <div className="text-3xl font-bold text-white">
+                {siteViews === null ? "..." : Number(siteViews).toLocaleString()}
+              </div>
+              <div className="text-sm text-white/60">Total Page Views</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-5 gap-3 mb-6">

@@ -75,7 +75,7 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-3 text-white/50 text-sm">
-            <span>© Xessex.me 2026</span>
+            <span>© Xessex.me {new Date().getFullYear()}</span>
             <img src="/logos/rta.gif" alt="RTA - Restricted to Adults" width={88} height={31} />
           </div>
         </div>

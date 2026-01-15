@@ -24,6 +24,8 @@ export function AgeGateEnforcer() {
       pathname.startsWith("/leave") ||
       pathname.startsWith("/parental-controls") ||
       pathname.startsWith("/terms") ||
+      pathname.startsWith("/privacy") ||
+      pathname.startsWith("/2257") ||
       pathname.startsWith("/auth/callback")
     ) return;
 
