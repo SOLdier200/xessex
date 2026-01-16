@@ -116,7 +116,47 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">8. Prohibited Conduct</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">8. Subscriptions, Billing, and Cancellations</h2>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.1 Subscription Access</h3>
+          <p>
+            Xessex memberships provide instant access to age-restricted digital content upon successful payment authorization. Because access is delivered immediately, all sales are considered final once access has been granted, and no cooling-off period applies except where required by applicable law.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.2 Billing & Payment Processing</h3>
+          <p>
+            All transactions are processed through a third-party payment processor. Charges will appear on your statement under a billing descriptor provided by the processor, which may differ from the site name. For billing inquiries or disputes, please contact our support team first. If you cannot resolve an issue with us, you may contact the payment processor directly using the information provided on your statement.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.3 Cancellation</h3>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Subscriptions may be canceled at any time from your account profile</li>
+            <li>Cancellation stops future billing but does not trigger a refund</li>
+            <li>Access remains active until the end of the current paid billing period</li>
+            <li>No partial or prorated refunds are issued for unused time</li>
+          </ul>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.4 Refunds</h3>
+          <p>
+            Refunds are not guaranteed and are granted solely at our discretion. Refunds may be considered only in the following circumstances:
+          </p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>A duplicate charge occurred due to a processing error</li>
+            <li>A billing error is verifiably attributable to our system</li>
+            <li>A purchase was accidental and no meaningful access to premium content occurred</li>
+          </ul>
+          <p className="mt-3">
+            All refund requests must be submitted within 24 hours of the original transaction.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.5 Chargebacks</h3>
+          <p>
+            We encourage you to contact support before initiating any dispute or chargeback with your bank or card issuer. Chargebacks filed without prior contact may result in immediate suspension of access, permanent account termination, and restriction from future purchases.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">9. Prohibited Conduct</h2>
           <p>You may not:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
             <li>Access Xessex if under 18</li>
@@ -128,7 +168,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">9. Disclaimers</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">10. Disclaimers</h2>
           <p>
             Xessex is provided &quot;as is.&quot; We do not guarantee uptime, availability, or accuracy of embedded third-party content.
           </p>
@@ -138,28 +178,28 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">10. Limitation of Liability</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">11. Limitation of Liability</h2>
           <p>
             To the fullest extent allowed by law, Xessex is not liable for any damages arising from your use of the Platform, including exposure to adult content or third-party media.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">11. Termination</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">12. Termination</h2>
           <p>
             We may suspend or terminate access at any time for violations of these Terms or misuse.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">12. Changes to These Terms</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">13. Changes to These Terms</h2>
           <p>
             We may update these Terms at any time. Continued use of Xessex after changes means you accept the updated Terms.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">13. Contact</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">14. Contact</h2>
           <p>For legal, compliance, or support inquiries:</p>
           <p className="mt-2">
             <a href="mailto:support@xessex.me" className="text-pink-400 hover:underline">support@xessex.me</a>

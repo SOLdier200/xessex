@@ -128,6 +128,7 @@ model Subscription {
   tier                 SubscriptionTier
   status               SubscriptionStatus @default(PENDING)
   expiresAt            DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   nowPaymentsPaymentId String?

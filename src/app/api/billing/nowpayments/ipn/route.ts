@@ -9,13 +9,13 @@ import { db } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-type PlanCode = "M60" | "MY" | "D1" | "D2" | "DY";
+type PlanCode = "M90" | "MY" | "D1" | "D2" | "DY";
 
 // Static invoice mapping (source of truth for tier + duration)
 // These are NOWPayments hosted "iid" values
 const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }>([
   // MEMBER
-  ["1094581819", { tier: "MEMBER", days: 60 }],   // Member 60 days $10
+  ["1513416538", { tier: "MEMBER", days: 90 }],   // Member 90 days $10
   ["429715526",  { tier: "MEMBER", days: 365 }],  // Member 1 year $40
 
   // DIAMOND
@@ -25,7 +25,7 @@ const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }
 ]);
 
 const PLAN_META: Record<PlanCode, { tier: "MEMBER" | "DIAMOND"; days: number }> = {
-  M60: { tier: "MEMBER", days: 60 },
+  M90: { tier: "MEMBER", days: 90 },
   MY:  { tier: "MEMBER", days: 365 },
   D1:  { tier: "DIAMOND", days: 30 },
   D2:  { tier: "DIAMOND", days: 60 },
@@ -34,7 +34,7 @@ const PLAN_META: Record<PlanCode, { tier: "MEMBER" | "DIAMOND"; days: number }> 
 
 function planFromOrderId(orderId: string | null): PlanCode | null {
   if (!orderId) return null;
-  const match = orderId.match(/^sx_(M60|MY|D1|D2|DY)_/i);
+  const match = orderId.match(/^sx_(M90|MY|D1|D2|DY)_/i);
   if (!match) return null;
   return match[1].toUpperCase() as PlanCode;
 }

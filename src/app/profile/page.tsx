@@ -17,6 +17,7 @@ type ProfileData = {
     tier: string;
     status: string;
     expiresAt: string | null;
+    cancelAtPeriodEnd: boolean;
   } | null;
   stats: {
     videosWatched: number;
@@ -91,7 +92,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "analytics" | "referrals" | "rewards">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "analytics" | "referrals" | "history">("profile");
 
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -104,6 +105,10 @@ export default function ProfilePage() {
   const [refCodeLoading, setRefCodeLoading] = useState(false);
   const [refCodeError, setRefCodeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Cancel subscription state
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -119,6 +124,15 @@ export default function ProfilePage() {
       .catch(() => {
         router.push("/login");
       });
+  }, [router]);
+
+  // Listen for auth-changed event (logout) and redirect to login
+  useEffect(() => {
+    const handleAuthChange = () => {
+      router.push("/login");
+    };
+    window.addEventListener("auth-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-changed", handleAuthChange);
   }, [router]);
 
   // Load analytics when tab is switched to analytics
@@ -138,6 +152,14 @@ export default function ProfilePage() {
         .finally(() => setAnalyticsLoading(false));
     }
   }, [activeTab, data?.membership, analyticsData, analyticsLoading]);
+
+  // Safety: redirect non-Diamond users to profile tab if they somehow land on a locked tab
+  useEffect(() => {
+    const isDiamondUser = data?.membership === "DIAMOND";
+    if (!isDiamondUser && activeTab !== "profile") {
+      setActiveTab("profile");
+    }
+  }, [data?.membership, activeTab]);
 
   if (loading) {
     return (
@@ -193,37 +215,42 @@ export default function ProfilePage() {
               >
                 Profile
               </button>
-              <button
-                onClick={() => setActiveTab("referrals")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                  activeTab === "referrals"
-                    ? "bg-white/10 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                Referrals
-              </button>
-              <button
-                onClick={() => setActiveTab("rewards")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                  activeTab === "rewards"
-                    ? "bg-white/10 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                Rewards
-              </button>
+
               {isDiamond && (
-                <button
-                  onClick={() => setActiveTab("analytics")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    activeTab === "analytics"
-                      ? "bg-white/10 text-white"
-                      : "text-white/50 hover:text-white"
-                  }`}
-                >
-                  <span className="text-pink-500">Anal</span>ytics
-                </button>
+                <>
+                  <button
+                    onClick={() => setActiveTab("referrals")}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                      activeTab === "referrals"
+                        ? "bg-white/10 text-white"
+                        : "text-white/50 hover:text-white"
+                    }`}
+                  >
+                    Referrals
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("history")}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                      activeTab === "history"
+                        ? "bg-white/10 text-white"
+                        : "text-white/50 hover:text-white"
+                    }`}
+                  >
+                    History
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("analytics")}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                      activeTab === "analytics"
+                        ? "bg-white/10 text-white"
+                        : "text-white/50 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-pink-500">Anal</span>ytics
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -307,8 +334,18 @@ export default function ProfilePage() {
                   {data.sub && data.sub.status === "ACTIVE" && (
                     <div className="mt-4 p-4 bg-emerald-500/10 border border-emerald-400/30 rounded-xl">
                       <p className="text-sm text-emerald-300">
-                        Your membership is active. Enjoy full access to all content!
+                        {data.sub.cancelAtPeriodEnd
+                          ? `Your subscription is set to cancel. Access continues until ${data.sub.expiresAt ? formatDate(data.sub.expiresAt) : "the end of your billing period"}.`
+                          : "Your membership is active. Enjoy full access to all content!"}
                       </p>
+                      {!data.sub.cancelAtPeriodEnd && (
+                        <button
+                          onClick={() => setShowCancelModal(true)}
+                          className="mt-3 text-sm text-white/50 hover:text-red-400 transition underline"
+                        >
+                          Cancel Subscription
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -329,7 +366,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Stats Card */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30">
+              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Activity</h2>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -345,11 +382,41 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+
+              {/* Diamond Features Teaser (non-Diamond only) */}
+              {!isDiamond && (
+                <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30">
+                  <h2 className="text-lg font-semibold text-white mb-2">Unlock Diamond</h2>
+                  <p className="text-sm text-white/70 mb-4">
+                    Diamond members get access to Referrals, XESS History, and Analytics.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-4">
+                    <div className="bg-black/50 rounded-xl p-4 border border-white/10">
+                      <div className="text-white font-semibold mb-1">Referrals</div>
+                      <div className="text-white/60 text-xs">Share a link and earn benefits.</div>
+                    </div>
+                    <div className="bg-black/50 rounded-xl p-4 border border-white/10">
+                      <div className="text-white font-semibold mb-1">History</div>
+                      <div className="text-white/60 text-xs">Receipts + payouts + breakdowns.</div>
+                    </div>
+                    <div className="bg-black/50 rounded-xl p-4 border border-white/10">
+                      <div className="text-white font-semibold mb-1">Analytics</div>
+                      <div className="text-white/60 text-xs">Performance stats and insights.</div>
+                    </div>
+                  </div>
+                  <Link
+                    href="/signup"
+                    className="inline-block px-6 py-2 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition text-sm"
+                  >
+                    Upgrade to Diamond
+                  </Link>
+                </div>
+              )}
             </>
           )}
 
           {/* Referrals Tab Content */}
-          {activeTab === "referrals" && (
+          {activeTab === "referrals" && isDiamond && (
             <>
               {/* Your Referral Link Card */}
               <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
@@ -361,6 +428,16 @@ export default function ProfilePage() {
                   >
                     View Benefits
                   </button>
+                </div>
+
+                {/* Diamond→Diamond only rule note */}
+                <div className="bg-black/50 rounded-xl p-4 mb-4 border border-white/10">
+                  <div className="text-sm text-white/80 font-semibold">Referral program rule</div>
+                  <div className="text-xs text-white/60 mt-1 leading-relaxed">
+                    Referral benefits apply only when a{" "}
+                    <span className="text-white/80 font-semibold">Diamond member</span> refers another{" "}
+                    <span className="text-white/80 font-semibold">Diamond member</span>.
+                  </div>
                 </div>
 
                 {data.referral.code ? (
@@ -523,10 +600,10 @@ export default function ProfilePage() {
             </>
           )}
 
-          {/* Rewards Tab Content */}
-          {activeTab === "rewards" && (
+          {/* History Tab Content (Diamond-only) */}
+          {activeTab === "history" && isDiamond && (
             <div className="neon-border rounded-2xl p-6 bg-black/30">
-              <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
+              <h2 className="text-lg font-semibold text-white mb-4">XESS History</h2>
               <RewardsTab />
             </div>
           )}
@@ -585,6 +662,69 @@ export default function ProfilePage() {
                 >
                   Got it!
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Cancel Subscription Modal */}
+          {showCancelModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <div
+                className="absolute inset-0 bg-black/80"
+                onClick={() => !cancelLoading && setShowCancelModal(false)}
+              />
+              <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/95 p-6">
+                <button
+                  onClick={() => !cancelLoading && setShowCancelModal(false)}
+                  disabled={cancelLoading}
+                  className="absolute top-4 right-4 text-white/50 hover:text-white transition disabled:opacity-50"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                <h3 className="text-xl font-bold text-red-400 mb-4">Cancel Subscription</h3>
+
+                <p className="text-white/80 mb-6">
+                  Are you sure you want to cancel your subscription? Your access will remain active until the end of your current billing period. You will not be charged again.
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={async () => {
+                      setCancelLoading(true);
+                      try {
+                        const res = await fetch("/api/subscription/cancel", {
+                          method: "POST",
+                        });
+                        const json = await res.json();
+                        if (json.ok) {
+                          // Refresh profile data
+                          const profileRes = await fetch("/api/profile");
+                          const profileJson = await profileRes.json();
+                          if (profileJson.ok) setData(profileJson);
+                          setShowCancelModal(false);
+                        }
+                      } catch {
+                        // Silently fail, user can try again
+                      } finally {
+                        setCancelLoading(false);
+                      }
+                    }}
+                    disabled={cancelLoading}
+                    className="flex-1 py-3 rounded-xl bg-red-500/20 border border-red-400/50 text-red-400 font-semibold hover:bg-red-500/30 transition disabled:opacity-50"
+                  >
+                    {cancelLoading ? "Canceling..." : "Confirm Cancellation"}
+                  </button>
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    disabled={cancelLoading}
+                    className="flex-1 py-3 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition disabled:opacity-50"
+                  >
+                    Keep Subscription
+                  </button>
+                </div>
               </div>
             </div>
           )}

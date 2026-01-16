@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WalletStatus from "./WalletStatus";
+import XessTokenModal from "./XessTokenModal";
 
 export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showXessTokenModal, setShowXessTokenModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/me/is-admin")
@@ -36,8 +38,14 @@ export default function TopNav() {
           />
         </Link>
 
-        {/* Right side - Wallet Status, Profile and Admin */}
+        {/* Right side - Xess Token, Wallet Status, Profile and Admin */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setShowXessTokenModal(true)}
+            className="inline-flex items-center rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-amber-300 transition hover:border-amber-300/70 hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
+          >
+            Xess Token
+          </button>
           <WalletStatus />
           {isLoggedIn && (
             <Link
@@ -110,6 +118,11 @@ export default function TopNav() {
           </div>
         </nav>
       )}
+
+      <XessTokenModal
+        open={showXessTokenModal}
+        onClose={() => setShowXessTokenModal(false)}
+      />
     </header>
   );
 }

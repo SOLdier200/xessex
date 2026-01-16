@@ -11,7 +11,7 @@ import ReferralCapture from "../components/ReferralCapture";
 
 // NOWPayments hosted invoice ids (must match IPN route IID_TO_PLAN)
 const NOWPAYMENTS_IIDS = {
-  M60: "1094581819", // Member 60 days $10
+  M90: "1513416538", // Member 90 days $10
   MY:  "429715526",  // Member 1 year $40
   D1:  "1754587706", // Diamond 30 days $18
   D2:  "552457287",  // Diamond 60 days $30
@@ -34,7 +34,7 @@ function SignupInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [memberCycle, setMemberCycle] = useState<"60days" | "yearly">("60days");
+  const [memberCycle, setMemberCycle] = useState<"90days" | "yearly">("90days");
   const [diamondCycle, setDiamondCycle] = useState<"30days" | "60days" | "yearly">("30days");
   const [loading, setLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -61,7 +61,7 @@ function SignupInner() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
-  const memberPlan = memberCycle === "60days" ? "M60" : "MY";
+  const memberPlan = memberCycle === "90days" ? "M90" : "MY";
   const diamondPlan = diamondCycle === "30days" ? "D1" : diamondCycle === "60days" ? "D2" : "DY";
 
   const autoPromptedRef = useRef(false);
@@ -402,7 +402,7 @@ function SignupInner() {
     if (!planParam) return;
 
     const plan = planParam.toUpperCase() as keyof typeof NOWPAYMENTS_IIDS;
-    if (!["M60", "MY", "D1", "D2", "DY"].includes(plan)) return;
+    if (!["M90", "MY", "D1", "D2", "DY"].includes(plan)) return;
 
     const key = `np_autolaunch_${plan}`;
     if (typeof window !== "undefined" && window.sessionStorage) {
@@ -473,14 +473,14 @@ function SignupInner() {
             <div className="flex justify-center mt-3">
               <div className="bg-black/40 rounded-full p-1 flex gap-1">
                 <button
-                  onClick={() => setMemberCycle("60days")}
+                  onClick={() => setMemberCycle("90days")}
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-                    memberCycle === "60days"
+                    memberCycle === "90days"
                       ? "bg-sky-500/30 text-sky-300"
                       : "text-white/60 hover:text-white"
                   }`}
                 >
-                  60 Days
+                  90 Days
                 </button>
                 <button
                   onClick={() => setMemberCycle("yearly")}
@@ -497,9 +497,9 @@ function SignupInner() {
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {memberCycle === "60days" ? "$10" : "$40"}
+                {memberCycle === "90days" ? "$10" : "$40"}
               </span>
-              <span className="text-white/60">/{memberCycle === "60days" ? "60 days" : "year"}</span>
+              <span className="text-white/60">/{memberCycle === "90days" ? "90 days" : "year"}</span>
             </div>
             {memberCycle === "yearly" && (
               <div className="mt-1 text-emerald-400 text-sm">Save $20/year</div>
@@ -529,8 +529,8 @@ function SignupInner() {
             </li>
           </ul>
 
-          {/* Blockchain fee tip for 60 days */}
-          {memberCycle === "60days" && (
+          {/* Blockchain fee tip for 90 days */}
+          {memberCycle === "90days" && (
             <div className="mt-4 p-3 bg-sky-500/10 border border-sky-400/30 rounded-lg text-xs text-sky-300/90">
               <strong>Tip:</strong> For faster confirmations, we recommend stablecoins (USDT/USDC) on low-fee networks like TRC20, BSC, or Polygon.
             </div>
@@ -694,10 +694,29 @@ function SignupInner() {
         </div>
       </div>
 
-      {/* Payment info */}
-      <div className="max-w-2xl mx-auto mt-8 text-center">
-        <p className="text-white/50 text-sm">
-          Pay with crypto via NOWPayments. We accept BTC, ETH, SOL, USDT, USDC, and 100+ cryptocurrencies.
+      {/* Billing & Payment Info */}
+      <div className="max-w-2xl mx-auto mt-8 neon-border rounded-2xl p-5 bg-black/30">
+        <h3 className="text-sm font-semibold text-white mb-3">Billing Information</h3>
+        <ul className="space-y-2 text-sm text-white/60">
+          <li className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">•</span>
+            <span><strong className="text-white/80">One-time payment</strong> — no recurring charges or auto-renewal.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">•</span>
+            <span><strong className="text-white/80">Crypto payments only</strong> — we accept BTC, ETH, SOL, USDT, USDC, and 100+ cryptocurrencies via NOWPayments.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">•</span>
+            <span><strong className="text-white/80">Charges appear as:</strong> NOWPayments or crypto network transaction.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">•</span>
+            <span><strong className="text-white/80">Need help?</strong> Contact us anytime at <a href="mailto:support@xessex.me" className="text-sky-400 hover:underline">support@xessex.me</a></span>
+          </li>
+        </ul>
+        <p className="mt-3 text-xs text-white/40">
+          We do not use Stripe, PayPal, or traditional card processors. All payments are handled securely through cryptocurrency.
         </p>
       </div>
 

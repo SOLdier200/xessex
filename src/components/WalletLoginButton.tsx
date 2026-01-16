@@ -49,7 +49,27 @@ export default function WalletLoginButton() {
 
   return (
     <div className="space-y-3">
-      <WalletMultiButton />
+      <div className="wallet-button-wrapper">
+        <WalletMultiButton />
+      </div>
+      <style jsx global>{`
+        .wallet-button-wrapper .wallet-adapter-button {
+          background: linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%) !important;
+          border-radius: 9999px !important;
+          border: 2px solid #FF1493 !important;
+          box-shadow: 0 0 12px rgba(255, 20, 147, 0.4) !important;
+          padding: 12px 24px !important;
+          font-weight: 600 !important;
+          transition: all 0.2s ease !important;
+        }
+        .wallet-button-wrapper .wallet-adapter-button:hover {
+          background: linear-gradient(135deg, #AB5CFF 0%, #8F4FEE 100%) !important;
+          box-shadow: 0 0 20px rgba(255, 20, 147, 0.6) !important;
+        }
+        .wallet-button-wrapper .wallet-adapter-button-start-icon {
+          margin-right: 8px !important;
+        }
+      `}</style>
       {wallet.connected && (
         <button
           onClick={signIn}

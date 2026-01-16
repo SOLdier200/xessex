@@ -55,6 +55,7 @@ export async function GET() {
           tier: sub.tier,
           status: sub.status,
           expiresAt: sub.expiresAt?.toISOString() ?? null,
+          cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
         }
       : null,
     stats: {

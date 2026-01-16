@@ -44,6 +44,37 @@ function formatWeekLabel(weekKey: string): string {
   });
 }
 
+function shortenSig(sig: string, left = 6, right = 6) {
+  if (!sig) return "";
+  if (sig.length <= left + right + 3) return sig;
+  return `${sig.slice(0, left)}...${sig.slice(-right)}`;
+}
+
+function solanaExplorerTxUrl(sig: string) {
+  const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "mainnet-beta";
+  const qp = cluster === "mainnet-beta" ? "" : `?cluster=${encodeURIComponent(cluster)}`;
+  return `https://explorer.solana.com/tx/${sig}${qp}`;
+}
+
+function csvEscape(val: string) {
+  return `"${String(val ?? "").replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
 export default function RewardsTab() {
   const [loading, setLoading] = useState(true);
   const [weeks, setWeeks] = useState<WeekSummary[]>([]);
@@ -115,13 +146,13 @@ export default function RewardsTab() {
     <div className="space-y-6">
       {/* All-Time Summary */}
       <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-4">
-        <div className="text-sm text-gray-400 mb-1">All-Time Earnings</div>
+        <div className="text-sm text-gray-400 mb-1">All-Time History</div>
         <div className="text-2xl font-bold text-white">
           {formatXess(allTime.total)} <span className="text-purple-400">XESS</span>
         </div>
         {BigInt(allTime.paid) > 0n && (
           <div className="text-sm text-green-400 mt-1">
-            {formatXess(allTime.paid)} XESS paid out
+            {formatXess(allTime.paid)} XESS paid
           </div>
         )}
       </div>
@@ -152,12 +183,40 @@ export default function RewardsTab() {
         <div className="space-y-4">
           {/* Week Totals */}
           <div className="bg-gray-800/50 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">
-              Week of {formatWeekLabel(weekDetail.weekKey)}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-sm text-gray-400 mb-1">
+                  Week of {formatWeekLabel(weekDetail.weekKey)}
+                </div>
+                <div className="text-xl font-bold text-white">
+                  {formatXess(weekDetail.totals.total)} XESS
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const rows: string[][] = [
+                    ["createdAt", "type", "amount", "status", "paidAt", "txSig"],
+                    ...weekDetail.rewards.map((r) => [
+                      r.createdAt,
+                      r.type,
+                      r.amount,
+                      r.status,
+                      r.paidAt ?? "",
+                      r.txSig ?? "",
+                    ]),
+                  ];
+
+                  downloadCsv(`xessex-history-${weekDetail.weekKey}.csv`, rows);
+                }}
+                disabled={!weekDetail.rewards?.length}
+                className="px-3 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                title="Export individual history rows for this week"
+              >
+                Export CSV
+              </button>
             </div>
-            <div className="text-xl font-bold text-white">
-              {formatXess(weekDetail.totals.total)} XESS
-            </div>
+
             <div className="flex gap-4 mt-2 text-sm">
               {BigInt(weekDetail.totals.pending) > 0n && (
                 <span className="text-yellow-400">
@@ -198,6 +257,51 @@ export default function RewardsTab() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Individual History */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-400">History</h4>
+
+            <div className="space-y-2">
+              {weekDetail.rewards.map((r) => {
+                const isPaid = r.status === "PAID";
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between bg-gray-800/30 rounded-lg p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <TypeIcon type={r.type} />
+                      <div className="min-w-0">
+                        <div className="text-white truncate">{rewardTypeLabel(r.type)}</div>
+                        <div className="text-xs text-white/50">
+                          {new Date(r.createdAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-white font-medium">{formatXess(r.amount)} XESS</div>
+
+                      {isPaid && r.txSig ? (
+                        <a
+                          href={solanaExplorerTxUrl(r.txSig)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-green-400 hover:underline"
+                          title={r.txSig}
+                        >
+                          Paid • View Tx {shortenSig(r.txSig)}
+                        </a>
+                      ) : (
+                        <div className="text-xs text-yellow-400">Pending</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : null}

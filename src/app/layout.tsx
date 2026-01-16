@@ -95,6 +95,10 @@ export default function RootLayout({
         {/* Global Footer */}
         <footer className="mt-12 pt-6 border-t border-white/10 text-center text-sm text-white/50">
           <div className="flex flex-wrap justify-center items-center gap-4 mb-4 px-4">
+            <Link href="/tokenomics" className="hover:text-white transition">
+              Tokenomics
+            </Link>
+            <span>•</span>
             <Link href="/terms" className="hover:text-white transition">
               Terms & Conditions
             </Link>
@@ -109,6 +113,10 @@ export default function RootLayout({
             <span>•</span>
             <Link href="/2257" className="hover:text-white transition">
               18 U.S.C. §2257
+            </Link>
+            <span>•</span>
+            <Link href="/refund-policy" className="hover:text-white transition">
+              Refund & Cancellation Policy
             </Link>
             <span>•</span>
             <Link href="/leave" className="hover:text-white transition">
@@ -137,6 +145,12 @@ export default function RootLayout({
           </div>
 
           <p className="text-center">© {new Date().getFullYear()} Xessex. All rights reserved.</p>
+          <p className="text-center mt-2 text-white/40">
+            For any issues at all please email{" "}
+            <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+              support@xessex.me
+            </a>
+          </p>
 
           {/* Donate Button - Bottom Right */}
           <div className="flex justify-end px-4 mt-4 mr-5">

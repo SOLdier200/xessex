@@ -13,14 +13,14 @@ export default function LoginPage() {
         <div className="px-6 pb-10 flex justify-center">
           <div className="w-full max-w-xl space-y-6">
 
-            {/* Wallet Login */}
+            {/* Email Login (Paid Members) */}
             <div className="neon-border rounded-2xl p-6 bg-black/30">
-              <h1 className="text-2xl font-semibold neon-text">Wallet Login</h1>
+              <h1 className="text-2xl font-semibold neon-text">Member Login (Email)</h1>
               <p className="mt-2 text-sm text-white/70">
-                Optional for free videos. Required for premium unlock and paid comments.
+                If you purchased a membership using an email account, sign in here.
               </p>
               <div className="mt-6">
-                <WalletLoginButton />
+                <EmailLoginBox />
               </div>
             </div>
 
@@ -40,14 +40,14 @@ export default function LoginPage() {
 
             <div className="text-center text-white/40 text-sm">or</div>
 
-            {/* Email Login (Paid Members) */}
+            {/* Wallet Login */}
             <div className="neon-border rounded-2xl p-6 bg-black/30">
-              <h2 className="text-xl font-semibold neon-text">Member Login (Email)</h2>
+              <h2 className="text-xl font-semibold neon-text">Wallet Login</h2>
               <p className="mt-2 text-sm text-white/70">
-                If you purchased a membership using an email account, sign in here.
+                Login with Solana Wallet to interact with Xess token Features!
               </p>
               <div className="mt-6">
-                <EmailLoginBox />
+                <WalletLoginButton />
               </div>
             </div>
 

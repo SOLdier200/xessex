@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
 import LogoutModal from "./LogoutModal";
 import FreeUserModal from "./FreeUserModal";
 
@@ -17,11 +18,15 @@ type AuthData = {
 export default function WalletStatus() {
   const pathname = usePathname();
   const router = useRouter();
+  const { wallet } = useWallet();
   const [auth, setAuth] = useState<AuthData | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showFreeUserModal, setShowFreeUserModal] = useState(false);
   const [showSignupLoginModal, setShowSignupLoginModal] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Detect wallet adapter name for styling
+  const walletName = wallet?.adapter?.name?.toLowerCase() ?? "";
 
   const fetchAuth = useCallback(() => {
     fetch(`/api/auth/me?_=${Date.now()}`)
@@ -77,9 +82,11 @@ export default function WalletStatus() {
   const authed = !!auth?.authed;
   const membership = auth?.membership ?? "FREE";
   const hasEmail = !!auth?.hasEmail;
+  const hasWallet = !!auth?.walletAddress;
 
   const isAuthedFree = authed && membership === "FREE" && hasEmail;
-  const isFreeOrNoUser = !authed || (membership === "FREE" && !hasEmail);
+  const isFreeWalletOnly = authed && membership === "FREE" && !hasEmail && hasWallet;
+  const isFreeOrNoUser = !authed || (membership === "FREE" && !hasEmail && !hasWallet);
   const isMember = authed && membership === "MEMBER";
   const isDiamondNoWallet = authed && membership === "DIAMOND" && auth?.needsSolWalletLink;
   const isDiamondWithWallet = authed && membership === "DIAMOND" && !auth?.needsSolWalletLink;
@@ -88,6 +95,9 @@ export default function WalletStatus() {
   const handleClick = () => {
     if (isFreeOrNoUser) {
       setShowSignupLoginModal(true);
+    } else if (isFreeWalletOnly) {
+      // Free user with wallet only - show free user modal
+      setShowFreeUserModal(true);
     } else if (isAuthedFree) {
       // Authenticated free user - show modal with Logout/Purchase options
       setShowFreeUserModal(true);
@@ -114,6 +124,29 @@ export default function WalletStatus() {
     textColor = "text-red-400";
     title = "Free User--Sign up or Login now!";
     subtitle = "Get full access";
+  } else if (isFreeWalletOnly) {
+    // Free user logged in with wallet only - purple for Phantom, yellow for Solflare
+    const isPhantom = walletName.includes("phantom");
+    const isSolflare = walletName.includes("solflare");
+    if (isPhantom) {
+      bgClass = "bg-gradient-to-r from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30";
+      borderClass = "border-purple-400/50";
+      dotColor = "bg-purple-400";
+      textColor = "text-purple-400";
+    } else if (isSolflare) {
+      bgClass = "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30";
+      borderClass = "border-yellow-400/50";
+      dotColor = "bg-yellow-400";
+      textColor = "text-yellow-400";
+    } else {
+      // Default purple for other wallets
+      bgClass = "bg-gradient-to-r from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30";
+      borderClass = "border-purple-400/50";
+      dotColor = "bg-purple-400";
+      textColor = "text-purple-400";
+    }
+    title = "Free User -- has wallet connected";
+    subtitle = shortAddress ?? "Wallet connected";
   } else if (isAuthedFree) {
     bgClass = "bg-gradient-to-r from-orange-500/20 to-amber-500/20 hover:from-orange-500/30 hover:to-amber-500/30";
     borderClass = "border-orange-400/50";

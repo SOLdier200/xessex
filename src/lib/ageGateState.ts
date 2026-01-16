@@ -7,9 +7,13 @@
 
 const AGE_OK_KEY = "__xessexAgeOk";
 
+// Use sessionStorage to persist across page navigations within the same tab/window.
+// sessionStorage is cleared when the tab or browser is closed, which is the desired behavior.
+
 export function getAgeGateOk() {
   try {
-    return (globalThis as Record<string, unknown>)[AGE_OK_KEY] === true;
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem(AGE_OK_KEY) === "1";
   } catch {
     return false;
   }
@@ -17,7 +21,12 @@ export function getAgeGateOk() {
 
 export function setAgeGateOk(value: boolean) {
   try {
-    (globalThis as Record<string, unknown>)[AGE_OK_KEY] = value;
+    if (typeof window === "undefined") return;
+    if (value) {
+      sessionStorage.setItem(AGE_OK_KEY, "1");
+    } else {
+      sessionStorage.removeItem(AGE_OK_KEY);
+    }
   } catch {
     // ignore client storage errors
   }

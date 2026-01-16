@@ -5,7 +5,7 @@ import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 
-type Plan = "M60" | "MY" | "D1" | "D2" | "DY";
+type Plan = "M90" | "MY" | "D1" | "D2" | "DY";
 
 const NOWPAYMENTS_API_BASE = "https://api.nowpayments.io/v1";
 
@@ -20,12 +20,12 @@ const PLAN_META: Record<
     preferLowMinCoins?: boolean;
   }
 > = {
-  M60: {
-    iid: "1094581819",
+  M90: {
+    iid: "1513416538",
     tier: "MEMBER",
-    days: 60,
+    days: 90,
     price: 10,
-    description: "Member 60 days",
+    description: "Member 90 days",
   },
   MY: {
     iid: "429715526",

@@ -21,6 +21,10 @@ export default function FreeUserModal({
 
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+
+      // Dispatch auth-changed event so all components can react
+      window.dispatchEvent(new CustomEvent("auth-changed"));
+
       onLogoutComplete();
       onClose();
     } catch (err) {
