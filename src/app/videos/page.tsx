@@ -12,7 +12,7 @@ export default async function VideosPage() {
   // Free users only see showcase videos
   const showcaseVideos = await db.video.findMany({
     where: { isShowcase: true },
-    orderBy: { createdAt: "desc" },
+    orderBy: { rank: "asc" },
     take: 3,
   });
 
@@ -20,7 +20,7 @@ export default async function VideosPage() {
   const premiumVideos = canViewPremium
     ? await db.video.findMany({
         where: { isShowcase: false },
-        orderBy: { createdAt: "desc" },
+        orderBy: { rank: "asc" },
       })
     : [];
 

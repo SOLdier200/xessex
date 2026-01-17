@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
+import { recomputeVideoRanks } from "@/lib/videoRank";
 
 // Rate limit: 20 seconds between rating changes per user
 const RATE_LIMIT_MS = 20 * 1000;
@@ -25,6 +26,8 @@ export async function POST(req: NextRequest) {
       { status: 401 }
     );
   }
+
+  const userId = access.user.id;
 
   if (!access.canRateStars) {
     return NextResponse.json(
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   // Check rate limit for this user
   const now = Date.now();
-  const cooldownKey = access.user.id;
+  const cooldownKey = userId;
   const lastRating = ratingCooldowns.get(cooldownKey);
 
   // Clean up old entries periodically
@@ -82,34 +85,44 @@ export async function POST(req: NextRequest) {
   // Update cooldown timestamp
   ratingCooldowns.set(cooldownKey, now);
 
-  // Upsert rating (allow updates)
-  await db.videoStarRating.upsert({
-    where: {
-      videoId_userId: { videoId, userId: access.user.id },
-    },
-    create: { videoId, userId: access.user.id, stars: s },
-    update: { stars: s },
-  });
+  const { avgStars, starsCount } = await db.$transaction(async (tx) => {
+    // Upsert rating (allow updates)
+    await tx.videoStarRating.upsert({
+      where: {
+        videoId_userId: { videoId, userId },
+      },
+      create: { videoId, userId, stars: s },
+      update: { stars: s },
+    });
 
-  // Update cached aggregates on video
-  const agg = await db.videoStarRating.aggregate({
-    where: { videoId },
-    _avg: { stars: true },
-    _count: { stars: true },
-  });
+    // Update cached aggregates on video
+    const agg = await tx.videoStarRating.aggregate({
+      where: { videoId },
+      _avg: { stars: true },
+      _count: { stars: true },
+    });
 
-  await db.video.update({
-    where: { id: videoId },
-    data: {
-      avgStars: agg._avg.stars ?? 0,
-      starsCount: agg._count.stars ?? 0,
-    },
+    const avgStarsRaw = agg._avg.stars ?? 0;
+    const avgStarsRounded = Math.round(avgStarsRaw * 100) / 100;
+    const starsCount = agg._count.stars ?? 0;
+
+    await tx.video.update({
+      where: { id: videoId },
+      data: {
+        avgStars: avgStarsRounded,
+        starsCount,
+      },
+    });
+
+    await recomputeVideoRanks(tx);
+
+    return { avgStars: avgStarsRounded, starsCount };
   });
 
   return NextResponse.json({
     ok: true,
-    avgStars: agg._avg.stars ?? 0,
-    starsCount: agg._count.stars ?? 0,
+    avgStars,
+    starsCount,
   });
 }
 

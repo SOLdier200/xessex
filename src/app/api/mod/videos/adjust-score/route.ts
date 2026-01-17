@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 import { weekKeyUTC, monthKeyUTC } from "@/lib/weekKey";
+import { recomputeVideoRanks } from "@/lib/videoRank";
 
 /**
  * POST /api/mod/videos/adjust-score
@@ -129,6 +130,8 @@ export async function POST(req: NextRequest) {
         create: { monthKey: mk, userId: comment.authorId, mvmPoints: 1 },
         update: { mvmPoints: { increment: 1 } },
       });
+
+      await recomputeVideoRanks(tx);
 
       return {
         ok: true as const,

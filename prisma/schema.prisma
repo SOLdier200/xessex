@@ -159,6 +159,7 @@ model Video {
   viewsCount   Int                    @default(0) // Xessex page views
   avgStars     Float                  @default(0)
   starsCount   Int                    @default(0)
+  rank         Int?                   @unique
   thumbnailUrl String?
   comments     Comment[]
   adjustments  VideoScoreAdjustment[]
@@ -166,6 +167,7 @@ model Video {
   sourceGrades CommentSourceGrade[]
 
   @@index([isShowcase])
+  @@index([rank])
 }
 
 model VideoStarRating {
@@ -364,6 +366,15 @@ enum RewardType {
   REF_L3
 }
 
+enum AdminActionKey {
+  RECOMPUTE_VIDEO_RANKS
+  RECOMPUTE_REWARDS_EPOCH
+  RECALCULATE_LEADERBOARDS
+  REBUILD_SEARCH_INDEX
+  FLUSH_CLOUDFLARE_CACHE
+  RECOMPUTE_ANALYTICS
+}
+
 model RewardEvent {
   id          String       @id @default(cuid())
   userId      String
@@ -429,6 +440,15 @@ model AdminConfig {
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+model AdminActionRun {
+  id        String         @id @default(cuid())
+  key       AdminActionKey @unique
+  lastRunAt DateTime?
+  lastOk    Boolean        @default(false)
+  lastMsg   String?
+  updatedAt DateTime       @updatedAt
 }
 
 // All-time cumulative stats (for all-time leaderboard)

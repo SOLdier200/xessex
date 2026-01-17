@@ -29,7 +29,7 @@ async function pickShowcase(excludeViewkey: string | null) {
   const videos = await db.video.findMany({
     where,
     select: VIDEO_SELECT,
-    orderBy: { id: "asc" },
+    orderBy: { rank: "asc" },
     skip,
     take: 1,
   });

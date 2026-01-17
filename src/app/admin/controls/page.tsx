@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import SystemActionsPanel from "./SystemActionsPanel";
 
 export default function AdminControlsPage() {
   const [siteViews, setSiteViews] = useState<string | null>(null);
@@ -110,6 +111,25 @@ export default function AdminControlsPage() {
             Manage Users
           </Link>
         </div>
+
+        {/* Manage Rewards Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-fuchsia-500/20 border border-fuchsia-400/50 flex items-center justify-center">
+              <span className="text-2xl">🎁</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Manage Rewards</h2>
+              <p className="text-sm text-white/60">Thresholds, pools, voter rewards</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/rewards"
+            className="block w-full px-4 py-3 rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/20 text-fuchsia-200 font-semibold hover:bg-fuchsia-500/30 transition text-center"
+          >
+            Open Rewards
+          </Link>
+        </div>
       </div>
 
       {/* Site Stats Panel */}
@@ -131,13 +151,7 @@ export default function AdminControlsPage() {
         </div>
       )}
 
-      {/* Coming Soon Section */}
-      <div className="mt-8 neon-border rounded-2xl p-6 bg-black/20 border-white/10">
-        <h3 className="text-lg font-semibold text-white/60 mb-2">Coming Soon</h3>
-        <p className="text-sm text-white/40">
-          More admin controls will be added here including rewards management, user moderation tools, and system configuration.
-        </p>
-      </div>
+      <SystemActionsPanel />
     </main>
   );
 }

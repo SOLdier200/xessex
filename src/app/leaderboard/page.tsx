@@ -7,7 +7,7 @@ import TopNav from "../components/TopNav";
 
 type LeaderboardData = {
   mvm: { user: string; utilizedComments: number }[];
-  karat: { user: string; memberLikes: number }[];
+  karat: { user: string; totalScore: number }[];
   rewards: { user: string; xessEarned: number }[];
   referrals: { user: string; referralCount: number }[];
 };
@@ -49,7 +49,7 @@ export default function LeaderboardPage() {
   }, []);
 
   const tabs = [
-    { id: "karat", label: "Karat Kruncher", desc: "Most Member Likes" },
+    { id: "karat", label: "Karat Kruncher", desc: "Highest Score" },
     { id: "mvm", label: "MVM", desc: "Most Valuable Member" },
     { id: "rewards", label: "Rewards", desc: "XESS Earned" },
     { id: "referrals", label: "Referrals", desc: "Members Referred" },
@@ -185,10 +185,10 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-pink-400">
-                            {entry.memberLikes}
+                            {entry.totalScore}
                           </div>
                           <div className="text-xs text-white/50">
-                            member likes
+                            Total Score
                           </div>
                         </div>
                       </div>

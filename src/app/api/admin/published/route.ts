@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         }
       : undefined,
     select: { slug: true, title: true, isShowcase: true },
-    orderBy: [{ isShowcase: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ rank: "asc" }],
     take: 250,
   });
 

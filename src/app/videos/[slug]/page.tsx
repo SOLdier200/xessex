@@ -95,7 +95,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       avgStars: true,
     },
     take: 4,
-    orderBy: { createdAt: "desc" },
+    orderBy: { rank: "asc" },
   });
 
   const pageUrl = absUrl(`/videos/${video.slug}`);
