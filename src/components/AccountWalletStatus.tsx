@@ -1,121 +1,99 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
-type MeUser = {
-  id: string;
-  email?: string | null;
-  role: string;
-  solWallet?: string | null;
+type AuthMe = {
+  authed: boolean;
+  membership?: "DIAMOND" | "MEMBER" | "FREE";
   walletAddress?: string | null;
+  email?: string | null;
 };
 
-function short(addr?: string | null) {
+function shortAddress(addr?: string | null) {
   if (!addr) return "";
-  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
-}
-
-function detectPlatform() {
-  if (typeof navigator === "undefined") return { isIos: false, isAndroid: false };
-  const ua = navigator.userAgent.toLowerCase();
-  const isAndroid = ua.includes("android");
-  const isIos =
-    ua.includes("iphone") ||
-    ua.includes("ipad") ||
-    (ua.includes("mac") && (navigator as unknown as { maxTouchPoints: number }).maxTouchPoints > 1);
-  return { isIos, isAndroid };
+  if (addr.length <= 10) return addr;
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 }
 
 export default function AccountWalletStatus() {
-  const { connected, publicKey } = useWallet();
-  const [me, setMe] = useState<MeUser | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const { publicKey, connected } = useWallet();
+  const [auth, setAuth] = useState<AuthMe | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const pk = publicKey?.toBase58() ?? null;
+  const fetchMe = useCallback(() => {
+    setLoading(true);
+    fetch(`/api/auth/me?_=${Date.now()}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok && d?.authed) {
+          setAuth({
+            authed: true,
+            membership: d.membership,
+            walletAddress: d.walletAddress ?? null,
+            email: d.email ?? null,
+          });
+        } else {
+          setAuth({ authed: false });
+        }
+      })
+      .catch(() => setAuth({ authed: false }))
+      .finally(() => setLoading(false));
+  }, []);
 
-  // Fetch user data
-  async function refreshMe() {
-    try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" });
-      const d = await res.json();
-      setMe(d?.user ?? null);
-    } catch {
-      setMe(null);
-    } finally {
-      setLoaded(true);
+  useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
+
+  useEffect(() => {
+    const handleAuthChange = () => fetchMe();
+    window.addEventListener("auth-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-changed", handleAuthChange);
+  }, [fetchMe]);
+
+  const connectedWallet = publicKey?.toBase58() ?? null;
+  const linkedWallet = auth?.walletAddress ?? null;
+  const linkedMatches =
+    !!connectedWallet && !!linkedWallet && connectedWallet === linkedWallet;
+
+  let linkedText = "No account";
+  if (!loading && auth?.authed) {
+    if (linkedWallet) {
+      const detail = `account wallet ${shortAddress(linkedWallet)}`;
+      if (connectedWallet) {
+        linkedText = linkedMatches ? `Yes (${detail})` : `No (${detail})`;
+      } else {
+        linkedText = `Yes (${detail})`;
+      }
+    } else {
+      linkedText = "No (no linked wallet)";
     }
   }
 
-  // Initial fetch
-  useEffect(() => {
-    refreshMe();
-  }, []);
+  const accountLabel = loading
+    ? "Loading..."
+    : auth?.authed
+    ? auth?.email || `Signed in (${auth?.membership ?? "FREE"})`
+    : "Not signed in";
 
-  // Listen for auth changes (login/logout)
-  useEffect(() => {
-    const onAuthChanged = () => refreshMe();
-    window.addEventListener("auth-changed", onAuthChanged);
-    return () => window.removeEventListener("auth-changed", onAuthChanged);
-  }, []);
-
-  const isAuthed = !!me;
-  const isLinked =
-    !!me &&
-    !!pk &&
-    (me.solWallet === pk || me.walletAddress === pk);
-
-  const linkedWalletOnAccount = me?.solWallet || me?.walletAddress || null;
-  const p = useMemo(detectPlatform, []);
+  const walletLabel = connected && connectedWallet
+    ? shortAddress(connectedWallet)
+    : "Not connected";
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-white/70">Account</span>
-        {!loaded ? (
-          <span className="text-white/50">Loading…</span>
-        ) : isAuthed ? (
-          <span className="text-emerald-300 font-semibold">
-            {me?.email ? me.email : `Signed in (${me?.role})`}
-          </span>
-        ) : (
-          <span className="text-red-300 font-semibold">Not signed in</span>
-        )}
+    <div className="neon-border rounded-2xl p-4 bg-black/30 text-sm space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-white/60">Account</span>
+        <span className="text-white/90 font-semibold">{accountLabel}</span>
       </div>
-
-      <div className="flex items-center justify-between">
-        <span className="text-white/70">Wallet</span>
-        {connected && pk ? (
-          <span className="text-emerald-300 font-semibold font-mono">
-            {short(pk)}
-          </span>
-        ) : (
-          <span className="text-red-300 font-semibold">Not connected</span>
-        )}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-white/60">Wallet</span>
+        <span className="text-white/90 font-semibold">{walletLabel}</span>
       </div>
-
-      <div className="flex items-center justify-between">
-        <span className="text-white/70">Linked</span>
-        {!isAuthed ? (
-          <span className="text-white/40">—</span>
-        ) : isLinked ? (
-          <span className="text-emerald-300 font-semibold">Yes</span>
-        ) : linkedWalletOnAccount ? (
-          <span className="text-yellow-300 font-semibold">
-            No (account has {short(linkedWalletOnAccount)})
-          </span>
-        ) : (
-          <span className="text-yellow-300 font-semibold">No</span>
-        )}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-white/60">Linked</span>
+        <span className="text-white/90 font-semibold">{loading ? "Loading..." : linkedText}</span>
       </div>
-
-      {(p.isIos || p.isAndroid) && (
-        <div className="pt-2 border-t border-white/10 text-xs text-white/50">
-          {p.isIos
-            ? "iOS tip: wallet connect works best inside Phantom/Solflare in-app browser."
-            : "Android tip: wallet connect works best in Chrome."}
-        </div>
-      )}
     </div>
   );
 }

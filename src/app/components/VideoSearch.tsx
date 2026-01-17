@@ -13,6 +13,7 @@ type Video = {
   categories: string | null;
   performers: string | null;
   favorite: number;
+  rank?: number | null;
 };
 
 function formatDuration(seconds: number | null): string {
@@ -39,7 +40,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [duration, setDuration] = useState("any");
-  const [sort, setSort] = useState("new");
+  const [sort, setSort] = useState("rank");
 
   const filteredVideos = useMemo(() => {
     let result = [...videos];
@@ -76,12 +77,20 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     }
 
     // Sort
-    if (sort === "top") {
+    if (sort === "rank") {
+      result.sort((a, b) => {
+        // Videos with rank come first, sorted ascending
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        return 0;
+      });
+    } else if (sort === "top") {
       result.sort((a, b) => (b.views || 0) - (a.views || 0));
     } else if (sort === "duration") {
       result.sort((a, b) => (b.duration || 0) - (a.duration || 0));
     }
-    // "new" keeps original order (already sorted by newest from data source)
+    // "new" keeps original order
 
     // For free users, put showcase (free) videos at the top
     if (!canViewPremium && showcaseSlugs.length > 0) {
@@ -162,8 +171,9 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
               onChange={(e) => setSort(e.target.value)}
               className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm"
             >
+              <option value="rank">Rank</option>
               <option value="new">Newest</option>
-              <option value="top">Top rated</option>
+              <option value="top">Most Viewed</option>
               <option value="duration">Duration</option>
             </select>
           </div>
@@ -249,16 +259,22 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                         No Thumbnail
                       </div>
                     )}
+                    {/* Rank Badge */}
+                    {v.rank != null && (
+                      <div className="absolute top-1 left-1 md:top-2 md:left-2 min-w-[24px] md:min-w-[28px] h-6 md:h-7 flex items-center justify-center text-xs md:text-sm font-bold px-1.5 md:px-2 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-lg">
+                        #{v.rank}
+                      </div>
+                    )}
                     <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
                       {formatDuration(v.duration)}
                     </div>
                     {v.favorite === 1 && (
-                      <div className="absolute top-2 left-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
+                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
                         ★
                       </div>
                     )}
                     {isShowcase && !canViewPremium && (
-                      <div className="absolute top-2 left-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
+                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
                         FREE
                       </div>
                     )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 import { weekKeyUTC, monthKeyUTC } from "@/lib/weekKey";
@@ -149,6 +150,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (e) {
     console.error("[ADJUST_SCORE] error", e);
-    return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
+    const isDev = process.env.NODE_ENV !== "production";
+    const detail = isDev
+      ? e instanceof Error
+        ? e.message
+        : String(e)
+      : undefined;
+    const code =
+      e instanceof Prisma.PrismaClientKnownRequestError
+        ? e.code
+        : undefined;
+    return NextResponse.json(
+      { ok: false, error: "SERVER_ERROR", detail, code },
+      { status: 500 }
+    );
   }
 }

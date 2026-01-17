@@ -2,6 +2,7 @@ import Link from "next/link";
 import fs from "fs";
 import path from "path";
 import TopNav from "../../components/TopNav";
+import { db } from "@/lib/prisma";
 
 type ApprovedVideo = {
   id: number;
@@ -13,6 +14,7 @@ type ApprovedVideo = {
   categories: string | null;
   performers: string | null;
   favorite: number;
+  rank?: number | null;
 };
 
 function getApprovedVideos(): ApprovedVideo[] {
@@ -56,21 +58,43 @@ interface CategoryPageProps {
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const allVideos = getApprovedVideos();
+  const allApprovedVideos = getApprovedVideos();
   const categoryInfo = CATEGORY_INFO[slug] || { name: slug.replace(/-/g, " "), icon: "📁" };
+
+  // Fetch all video ranks from DB
+  const dbVideos = await db.video.findMany({
+    select: { slug: true, rank: true },
+  });
+  const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
+
+  // Merge rank into approved videos
+  const allVideos = allApprovedVideos.map((v) => ({
+    ...v,
+    rank: rankMap.get(v.viewkey) ?? null,
+  }));
 
   // Filter/sort videos based on category
   let videos: ApprovedVideo[];
 
   if (slug === "highest-rated") {
-    // Sort by views (as proxy for rating)
-    videos = [...allVideos].sort((a, b) => (b.views || 0) - (a.views || 0));
+    // Sort by rank (star ratings)
+    videos = [...allVideos].sort((a, b) => {
+      if (a.rank != null && b.rank != null) return a.rank - b.rank;
+      if (a.rank != null) return -1;
+      if (b.rank != null) return 1;
+      return 0;
+    });
   } else {
-    // Filter by category name
+    // Filter by category name, then sort by rank
     const categoryName = slug.replace(/-/g, " ");
-    videos = allVideos.filter((v) =>
-      v.categories?.toLowerCase().includes(categoryName.toLowerCase())
-    );
+    videos = allVideos
+      .filter((v) => v.categories?.toLowerCase().includes(categoryName.toLowerCase()))
+      .sort((a, b) => {
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        return 0;
+      });
   }
 
   return (
@@ -118,11 +142,17 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                       No Thumbnail
                     </div>
                   )}
+                  {/* Rank Badge */}
+                  {v.rank != null && (
+                    <div className="absolute top-1 left-1 md:top-2 md:left-2 min-w-[24px] md:min-w-[28px] h-6 md:h-7 flex items-center justify-center text-xs md:text-sm font-bold px-1.5 md:px-2 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-lg">
+                      #{v.rank}
+                    </div>
+                  )}
                   <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-white">
                     {formatDuration(v.duration)}
                   </div>
                   {v.favorite === 1 && (
-                    <div className="absolute top-1 left-1 md:top-2 md:left-2 bg-yellow-500/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-black font-semibold">
+                    <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-black font-semibold">
                       ★
                     </div>
                   )}

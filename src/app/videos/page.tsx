@@ -77,7 +77,11 @@ export default async function VideosPage() {
                         className="w-full h-full object-cover"
                       />
                     )}
-                    <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200">
+                    {/* Rank Badge */}
+                    <span className="absolute top-2 left-2 min-w-[28px] h-7 flex items-center justify-center text-sm font-bold px-2 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-lg">
+                      #{v.rank}
+                    </span>
+                    <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200">
                       FREE
                     </span>
                   </div>
@@ -121,7 +125,11 @@ export default async function VideosPage() {
                             className="w-full h-full object-cover"
                           />
                         )}
-                        <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 border border-pink-400/30 text-pink-200">
+                        {/* Rank Badge */}
+                        <span className="absolute top-2 left-2 min-w-[28px] h-7 flex items-center justify-center text-sm font-bold px-2 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-lg">
+                          #{v.rank}
+                        </span>
+                        <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 border border-pink-400/30 text-pink-200">
                           PREMIUM
                         </span>
                       </div>
