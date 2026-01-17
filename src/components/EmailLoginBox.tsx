@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import "@solana/wallet-adapter-react-ui/styles.css";
+import { useRouter } from "next/navigation";
 
 type Membership = "FREE" | "MEMBER" | "DIAMOND";
 
@@ -14,7 +12,7 @@ function prettyMembership(m: Membership) {
 }
 
 export default function EmailLoginBox() {
-  const wallet = useWallet();
+  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,17 +24,12 @@ export default function EmailLoginBox() {
 
   const [showModal, setShowModal] = useState(false);
   const [membership, setMembership] = useState<Membership>("FREE");
+  const [needsWalletLink, setNeedsWalletLink] = useState(false);
 
   const [banner, setBanner] = useState<{ show: boolean; membership: Membership }>({
     show: false,
     membership: "FREE",
   });
-
-  // Wallet link state
-  const [needsWalletLink, setNeedsWalletLink] = useState(false);
-  const [linking, setLinking] = useState(false);
-  const [linkError, setLinkError] = useState<string | null>(null);
-  const [linkedOk, setLinkedOk] = useState(false);
 
   // Auto-hide toast
   useEffect(() => {
@@ -46,74 +39,21 @@ export default function EmailLoginBox() {
   }, [toast]);
 
   async function fetchMeAndSetBanner() {
-    const res = await fetch("/api/auth/me", { method: "GET" });
+    const res = await fetch("/api/auth/me", { method: "GET", cache: "no-store" });
     const j = await res.json().catch(() => null);
-    if (!j?.ok || !j?.authed) return;
 
-    const m = (j.membership as Membership) || "FREE";
+    const u = j?.ok ? j.user : null;
+    if (!u) return;
+
+    const m: Membership =
+      u.role === "DIAMOND" ? "DIAMOND" : u.role === "MEMBER" ? "MEMBER" : "FREE";
+
     setMembership(m);
     setBanner({ show: true, membership: m });
 
     // Check if Diamond email user needs to link wallet
-    const needs = !!j.needsSolWalletLink || (m === "DIAMOND" && !j.walletAddress);
-    setNeedsWalletLink(needs);
-  }
-
-  async function linkSolWallet() {
-    setLinkError(null);
-    setLinkedOk(false);
-
-    if (!wallet.publicKey || !wallet.signMessage) {
-      setLinkError("Connect a Solana wallet that supports message signing.");
-      return;
-    }
-
-    setLinking(true);
-    try {
-      // 1) Get challenge
-      const cRes = await fetch("/api/auth/wallet-link/challenge", { method: "POST" });
-      const c = await cRes.json().catch(() => null);
-      if (!cRes.ok || !c?.ok) throw new Error(c?.error || "Failed to start wallet link");
-
-      // 2) Sign challenge message
-      const msgBytes = new TextEncoder().encode(c.message);
-      const signed = await wallet.signMessage(msgBytes);
-      const bs58 = (await import("bs58")).default;
-      const signature = bs58.encode(signed);
-
-      // 3) Verify + link
-      const vRes = await fetch("/api/auth/wallet-link/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          wallet: wallet.publicKey.toBase58(),
-          signature,
-          nonce: c.nonce,
-        }),
-      });
-
-      const v = await vRes.json().catch(() => null);
-      if (!vRes.ok || !v?.ok) throw new Error(v?.error || "Wallet link failed");
-
-      setLinkedOk(true);
-      setNeedsWalletLink(false);
-
-      // Show success toast with wallet name
-      const walletName = wallet.wallet?.adapter?.name || "Wallet";
-      setToastType("success");
-      setToast(`${walletName} linked and connected!`);
-
-      // Close the modal after successful wallet link
-      setShowModal(false);
-
-      // Refresh banner state
-      await fetchMeAndSetBanner();
-    } catch (e: unknown) {
-      const err = e as Error;
-      setLinkError(err?.message || "Wallet link failed");
-    } finally {
-      setLinking(false);
-    }
+    const linked = !!(u.solWallet || u.walletAddress);
+    setNeedsWalletLink(m === "DIAMOND" && !linked);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -136,7 +76,6 @@ export default function EmailLoginBox() {
 
       if (!res.ok || !j.ok) {
         setToastType("error");
-        // Show specific error messages
         if (j.error === "INVALID_PASSWORD") {
           setToast("Incorrect password, please try again.");
         } else if (j.error === "USER_NOT_FOUND") {
@@ -175,45 +114,30 @@ export default function EmailLoginBox() {
 
   return (
     <div className="relative">
-      {/* Diamond wallet link banner (constant until linked) */}
-      {needsWalletLink && (
+      {/* Diamond wallet link banner (highest priority) OR logged-in banner */}
+      {needsWalletLink ? (
         <div className="mb-4 rounded-2xl border border-pink-500/40 bg-black/60 px-4 py-4">
           <div className="text-sm font-semibold text-pink-200">
-            You need to link your wallet to receive your Xess Payments!
+            Link your wallet to receive Xess payments
           </div>
           <div className="mt-1 text-xs text-white/75">
-            You signed up with email as a Diamond Member — link your SOL wallet to receive your payments in Xess and
-            enable other Xess interactions.
+            As a Diamond Member, you must link a Solana wallet to receive payments and enable on-chain Xess features.
           </div>
-
-          <div className="mt-3 flex flex-col gap-3">
-            <WalletMultiButton />
-            <button
-              onClick={linkSolWallet}
-              disabled={linking}
-              className="rounded-xl bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-500 disabled:opacity-60"
-            >
-              {linking ? "Linking..." : "Link SOL Wallet"}
-            </button>
-
-            {linkError && <div className="text-xs text-red-300">{linkError}</div>}
-            {linkedOk && <div className="text-xs text-emerald-300">Wallet linked</div>}
-          </div>
-
-          <div className="mt-3 text-xs text-white/50 italic">
-            Tip: You may have to switch back and forth between browser and wallet a few times to get the connect prompt to pop up.
-          </div>
+          <button
+            onClick={() => router.push("/link-wallet")}
+            className="mt-3 w-full rounded-xl bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-500 transition"
+          >
+            Go to Wallet Linking
+          </button>
         </div>
-      )}
-
-      {/* Top "logged in" banner */}
-      {banner.show && (
+      ) : banner.show ? (
         <div className="mb-4 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
           <div className="text-sm">
-            You're now logged in — <span className="font-semibold">{prettyMembership(banner.membership)}</span>
+            You&apos;re now logged in —{" "}
+            <span className="font-semibold">{prettyMembership(banner.membership)}</span>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Toast */}
       {toast && (
@@ -258,13 +182,11 @@ export default function EmailLoginBox() {
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (
-              /* Eye open icon */
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                 <circle cx="12" cy="12" r="3" />
               </svg>
             ) : (
-              /* Eye closed icon */
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                 <line x1="1" y1="1" x2="23" y2="23" />
@@ -291,7 +213,6 @@ export default function EmailLoginBox() {
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
           <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-black/80 p-6 shadow-2xl backdrop-blur">
-            {/* X close */}
             <button
               onClick={() => setShowModal(false)}
               className="absolute right-3 top-3 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm hover:bg-white/10"
@@ -300,58 +221,29 @@ export default function EmailLoginBox() {
               X
             </button>
 
-            <div className="text-xl font-semibold neon-text">Successfully logged into your account!</div>
+            <div className="text-xl font-semibold neon-text">Successfully logged in!</div>
             <div className="mt-2 text-sm text-white/80">
               You're signed in as <span className="font-semibold">{prettyMembership(membership)}</span>.
             </div>
 
-            {/* Diamond wallet link in modal */}
+            {/* Diamond wallet link prompt - routes to /link-wallet */}
             {membership === "DIAMOND" && needsWalletLink && (
               <div className="mt-4 rounded-xl border border-pink-500/30 bg-black/40 p-4">
-                {!wallet.connected ? (
-                  <>
-                    <div className="text-sm font-semibold text-pink-200">
-                      Step 1: Connect your wallet
-                    </div>
-                    <div className="mt-1 text-xs text-white/75">
-                      Link your SOL wallet to receive your payments in Xess and enable other Xess interactions.
-                    </div>
-
-                    <div className="mt-3">
-                      <WalletMultiButton />
-                    </div>
-
-                    <div className="mt-3 text-xs text-white/50 italic">
-                      Tip: You may have to switch back and forth between browser and wallet a few times to get the connect prompt to pop up.
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm font-semibold text-emerald-300">
-                      Step 2: Sign message to verify ownership
-                    </div>
-                    <div className="mt-1 text-xs text-white/75">
-                      Wallet connected! Now sign a message to link it to your account.
-                    </div>
-
-                    <div className="mt-3 space-y-3">
-                      <button
-                        onClick={linkSolWallet}
-                        disabled={linking}
-                        className="w-full rounded-xl bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-500 disabled:opacity-60"
-                      >
-                        {linking ? "Signing..." : "Sign Message to Link Wallet"}
-                      </button>
-
-                      {linkError && <div className="text-xs text-red-300">{linkError}</div>}
-                      {linkedOk && <div className="text-xs text-emerald-300">Wallet linked</div>}
-                    </div>
-
-                    <div className="mt-3 text-xs text-white/50">
-                      Connected: {wallet.publicKey?.toBase58().slice(0, 4)}...{wallet.publicKey?.toBase58().slice(-4)}
-                    </div>
-                  </>
-                )}
+                <div className="text-sm font-semibold text-pink-200">
+                  Link your wallet to receive Xess payments
+                </div>
+                <div className="mt-1 text-xs text-white/75">
+                  As a Diamond Member, you need to link a SOL wallet to receive your payments.
+                </div>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    router.push("/link-wallet");
+                  }}
+                  className="mt-3 w-full rounded-xl bg-pink-600 px-4 py-2 font-semibold text-white hover:bg-pink-500"
+                >
+                  Link Wallet Now
+                </button>
               </div>
             )}
 

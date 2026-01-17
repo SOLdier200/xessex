@@ -3,7 +3,6 @@
 import { ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { Adapter } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 import {
   SolanaMobileWalletAdapter,
@@ -12,44 +11,51 @@ import {
   createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
 
+function detectPlatform() {
+  if (typeof navigator === "undefined") return { isAndroid: false, isIos: false };
+  const ua = navigator.userAgent.toLowerCase();
+  const isAndroid = ua.includes("android");
+  const isIos =
+    ua.includes("iphone") ||
+    ua.includes("ipad") ||
+    (ua.includes("mac") && (navigator as any).maxTouchPoints > 1);
+  return { isAndroid, isIos };
+}
+
 export default function SolanaProviders({ children }: { children: ReactNode }) {
-  const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
+  const endpoint =
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 
   const wallets = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://xessex.me";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://xessex.me";
+
     const appIdentity = {
       name: "Xessex",
       uri: origin,
       icon: `${origin}/logos/android-chrome-192x192.png`,
     };
 
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent.toLowerCase() : "";
-    const isAndroid = ua.includes("android");
-    const isIos =
-      ua.includes("iphone") ||
-      ua.includes("ipad") ||
-      (ua.includes("mac") && (navigator as any).maxTouchPoints > 1);
+    const { isAndroid, isIos } = detectPlatform();
 
-    // ALWAYS include desktop extensions - never remove them
-    const list: Adapter[] = [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ];
+    // ALWAYS include desktop adapters
+    const base = [new PhantomWalletAdapter(), new SolflareWalletAdapter()];
 
-    // Only add MWA on Android (not iOS)
+    // Only add MWA on Android (never iOS)
     if (isAndroid && !isIos) {
-      list.unshift(
+      return [
         new SolanaMobileWalletAdapter({
           addressSelector: createDefaultAddressSelector(),
           appIdentity,
           authorizationResultCache: createDefaultAuthorizationResultCache(),
           cluster: "mainnet-beta",
           onWalletNotFound: createDefaultWalletNotFoundHandler(),
-        })
-      );
+        }),
+        ...base,
+      ];
     }
 
-    return list;
+    return base;
   }, []);
 
   return (

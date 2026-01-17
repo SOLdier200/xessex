@@ -1,77 +1,109 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useEffect, useState } from "react";
 
 type MeUser = {
   id: string;
   email?: string | null;
+  role: string;
   solWallet?: string | null;
   walletAddress?: string | null;
-  role?: string;
 };
+
+function short(addr?: string | null) {
+  if (!addr) return "";
+  return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
+}
+
+function detectPlatform() {
+  if (typeof navigator === "undefined") return { isIos: false, isAndroid: false };
+  const ua = navigator.userAgent.toLowerCase();
+  const isAndroid = ua.includes("android");
+  const isIos =
+    ua.includes("iphone") ||
+    ua.includes("ipad") ||
+    (ua.includes("mac") && (navigator as unknown as { maxTouchPoints: number }).maxTouchPoints > 1);
+  return { isIos, isAndroid };
+}
 
 export default function AccountWalletStatus() {
   const { connected, publicKey } = useWallet();
   const [me, setMe] = useState<MeUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+
+  const pk = publicKey?.toBase58() ?? null;
 
   useEffect(() => {
+    let alive = true;
     fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
-        setMe(d.user ?? null);
-        setLoading(false);
+        if (!alive) return;
+        setMe(d?.user ?? null);
+        setLoaded(true);
       })
-      .catch(() => setLoading(false));
+      .catch(() => setLoaded(true));
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const walletAddr = publicKey?.toBase58();
-  const linked =
-    me &&
-    walletAddr &&
-    (me.solWallet === walletAddr || me.walletAddress === walletAddr);
+  const isAuthed = !!me;
+  const isLinked =
+    !!me &&
+    !!pk &&
+    (me.solWallet === pk || me.walletAddress === pk);
 
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-sm">
-        <span className="text-white/50">Loading status...</span>
-      </div>
-    );
-  }
+  const linkedWalletOnAccount = me?.solWallet || me?.walletAddress || null;
+  const p = useMemo(detectPlatform, []);
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/40 p-4 text-sm space-y-2">
-      <div>
-        <b className="text-white/70">Account:</b>{" "}
-        {me ? (
-          <span className="text-green-400">{me.email || "Wallet account"}</span>
-        ) : (
-          <span className="text-red-400">Not logged in</span>
-        )}
-      </div>
-
-      <div>
-        <b className="text-white/70">Wallet:</b>{" "}
-        {connected && walletAddr ? (
-          <span className="text-green-400">
-            Connected ({walletAddr.slice(0, 4)}...{walletAddr.slice(-4)})
+    <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-white/70">Account</span>
+        {!loaded ? (
+          <span className="text-white/50">Loading…</span>
+        ) : isAuthed ? (
+          <span className="text-emerald-300 font-semibold">
+            {me?.email ? me.email : `Signed in (${me?.role})`}
           </span>
         ) : (
-          <span className="text-red-400">Not connected</span>
+          <span className="text-red-300 font-semibold">Not signed in</span>
         )}
       </div>
 
-      {connected && walletAddr && (
-        <div>
-          <b className="text-white/70">Link:</b>{" "}
-          {linked ? (
-            <span className="text-green-400">Linked to account</span>
-          ) : me ? (
-            <span className="text-yellow-400">Not linked</span>
-          ) : (
-            <span className="text-gray-400">N/A (not logged in)</span>
-          )}
+      <div className="flex items-center justify-between">
+        <span className="text-white/70">Wallet</span>
+        {connected && pk ? (
+          <span className="text-emerald-300 font-semibold font-mono">
+            {short(pk)}
+          </span>
+        ) : (
+          <span className="text-red-300 font-semibold">Not connected</span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-white/70">Linked</span>
+        {!isAuthed ? (
+          <span className="text-white/40">—</span>
+        ) : isLinked ? (
+          <span className="text-emerald-300 font-semibold">Yes</span>
+        ) : linkedWalletOnAccount ? (
+          <span className="text-yellow-300 font-semibold">
+            No (account has {short(linkedWalletOnAccount)})
+          </span>
+        ) : (
+          <span className="text-yellow-300 font-semibold">No</span>
+        )}
+      </div>
+
+      {(p.isIos || p.isAndroid) && (
+        <div className="pt-2 border-t border-white/10 text-xs text-white/50">
+          {p.isIos
+            ? "iOS tip: wallet connect works best inside Phantom/Solflare in-app browser."
+            : "Android tip: wallet connect works best in Chrome."}
         </div>
       )}
     </div>
