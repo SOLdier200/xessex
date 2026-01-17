@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
 import TopNav from "../components/TopNav";
 
 export default function LinkWalletPage() {
   const router = useRouter();
   const { publicKey, signMessage, connected } = useWallet();
+  const { setVisible } = useWalletModal();
 
   const [status, setStatus] = useState<"idle" | "signing" | "verifying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -109,11 +110,16 @@ export default function LinkWalletPage() {
           <div className="space-y-4">
             {/* Wallet Connect Button */}
             <div className="flex flex-col items-center gap-4">
-              <WalletMultiButton className="!bg-gradient-to-r !from-purple-500/20 !to-pink-500/20 !border !border-purple-400/40 !rounded-xl !py-3 !px-6 !text-white !font-medium hover:!from-purple-500/30 hover:!to-pink-500/30 !transition" />
-
-              {connected && publicKey && (
+              {!connected ? (
+                <button
+                  onClick={() => setVisible(true)}
+                  className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/40 text-white font-medium hover:from-purple-500/30 hover:to-pink-500/30 transition"
+                >
+                  Select Wallet
+                </button>
+              ) : (
                 <div className="text-sm text-white/60">
-                  Connected: {publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)}
+                  Connected: {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
                 </div>
               )}
             </div>
