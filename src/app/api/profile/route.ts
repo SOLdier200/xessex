@@ -48,7 +48,8 @@ export async function GET() {
     ok: true,
     authed: true,
     email: user.email ?? null,
-    walletAddress: user.walletAddress ?? user.solWallet ?? null,
+    walletAddress: user.walletAddress ?? null,
+    solWallet: user.solWallet ?? null,
     membership,
     sub: sub
       ? {

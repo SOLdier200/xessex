@@ -12,6 +12,7 @@ type ProfileData = {
   authed: boolean;
   email: string | null;
   walletAddress: string | null;
+  solWallet: string | null;
   membership: "FREE" | "MEMBER" | "DIAMOND";
   sub: {
     tier: string;
@@ -121,6 +122,16 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  // Claim state
+  const [claimSummary, setClaimSummary] = useState<null | {
+    epoch: null | { id: string; epochNo: number; merkleRoot: string };
+    pendingAmount: string;
+    hasPending: boolean;
+    claim: null | { id: string; status: "PROCESSING" | "CLAIMED" | "FAILED"; txSig: string | null; error: string | null };
+  }>(null);
+  const [claimBusy, setClaimBusy] = useState(false);
+  const [claimErr, setClaimErr] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/profile")
       .then((res) => res.json())
@@ -172,6 +183,85 @@ export default function ProfilePage() {
       setActiveTab("profile");
     }
   }, [data?.membership, activeTab]);
+
+  // Fetch claim summary for Diamond members
+  async function refreshClaimSummary() {
+    try {
+      const res = await fetch("/api/rewards/summary", { cache: "no-store" });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || "FAILED_SUMMARY");
+      setClaimSummary({
+        epoch: j.epoch,
+        pendingAmount: j.pendingAmount,
+        hasPending: j.hasPending,
+        claim: j.claim ? { id: j.claim.id, status: j.claim.status, txSig: j.claim.txSig, error: j.claim.error } : null,
+      });
+    } catch {
+      // Silent fail - claim summary is optional
+    }
+  }
+
+  useEffect(() => {
+    if (data?.membership === "DIAMOND") {
+      refreshClaimSummary();
+    }
+  }, [data?.membership]);
+
+  // Claim handler
+  async function onClaimPendingXess() {
+    setClaimErr(null);
+    setClaimBusy(true);
+
+    try {
+      // 1) Start claim (idempotent) → get merkle proof payload
+      const startRes = await fetch("/api/rewards/claim/start", { method: "POST" });
+      const start = await startRes.json();
+
+      if (!start.ok) throw new Error(start.error || "CLAIM_START_FAILED");
+
+      // If already claimed, just refresh UI
+      if (start.alreadyClaimed) {
+        await refreshClaimSummary();
+        return;
+      }
+
+      const { claimId, epoch, leaf } = start as {
+        claimId: string;
+        epoch: { epochNo: number; merkleRoot: string };
+        leaf: { amount: string; leafIndex: number; proof: string[] };
+      };
+
+      // 2) SUBMIT ON-CHAIN CLAIM
+      //    You'll call your Solana program:
+      //    claim(epoch.epochNo, leaf.amount, leaf.leafIndex, leaf.proof)
+      //
+      // Placeholder until on-chain program is wired:
+      const txSig = await (async () => {
+        // TODO: Wire actual on-chain claim here
+        // Example: return await claimOnChain({ epochNo: epoch.epochNo, amount: leaf.amount, leafIndex: leaf.leafIndex, proof: leaf.proof });
+        void epoch; // suppress unused warning
+        void leaf;
+        throw new Error("ON_CHAIN_NOT_WIRED_YET");
+      })();
+
+      // 3) Mark complete (idempotent)
+      const doneRes = await fetch("/api/rewards/claim/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ claimId, txSig }),
+      });
+      const done = await doneRes.json();
+      if (!done.ok) throw new Error(done.error || "CLAIM_COMPLETE_FAILED");
+
+      await refreshClaimSummary();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "CLAIM_FAILED";
+      setClaimErr(msg);
+      await refreshClaimSummary();
+    } finally {
+      setClaimBusy(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -280,12 +370,34 @@ export default function ProfilePage() {
                     <span className="text-white">{data.email || "Not set"}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/60">Wallet</span>
-                    <span className="text-white font-mono text-sm">
-                      {truncateWallet(data.walletAddress)}
-                    </span>
-                  </div>
+                  {data.walletAddress && (
+                    <div className="flex justify-between items-center py-2 border-b border-white/10">
+                      <span className="text-white/60">Signed-in Wallet</span>
+                      <span className="text-white font-mono text-sm">
+                        {truncateWallet(data.walletAddress)}
+                      </span>
+                    </div>
+                  )}
+
+                  {data.solWallet && (
+                    <div className="flex justify-between items-center py-2 border-b border-white/10">
+                      <span className="text-white/60">Payout Wallet</span>
+                      <span className="text-green-400 font-mono text-sm">
+                        {truncateWallet(data.solWallet)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Warning when signed-in wallet differs from payout wallet */}
+                  {data.walletAddress && data.solWallet && data.walletAddress !== data.solWallet && (
+                    <div className="py-2 border-b border-white/10">
+                      <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3">
+                        <p className="text-yellow-400 text-xs">
+                          You&apos;re signed in with a different wallet than your payout wallet. XESS claims will go to your payout wallet.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex justify-between items-center py-2 border-b border-white/10">
                     <span className="text-white/60">Member Since</span>
@@ -456,6 +568,84 @@ export default function ProfilePage() {
                         />
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Claim Pending XESS (Diamond only) */}
+              {isDiamond && (
+                <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">Claim Rewards</h2>
+                      <p className="text-sm text-white/60">
+                        Pending XESS:{" "}
+                        <span className="text-white font-semibold">
+                          {claimSummary?.pendingAmount ?? "..."}
+                        </span>
+                        {claimSummary?.epoch ? (
+                          <span className="text-white/40"> (Epoch {claimSummary.epoch.epochNo})</span>
+                        ) : null}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="/api/rewards/claims-csv"
+                        className="px-3 py-2 rounded-xl border border-white/10 bg-black/40 text-white/70 hover:text-white transition text-sm"
+                      >
+                        CSV
+                      </a>
+
+                      <button
+                        onClick={onClaimPendingXess}
+                        disabled={
+                          claimBusy ||
+                          !claimSummary?.hasPending ||
+                          claimSummary?.claim?.status === "PROCESSING"
+                        }
+                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                          claimBusy || claimSummary?.claim?.status === "PROCESSING"
+                            ? "bg-white/10 text-white/50 cursor-not-allowed"
+                            : claimSummary?.hasPending
+                              ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-400 hover:to-pink-400"
+                              : "bg-white/5 text-white/30 cursor-not-allowed"
+                        }`}
+                      >
+                        {claimBusy || claimSummary?.claim?.status === "PROCESSING"
+                          ? "Claiming..."
+                          : claimSummary?.hasPending
+                            ? "Claim Pending XESS"
+                            : "No Pending XESS"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* txSig link */}
+                  {claimSummary?.claim?.txSig ? (
+                    <div className="mt-3 text-sm">
+                      <span className="text-white/60">Tx:</span>{" "}
+                      <a
+                        className="text-pink-400 underline hover:text-pink-300"
+                        href={`https://solscan.io/tx/${claimSummary.claim.txSig}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        View on Solscan
+                      </a>
+                    </div>
+                  ) : null}
+
+                  {/* error line */}
+                  {(claimErr || claimSummary?.claim?.error) && (
+                    <div className="mt-3 text-sm text-red-400">
+                      {claimErr ?? claimSummary?.claim?.error}
+                    </div>
+                  )}
+
+                  {/* status */}
+                  <div className="mt-2 text-xs text-white/40">
+                    Status: {claimSummary?.claim?.status ?? (claimSummary?.hasPending ? "READY" : "—")}
                   </div>
                 </div>
               )}

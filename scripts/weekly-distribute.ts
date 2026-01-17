@@ -99,93 +99,93 @@ function likesLadderBonusAtomic(ladderPool: bigint, rank: number): bigint {
   return 0n;
 }
 
-/**
- * Ladder bonus distribution for MVM Top 10
- * 1: 25%, 2: 15%, 3: 10%, 4-10: 50%/7 each
- */
-function mvmLadderBonusAtomic(ladderPool: bigint, rank: number): bigint {
-  if (rank === 1) return mulBps(ladderPool, 2500);
-  if (rank === 2) return mulBps(ladderPool, 1500);
-  if (rank === 3) return mulBps(ladderPool, 1000);
+// Note: MVM now uses the same Top 50 ladder as likes (likesLadderBonusAtomic)
 
-  // Ranks 4-10: 50% evenly split
-  if (rank >= 4 && rank <= 10) {
-    const pool = mulBps(ladderPool, 5000);
-    return pool / 7n;
-  }
-
-  return 0n;
-}
-
-async function getTop50Likes(weekKey: string): Promise<Winner[]> {
-  // Use WeeklyUserStat for accurate weekly likes tracking
-  // This is populated by the vote route when likes are cast
+async function getTop50Score(weekKey: string, now: Date): Promise<Winner[]> {
+  // Use WeeklyUserStat for accurate weekly score tracking
+  // This is populated by the vote routes when votes are cast
+  // Only include eligible Diamond users with linked wallets
   const top50 = await db.weeklyUserStat.findMany({
     where: {
       weekKey,
-      likesReceived: { gte: MIN_LIKES_THRESHOLD },
+      scoreReceived: { gte: MIN_WEEKLY_SCORE_THRESHOLD },
+      user: {
+        solWallet: { not: null },
+        subscription: {
+          tier: "DIAMOND",
+          status: "ACTIVE",
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: now } },
+          ],
+        },
+      },
     },
-    orderBy: { likesReceived: "desc" },
+    orderBy: { scoreReceived: "desc" },
     take: 50,
-    select: { userId: true, likesReceived: true },
+    select: { userId: true, scoreReceived: true },
   });
 
   return top50.map((r) => ({
     userId: r.userId,
-    likes: r.likesReceived,
+    score: r.scoreReceived,
   }));
 }
 
-async function getTop10Mvm(weekKey: string): Promise<MvmWinner[]> {
-  // Use WeeklyUserStat for weekly MVM tracking
-  // Users must have >= MIN_MVM_THRESHOLD points to qualify
-  const top10 = await db.weeklyUserStat.findMany({
+async function getTop50Mvm(monthKey: string, now: Date): Promise<MvmWinner[]> {
+  // Use MonthlyUserStat for monthly MVM tracking (paid out weekly)
+  // Only include eligible Diamond users with linked wallets
+  const top50 = await db.monthlyUserStat.findMany({
     where: {
-      weekKey,
+      monthKey,
       mvmPoints: { gte: MIN_MVM_THRESHOLD },
+      user: {
+        solWallet: { not: null },
+        subscription: {
+          tier: "DIAMOND",
+          status: "ACTIVE",
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: now } },
+          ],
+        },
+      },
     },
     orderBy: { mvmPoints: "desc" },
-    take: 10,
+    take: 50,
     select: { userId: true, mvmPoints: true },
   });
 
-  return top10.map((r) => ({
+  return top50.map((r) => ({
     userId: r.userId,
     mvmPoints: r.mvmPoints,
   }));
 }
 
-async function getDiamondCommentCounts(weekKey: string, weekStart: Date, weekEnd: Date): Promise<Map<string, number>> {
-  // Try to get from WeeklyUserStat first
+async function getDiamondCommentCounts(weekKey: string, now: Date): Promise<Map<string, number>> {
+  // Get from WeeklyUserStat filtered by eligible Diamond users
   const stats = await db.weeklyUserStat.findMany({
-    where: { weekKey },
-    select: { userId: true, diamondComments: true },
-  });
-
-  if (stats.length > 0) {
-    const m = new Map<string, number>();
-    for (const s of stats) if (s.diamondComments > 0) m.set(s.userId, s.diamondComments);
-    return m;
-  }
-
-  // Fallback: calculate from comments table
-  const comments = await db.comment.findMany({
     where: {
-      createdAt: { gte: weekStart, lt: weekEnd },
-      status: "ACTIVE",
-      author: {
+      weekKey,
+      diamondComments: { gt: 0 },
+      user: {
+        solWallet: { not: null },
         subscription: {
           tier: "DIAMOND",
           status: "ACTIVE",
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: now } },
+          ],
         },
       },
     },
-    select: { authorId: true },
+    select: { userId: true, diamondComments: true },
   });
 
   const m = new Map<string, number>();
-  for (const c of comments) {
-    m.set(c.authorId, (m.get(c.authorId) || 0) + 1);
+  for (const s of stats) {
+    m.set(s.userId, s.diamondComments);
   }
   return m;
 }
@@ -224,10 +224,21 @@ async function referralChain(userId: string): Promise<string[]> {
 async function main() {
   const now = new Date();
   const wk = weekKeyUTC(now);
+  const mk = monthKeyUTC(now);
   const { start, end } = weekRangeUTC(wk);
 
   console.log(`[weekly-distribute] Processing week: ${wk}`);
   console.log(`[weekly-distribute] Range: ${start.toISOString()} to ${end.toISOString()}`);
+
+  // Load admin-configurable settings (singleton)
+  const cfg =
+    (await db.adminConfig.findFirst()) ??
+    (await db.adminConfig.create({ data: {} }));
+
+  MIN_WEEKLY_SCORE_THRESHOLD = cfg.minWeeklyScoreThreshold;
+  MIN_MVM_THRESHOLD = cfg.minMvmThreshold;
+
+  console.log(`[weekly-distribute] Config loaded: minWeeklyScoreThreshold=${MIN_WEEKLY_SCORE_THRESHOLD}, minMvmThreshold=${MIN_MVM_THRESHOLD}`);
 
   const weekIndex = weekIndexFromLaunch(wk);
   const emission = weeklyEmissionAtomic(weekIndex);
@@ -252,28 +263,28 @@ async function main() {
   const earnedByUser = new Map<string, bigint>();
 
   // ============================================
-  // 1. LIKES WINNERS (Top 50)
+  // 1. SCORE WINNERS (Top 50 Diamond)
   // ============================================
-  console.log(`\n[weekly-distribute] === LIKES REWARDS (Top 50, >= ${MIN_LIKES_THRESHOLD} likes) ===`);
+  console.log(`\n[weekly-distribute] === SCORE REWARDS (Top 50, >= ${MIN_WEEKLY_SCORE_THRESHOLD} score) ===`);
 
-  const top50 = await getTop50Likes(wk);
-  const sumLikes = top50.reduce((acc, w) => acc + w.likes, 0);
+  const top50 = await getTop50Score(wk, now);
+  const sumScore = top50.reduce((acc, w) => acc + w.score, 0);
 
-  console.log(`[weekly-distribute] Found ${top50.length} users with >= ${MIN_LIKES_THRESHOLD} likes`);
-  console.log(`[weekly-distribute] Total likes in top 50: ${sumLikes}`);
+  console.log(`[weekly-distribute] Found ${top50.length} eligible Diamond users with >= ${MIN_WEEKLY_SCORE_THRESHOLD} score`);
+  console.log(`[weekly-distribute] Total score in top 50: ${sumScore}`);
 
   // Split likes pool: 80% base (proportional), 20% ladder bonus
   const likesBasePool = mulBps(likesPool, 8000);
   const likesLadderPool = likesPool - likesBasePool;
 
-  let likesCreated = 0;
+  let scoreCreated = 0;
   for (let i = 0; i < top50.length; i++) {
     const rank = i + 1;
     const w = top50[i];
 
     const base =
-      sumLikes > 0
-        ? (likesBasePool * BigInt(w.likes)) / BigInt(sumLikes)
+      sumScore > 0
+        ? (likesBasePool * BigInt(w.score)) / BigInt(sumScore)
         : 0n;
 
     const bonus = likesLadderBonusAtomic(likesLadderPool, rank);
@@ -286,73 +297,78 @@ async function main() {
       wk,
       RewardType.WEEKLY_LIKES,
       total,
-      "weekly_likes",
+      "weekly_score",
       `${wk}:${w.userId}`
     );
 
     if (created) {
-      likesCreated++;
-      console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - ${w.likes} likes - ${formatXess(total)} XESS`);
+      scoreCreated++;
+      console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - ${w.score} score - ${formatXess(total)} XESS`);
     } else {
       console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - SKIPPED (exists)`);
     }
   }
-  console.log(`[weekly-distribute] Created ${likesCreated} likes rewards`);
+  console.log(`[weekly-distribute] Created ${scoreCreated} score rewards`);
 
   // ============================================
-  // 2. MVM POOL (Top 10 with ladder)
+  // 2. MVM POOL (Monthly ranking, Top 50, weekly payout)
   // ============================================
-  console.log(`\n[weekly-distribute] === MVM REWARDS (Top 10, >= ${MIN_MVM_THRESHOLD} points) ===`);
+  console.log(`\n[weekly-distribute] === MVM REWARDS (Month ${mk}, Top 50, >= ${MIN_MVM_THRESHOLD} points) ===`);
 
-  const top10Mvm = await getTop10Mvm(wk);
-  const sumMvm = top10Mvm.reduce((acc, w) => acc + w.mvmPoints, 0);
+  const top50Mvm = await getTop50Mvm(mk, now);
+  const sumMvm = top50Mvm.reduce((acc, w) => acc + w.mvmPoints, 0);
 
-  console.log(`[weekly-distribute] Found ${top10Mvm.length} users with >= ${MIN_MVM_THRESHOLD} MVM points`);
-  console.log(`[weekly-distribute] Total MVM points in top 10: ${sumMvm}`);
+  // Skip MVM payout if no MVM points this month
+  if (sumMvm === 0) {
+    console.log(`[weekly-distribute] No MVM points this month - skipping MVM payout (withheld to treasury)`);
+  } else {
+    console.log(`[weekly-distribute] Found ${top50Mvm.length} eligible Diamond users with >= ${MIN_MVM_THRESHOLD} MVM points`);
+    console.log(`[weekly-distribute] Total MVM points in top 50: ${sumMvm}`);
 
-  // Split MVM pool: 60% base (proportional), 40% ladder bonus
-  const mvmBasePool = mulBps(mvmPool, 6000);
-  const mvmLadderPool = mvmPool - mvmBasePool;
+    // Split MVM pool: 80% base (proportional), 20% ladder bonus (same as likes)
+    const mvmBasePool = mulBps(mvmPool, 8000);
+    const mvmLadderPool = mvmPool - mvmBasePool;
 
-  let mvmCreated = 0;
-  for (let i = 0; i < top10Mvm.length; i++) {
-    const rank = i + 1;
-    const w = top10Mvm[i];
+    let mvmCreated = 0;
+    for (let i = 0; i < top50Mvm.length; i++) {
+      const rank = i + 1;
+      const w = top50Mvm[i];
 
-    const base =
-      sumMvm > 0
-        ? (mvmBasePool * BigInt(w.mvmPoints)) / BigInt(sumMvm)
-        : 0n;
+      const base =
+        sumMvm > 0
+          ? (mvmBasePool * BigInt(w.mvmPoints)) / BigInt(sumMvm)
+          : 0n;
 
-    const bonus = mvmLadderBonusAtomic(mvmLadderPool, rank);
-    const total = base + bonus;
+      const bonus = likesLadderBonusAtomic(mvmLadderPool, rank);
+      const total = base + bonus;
 
-    earnedByUser.set(w.userId, (earnedByUser.get(w.userId) || 0n) + total);
+      earnedByUser.set(w.userId, (earnedByUser.get(w.userId) || 0n) + total);
 
-    const created = await upsertReward(
-      w.userId,
-      wk,
-      RewardType.WEEKLY_MVM,
-      total,
-      "weekly_mvm",
-      `${wk}:${w.userId}`
-    );
+      const created = await upsertReward(
+        w.userId,
+        wk,
+        RewardType.WEEKLY_MVM,
+        total,
+        "weekly_mvm",
+        `${wk}:${w.userId}`
+      );
 
-    if (created) {
-      mvmCreated++;
-      console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - ${w.mvmPoints} MVM - ${formatXess(total)} XESS`);
-    } else {
-      console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - SKIPPED (exists)`);
+      if (created) {
+        mvmCreated++;
+        console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - ${w.mvmPoints} MVM - ${formatXess(total)} XESS`);
+      } else {
+        console.log(`  Rank ${rank}: ${w.userId.slice(0, 8)}... - SKIPPED (exists)`);
+      }
     }
+    console.log(`[weekly-distribute] Created ${mvmCreated} MVM rewards`);
   }
-  console.log(`[weekly-distribute] Created ${mvmCreated} MVM rewards`);
 
   // ============================================
   // 3. DIAMOND COMMENTS POOL
   // ============================================
   console.log(`\n[weekly-distribute] === DIAMOND COMMENTS REWARDS ===`);
 
-  const cc = await getDiamondCommentCounts(wk, start, end);
+  const cc = await getDiamondCommentCounts(wk, now);
   const sumC = [...cc.values()].reduce((a, b) => a + b, 0);
 
   console.log(`[weekly-distribute] Found ${cc.size} Diamond users with ${sumC} total comments`);

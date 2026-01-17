@@ -71,12 +71,20 @@ export default function WalletLoginButton() {
         }
       `}</style>
       {wallet.connected && (
-        <button
-          onClick={signIn}
-          className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400"
-        >
-          Sign in with wallet
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={signIn}
+            className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400"
+          >
+            Sign in with wallet
+          </button>
+          <button
+            onClick={() => wallet.disconnect()}
+            className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/70 hover:bg-white/20 hover:text-white transition"
+          >
+            Disconnect Wallet
+          </button>
+        </div>
       )}
       {status && <div className="text-sm text-white/70">{status}</div>}
     </div>

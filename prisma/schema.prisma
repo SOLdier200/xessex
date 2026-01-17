@@ -48,6 +48,8 @@ model User {
   allTimeStat          AllTimeUserStat?
   monthlyStats         MonthlyUserStat[]
   weeklyVoterStats     WeeklyVoterStat[]
+  rewardEpochLeaves    RewardEpochLeaf[]
+  rewardClaims         RewardClaim[]
 
   @@index([referredById])
 }
@@ -474,4 +476,61 @@ model RewardBatch {
   totalAmount BigInt
   totalUsers  Int
   createdAt   DateTime @default(now())
+}
+
+// ============================================
+// CLAIM SYSTEM (Idempotent on-chain claims)
+// ============================================
+
+enum ClaimStatus {
+  PROCESSING
+  CLAIMED
+  FAILED
+}
+
+model RewardEpoch {
+  id         String   @id @default(cuid())
+  epochNo    Int      @unique
+  merkleRoot String?
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime @default(now())
+
+  leaves RewardEpochLeaf[]
+  claims RewardClaim[]
+}
+
+model RewardEpochLeaf {
+  id        String @id @default(cuid())
+  epochId   String
+  userId    String
+  amount    BigInt
+  leafIndex Int
+  proofJson String // JSON array of sibling hashes
+
+  epoch RewardEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([epochId, userId])
+  @@unique([epochId, leafIndex])
+  @@index([userId])
+}
+
+model RewardClaim {
+  id        String      @id @default(cuid())
+  userId    String
+  epochId   String
+  amount    BigInt
+  status    ClaimStatus @default(PROCESSING)
+  leafIndex Int?
+  txSig     String?     @unique
+  startedAt DateTime    @default(now())
+  claimedAt DateTime?
+  error     String?
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  epoch RewardEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, epochId]) // Prevents double-claim creation
+  @@index([userId, status])
 }
