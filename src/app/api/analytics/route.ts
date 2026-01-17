@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
-import { computeCommentScore } from "@/lib/scoring";
 
 /**
  * GET /api/analytics
@@ -65,13 +64,6 @@ export async function GET() {
     totalModLikes += modLikes;
     totalModDislikes += modDislikes;
 
-    const score = computeCommentScore({
-      memberLikes,
-      memberDislikes,
-      modLikes,
-      modDislikes,
-    });
-
     return {
       sourceId: c.id,
       createdAt: c.createdAt.toISOString(),
@@ -81,13 +73,24 @@ export async function GET() {
       modLikes,
       modDislikes,
       utilized: utilizedSet.has(c.id),
-      score,
+      score: c.score,
     };
   });
 
-  // Rewards stubs (until payout system is implemented)
-  const totalXessPaid = 0;
-  const pendingXess = 0;
+  // Query actual rewards from RewardEvent table (weekly rewards only)
+  const [paidRewards, pendingRewards] = await Promise.all([
+    db.rewardEvent.aggregate({
+      where: { userId, status: "PAID", refType: { startsWith: "weekly" } },
+      _sum: { amount: true },
+    }),
+    db.rewardEvent.aggregate({
+      where: { userId, status: "PENDING", refType: { startsWith: "weekly" } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const totalXessPaid = Number(paidRewards._sum.amount ?? 0n);
+  const pendingXess = Number(pendingRewards._sum.amount ?? 0n);
 
   return NextResponse.json({
     ok: true,

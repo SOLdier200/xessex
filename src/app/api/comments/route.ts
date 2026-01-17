@@ -169,29 +169,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Create comment - permanent, no edit/delete routes exist
-  const comment = await db.comment.create({
-    data: {
-      videoId,
-      authorId: access.user.id,
-      body: text,
-      memberLikes: 0,
-      memberDislikes: 0,
-    },
-    include: {
-      author: { select: { walletAddress: true, email: true } },
-    },
-  });
+  const wk = weekKeyUTC(new Date());
 
-  // Track Diamond comment activity for weekly rewards (min 20 chars quality gate)
-  if (text.length >= 20) {
-    const wk = weekKeyUTC(new Date());
-    await db.weeklyUserStat.upsert({
-      where: { weekKey_userId: { weekKey: wk, userId: access.user.id } },
-      create: { weekKey: wk, userId: access.user.id, diamondComments: 1, mvmPoints: 0, likesReceived: 0 },
-      update: { diamondComments: { increment: 1 } },
-    }).catch(() => {});
-  }
+  // Create comment and track stats in a transaction
+  const comment = await db.$transaction(async (tx) => {
+    const newComment = await tx.comment.create({
+      data: {
+        videoId,
+        authorId: access.user!.id,
+        body: text,
+        memberLikes: 0,
+        memberDislikes: 0,
+        score: 0,
+      },
+      include: {
+        author: { select: { walletAddress: true, email: true } },
+      },
+    });
+
+    // Track Diamond comment activity for weekly rewards (min 20 chars quality gate)
+    if (text.length >= 20) {
+      await tx.weeklyUserStat.upsert({
+        where: { weekKey_userId: { weekKey: wk, userId: access.user!.id } },
+        create: { weekKey: wk, userId: access.user!.id, diamondComments: 1, mvmPoints: 0, scoreReceived: 0 },
+        update: { diamondComments: { increment: 1 } },
+      });
+    }
+
+    return newComment;
+  });
 
   return NextResponse.json({
     ok: true,

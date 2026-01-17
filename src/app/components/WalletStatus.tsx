@@ -200,6 +200,7 @@ export default function WalletStatus() {
         open={showFreeUserModal}
         onClose={() => setShowFreeUserModal(false)}
         onLogoutComplete={handleLogoutComplete}
+        isWalletOnly={isFreeWalletOnly}
       />
 
       {showSignupLoginModal && (

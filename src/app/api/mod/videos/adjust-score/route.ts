@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
-import { weekKeyUTC } from "@/lib/weekKey";
+import { weekKeyUTC, monthKeyUTC } from "@/lib/weekKey";
 
 /**
  * POST /api/mod/videos/adjust-score
@@ -118,7 +118,15 @@ export async function POST(req: NextRequest) {
       const wk = weekKeyUTC(new Date());
       await tx.weeklyUserStat.upsert({
         where: { weekKey_userId: { weekKey: wk, userId: comment.authorId } },
-        create: { weekKey: wk, userId: comment.authorId, mvmPoints: 1, likesReceived: 0, diamondComments: 0 },
+        create: { weekKey: wk, userId: comment.authorId, mvmPoints: 1, diamondComments: 0, scoreReceived: 0 },
+        update: { mvmPoints: { increment: 1 } },
+      });
+
+      // Track monthly MVM points for monthly leaderboard
+      const mk = monthKeyUTC(new Date());
+      await tx.monthlyUserStat.upsert({
+        where: { monthKey_userId: { monthKey: mk, userId: comment.authorId } },
+        create: { monthKey: mk, userId: comment.authorId, mvmPoints: 1 },
         update: { mvmPoints: { increment: 1 } },
       });
 

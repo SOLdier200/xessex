@@ -110,6 +110,17 @@ export default function ProfilePage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
 
+  // Change password state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
   useEffect(() => {
     fetch("/api/profile")
       .then((res) => res.json())
@@ -135,9 +146,10 @@ export default function ProfilePage() {
     return () => window.removeEventListener("auth-changed", handleAuthChange);
   }, [router]);
 
-  // Load analytics when tab is switched to analytics
+  // Load analytics for Diamond members (needed for Profile tab XESS display and Analytics tab)
   useEffect(() => {
-    if (activeTab === "analytics" && data?.membership === "DIAMOND" && !analyticsData && !analyticsLoading) {
+    const needsAnalytics = (activeTab === "analytics" || activeTab === "profile") && data?.membership === "DIAMOND";
+    if (needsAnalytics && !analyticsData && !analyticsLoading) {
       setAnalyticsLoading(true);
       fetch("/api/analytics")
         .then((res) => res.json())
@@ -177,7 +189,7 @@ export default function ProfilePage() {
   const membershipColors = {
     FREE: "text-white/60 border-white/20 bg-white/5",
     MEMBER: "text-sky-400 border-sky-400/50 bg-sky-500/20",
-    DIAMOND: "text-yellow-400 border-yellow-400/50 bg-yellow-500/20",
+    DIAMOND: "text-blue-400 border-blue-400/50 bg-blue-500/20",
   };
 
   const statusColors: Record<string, string> = {
@@ -279,6 +291,24 @@ export default function ProfilePage() {
                     <span className="text-white/60">Member Since</span>
                     <span className="text-white">{formatDate(data.stats.accountCreated)}</span>
                   </div>
+
+                  {/* Change Password - only for email users */}
+                  {data.email && (
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-white/60">Password</span>
+                      <button
+                        onClick={() => {
+                          setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                          setPasswordError(null);
+                          setPasswordSuccess(false);
+                          setShowPasswordModal(true);
+                        }}
+                        className="px-3 py-1 text-sm rounded-lg bg-white/10 border border-white/20 text-white/80 hover:bg-white/20 transition"
+                      >
+                        Change Password
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -382,6 +412,53 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+
+              {/* XESS Rewards Card (Diamond only) */}
+              {isDiamond && analyticsData && (
+                <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                  <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/5 border border-yellow-400/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-yellow-400/80 uppercase tracking-wide">
+                            Total XESS Paid
+                          </div>
+                          <div className="text-2xl font-bold text-yellow-400 mt-1">
+                            {analyticsData.totals.totalXessPaid.toLocaleString()} XESS
+                          </div>
+                        </div>
+                        <Image
+                          src="/logos/favicon-32x32.png"
+                          alt="XESS"
+                          width={32}
+                          height={32}
+                          className="opacity-50"
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-r from-green-500/10 via-black/0 to-green-500/5 border border-green-400/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-green-400/80 uppercase tracking-wide">
+                            Pending XESS
+                          </div>
+                          <div className="text-2xl font-bold text-green-400 mt-1">
+                            {analyticsData.totals.pendingXess.toLocaleString()} XESS
+                          </div>
+                        </div>
+                        <Image
+                          src="/logos/favicon-32x32.png"
+                          alt="XESS"
+                          width={32}
+                          height={32}
+                          className="opacity-50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Diamond Features Teaser (non-Diamond only) */}
               {!isDiamond && (
@@ -729,6 +806,150 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Change Password Modal */}
+          {showPasswordModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <div
+                className="absolute inset-0 bg-black/80"
+                onClick={() => !passwordLoading && setShowPasswordModal(false)}
+              />
+              <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/95 p-6">
+                <button
+                  onClick={() => !passwordLoading && setShowPasswordModal(false)}
+                  disabled={passwordLoading}
+                  className="absolute top-4 right-4 text-white/50 hover:text-white transition disabled:opacity-50"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                <h3 className="text-xl font-bold text-white mb-6">Change Password</h3>
+
+                {passwordSuccess ? (
+                  <div className="text-center py-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-green-400 font-semibold mb-2">Password Changed!</p>
+                    <p className="text-white/60 text-sm mb-6">Your password has been updated successfully.</p>
+                    <button
+                      onClick={() => setShowPasswordModal(false)}
+                      className="px-6 py-2 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition"
+                    >
+                      Close
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setPasswordError(null);
+
+                      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+                        setPasswordError("New passwords do not match");
+                        return;
+                      }
+
+                      if (passwordForm.newPassword.length < 5) {
+                        setPasswordError("New password must be at least 5 characters");
+                        return;
+                      }
+
+                      setPasswordLoading(true);
+                      try {
+                        const res = await fetch("/api/profile/change-password", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            currentPassword: passwordForm.currentPassword,
+                            newPassword: passwordForm.newPassword,
+                          }),
+                        });
+                        const json = await res.json();
+
+                        if (json.ok) {
+                          setPasswordSuccess(true);
+                        } else {
+                          setPasswordError(json.message || json.error || "Failed to change password");
+                        }
+                      } catch {
+                        setPasswordError("Failed to change password. Please try again.");
+                      } finally {
+                        setPasswordLoading(false);
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Current Password</label>
+                      <input
+                        type="password"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-white placeholder:text-white/30 focus:border-pink-400/50 focus:outline-none"
+                        placeholder="Enter current password"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">New Password</label>
+                      <input
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-white placeholder:text-white/30 focus:border-pink-400/50 focus:outline-none"
+                        placeholder="Enter new password (min 5 characters)"
+                        minLength={5}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-white placeholder:text-white/30 focus:border-pink-400/50 focus:outline-none"
+                        placeholder="Confirm new password"
+                        minLength={5}
+                        required
+                      />
+                    </div>
+
+                    {passwordError && (
+                      <div className="p-3 rounded-xl bg-red-500/10 border border-red-400/30">
+                        <p className="text-red-400 text-sm">{passwordError}</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="submit"
+                        disabled={passwordLoading}
+                        className="flex-1 py-3 rounded-xl bg-pink-500/20 border border-pink-400/50 text-pink-400 font-semibold hover:bg-pink-500/30 transition disabled:opacity-50"
+                      >
+                        {passwordLoading ? "Changing..." : "Change Password"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordModal(false)}
+                        disabled={passwordLoading}
+                        className="flex-1 py-3 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 transition disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Analytics Tab Content */}
           {activeTab === "analytics" && isDiamond && (
             <>
@@ -775,49 +996,6 @@ export default function ProfilePage() {
                         {analyticsData.totals.totalModLikes}
                       </div>
                       <div className="text-xs text-white/60 mt-1">Mod Likes</div>
-                    </div>
-                  </div>
-
-                  {/* Rewards Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="neon-border rounded-xl p-4 bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/5 border-yellow-400/30">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-xs text-yellow-400/80 uppercase tracking-wide">
-                            Total XESS Paid
-                          </div>
-                          <div className="text-2xl font-bold text-yellow-400 mt-1">
-                            {analyticsData.totals.totalXessPaid.toLocaleString()} XESS
-                          </div>
-                        </div>
-                        <Image
-                          src="/logos/favicon-32x32.png"
-                          alt="XESS"
-                          width={32}
-                          height={32}
-                          className="opacity-50"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="neon-border rounded-xl p-4 bg-gradient-to-r from-green-500/10 via-black/0 to-green-500/5 border-green-400/30">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-xs text-green-400/80 uppercase tracking-wide">
-                            Pending XESS
-                          </div>
-                          <div className="text-2xl font-bold text-green-400 mt-1">
-                            {analyticsData.totals.pendingXess.toLocaleString()} XESS
-                          </div>
-                        </div>
-                        <Image
-                          src="/logos/favicon-32x32.png"
-                          alt="XESS"
-                          width={32}
-                          height={32}
-                          className="opacity-50"
-                        />
-                      </div>
                     </div>
                   </div>
 

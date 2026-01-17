@@ -45,6 +45,9 @@ model User {
   sourceGradesEarned   CommentSourceGrade[]     @relation("CommentSourceGradeAuthor")
   rewardEvents         RewardEvent[]
   weeklyStats          WeeklyUserStat[]
+  allTimeStat          AllTimeUserStat?
+  monthlyStats         MonthlyUserStat[]
+  weeklyVoterStats     WeeklyVoterStat[]
 
   @@index([referredById])
 }
@@ -188,6 +191,7 @@ model Comment {
   removedReason    String?
   memberDislikes   Int                    @default(0)
   memberLikes      Int                    @default(0)
+  score            Int                    @default(0)
   author           User                   @relation("CommentAuthor", fields: [authorId], references: [id])
   removedBy        User?                  @relation("CommentRemovedBy", fields: [removedById], references: [id])
   video            Video                  @relation(fields: [videoId], references: [id], onDelete: Cascade)
@@ -342,6 +346,7 @@ model SiteStat {
 
 enum RewardStatus {
   PENDING
+  PROCESSING
   PAID
   VOID
 }
@@ -350,28 +355,35 @@ enum RewardType {
   WEEKLY_LIKES
   WEEKLY_MVM
   WEEKLY_COMMENTS
+  WEEKLY_VOTER
+  ALLTIME_LIKES
   REF_L1
   REF_L2
   REF_L3
 }
 
 model RewardEvent {
-  id        String       @id @default(cuid())
-  userId    String
-  type      RewardType
-  amount    BigInt
-  status    RewardStatus @default(PENDING)
+  id          String       @id @default(cuid())
+  userId      String
+  type        RewardType
+  amount      BigInt
+  status      RewardStatus @default(PENDING)
 
-  weekKey   String       // e.g. "2024-W03"
+  weekKey     String       // e.g. "2024-W03"
 
-  refType   String       // e.g. "like", "mvm", "ref"
-  refId     String       // e.g. comment ID or user ID
+  refType     String       // e.g. "like", "mvm", "ref"
+  refId       String       // e.g. comment ID or user ID
 
-  txSig     String?      // Solana transaction signature
-  createdAt DateTime     @default(now())
-  paidAt    DateTime?
+  txSig       String?      // Solana transaction signature
+  createdAt   DateTime     @default(now())
+  paidAt      DateTime?
 
-  user      User         @relation(fields: [userId], references: [id])
+  // Merkle claim fields
+  merkleIndex Int?
+  merkleProof String?
+  claimedAt   DateTime?
+
+  user        User         @relation(fields: [userId], references: [id])
 
   @@unique([refType, refId])
   @@index([weekKey, status])
@@ -386,7 +398,7 @@ model WeeklyUserStat {
 
   diamondComments Int      @default(0)
   mvmPoints       Int      @default(0)
-  likesReceived   Int      @default(0)
+  scoreReceived   Int      @default(0)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -395,4 +407,71 @@ model WeeklyUserStat {
 
   @@unique([weekKey, userId])
   @@index([weekKey])
+}
+
+// Admin-configurable thresholds (singleton)
+model AdminConfig {
+  id String @id @default(cuid())
+
+  // Thresholds (admin adjustable)
+  minWeeklyScoreThreshold Int @default(10) // Weekly leaderboard eligibility (scoreReceived)
+  minMvmThreshold         Int @default(1)  // MVM eligibility
+
+  // Pool slices (basis points, 10000 = 100%)
+  // These are slices of the LIKES POOL (which is 75% of emission after ref budget)
+  allTimeLikesBpsOfLikes Int @default(1000) // 10% of likes pool -> all-time leaderboard
+  memberVoterBpsOfLikes  Int @default(500)  // 5% of likes pool -> member voter incentives
+
+  // Voter payout sizing (atomic XESS units)
+  voterRewardPerVoteAtomic BigInt @default(0) // set later; 0 = use pool split instead
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// All-time cumulative stats (for all-time leaderboard)
+model AllTimeUserStat {
+  userId        String   @id
+  scoreReceived Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+// Monthly MVM tracking (resets monthly, weekly payouts)
+model MonthlyUserStat {
+  id        String   @id @default(cuid())
+  monthKey  String   // "2026-01"
+  userId    String
+  mvmPoints Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([monthKey, userId])
+  @@index([monthKey])
+}
+
+// Weekly voter stats (for member voter rewards)
+model WeeklyVoterStat {
+  id        String   @id @default(cuid())
+  weekKey   String
+  userId    String
+  votesCast Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([weekKey, userId])
+  @@index([weekKey])
+}
+
+// Merkle batch for weekly distribution
+model RewardBatch {
+  id          String   @id @default(cuid())
+  weekKey     String   @unique
+  merkleRoot  String
+  totalAmount BigInt
+  totalUsers  Int
+  createdAt   DateTime @default(now())
 }

@@ -13,13 +13,13 @@
 
 import "dotenv/config";
 import { PrismaClient, RewardType } from "@prisma/client";
-import { weekKeyUTC, weekRangeUTC } from "./week";
+import { weekKeyUTC, weekRangeUTC, monthKeyUTC } from "./week";
 import { weeklyEmissionAtomic } from "./emissions";
 import { mulBps, formatXess } from "./xessMath";
 
 const db = new PrismaClient();
 
-type Winner = { userId: string; likes: number };
+type Winner = { userId: string; score: number };
 type MvmWinner = { userId: string; mvmPoints: number };
 
 // ============================================
@@ -39,11 +39,11 @@ const REF_L1_BPS = 1000; // 10%
 const REF_L2_BPS = 300;  // 3%
 const REF_L3_BPS = 100;  // 1%
 
-// Minimum likes to qualify for top 50
-const MIN_LIKES_THRESHOLD = 10;
+// Minimum score to qualify for top 50 (loaded from AdminConfig)
+let MIN_WEEKLY_SCORE_THRESHOLD = 10;
 
-// Minimum MVM points to qualify for top 10
-const MIN_MVM_THRESHOLD = 2;
+// Minimum MVM points to qualify (loaded from AdminConfig)
+let MIN_MVM_THRESHOLD = 1;
 
 // ============================================
 // HELPERS

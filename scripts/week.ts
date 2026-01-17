@@ -23,3 +23,9 @@ export function getPreviousWeekKey(weekKey: string): string {
   start.setUTCDate(start.getUTCDate() - 7);
   return weekKeyUTC(start);
 }
+
+export function monthKeyUTC(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
