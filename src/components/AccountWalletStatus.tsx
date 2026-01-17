@@ -34,19 +34,29 @@ export default function AccountWalletStatus() {
 
   const pk = publicKey?.toBase58() ?? null;
 
+  // Fetch user data
+  async function refreshMe() {
+    try {
+      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const d = await res.json();
+      setMe(d?.user ?? null);
+    } catch {
+      setMe(null);
+    } finally {
+      setLoaded(true);
+    }
+  }
+
+  // Initial fetch
   useEffect(() => {
-    let alive = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!alive) return;
-        setMe(d?.user ?? null);
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-    return () => {
-      alive = false;
-    };
+    refreshMe();
+  }, []);
+
+  // Listen for auth changes (login/logout)
+  useEffect(() => {
+    const onAuthChanged = () => refreshMe();
+    window.addEventListener("auth-changed", onAuthChanged);
+    return () => window.removeEventListener("auth-changed", onAuthChanged);
   }, []);
 
   const isAuthed = !!me;

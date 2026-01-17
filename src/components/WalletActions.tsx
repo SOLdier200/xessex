@@ -196,7 +196,9 @@ export default function WalletActions({ showWalletSignIn = true }: { showWalletS
   async function switchAccount() {
     setStatus("Logging out…");
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-    window.location.href = "/login";
+    window.dispatchEvent(new Event("auth-changed"));
+    await refreshMe();
+    setStatus("");
   }
 
   return (
