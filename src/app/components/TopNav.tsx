@@ -40,9 +40,10 @@ export default function TopNav() {
 
         {/* Right side - Xess Token, Wallet Status, Profile and Admin */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Xess Token - desktop only, mobile goes in dropdown */}
           <button
             onClick={() => setShowXessTokenModal(true)}
-            className="inline-flex items-center rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-amber-300 transition hover:border-amber-300/70 hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
+            className="hidden md:inline-flex items-center rounded-full border border-amber-400/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:border-amber-300/70 hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
           >
             Xess Token
           </button>
@@ -63,45 +64,57 @@ export default function TopNav() {
               Admin
             </Link>
           )}
-          {(isLoggedIn || isAdmin) && (
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg border border-pink-400/40 bg-pink-500/10"
-              aria-label="Toggle menu"
-            >
-              <span
-                className={`block w-5 h-0.5 bg-white transition-all duration-300 ${
-                  menuOpen ? "rotate-45 translate-y-1" : ""
-                }`}
-              />
-              <span
-                className={`block w-5 h-0.5 bg-white my-1 transition-all duration-300 ${
-                  menuOpen ? "opacity-0" : ""
-                }`}
-              />
-              <span
-                className={`block w-5 h-0.5 bg-white transition-all duration-300 ${
-                  menuOpen ? "-rotate-45 -translate-y-1" : ""
-                }`}
-              />
-            </button>
-          )}
+          {/* Mobile hamburger menu - always visible on mobile */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg border border-pink-400/40 bg-pink-500/10"
+            aria-label="Toggle menu"
+          >
+            <span
+              className={`block w-5 h-0.5 bg-white transition-all duration-300 ${
+                menuOpen ? "rotate-45 translate-y-1" : ""
+              }`}
+            />
+            <span
+              className={`block w-5 h-0.5 bg-white my-1 transition-all duration-300 ${
+                menuOpen ? "opacity-0" : ""
+              }`}
+            />
+            <span
+              className={`block w-5 h-0.5 bg-white transition-all duration-300 ${
+                menuOpen ? "-rotate-45 -translate-y-1" : ""
+              }`}
+            />
+          </button>
         </div>
       </div>
 
       {/* Mobile Navigation Menu */}
-      {(isAdmin || isLoggedIn) && (
-        <nav
-          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-            menuOpen ? "max-h-[400px] opacity-100 mt-4" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div className="flex flex-col gap-3 pb-2">
+      <nav
+        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+          menuOpen ? "max-h-[400px] opacity-100 mt-4" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="rounded-2xl border-2 border-pink-500 bg-black/80 p-4 shadow-[0_0_20px_rgba(236,72,153,0.3)]">
+          <div className="text-xs text-pink-400 font-semibold uppercase tracking-wider mb-3 text-center">
+            Menu
+          </div>
+          <div className="flex flex-col gap-2">
+            {/* Xess Token - mobile only */}
+            <button
+              onClick={() => {
+                setShowXessTokenModal(true);
+                setMenuOpen(false);
+              }}
+              className="flex items-center justify-center rounded-xl border border-amber-400/50 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-300 transition active:bg-amber-500/30"
+            >
+              Xess Token
+            </button>
             {isLoggedIn && (
               <Link
                 href="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-sky-500/30"
+                className="flex items-center justify-center rounded-xl border border-sky-400/50 bg-sky-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-sky-500/30"
               >
                 Profile
               </Link>
@@ -110,14 +123,14 @@ export default function TopNav() {
               <Link
                 href="/admin"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center rounded-xl border border-purple-400/40 bg-purple-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-purple-500/30"
+                className="flex items-center justify-center rounded-xl border border-purple-400/50 bg-purple-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-purple-500/30"
               >
                 Admin
               </Link>
             )}
           </div>
-        </nav>
-      )}
+        </div>
+      </nav>
 
       <XessTokenModal
         open={showXessTokenModal}

@@ -1,9 +1,14 @@
 "use client";
 
-import { ReactNode, useMemo } from "react";
+import type { ReactNode } from "react";
+import { useMemo } from "react";
+
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import "@solana/wallet-adapter-react-ui/styles.css";
+
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
+
 import {
   SolanaMobileWalletAdapter,
   createDefaultAddressSelector,
@@ -11,7 +16,7 @@ import {
   createDefaultWalletNotFoundHandler,
 } from "@solana-mobile/wallet-adapter-mobile";
 
-function detectPlatform() {
+function getPlatform() {
   if (typeof navigator === "undefined") return { isAndroid: false, isIos: false };
   const ua = navigator.userAgent.toLowerCase();
   const isAndroid = ua.includes("android");
@@ -32,16 +37,15 @@ export default function SolanaProviders({ children }: { children: ReactNode }) {
 
     const appIdentity = {
       name: "Xessex",
-      uri: origin,
-      icon: `${origin}/logos/android-chrome-192x192.png`,
+      uri: "https://xessex.me",
+      icon: "https://xessex.me/logos/android-chrome-192x192.png",
     };
 
-    const { isAndroid, isIos } = detectPlatform();
+    const { isAndroid, isIos } = getPlatform();
 
-    // ALWAYS include desktop adapters
     const base = [new PhantomWalletAdapter(), new SolflareWalletAdapter()];
 
-    // Only add MWA on Android (never iOS)
+    // MWA only on Android (never iOS). If MWA is flaky, Phantom extension still works on desktop.
     if (isAndroid && !isIos) {
       return [
         new SolanaMobileWalletAdapter({
