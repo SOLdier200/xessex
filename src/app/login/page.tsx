@@ -1,7 +1,7 @@
 import TopNav from "../components/TopNav";
 import SolanaProviders from "@/components/SolanaProviders";
 import AccountWalletStatus from "@/components/AccountWalletStatus";
-import WalletLoginButton from "@/components/WalletLoginButton";
+import WalletActions from "@/components/WalletActions";
 import EmailLoginBox from "@/components/EmailLoginBox";
 import GoogleSignupButton from "../components/GoogleSignupButton";
 
@@ -46,7 +46,7 @@ export default function LoginPage() {
                 Login with Solana Wallet to interact with Xess token Features!
               </p>
               <div className="mt-6">
-                <WalletLoginButton />
+                <WalletActions />
               </div>
             </div>
 
