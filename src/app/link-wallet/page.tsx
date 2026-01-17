@@ -14,6 +14,7 @@ export default function LinkWalletPage() {
 
   const [status, setStatus] = useState<"idle" | "signing" | "verifying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Check if user is logged in and needs wallet link
   useEffect(() => {
@@ -36,6 +37,24 @@ export default function LinkWalletPage() {
       })
       .catch(() => router.push("/login"));
   }, [router]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = ua.includes("android");
+    const isIos =
+      ua.includes("iphone") ||
+      ua.includes("ipad") ||
+      (ua.includes("mac") && navigator.maxTouchPoints > 1);
+    setIsMobile(isAndroid || isIos);
+  }, []);
+
+  const openInPhantom = () => {
+    if (typeof window === "undefined") return;
+    const url = encodeURIComponent(window.location.href);
+    const ref = encodeURIComponent(window.location.origin);
+    window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+  };
 
   const handleLinkWallet = async () => {
     if (!publicKey || !signMessage) {
@@ -111,12 +130,22 @@ export default function LinkWalletPage() {
             {/* Wallet Connect Button */}
             <div className="flex flex-col items-center gap-4">
               {!connected ? (
-                <button
-                  onClick={() => setVisible(true)}
-                  className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/40 text-white font-medium hover:from-purple-500/30 hover:to-pink-500/30 transition"
-                >
-                  Select Wallet
-                </button>
+                <>
+                  <button
+                    onClick={() => setVisible(true)}
+                    className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/40 text-white font-medium hover:from-purple-500/30 hover:to-pink-500/30 transition"
+                  >
+                    Select Wallet
+                  </button>
+                  {isMobile && (
+                    <button
+                      onClick={openInPhantom}
+                      className="w-full py-3 px-6 rounded-xl border border-white/20 bg-white/10 text-white/90 font-medium hover:bg-white/15 transition"
+                    >
+                      Open in Phantom
+                    </button>
+                  )}
+                </>
               ) : (
                 <div className="text-sm text-white/60">
                   Connected: {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}

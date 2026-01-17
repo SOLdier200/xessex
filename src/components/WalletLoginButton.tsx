@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -9,6 +9,25 @@ export default function WalletLoginButton() {
   const wallet = useWallet();
   const { setVisible } = useWalletModal();
   const [status, setStatus] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = ua.includes("android");
+    const isIos =
+      ua.includes("iphone") ||
+      ua.includes("ipad") ||
+      (ua.includes("mac") && navigator.maxTouchPoints > 1);
+    setIsMobile(isAndroid || isIos);
+  }, []);
+
+  const openInPhantom = () => {
+    if (typeof window === "undefined") return;
+    const url = encodeURIComponent(window.location.href);
+    const ref = encodeURIComponent(window.location.origin);
+    window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+  };
 
   async function signIn() {
     if (!wallet.publicKey || !wallet.signMessage) {
@@ -51,17 +70,27 @@ export default function WalletLoginButton() {
   return (
     <div className="space-y-3">
       {!wallet.connected ? (
-        <button
-          onClick={() => setVisible(true)}
-          className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
-          style={{
-            background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
-            border: "2px solid #FF1493",
-            boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
-          }}
-        >
-          Select Wallet
-        </button>
+        <>
+          <button
+            onClick={() => setVisible(true)}
+            className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
+            style={{
+              background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
+              border: "2px solid #FF1493",
+              boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
+            }}
+          >
+            Select Wallet
+          </button>
+          {isMobile && (
+            <button
+              onClick={openInPhantom}
+              className="w-full py-3 px-6 rounded-full font-semibold text-white/90 transition border border-white/20 bg-white/10 hover:bg-white/15"
+            >
+              Open in Phantom
+            </button>
+          )}
+        </>
       ) : (
         <div className="flex flex-wrap gap-2">
           <button

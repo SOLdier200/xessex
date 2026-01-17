@@ -15,21 +15,26 @@ import "@solana/wallet-adapter-react-ui/styles.css";
 const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 
 export default function Providers({ children }: { children: ReactNode }) {
-  const wallets = useMemo(() => [
-    new SolanaMobileWalletAdapter({
-      addressSelector: createDefaultAddressSelector(),
-      appIdentity: {
-        name: "Xessex",
-        uri: typeof window !== "undefined" ? window.location.origin : "https://xessex.me",
-        icon: "/logos/favicon-32x32.png",
-      },
-      authorizationResultCache: createDefaultAuthorizationResultCache(),
-      cluster: "mainnet-beta",
-      onWalletNotFound: createDefaultWalletNotFoundHandler(),
-    }),
-    new PhantomWalletAdapter(),
-    new SolflareWalletAdapter(),
-  ], []);
+  const wallets = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://xessex.me";
+    const appIdentity = {
+      name: "Xessex",
+      uri: origin,
+      icon: `${origin}/logos/android-chrome-192x192.png`,
+    };
+
+    return [
+      new SolanaMobileWalletAdapter({
+        addressSelector: createDefaultAddressSelector(),
+        appIdentity,
+        authorizationResultCache: createDefaultAuthorizationResultCache(),
+        cluster: "mainnet-beta",
+        onWalletNotFound: createDefaultWalletNotFoundHandler(),
+      }),
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+    ];
+  }, []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
