@@ -13,16 +13,20 @@ import { computeCommentScore, truncWallet } from "@/lib/scoring";
  * Public leaderboard data
  * - MVM: number of comments used in VideoScoreAdjustment
  * - Karat Kruncher: highest total comment score
- * - Rewards: most XESS earned (paid events)
+ * - Rewards: most XESS earned (paid events) + breakdown by RewardType
  * - Referrals: most referrals
  */
 export async function GET() {
-  const XESS_DECIMALS = 1_000_000n;
-  const toXessAmount = (atomic: bigint) => {
-    const whole = atomic / XESS_DECIMALS;
-    const frac = atomic % XESS_DECIMALS;
-    return Number(whole) + Number(frac) / 1_000_000;
+  // 6 decimals (EMISSION_DECIMALS = 6n)
+  const XESS_SCALE = 1_000_000n;
+
+  const formatXess = (atomic: bigint) => {
+    const whole = atomic / XESS_SCALE;
+    const frac = atomic % XESS_SCALE;
+    const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
+    return fracStr.length ? `${whole}.${fracStr}` : `${whole}`;
   };
+
   // MVM: comments used in VideoScoreAdjustment, grouped by author
   const utilized = await db.videoScoreAdjustment.findMany({
     include: { comment: true },
@@ -89,7 +93,9 @@ export async function GET() {
     .sort((a, b) => b.totalScore - a.totalScore)
     .slice(0, 50);
 
-  // Rewards: sum RewardEvent.amount where status = PAID
+  // =========================
+  // Rewards: total + breakdown by RewardType (PAID only)
+  // =========================
   const rewardTotals = await db.rewardEvent.groupBy({
     by: ["userId"],
     where: { status: RewardStatus.PAID },
@@ -99,6 +105,19 @@ export async function GET() {
   });
 
   const rewardUserIds = rewardTotals.map((r) => r.userId);
+
+  // per-type sums for the top users only
+  const rewardByTypeRows = rewardUserIds.length
+    ? await db.rewardEvent.groupBy({
+        by: ["userId", "type"],
+        where: {
+          status: RewardStatus.PAID,
+          userId: { in: rewardUserIds },
+        },
+        _sum: { amount: true },
+      })
+    : [];
+
   const rewardUsers = rewardUserIds.length
     ? await db.user.findMany({
         where: { id: { in: rewardUserIds } },
@@ -107,12 +126,44 @@ export async function GET() {
     : [];
 
   const rewardUserMap = new Map(rewardUsers.map((u) => [u.id, u]));
+
+  // build userId -> (type -> amount)
+  const breakdownMap = new Map<string, Map<string, bigint>>();
+  for (const row of rewardByTypeRows) {
+    const uid = row.userId;
+    const type = String(row.type);
+    const amt = (row._sum.amount ?? 0n) as bigint;
+
+    if (!breakdownMap.has(uid)) breakdownMap.set(uid, new Map());
+    breakdownMap.get(uid)!.set(type, amt);
+  }
+
   const rewards = rewardTotals.map((r) => {
     const user = rewardUserMap.get(r.userId);
-    const atomic = r._sum.amount ?? 0n;
+    const totalAtomic = (r._sum.amount ?? 0n) as bigint;
+
+    const typeMap = breakdownMap.get(r.userId) ?? new Map<string, bigint>();
+    const breakdown = Array.from(typeMap.entries())
+      .map(([type, atomic]) => ({
+        type, // RewardType
+        amountAtomic: atomic.toString(), // JSON-safe
+        amount: formatXess(atomic), // string amount
+      }))
+      .sort((a, b) => {
+        const A = BigInt(a.amountAtomic);
+        const B = BigInt(b.amountAtomic);
+        return A === B ? 0 : A > B ? -1 : 1;
+      });
+
     return {
       user: user ? truncWallet(user.walletAddress, user.email) : "Anonymous",
-      xessEarned: toXessAmount(atomic),
+
+      // keep the old field name for compatibility
+      xessEarnedAtomic: totalAtomic.toString(),
+      xessEarned: formatXess(totalAtomic), // now string (no float issues)
+
+      // ✅ new transparency data
+      breakdown,
     };
   });
 

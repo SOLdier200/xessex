@@ -19,6 +19,17 @@ export default function GoogleSignupButton({
     if (busy) return;
     setBusy(true);
 
+    // Guard against in-app browsers where Google OAuth often fails
+    const ua = navigator.userAgent || "";
+    const isInApp =
+      /FBAN|FBAV|Instagram|Line|MicroMessenger|Snapchat|Pinterest|wv|; wv\)/i.test(ua);
+
+    if (isInApp) {
+      alert("Google sign-in may fail inside in-app browsers. Open xessex.me in Chrome/Safari and try again.");
+      setBusy(false);
+      return;
+    }
+
     // Use current origin so PKCE cookies match the redirect host
     // (www.xessex.me cookies won't be sent to xessex.me)
     const origin = window.location.origin;
