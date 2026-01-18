@@ -17,12 +17,15 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow static files
+  // Allow static files and verification files
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/robots.txt") ||
-    pathname.startsWith("/sitemap")
+    pathname.startsWith("/sitemap") ||
+    pathname.startsWith("/yandex_") ||
+    pathname.startsWith("/google") ||
+    pathname.startsWith("/BingSiteAuth")
   ) {
     return NextResponse.next();
   }
