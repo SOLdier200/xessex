@@ -1,0 +1,25 @@
+# Anchor/Solana build artifacts
+.anchor
+target
+test-ledger
+
+# Dependencies
+node_modules
+.yarn
+
+# Keypairs - NEVER commit these
+*-keypair.json
+deploy/*.json
+
+# IDE / OS
+.DS_Store
+.idea
+.vscode
+**/*.rs.bk
+
+# Logs
+*.log
+
+# Lock files (optional - some prefer to commit these)
+yarn.lock
+pnpm-lock.yaml

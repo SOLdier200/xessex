@@ -13,7 +13,7 @@
 
 import "dotenv/config";
 import { PrismaClient, RewardType } from "@prisma/client";
-import { weekKeyUTC, weekRangeUTC, monthKeyUTC } from "./week";
+import { weekKeySundayMidnightPT, weekRangeUTC, monthKeyUTC } from "./week";
 import { weeklyEmissionAtomic } from "./emissions";
 import { mulBps, formatXess } from "./xessMath";
 
@@ -223,7 +223,8 @@ async function referralChain(userId: string): Promise<string[]> {
 
 async function main() {
   const now = new Date();
-  const wk = weekKeyUTC(now);
+  // STANDARD: Sunday midnight PT for XESS claim epochs
+  const wk = weekKeySundayMidnightPT(now);
   const mk = monthKeyUTC(now);
   const { start, end } = weekRangeUTC(wk);
 

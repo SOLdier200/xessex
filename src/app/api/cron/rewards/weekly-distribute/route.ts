@@ -9,6 +9,9 @@ import { SubscriptionTier, SubscriptionStatus, Prisma } from "@prisma/client";
 const CRON_SECRET = process.env.CRON_SECRET || "";
 
 // Emission schedule (in XESS tokens, 6 decimals)
+// IMPORTANT: RewardEvent.amount is stored with 6 decimals.
+// The claimables aggregator converts to 9 decimals for on-chain use.
+// See: src/lib/claimables.ts for conversion logic.
 const EMISSION_DECIMALS = 6n;
 const EMISSION_MULTIPLIER = 10n ** EMISSION_DECIMALS;
 

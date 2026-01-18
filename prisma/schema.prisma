@@ -15,41 +15,39 @@ model User {
   role                 UserRole                 @default(USER)
   createdAt            DateTime                 @default(now())
   email                String?                  @unique
-  supabaseId           String?                  @unique
   passHash             String?
   solWallet            String?                  @unique
   solWalletLinkedAt    DateTime?
   welcomeEmailSentAt   DateTime?
+  supabaseId           String?                  @unique
   mvmPoints            Int                      @default(0)
-
-  // Referrals
   referralCode         String?                  @unique
-  referredById         String?
-  referredBy           User?                    @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals            User[]                   @relation("UserReferrals")
   referredAt           DateTime?
-
+  referredById         String?
+  allTimeStat          AllTimeUserStat?
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
   memberVotes          CommentMemberVote[]
   modVotes             CommentModVote[]
+  sourceGradesEarned   CommentSourceGrade[]     @relation("CommentSourceGradeAuthor")
+  sourceGradesMade     CommentSourceGrade[]     @relation("CommentSourceGradeMod")
   integrityFlagsAuthor ModeratorIntegrityFlag[] @relation("FlaggedAuthor")
   integrityFlagsMod    ModeratorIntegrityFlag[] @relation("FlaggedMod")
+  monthlyStats         MonthlyUserStat[]
   passwordResetTokens  PasswordResetToken[]
+  rewardClaims         RewardClaim[]
+  rewardEpochLeaves    RewardEpochLeaf[]
+  rewardEvents         RewardEvent[]
+  claimLeaves          ClaimLeaf[]
   sessions             Session[]
   subscription         Subscription?
+  referredBy           User?                    @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals            User[]                   @relation("UserReferrals")
   scoreAdjustments     VideoScoreAdjustment[]
   starRatings          VideoStarRating[]
   walletLinkChallenges WalletLinkChallenge[]
-  sourceGradesMade     CommentSourceGrade[]     @relation("CommentSourceGradeMod")
-  sourceGradesEarned   CommentSourceGrade[]     @relation("CommentSourceGradeAuthor")
-  rewardEvents         RewardEvent[]
   weeklyStats          WeeklyUserStat[]
-  allTimeStat          AllTimeUserStat?
-  monthlyStats         MonthlyUserStat[]
   weeklyVoterStats     WeeklyVoterStat[]
-  rewardEpochLeaves    RewardEpochLeaf[]
-  rewardClaims         RewardClaim[]
 
   @@index([referredById])
 }
@@ -133,13 +131,13 @@ model Subscription {
   tier                 SubscriptionTier
   status               SubscriptionStatus @default(PENDING)
   expiresAt            DateTime?
-  cancelAtPeriodEnd    Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   nowPaymentsPaymentId String?
   nowPaymentsInvoiceId String?
   lastTxSig            String?
   nowPaymentsOrderId   String?            @unique
+  cancelAtPeriodEnd    Boolean            @default(false)
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
@@ -155,16 +153,16 @@ model Video {
   createdAt    DateTime               @default(now())
   isShowcase   Boolean                @default(false)
   adminScore   Int                    @default(75)
-  sourceViews  Int                    @default(0) // Original views from source platform
-  viewsCount   Int                    @default(0) // Xessex page views
+  viewsCount   Int                    @default(0)
   avgStars     Float                  @default(0)
   starsCount   Int                    @default(0)
-  rank         Int?                   @unique
   thumbnailUrl String?
+  sourceViews  Int                    @default(0)
+  rank         Int?                   @unique
   comments     Comment[]
+  sourceGrades CommentSourceGrade[]
   adjustments  VideoScoreAdjustment[]
   starRatings  VideoStarRating[]
-  sourceGrades CommentSourceGrade[]
 
   @@index([isShowcase])
   @@index([rank])
@@ -201,8 +199,8 @@ model Comment {
   video            Video                  @relation(fields: [videoId], references: [id], onDelete: Cascade)
   memberVotes      CommentMemberVote[]
   modVotes         CommentModVote[]
-  scoreAdjustments VideoScoreAdjustment[]
   sourceGrades     CommentSourceGrade[]
+  scoreAdjustments VideoScoreAdjustment[]
 
   @@index([videoId])
   @@index([authorId])
@@ -302,16 +300,166 @@ model CommentSourceGrade {
   authorId  String
   direction Int
   createdAt DateTime @default(now())
-
-  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  mod     User    @relation("CommentSourceGradeMod", fields: [modId], references: [id], onDelete: Cascade)
-  author  User    @relation("CommentSourceGradeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  author    User     @relation("CommentSourceGradeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mod       User     @relation("CommentSourceGradeMod", fields: [modId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, modId])
   @@index([authorId, createdAt])
   @@index([videoId, createdAt])
   @@index([modId, createdAt])
+}
+
+model SiteStat {
+  key       String   @id
+  value     BigInt   @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model RewardEvent {
+  id          String       @id @default(cuid())
+  userId      String
+  type        RewardType
+  amount      BigInt
+  status      RewardStatus @default(PENDING)
+  weekKey     String
+  refType     String
+  refId       String
+  txSig       String?
+  createdAt   DateTime     @default(now())
+  paidAt      DateTime?
+  claimedAt   DateTime?
+  merkleIndex Int?
+  merkleProof String?
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@unique([refType, refId])
+  @@index([weekKey, status])
+  @@index([userId, status])
+  @@index([type, status])
+}
+
+model WeeklyUserStat {
+  id              String   @id @default(cuid())
+  weekKey         String
+  userId          String
+  diamondComments Int      @default(0)
+  mvmPoints       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  scoreReceived   Int      @default(0)
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([weekKey, userId])
+  @@index([weekKey])
+}
+
+model AdminConfig {
+  id                       String   @id @default(cuid())
+  minWeeklyScoreThreshold  Int      @default(10)
+  minMvmThreshold          Int      @default(1)
+  allTimeLikesBpsOfLikes   Int      @default(1000)
+  memberVoterBpsOfLikes    Int      @default(500)
+  voterRewardPerVoteAtomic BigInt   @default(0)
+  updatedAt                DateTime @updatedAt
+  createdAt                DateTime @default(now())
+}
+
+model AdminActionRun {
+  id        String         @id @default(cuid())
+  key       AdminActionKey @unique
+  lastRunAt DateTime?
+  lastOk    Boolean        @default(false)
+  lastMsg   String?
+  updatedAt DateTime       @updatedAt
+}
+
+model AllTimeUserStat {
+  userId        String   @id
+  scoreReceived Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model MonthlyUserStat {
+  id        String   @id @default(cuid())
+  monthKey  String
+  userId    String
+  mvmPoints Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([monthKey, userId])
+  @@index([monthKey])
+}
+
+model WeeklyVoterStat {
+  id        String   @id @default(cuid())
+  weekKey   String
+  userId    String
+  votesCast Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([weekKey, userId])
+  @@index([weekKey])
+}
+
+model RewardBatch {
+  id          String   @id @default(cuid())
+  weekKey     String   @unique
+  merkleRoot  String
+  totalAmount BigInt
+  totalUsers  Int
+  createdAt   DateTime @default(now())
+}
+
+model RewardEpoch {
+  id         String            @id @default(cuid())
+  epochNo    Int               @unique
+  merkleRoot String?
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime          @default(now())
+  claims     RewardClaim[]
+  leaves     RewardEpochLeaf[]
+}
+
+model RewardEpochLeaf {
+  id        String      @id @default(cuid())
+  epochId   String
+  userId    String
+  amount    BigInt
+  leafIndex Int
+  proofJson String
+  epoch     RewardEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([epochId, userId])
+  @@unique([epochId, leafIndex])
+  @@index([userId])
+}
+
+model RewardClaim {
+  id        String      @id @default(cuid())
+  userId    String
+  epochId   String
+  amount    BigInt
+  status    ClaimStatus @default(PROCESSING)
+  leafIndex Int?
+  txSig     String?     @unique
+  startedAt DateTime    @default(now())
+  claimedAt DateTime?
+  error     String?
+  epoch     RewardEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, epochId])
+  @@index([userId, status])
 }
 
 enum UserRole {
@@ -338,32 +486,22 @@ enum CommentStatus {
   REMOVED
 }
 
-model SiteStat {
-  key       String   @id
-  value     BigInt   @default(0)
-  updatedAt DateTime @updatedAt
-}
-
-// ============================================
-// REWARDS SYSTEM
-// ============================================
-
 enum RewardStatus {
   PENDING
-  PROCESSING
   PAID
   VOID
+  PROCESSING
 }
 
 enum RewardType {
   WEEKLY_LIKES
   WEEKLY_MVM
   WEEKLY_COMMENTS
-  WEEKLY_VOTER
-  ALLTIME_LIKES
   REF_L1
   REF_L2
   REF_L3
+  WEEKLY_VOTER
+  ALLTIME_LIKES
 }
 
 enum AdminActionKey {
@@ -375,182 +513,44 @@ enum AdminActionKey {
   RECOMPUTE_ANALYTICS
 }
 
-model RewardEvent {
-  id          String       @id @default(cuid())
-  userId      String
-  type        RewardType
-  amount      BigInt
-  status      RewardStatus @default(PENDING)
-
-  weekKey     String       // e.g. "2024-W03"
-
-  refType     String       // e.g. "like", "mvm", "ref"
-  refId       String       // e.g. comment ID or user ID
-
-  txSig       String?      // Solana transaction signature
-  createdAt   DateTime     @default(now())
-  paidAt      DateTime?
-
-  // Merkle claim fields
-  merkleIndex Int?
-  merkleProof String?
-  claimedAt   DateTime?
-
-  user        User         @relation(fields: [userId], references: [id])
-
-  @@unique([refType, refId])
-  @@index([weekKey, status])
-  @@index([userId, status])
-  @@index([type, status])
-}
-
-model WeeklyUserStat {
-  id              String   @id @default(cuid())
-  weekKey         String
-  userId          String
-
-  diamondComments Int      @default(0)
-  mvmPoints       Int      @default(0)
-  scoreReceived   Int      @default(0)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user            User     @relation(fields: [userId], references: [id])
-
-  @@unique([weekKey, userId])
-  @@index([weekKey])
-}
-
-// Admin-configurable thresholds (singleton)
-model AdminConfig {
-  id String @id @default(cuid())
-
-  // Thresholds (admin adjustable)
-  minWeeklyScoreThreshold Int @default(10) // Weekly leaderboard eligibility (scoreReceived)
-  minMvmThreshold         Int @default(1)  // MVM eligibility
-
-  // Pool slices (basis points, 10000 = 100%)
-  // These are slices of the LIKES POOL (which is 75% of emission after ref budget)
-  allTimeLikesBpsOfLikes Int @default(1000) // 10% of likes pool -> all-time leaderboard
-  memberVoterBpsOfLikes  Int @default(500)  // 5% of likes pool -> member voter incentives
-
-  // Voter payout sizing (atomic XESS units)
-  voterRewardPerVoteAtomic BigInt @default(0) // set later; 0 = use pool split instead
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-}
-
-model AdminActionRun {
-  id        String         @id @default(cuid())
-  key       AdminActionKey @unique
-  lastRunAt DateTime?
-  lastOk    Boolean        @default(false)
-  lastMsg   String?
-  updatedAt DateTime       @updatedAt
-}
-
-// All-time cumulative stats (for all-time leaderboard)
-model AllTimeUserStat {
-  userId        String   @id
-  scoreReceived Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id])
-}
-
-// Monthly MVM tracking (resets monthly, weekly payouts)
-model MonthlyUserStat {
-  id        String   @id @default(cuid())
-  monthKey  String   // "2026-01"
-  userId    String
-  mvmPoints Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
-
-  @@unique([monthKey, userId])
-  @@index([monthKey])
-}
-
-// Weekly voter stats (for member voter rewards)
-model WeeklyVoterStat {
-  id        String   @id @default(cuid())
-  weekKey   String
-  userId    String
-  votesCast Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
-
-  @@unique([weekKey, userId])
-  @@index([weekKey])
-}
-
-// Merkle batch for weekly distribution
-model RewardBatch {
-  id          String   @id @default(cuid())
-  weekKey     String   @unique
-  merkleRoot  String
-  totalAmount BigInt
-  totalUsers  Int
-  createdAt   DateTime @default(now())
-}
-
-// ============================================
-// CLAIM SYSTEM (Idempotent on-chain claims)
-// ============================================
-
 enum ClaimStatus {
   PROCESSING
   CLAIMED
   FAILED
 }
 
-model RewardEpoch {
-  id         String   @id @default(cuid())
-  epochNo    Int      @unique
-  merkleRoot String?
-  startsAt   DateTime
-  endsAt     DateTime
-  createdAt  DateTime @default(now())
+// ========== On-Chain Claim System ==========
 
-  leaves RewardEpochLeaf[]
-  claims RewardClaim[]
+model ClaimEpoch {
+  epoch        Int         @id
+  weekKey      String      @unique // "2026-01-18" = Sunday midnight PT
+  rootHex      String      @db.VarChar(64) // 32 bytes hex, lowercase
+  totalAtomic  BigInt
+  leafCount    Int
+  createdAt    DateTime    @default(now())
+  setOnChain   Boolean     @default(false)
+  onChainTxSig String?
+
+  leaves       ClaimLeaf[]
 }
 
-model RewardEpochLeaf {
-  id        String @id @default(cuid())
-  epochId   String
-  userId    String
-  amount    BigInt
-  leafIndex Int
-  proofJson String // JSON array of sibling hashes
+model ClaimLeaf {
+  id           String     @id @default(cuid())
+  epoch        Int
+  weekKey      String
+  userId       String
+  wallet       String     @db.VarChar(64) // base58
+  index        Int
+  amountAtomic BigInt
+  proofHex     Json       // array of 32-byte hex strings
 
-  epoch RewardEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
 
-  @@unique([epochId, userId])
-  @@unique([epochId, leafIndex])
-  @@index([userId])
-}
+  epochRel     ClaimEpoch @relation(fields: [epoch], references: [epoch], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model RewardClaim {
-  id        String      @id @default(cuid())
-  userId    String
-  epochId   String
-  amount    BigInt
-  status    ClaimStatus @default(PROCESSING)
-  leafIndex Int?
-  txSig     String?     @unique
-  startedAt DateTime    @default(now())
-  claimedAt DateTime?
-  error     String?
-
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  epoch RewardEpoch @relation(fields: [epochId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, epochId]) // Prevents double-claim creation
-  @@index([userId, status])
+  @@unique([epoch, wallet])
+  @@unique([weekKey, wallet])
+  @@index([weekKey, userId])
+  @@index([wallet])
 }

@@ -6,6 +6,14 @@ import Link from "next/link";
 import Image from "next/image";
 import TopNav from "../components/TopNav";
 import RewardsTab from "../components/RewardsTab";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import {
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import * as anchor from "@coral-xyz/anchor";
 
 type ProfileData = {
   ok: boolean;
@@ -210,51 +218,108 @@ export default function ProfilePage() {
     }
   }, [data?.membership]);
 
-  // Claim handler
+  // Claim handler - wired to on-chain program
   async function onClaimPendingXess() {
     setClaimErr(null);
     setClaimBusy(true);
 
     try {
-      // 1) Start claim (idempotent) → get merkle proof payload
-      const startRes = await fetch("/api/rewards/claim/start", { method: "POST" });
-      const start = await startRes.json();
-
-      if (!start.ok) throw new Error(start.error || "CLAIM_START_FAILED");
-
-      // If already claimed, just refresh UI
-      if (start.alreadyClaimed) {
-        await refreshClaimSummary();
-        return;
-      }
-
-      const { claimId, epoch, leaf } = start as {
-        claimId: string;
-        epoch: { epochNo: number; merkleRoot: string };
-        leaf: { amount: string; leafIndex: number; proof: string[] };
-      };
-
-      // 2) SUBMIT ON-CHAIN CLAIM
-      //    You'll call your Solana program:
-      //    claim(epoch.epochNo, leaf.amount, leaf.leafIndex, leaf.proof)
-      //
-      // Placeholder until on-chain program is wired:
-      const txSig = await (async () => {
-        // TODO: Wire actual on-chain claim here
-        // Example: return await claimOnChain({ epochNo: epoch.epochNo, amount: leaf.amount, leafIndex: leaf.leafIndex, proof: leaf.proof });
-        void epoch; // suppress unused warning
-        void leaf;
-        throw new Error("ON_CHAIN_NOT_WIRED_YET");
-      })();
-
-      // 3) Mark complete (idempotent)
-      const doneRes = await fetch("/api/rewards/claim/complete", {
+      // 1) Get claim payload from prepare endpoint
+      const prepRes = await fetch("/api/rewards/claim/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ claimId, txSig }),
+        body: JSON.stringify({ epoch: 3 }), // Test epoch 3 (keccak256 hash)
       });
-      const done = await doneRes.json();
-      if (!done.ok) throw new Error(done.error || "CLAIM_COMPLETE_FAILED");
+      const prep = await prepRes.json();
+
+      if (!prep.ok) throw new Error(prep.error || "PREPARE_FAILED");
+      if (!prep.claimable) {
+        if (prep.reason === "already_claimed") {
+          throw new Error("Already claimed for this epoch");
+        }
+        throw new Error(prep.reason || "NOT_CLAIMABLE");
+      }
+
+      // 2) Connect to Phantom wallet
+      const provider = (window as any).solana;
+      if (!provider?.isPhantom) throw new Error("PHANTOM_NOT_FOUND");
+      await provider.connect();
+
+      const walletPubkey = new PublicKey(provider.publicKey.toString());
+
+      // 3) Set up connection
+      const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+      const connection = new Connection(rpc, "confirmed");
+
+      // 4) Fetch IDL from chain
+      const programId = new PublicKey(prep.programId);
+      const idl = await anchor.Program.fetchIdl(programId, { connection } as any);
+      if (!idl) throw new Error("IDL_NOT_FOUND");
+
+      const anchorProvider = { connection, publicKey: walletPubkey } as anchor.Provider;
+      const program = new anchor.Program({ ...idl, address: programId.toBase58() } as anchor.Idl, anchorProvider);
+
+      // 5) Get user ATA and check if it exists
+      const mint = new PublicKey(prep.xessMint);
+      const userAta = getAssociatedTokenAddressSync(mint, walletPubkey);
+      const userAtaInfo = await connection.getAccountInfo(userAta);
+
+      // 6) Build claim instruction
+      const proofVec: number[][] = Array.isArray(prep.proof) ? prep.proof : [];
+
+      const claimIx = await program.methods
+        .claim(
+          new anchor.BN(prep.epoch),
+          new anchor.BN(prep.amountAtomic),
+          prep.index,
+          proofVec
+        )
+        .accounts({
+          config: new PublicKey(prep.pdas.config),
+          vaultAuthority: new PublicKey(prep.pdas.vaultAuthority),
+          epochRoot: new PublicKey(prep.pdas.epochRoot),
+          receipt: new PublicKey(prep.pdas.receipt),
+          claimer: walletPubkey,
+          vaultAta: new PublicKey(prep.vaultAta),
+          userAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .instruction();
+
+      // 7) Build transaction - create ATA if missing, then claim
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const tx = new Transaction({
+        feePayer: walletPubkey,
+        blockhash,
+        lastValidBlockHeight,
+      });
+
+      // If user ATA doesn't exist, create it first
+      if (!userAtaInfo) {
+        const createAtaIx = createAssociatedTokenAccountInstruction(
+          walletPubkey,        // payer
+          userAta,             // ata address
+          walletPubkey,        // owner
+          mint,                // mint
+          TOKEN_PROGRAM_ID,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        );
+        tx.add(createAtaIx);
+      }
+
+      tx.add(claimIx);
+
+      const signed = await provider.signTransaction(tx);
+      const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+      await connection.confirmTransaction(sig, "confirmed");
+
+      // 8) Confirm with backend
+      await fetch("/api/rewards/claim/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ signature: sig, epoch: prep.epoch }),
+      });
 
       await refreshClaimSummary();
     } catch (e: unknown) {
@@ -633,7 +698,7 @@ export default function ProfilePage() {
                       <span className="text-white/60">Tx:</span>{" "}
                       <a
                         className="text-pink-400 underline hover:text-pink-300"
-                        href={`https://solscan.io/tx/${claimSummary.claim.txSig}`}
+                        href={`https://explorer.solana.com/tx/${claimSummary.claim.txSig}?cluster=devnet`}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -655,6 +720,30 @@ export default function ProfilePage() {
                   </div>
                 </div>
               )}
+
+              {/* TEST: Claim Button (visible to all for testing) */}
+              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6 border-yellow-400/50">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <h2 className="text-lg font-semibold text-yellow-400">🧪 Test Claim (Dev Only)</h2>
+                    <p className="text-sm text-white/60">
+                      Linked wallet: <span className="font-mono text-xs">{data.solWallet || data.walletAddress || "None"}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={onClaimPendingXess}
+                    disabled={claimBusy}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                      claimBusy
+                        ? "bg-white/10 text-white/50 cursor-not-allowed"
+                        : "bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-400 hover:to-orange-400"
+                    }`}
+                  >
+                    {claimBusy ? "Claiming..." : "Test Claim 1 XESS"}
+                  </button>
+                </div>
+                {claimErr && <div className="mt-3 text-sm text-red-400">{claimErr}</div>}
+              </div>
 
               {/* Diamond Features Teaser (non-Diamond only) */}
               {!isDiamond && (
