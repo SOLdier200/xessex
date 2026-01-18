@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { buildAndStoreEpoch, getLatestEpoch } from "@/lib/claimEpochBuilder";
+import { buildAndStoreClaimEpoch, getLatestEpoch } from "@/lib/claimEpochBuilder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,15 +48,45 @@ export async function POST(req: Request) {
     }
 
     try {
+      // DATA-DRIVEN: Find the latest weekKey with PAID, unclaimed rewards
+      const latestReward = await db.rewardEvent.findFirst({
+        where: { status: "PAID", claimedAt: null },
+        orderBy: { weekKey: "desc" },
+        select: { weekKey: true },
+      });
+
+      if (!latestReward?.weekKey) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: "no_paid_rewards",
+        });
+      }
+
+      const weekKey = latestReward.weekKey;
+
+      // Check if epoch already exists for this weekKey
+      const existingEpoch = await db.claimEpoch.findUnique({ where: { weekKey } });
+      if (existingEpoch) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: "epoch_exists",
+          weekKey,
+          epoch: existingEpoch.epoch,
+          rootHex: existingEpoch.rootHex,
+        });
+      }
+
       // Determine next epoch number
       const lastEpoch = await getLatestEpoch();
       const nextEpoch = (lastEpoch?.epoch ?? 0) + 1;
 
-      const result = await buildAndStoreEpoch(nextEpoch);
+      const result = await buildAndStoreClaimEpoch({ epoch: nextEpoch, weekKey });
 
       return NextResponse.json({
-        ok: true,
         ...result,
+        weekKey,
       });
     } finally {
       // Release advisory lock
