@@ -24,6 +24,19 @@ export async function GET() {
         ? "MEMBER"
         : "FREE";
 
+  let authProvider: "google" | "email" | "wallet" | "unknown" = "unknown";
+  if (user.email) {
+    if (user.passHash) {
+      authProvider = "email";
+    } else if (user.supabaseId) {
+      authProvider = "google";
+    } else {
+      authProvider = "email";
+    }
+  } else if (user.walletAddress || user.solWallet) {
+    authProvider = "wallet";
+  }
+
   // Check if Diamond email user needs to link wallet
   const hasLinkedWallet = !!user.walletAddress || !!user.solWallet;
   const needsSolWalletLink = membership === "DIAMOND" && !!user.email && !hasLinkedWallet;
@@ -32,6 +45,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     authed: true,
+    authProvider,
 
     // New standardized shape
     user: {
