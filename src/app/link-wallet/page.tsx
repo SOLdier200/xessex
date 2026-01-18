@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import TopNav from "../components/TopNav";
-import SolanaProviders from "@/components/SolanaProviders";
 import AccountWalletStatus from "@/components/AccountWalletStatus";
 import WalletActions from "@/components/WalletActions";
 
@@ -94,9 +93,7 @@ export default function LinkWalletPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black">
       <TopNav />
-      <SolanaProviders>
-        <LinkWalletContent />
-      </SolanaProviders>
+      <LinkWalletContent />
     </div>
   );
 }

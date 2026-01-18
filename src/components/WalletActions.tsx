@@ -215,17 +215,22 @@ export default function WalletActions({ showWalletSignIn = true }: { showWalletS
         <>
           <button
             onClick={() => setVisible(true)}
-            className="w-full py-3 px-6 rounded-xl font-semibold text-white transition bg-white/10 border border-white/20 hover:bg-white/15"
+            className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
+            style={{
+              background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
+              border: "2px solid #FF1493",
+              boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
+            }}
           >
-            Connect Wallet
+            Select Wallet
           </button>
 
-          {p.isIos && (
+          {(p.isIos || p.isAndroid) && (
             <button
               onClick={openInPhantom}
               className="w-full py-3 px-6 rounded-xl font-semibold text-white/90 transition border border-white/20 bg-white/10 hover:bg-white/15"
             >
-              Open in Phantom (iOS)
+              Open in Phantom
             </button>
           )}
         </>

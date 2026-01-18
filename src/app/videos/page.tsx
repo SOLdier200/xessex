@@ -78,7 +78,7 @@ export default async function VideosPage() {
                       />
                     )}
                     {/* Rank Badge */}
-                    <span className="absolute top-2 left-2 min-w-[28px] h-7 flex items-center justify-center text-sm font-bold px-2 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 text-black shadow-lg">
+                    <span className="absolute top-1.5 left-1.5 min-w-[22px] h-5 flex items-center justify-center text-xs font-bold px-1.5 rounded-md bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white/90 backdrop-blur-sm shadow-md">
                       #{v.rank}
                     </span>
                     <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200">

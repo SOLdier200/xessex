@@ -1,9 +1,9 @@
 import TopNav from "../components/TopNav";
 import SolanaProviders from "@/components/SolanaProviders";
-import AccountWalletStatus from "@/components/AccountWalletStatus";
-import WalletActions from "@/components/WalletActions";
+import WalletLoginButton from "@/components/WalletLoginButton";
 import EmailLoginBox from "@/components/EmailLoginBox";
 import GoogleSignupButton from "../components/GoogleSignupButton";
+import AccountWalletStatus from "@/components/AccountWalletStatus";
 
 export default function LoginPage() {
   return (
@@ -13,6 +13,8 @@ export default function LoginPage() {
       <SolanaProviders>
         <div className="px-6 pb-10 flex justify-center">
           <div className="w-full max-w-xl space-y-6">
+
+            {/* Account/Wallet Status Display */}
             <AccountWalletStatus />
 
             {/* Member Login (Email + Google) */}
@@ -46,7 +48,7 @@ export default function LoginPage() {
                 Login with Solana Wallet to interact with Xess token Features!
               </p>
               <div className="mt-6">
-                <WalletActions />
+                <WalletLoginButton />
               </div>
             </div>
 
