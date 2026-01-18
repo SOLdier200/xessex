@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   // Check rate limit for this user
   const now = Date.now();
-  const cooldownKey = userId;
+  const cooldownKey = `${userId}:${videoId}`;
   const lastRating = ratingCooldowns.get(cooldownKey);
 
   // Clean up old entries periodically
@@ -114,10 +114,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await recomputeVideoRanks(tx);
-
     return { avgStars: avgStarsRounded, starsCount };
   });
+
+  try {
+    await recomputeVideoRanks(db);
+  } catch (e) {
+    console.error("[RATINGS] rank recompute failed", e);
+  }
 
   return NextResponse.json({
     ok: true,

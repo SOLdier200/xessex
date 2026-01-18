@@ -80,8 +80,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const canPostComment = !!access.user && access.canComment; // diamond-only
   const canVoteComments = !!access.user && access.canVoteComments; // paid+
 
-  // Get related videos for sidebar
-  const relatedVideos = await db.video.findMany({
+  // Get related videos for sidebar - fetch more and randomize
+  const allRelated = await db.video.findMany({
     where: {
       id: { not: video.id },
       // Show showcase to everyone, premium only to paid
@@ -94,9 +94,11 @@ export default async function VideoPage({ params }: VideoPageProps) {
       thumbnailUrl: true,
       avgStars: true,
     },
-    take: 4,
-    orderBy: { rank: "asc" },
   });
+
+  // Shuffle and take 4 random videos
+  const shuffled = allRelated.sort(() => Math.random() - 0.5);
+  const relatedVideos = shuffled.slice(0, 4);
 
   const pageUrl = absUrl(`/videos/${video.slug}`);
   const thumb = video.thumbnailUrl ? absUrl(video.thumbnailUrl) : undefined;

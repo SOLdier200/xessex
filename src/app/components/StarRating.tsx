@@ -18,35 +18,56 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
   const [canRate, setCanRate] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    setRating(null);
-    setHovered(null);
-    setAverage(0);
-    setCount(0);
+    let active = true;
 
-    fetch(`/api/ratings?videoId=${videoId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.ok) {
-          setAverage(data.avgStars);
-          setCount(data.starsCount);
-          if (data.userRating) {
-            setRating(data.userRating);
-          }
-        }
-      })
-      .finally(() => setLoading(false));
+    const resetState = () => {
+      setLoading(true);
+      setRating(null);
+      setHovered(null);
+      setAverage(0);
+      setCount(0);
+    };
 
-    // Check if user can rate (only if not readOnly)
-    if (!readOnly) {
-      fetch("/api/auth/status")
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.ok) {
-            setCanRate(data.canRateStars);
-          }
+    const readJson = async (res: Response) => {
+      try {
+        return await res.json();
+      } catch {
+        return null;
+      }
+    };
+
+    const loadRatings = async () => {
+      resetState();
+      try {
+        const res = await fetch(`/api/ratings?videoId=${videoId}`, {
+          credentials: "include",
         });
-    }
+        const data = await readJson(res);
+        if (!active || !data?.ok) return;
+        setAverage(data.avgStars);
+        setCount(data.starsCount);
+        if (data.userRating) {
+          setRating(data.userRating);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    const loadCanRate = async () => {
+      if (readOnly) return;
+      const res = await fetch("/api/auth/status", { credentials: "include" });
+      const data = await readJson(res);
+      if (!active || !data?.ok) return;
+      setCanRate(data.canRateStars);
+    };
+
+    loadRatings();
+    loadCanRate();
+
+    return () => {
+      active = false;
+    };
   }, [videoId, readOnly]);
 
   const handleRate = async (stars: number) => {
@@ -62,10 +83,17 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
       const res = await fetch("/api/ratings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ videoId, stars }),
       });
 
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        toast.error("Session expired. Please refresh and try again.");
+        return;
+      }
 
       if (data.ok) {
         setRating(stars);
