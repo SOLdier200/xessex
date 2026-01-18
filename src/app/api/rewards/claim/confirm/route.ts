@@ -6,9 +6,16 @@ import { db } from "@/lib/prisma";
 
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 
-const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_XESS_CLAIM_PROGRAM_ID!);
-const XESS_MINT = new PublicKey(process.env.XESS_MINT!);
-const VAULT_ATA = new PublicKey(process.env.XESS_VAULT_ATA!);
+// Lazy-loaded to avoid build-time failures when env vars are not set
+function getProgramId() {
+  return new PublicKey(process.env.NEXT_PUBLIC_XESS_CLAIM_PROGRAM_ID!);
+}
+function getXessMint() {
+  return new PublicKey(process.env.XESS_MINT!);
+}
+function getVaultAta() {
+  return new PublicKey(process.env.XESS_VAULT_ATA!);
+}
 
 function u64LE(n: bigint) {
   const b = Buffer.alloc(8);
@@ -38,7 +45,7 @@ export async function POST(req: Request) {
     // Just verify tx exists and receipt was created
     const [receiptPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-      PROGRAM_ID
+      getProgramId()
     );
 
     const receiptInfo = await connection.getAccountInfo(receiptPda, "confirmed");
@@ -46,7 +53,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "receipt_missing" }, { status: 400 });
     }
 
-    const userAta = getAssociatedTokenAddressSync(XESS_MINT, claimerPk);
+    const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
 
     return NextResponse.json({
       ok: true,
@@ -70,7 +77,7 @@ export async function POST(req: Request) {
   // Receipt PDA
   const [receiptPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-    PROGRAM_ID
+    getProgramId()
   );
 
   const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
@@ -83,7 +90,7 @@ export async function POST(req: Request) {
 
   // IDEMPOTENT: If receipt already exists, return success
   const receiptInfo = await connection.getAccountInfo(receiptPda, "confirmed");
-  if (receiptInfo && receiptInfo.owner.equals(PROGRAM_ID)) {
+  if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
     // Already claimed - update DB if needed using weekKey and return ok
     if (leaf?.weekKey) {
       await db.rewardEvent.updateMany({
@@ -97,7 +104,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const userAta = getAssociatedTokenAddressSync(XESS_MINT, claimerPk);
+    const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
     return NextResponse.json({
       ok: true,
       alreadyClaimed: true,
@@ -119,14 +126,14 @@ export async function POST(req: Request) {
   const keys = msg.getAccountKeys().staticAccountKeys;
 
   // Ensure our program is in the transaction account keys
-  if (!keys.some((k) => k.equals(PROGRAM_ID))) {
+  if (!keys.some((k) => k.equals(getProgramId()))) {
     return NextResponse.json({ error: "wrong_program" }, { status: 400 });
   }
 
   // Re-check receipt after tx verification (it should exist now)
   const receiptInfoAfter = await connection.getAccountInfo(receiptPda, "confirmed");
   if (!receiptInfoAfter) return NextResponse.json({ error: "receipt_missing" }, { status: 400 });
-  if (!receiptInfoAfter.owner.equals(PROGRAM_ID)) {
+  if (!receiptInfoAfter.owner.equals(getProgramId())) {
     return NextResponse.json({ error: "receipt_wrong_owner" }, { status: 400 });
   }
 
@@ -134,7 +141,7 @@ export async function POST(req: Request) {
   const expected = leaf?.amountAtomic ?? 1000000000n;
 
   // Validate the SPL transfer: vault ATA -> user ATA
-  const userAta = getAssociatedTokenAddressSync(XESS_MINT, claimerPk);
+  const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
 
   const inner = tx.meta?.innerInstructions ?? [];
   let transferred = 0n;
@@ -156,7 +163,7 @@ export async function POST(req: Request) {
       const src = keys[acctIdx[0]];
       const dst = keys[acctIdx[1]];
 
-      if (src?.equals(VAULT_ATA) && dst?.equals(userAta)) {
+      if (src?.equals(getVaultAta()) && dst?.equals(userAta)) {
         transferred += amount;
       }
     }

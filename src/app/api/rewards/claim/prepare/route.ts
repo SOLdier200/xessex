@@ -3,9 +3,16 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
-const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_XESS_CLAIM_PROGRAM_ID!);
-const XESS_MINT = new PublicKey(process.env.XESS_MINT!);
-const VAULT_ATA = new PublicKey(process.env.XESS_VAULT_ATA || process.env.XESS_TREASURY_ATA || process.env.XESS_ATA!);
+// Lazy-loaded to avoid build-time failures when env vars are not set
+function getProgramId() {
+  return new PublicKey(process.env.NEXT_PUBLIC_XESS_CLAIM_PROGRAM_ID!);
+}
+function getXessMint() {
+  return new PublicKey(process.env.XESS_MINT!);
+}
+function getVaultAta() {
+  return new PublicKey(process.env.XESS_VAULT_ATA || process.env.XESS_TREASURY_ATA || process.env.XESS_ATA!);
+}
 
 function u64LE(n: bigint) {
   const b = Buffer.alloc(8);
@@ -30,18 +37,18 @@ export async function POST(req: Request) {
     const index = 0;
     const proof: number[][] = [];
 
-    const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID);
+    const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], getProgramId());
     const [vaultAuthority] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault_authority"), configPda.toBuffer()],
-      PROGRAM_ID
+      getProgramId()
     );
     const [epochRootPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("epoch_root"), u64LE(epoch)],
-      PROGRAM_ID
+      getProgramId()
     );
     const [receiptPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-      PROGRAM_ID
+      getProgramId()
     );
 
     // Check if already claimed (receipt exists on-chain)
@@ -49,7 +56,7 @@ export async function POST(req: Request) {
     const connection = new Connection(rpc, "confirmed");
     const receiptInfo = await connection.getAccountInfo(receiptPda);
 
-    if (receiptInfo && receiptInfo.owner.equals(PROGRAM_ID)) {
+    if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
       return NextResponse.json({
         ok: true,
         claimable: false,
@@ -67,9 +74,9 @@ export async function POST(req: Request) {
       amountAtomic: amountAtomic.toString(),
       index,
       proof,
-      programId: PROGRAM_ID.toBase58(),
-      xessMint: XESS_MINT.toBase58(),
-      vaultAta: VAULT_ATA.toBase58(),
+      programId: getProgramId().toBase58(),
+      xessMint: getXessMint().toBase58(),
+      vaultAta: getVaultAta().toBase58(),
       claimer: claimerPk.toBase58(),
       pdas: {
         config: configPda.toBase58(),
@@ -124,18 +131,18 @@ export async function POST(req: Request) {
   const epoch = BigInt(epochRow.epoch);
 
   // Compute PDAs
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID);
+  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], getProgramId());
   const [vaultAuthority] = PublicKey.findProgramAddressSync(
     [Buffer.from("vault_authority"), configPda.toBuffer()],
-    PROGRAM_ID
+    getProgramId()
   );
   const [epochRootPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("epoch_root"), u64LE(epoch)],
-    PROGRAM_ID
+    getProgramId()
   );
   const [receiptPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-    PROGRAM_ID
+    getProgramId()
   );
 
   // Check if already claimed on-chain
@@ -143,7 +150,7 @@ export async function POST(req: Request) {
   const connection = new Connection(rpc, "confirmed");
   const receiptInfo = await connection.getAccountInfo(receiptPda);
 
-  if (receiptInfo && receiptInfo.owner.equals(PROGRAM_ID)) {
+  if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
     return NextResponse.json({
       ok: true,
       claimable: false,
@@ -161,9 +168,9 @@ export async function POST(req: Request) {
     amountAtomic: leaf.amountAtomic.toString(),
     index: leaf.index,
     proof: leaf.proofHex, // array of hex strings
-    programId: PROGRAM_ID.toBase58(),
-    xessMint: XESS_MINT.toBase58(),
-    vaultAta: VAULT_ATA.toBase58(),
+    programId: getProgramId().toBase58(),
+    xessMint: getXessMint().toBase58(),
+    vaultAta: getVaultAta().toBase58(),
     claimer: claimerPk.toBase58(),
     pdas: {
       config: configPda.toBase58(),
