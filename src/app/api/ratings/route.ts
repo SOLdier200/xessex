@@ -9,7 +9,7 @@ import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 import { recomputeVideoRanks } from "@/lib/videoRank";
 
-// Rate limit: 20 seconds between rating changes per user
+// Rate limit: 20 seconds between rating changes per user+video
 const RATE_LIMIT_MS = 20 * 1000;
 const ratingCooldowns = new Map<string, number>();
 
@@ -21,37 +21,27 @@ export async function POST(req: NextRequest) {
   const access = await getAccessContext();
 
   if (!access.user) {
-    return NextResponse.json(
-      { ok: false, error: "UNAUTHORIZED" },
-      { status: 401 }
-    );
+    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
-
-  const userId = access.user.id;
 
   if (!access.canRateStars) {
-    return NextResponse.json(
-      { ok: false, error: "DIAMOND_ONLY" },
-      { status: 403 }
-    );
+    return NextResponse.json({ ok: false, error: "DIAMOND_ONLY" }, { status: 403 });
   }
 
-  const body = (await req.json().catch(() => null)) as {
-    videoId?: string;
-    stars?: number;
-  } | null;
+  const body = (await req.json().catch(() => null)) as
+    | { videoId?: string; stars?: number }
+    | null;
 
   const videoId = body?.videoId?.trim();
   const stars = body?.stars;
 
   if (!videoId || typeof stars !== "number") {
-    return NextResponse.json(
-      { ok: false, error: "BAD_REQUEST" },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: "BAD_REQUEST" }, { status: 400 });
   }
 
-  // Check rate limit for this user
+  const userId = access.user.id;
+
+  // Rate limit per user+video
   const now = Date.now();
   const cooldownKey = `${userId}:${videoId}`;
   const lastRating = ratingCooldowns.get(cooldownKey);
@@ -76,26 +66,20 @@ export async function POST(req: NextRequest) {
 
   const video = await db.video.findUnique({ where: { id: videoId } });
   if (!video) {
-    return NextResponse.json(
-      { ok: false, error: "VIDEO_NOT_FOUND" },
-      { status: 404 }
-    );
+    return NextResponse.json({ ok: false, error: "VIDEO_NOT_FOUND" }, { status: 404 });
   }
 
   // Update cooldown timestamp
   ratingCooldowns.set(cooldownKey, now);
 
+  // Do the rating + aggregates in a transaction
   const { avgStars, starsCount } = await db.$transaction(async (tx) => {
-    // Upsert rating (allow updates)
     await tx.videoStarRating.upsert({
-      where: {
-        videoId_userId: { videoId, userId },
-      },
+      where: { videoId_userId: { videoId, userId } },
       create: { videoId, userId, stars: s },
       update: { stars: s },
     });
 
-    // Update cached aggregates on video
     const agg = await tx.videoStarRating.aggregate({
       where: { videoId },
       _avg: { stars: true },
@@ -108,26 +92,21 @@ export async function POST(req: NextRequest) {
 
     await tx.video.update({
       where: { id: videoId },
-      data: {
-        avgStars: avgStarsRounded,
-        starsCount,
-      },
+      data: { avgStars: avgStarsRounded, starsCount },
     });
 
     return { avgStars: avgStarsRounded, starsCount };
   });
 
+  // Recompute ranks outside the transaction
   try {
     await recomputeVideoRanks(db);
   } catch (e) {
-    console.error("[RATINGS] rank recompute failed", e);
+    // Don't fail the rating if ranking recompute fails
+    console.error("[ratings] recomputeVideoRanks failed:", e);
   }
 
-  return NextResponse.json({
-    ok: true,
-    avgStars,
-    starsCount,
-  });
+  return NextResponse.json({ ok: true, avgStars, starsCount });
 }
 
 /**
@@ -139,10 +118,7 @@ export async function GET(req: NextRequest) {
   const videoId = searchParams.get("videoId");
 
   if (!videoId) {
-    return NextResponse.json(
-      { ok: false, error: "MISSING_VIDEO_ID" },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: "MISSING_VIDEO_ID" }, { status: 400 });
   }
 
   const video = await db.video.findUnique({
@@ -151,21 +127,15 @@ export async function GET(req: NextRequest) {
   });
 
   if (!video) {
-    return NextResponse.json(
-      { ok: false, error: "VIDEO_NOT_FOUND" },
-      { status: 404 }
-    );
+    return NextResponse.json({ ok: false, error: "VIDEO_NOT_FOUND" }, { status: 404 });
   }
 
-  // Check if current user has rated
   const access = await getAccessContext();
   let userRating: number | null = null;
 
   if (access.user) {
     const existing = await db.videoStarRating.findUnique({
-      where: {
-        videoId_userId: { videoId, userId: access.user.id },
-      },
+      where: { videoId_userId: { videoId, userId: access.user.id } },
     });
     userRating = existing?.stars ?? null;
   }

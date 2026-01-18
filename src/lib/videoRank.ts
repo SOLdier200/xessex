@@ -20,8 +20,14 @@ export async function recomputeVideoRanks(tx: RankDb = db) {
       FROM "Video"
     )
     UPDATE "Video" v
-    SET "rank" = o.new_rank
+    SET "rank" = -o.new_rank
     FROM ordered o
     WHERE v.id = o.id;
+  `);
+
+  await tx.$executeRawUnsafe(`
+    UPDATE "Video"
+    SET "rank" = -"rank"
+    WHERE "rank" < 0;
   `);
 }
