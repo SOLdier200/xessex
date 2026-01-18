@@ -16,9 +16,26 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Xessex – Premium Adult Video Membership",
+  title: "Xessex – HD Porn Videos, Premium Sex Content & Crypto Rewards",
   description:
-    "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
+    "Watch high-quality HD porn and premium sex videos on Xessex. Earn crypto rewards and XESS tokens for watching and grading content. Solana-powered adult platform with top-ranked XXX videos.",
+  keywords: [
+    "HD porn",
+    "best porn online",
+    "top ranked porn",
+    "top ranked xxx videos",
+    "premium sex videos",
+    "high quality sex videos",
+    "adult video platform",
+    "watch porn earn crypto",
+    "get paid to watch videos",
+    "crypto porn platform",
+    "solana adult token",
+    "xess token",
+    "porn rewards",
+    "xxx rewards",
+    "adult crypto payments",
+  ],
   metadataBase: new URL("https://xessex.me"),
   robots: {
     index: true,
@@ -34,13 +51,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://xessex.me",
-    title: "Xessex – Premium Adult Video Membership",
+    title: "Xessex – HD Porn Videos, Premium Sex Content & Crypto Rewards",
     description:
-      "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
+      "Watch high-quality HD porn and premium sex videos on Xessex. Earn crypto rewards and XESS tokens for watching and grading content.",
     siteName: "Xessex",
   },
   other: {
     "RATING": "RTA-5042-1996-1400-1577-RTA",
+    "rating": "adult",
+    "content-rating": "adult",
+    "bingbot": "index,follow",
   },
 };
 
@@ -53,6 +73,8 @@ export default function RootLayout({
     <html lang="en" translate="no">
       <head>
         <meta name="google" content="notranslate" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/logos/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/logos/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/logos/favicon-16x16.png" />
@@ -65,11 +87,28 @@ export default function RootLayout({
               "@type": "AdultEntertainment",
               "name": "Xessex",
               "url": "https://xessex.me",
-              "description": "Get paid to Watch and grade adult videos! Tired of skimming through 20 videos to find one that's High-Quality content? At Xessex, you can relax knowing anything you click is sought after content!",
+              "description": "Watch high-quality HD adult videos and earn crypto rewards for watching and grading content.",
               "publisher": {
                 "@type": "Organization",
                 "name": "Xessex"
               }
+            })
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "Xessex",
+              "url": "https://xessex.me",
+              "description": "Premium adult platform with HD videos, top ranked content, and crypto rewards.",
+              "audience": {
+                "@type": "PeopleAudience",
+                "suggestedMinAge": 18
+              },
+              "isFamilyFriendly": false
             })
           }}
         />
@@ -97,6 +136,10 @@ export default function RootLayout({
           <div className="flex flex-wrap justify-center items-center gap-4 mb-4 px-4">
             <Link href="/tokenomics" className="hover:text-white transition">
               Tokenomics
+            </Link>
+            <span>•</span>
+            <Link href="/earn-crypto-watching-porn" className="hover:text-white transition">
+              Earn Crypto Watching Porn
             </Link>
             <span>•</span>
             <Link href="/terms" className="hover:text-white transition">

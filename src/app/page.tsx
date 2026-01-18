@@ -138,6 +138,33 @@ export default async function HomePage() {
 
         <VideoSearch videos={videos} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
 
+        <section className="mt-10 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8">
+          <h1 className="text-2xl md:text-3xl font-semibold text-white">
+            HD Porn Videos, Premium Sex Content & Crypto Rewards
+          </h1>
+          <p className="mt-4 text-white/70">
+            Xessex is a next-generation adult platform offering high-quality HD porn and premium sex
+            videos. Every release is curated, verified, and ranked by the community.
+          </p>
+          <p className="mt-4 text-white/70">
+            Members can earn crypto rewards for watching videos, engaging with content, and
+            supporting creators. Xessex runs on Solana, enabling fast rewards with XESS tokens and
+            Diamond tiers for premium access.
+          </p>
+          <p className="mt-4 text-white/70">
+            If you are looking for the best porn online and top-ranked XXX videos with a modern,
+            reward-driven experience, Xessex delivers quality, speed, and privacy.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/earn-crypto-watching-porn"
+              className="text-sm font-semibold text-pink-300 hover:text-pink-200 transition"
+            >
+              Learn how to earn crypto watching porn
+            </Link>
+          </div>
+        </section>
+
         {/* Featured & Top Ranked Videos */}
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Featured Video */}

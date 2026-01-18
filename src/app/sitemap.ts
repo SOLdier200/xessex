@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/videos`, changeFrequency: "daily", priority: 0.9 },
     { url: `${base}/stars`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/membership`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/earn-crypto-watching-porn`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/login`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/signup`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.2 },
