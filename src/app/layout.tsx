@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Xessex – HD Porn Videos, Premium Sex Content & Crypto Rewards",
   description:
-    "Watch high-quality HD porn and premium sex videos on Xessex. Earn crypto rewards and XESS tokens for watching and grading content. Solana-powered adult platform with top-ranked XXX videos.",
+    "Watch premium HD porn videos on Xessex. Earn crypto rewards for watching adult content. Solana-powered platform. 18+ only.",
   keywords: [
     "HD porn",
     "best porn online",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     url: "https://xessex.me",
     title: "Xessex – HD Porn Videos, Premium Sex Content & Crypto Rewards",
     description:
-      "Watch high-quality HD porn and premium sex videos on Xessex. Earn crypto rewards and XESS tokens for watching and grading content.",
+      "Watch premium HD porn videos on Xessex. Earn crypto rewards for watching adult content. Solana-powered platform. 18+ only.",
     siteName: "Xessex",
   },
   other: {

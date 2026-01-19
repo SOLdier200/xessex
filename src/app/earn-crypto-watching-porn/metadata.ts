@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Earn Crypto Watching Porn | Get Paid to Watch HD Adult Videos",
   description:
-    "Earn crypto watching porn on Xessex. Watch premium HD adult videos and get paid in XESS tokens and Diamond rewards. Solana-powered adult platform with top-ranked XXX content.",
+    "Earn crypto watching porn on Xessex. Get paid in XESS tokens for watching HD adult videos. Diamond rewards available. 18+",
   keywords: [
     "earn crypto watching porn",
     "get paid to watch porn",

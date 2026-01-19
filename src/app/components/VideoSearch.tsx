@@ -116,7 +116,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     <>
       <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold neon-text">Browse Videos</h1>
+          <h2 className="text-2xl font-semibold neon-text">Browse Videos</h2>
           <p className="text-sm text-white/70">
             {filteredVideos.length} of {videos.length} videos
           </p>
