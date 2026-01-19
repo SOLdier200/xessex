@@ -39,6 +39,7 @@ model User {
   rewardEpochLeaves    RewardEpochLeaf[]
   rewardEvents         RewardEvent[]
   claimLeaves          ClaimLeaf[]
+  manualPayments       ManualPayment[]
   sessions             Session[]
   subscription         Subscription?
   referredBy           User?                    @relation("UserReferrals", fields: [referredById], references: [id])
@@ -519,6 +520,17 @@ enum ClaimStatus {
   FAILED
 }
 
+enum ManualPayMethod {
+  CASHAPP
+}
+
+enum ManualPayStatus {
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+}
+
 // ========== On-Chain Claim System ==========
 
 model ClaimEpoch {
@@ -553,4 +565,32 @@ model ClaimLeaf {
   @@unique([weekKey, wallet])
   @@index([weekKey, userId])
   @@index([wallet])
+}
+
+model ManualPayment {
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  method           ManualPayMethod  @default(CASHAPP)
+  status           ManualPayStatus  @default(PENDING)
+
+  requestedTier    SubscriptionTier // MEMBER | DIAMOND
+  planCode         String           // member_monthly | diamond_yearly etc
+  amountUsd        Int              // cents
+  currency         String           @default("USD")
+
+  payerHandle      String?
+  note             String?
+  proofUrl         String?
+  verifyCode       String           @unique
+
+  provisionalUntil DateTime
+  createdAt        DateTime         @default(now())
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  adminNote        String?
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
 }

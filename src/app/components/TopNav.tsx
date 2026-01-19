@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import WalletStatus from "./WalletStatus";
 import XessTokenModal from "./XessTokenModal";
+import PendingManualBadge from "./PendingManualBadge";
 
 export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -61,6 +62,7 @@ export default function TopNav() {
               className="hidden md:inline-flex items-center rounded-full border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-purple-300/70 hover:bg-purple-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300/70"
             >
               Admin
+              <PendingManualBadge />
             </Link>
           )}
           <button
@@ -127,6 +129,7 @@ export default function TopNav() {
               className="flex items-center justify-center rounded-xl border border-purple-400/40 bg-purple-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-purple-500/30"
             >
               Admin
+              <PendingManualBadge />
             </Link>
           )}
         </div>

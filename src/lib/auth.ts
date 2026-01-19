@@ -39,8 +39,13 @@ export function isSubscriptionActive(
   if (!sub) return false;
 
   // ACTIVE = fully paid membership
-  // PENDING + future expiresAt = provisional access window (instant access)
-  const statusOk = sub.status === "ACTIVE" || sub.status === "PENDING";
+  // PENDING = payment initiated (NOWPayments) but we may allow instant access window
+  // PARTIAL = manual/provisional access (e.g., Cash App) that MUST have an expiresAt
+  const statusOk =
+    sub.status === "ACTIVE" ||
+    sub.status === "PENDING" ||
+    sub.status === "PARTIAL";
+
   if (!statusOk) return false;
 
   // Keep lifetime semantics ONLY for ACTIVE (prevents "lifetime provisional")

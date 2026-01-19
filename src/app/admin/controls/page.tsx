@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import SystemActionsPanel from "./SystemActionsPanel";
+import ManualPaymentsPanel from "./ManualPaymentsPanel";
 
 export default function AdminControlsPage() {
   const [siteViews, setSiteViews] = useState<string | null>(null);
@@ -150,6 +151,10 @@ export default function AdminControlsPage() {
           )}
         </div>
       )}
+
+      <div className="mt-8">
+        <ManualPaymentsPanel />
+      </div>
 
       <SystemActionsPanel />
     </main>

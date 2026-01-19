@@ -654,6 +654,14 @@ function SignupInner() {
             </li>
           </ul>
 
+          <div className="mt-4 rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-xs text-yellow-200/90">
+            <strong>NOTE:</strong> Diamond Membership is in beta testing. If you want to help beta test it, please email{" "}
+            <a href="mailto:admin@xessex.me" className="text-yellow-100 underline hover:text-yellow-50">
+              admin@xessex.me
+            </a>
+            . Beta testers will be rewarded with free Diamond Memberships for a set amount of time after mainnet launch.
+          </div>
+
           {diamondDisabled && (
             <div className="mt-4 text-center text-white/70 text-sm">
               Coming Very Soon....
