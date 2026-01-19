@@ -193,15 +193,14 @@ export default function VideoPlayback({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2">
           <div className="neon-border rounded-2xl overflow-hidden bg-black/30">
-            <div className="aspect-video bg-black relative">
+            <div className="relative w-full bg-black" style={{ paddingTop: "56.25%" }}>
               {currentVideo.embedUrl ? (
                 <iframe
                   ref={iframeRef}
                   key={currentVideo.id}
                   src={currentVideo.embedUrl}
-                  frameBorder={0}
-                  width="100%"
-                  height="100%"
+                  title={currentVideo.title}
+                  className="absolute inset-0 h-full w-full z-10"
                   allow="autoplay; fullscreen; picture-in-picture"
                   allowFullScreen
                 />

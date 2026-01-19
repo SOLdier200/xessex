@@ -30,6 +30,22 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow age gate and non-content pages without a cookie
+  if (
+    pathname.startsWith("/age") ||
+    pathname.startsWith("/leave") ||
+    pathname.startsWith("/parental-controls") ||
+    pathname.startsWith("/terms") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/2257") ||
+    pathname.startsWith("/auth/callback") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/forgot-password")
+  ) {
+    return NextResponse.next();
+  }
+
   // Age gate logic
   const hasAgeCookie = req.cookies.get("age_verified");
 
