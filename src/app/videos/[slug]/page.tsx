@@ -139,7 +139,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
               width="100%"
               height="100%"
               frameBorder={0}
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+              referrerPolicy="origin-when-cross-origin"
               allowFullScreen
             />
           </div>

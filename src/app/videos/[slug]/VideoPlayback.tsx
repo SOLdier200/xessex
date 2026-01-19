@@ -90,6 +90,8 @@ export default function VideoPlayback({
   const [currentVideo, setCurrentVideo] = useState<VideoPayload>(initialVideo);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isLoadingNext, setIsLoadingNext] = useState(false);
+  const [isFirefoxMobile, setIsFirefoxMobile] = useState(false);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const currentVideoRef = useRef(currentVideo);
   const loadingRef = useRef(false);
@@ -97,6 +99,15 @@ export default function VideoPlayback({
   useEffect(() => {
     currentVideoRef.current = currentVideo;
   }, [currentVideo]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const ua = navigator.userAgent.toLowerCase();
+    const isFirefox = ua.includes("firefox");
+    const isAndroid = ua.includes("android");
+    const isMobile = ua.includes("mobile") || ua.includes("tablet");
+    setIsFirefoxMobile(isFirefox && (isAndroid || isMobile));
+  }, []);
 
   useEffect(() => {
     setCountdown(null);
@@ -153,7 +164,7 @@ export default function VideoPlayback({
     <div className="mx-auto max-w-6xl px-4 py-6">
       <ViewTracker videoId={currentVideo.id} />
 
-      <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white">
             {currentVideo.title}
@@ -182,12 +193,24 @@ export default function VideoPlayback({
           </div>
         </div>
 
-        <Link
-          href="/videos"
-          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
-        >
-          Back to Videos
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/videos"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
+          >
+            Back to Videos
+          </Link>
+          {isFirefoxMobile && currentVideo.embedUrl && (
+            <a
+              href={currentVideo.embedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
+            >
+              Open Video in New Tab
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
@@ -201,7 +224,9 @@ export default function VideoPlayback({
                   src={currentVideo.embedUrl}
                   title={currentVideo.title}
                   className="absolute inset-0 h-full w-full z-10"
-                  allow="autoplay; fullscreen; picture-in-picture"
+                  allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                  loading="eager"
+                  referrerPolicy="origin-when-cross-origin"
                   allowFullScreen
                 />
               ) : (
@@ -211,18 +236,26 @@ export default function VideoPlayback({
               )}
 
               {countdown !== null && (
-                <div className="absolute inset-0 bg-black/80 flex items-center justify-center text-white text-2xl md:text-3xl font-semibold">
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center text-white text-2xl md:text-3xl font-semibold pointer-events-none">
                   Next video starting in {countdown}...
                 </div>
               )}
 
               {isLoadingNext && countdown === null && (
-                <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-lg">
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-lg pointer-events-none">
                   Loading next video...
                 </div>
               )}
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowTroubleshoot(true)}
+            className="mt-3 text-xs text-white/60 hover:text-white transition"
+          >
+            Video not playing? Troubleshoot here
+          </button>
 
           <div className="mt-4 md:mt-6">
             <StarRating videoId={currentVideo.id} readOnly={!canRateStars} />
@@ -307,6 +340,50 @@ export default function VideoPlayback({
           )}
         </div>
       </div>
+
+      {showTroubleshoot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-black/90 p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Video Troubleshooting</h3>
+                <p className="mt-1 text-sm text-white/70">
+                  If you are using Firefox, make sure “Enhanced Tracking Protection” is disabled or
+                  your videos may not play.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTroubleshoot(false)}
+                className="text-white/60 hover:text-white text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="mt-4 text-sm text-white/70">
+              If you are still having an issue please email{" "}
+              <a href="mailto:support@xessex.me" className="text-pink-300 hover:text-pink-200">
+                support@xessex.me
+              </a>{" "}
+              so that we can get it fixed for you right away. Xessex has a very committed team
+              actively engaged in building and improving the site and we are dedicated to making
+              sure everything works well for every user. Thank you for your feedback.
+            </p>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowTroubleshoot(false)}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/15 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

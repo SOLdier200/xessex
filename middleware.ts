@@ -23,10 +23,16 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/robots.txt") ||
     pathname.startsWith("/sitemap") ||
+    pathname.startsWith("/logos") ||
     pathname.startsWith("/yandex_") ||
     pathname.startsWith("/google") ||
     pathname.startsWith("/BingSiteAuth")
   ) {
+    return NextResponse.next();
+  }
+
+  const isStaticAsset = /\.(?:png|jpg|jpeg|gif|webp|svg|ico|webmanifest)$/i.test(pathname);
+  if (isStaticAsset) {
     return NextResponse.next();
   }
 

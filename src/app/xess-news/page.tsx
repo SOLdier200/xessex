@@ -37,6 +37,21 @@ export default function XessNewsPage() {
           Stay updated with the latest announcements and developments.
         </p>
 
+        {/* Featured Link */}
+        <Link
+          href="/earn-crypto-watching-porn"
+          className="block mb-8 p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/40 hover:border-green-400/70 transition"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">💰</span>
+            <div>
+              <h3 className="font-semibold text-green-300">Earn Crypto Watching Porn</h3>
+              <p className="text-sm text-white/60">Learn how to get paid in XESS tokens</p>
+            </div>
+            <span className="ml-auto text-green-400">→</span>
+          </div>
+        </Link>
+
         <div className="space-y-6">
           {/* Placeholder news items */}
           <article className="bg-gray-900/50 border border-pink-500/30 rounded-2xl p-6">
