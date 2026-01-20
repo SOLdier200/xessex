@@ -54,3 +54,5 @@ ai-media/
 
 # Lock files
 .~lock.*
+devnet-id.json
+.config/solana/*.json
