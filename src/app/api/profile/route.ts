@@ -44,6 +44,13 @@ export async function GET() {
     }
   }
 
+  // Get special credits balance
+  const specialCreditAccount = await db.specialCreditAccount.findUnique({
+    where: { userId: user.id },
+    select: { balanceMicro: true },
+  });
+  const specialCreditsMicro = specialCreditAccount?.balanceMicro ?? 0n;
+
   return NextResponse.json({
     ok: true,
     authed: true,
@@ -69,5 +76,6 @@ export async function GET() {
       referredById: user.referredById ?? null,
       referredByEmail,
     },
+    specialCreditsMicro: specialCreditsMicro.toString(),
   });
 }

@@ -76,6 +76,7 @@ export default async function HomePage() {
       if (b.rank !== null) return 1;
       return 0;
     });
+  const top20 = videos.slice(0, 20);
 
   return (
     <main className="min-h-screen">
@@ -308,6 +309,60 @@ export default async function HomePage() {
             );
           })()}
         </div>
+
+        {/* Top 20 List */}
+        <section className="mt-8 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg md:text-xl font-semibold text-white">Top 20 Videos</h2>
+            <span className="text-xs text-white/40">Ranked globally</span>
+          </div>
+
+          {top20.length === 0 ? (
+            <p className="mt-4 text-sm text-white/50">No videos available yet.</p>
+          ) : (
+            <ol className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {top20.map((video, index) => {
+                const isShowcase = showcaseSlugs.includes(video.viewkey);
+                const isLocked = !canViewPremium && !isShowcase;
+                const href = isLocked ? "/signup" : `/videos/${video.viewkey}`;
+
+                return (
+                  <li key={video.viewkey} className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                    <Link href={href} className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs text-white/40">#{index + 1}</div>
+                        <div className="text-sm font-semibold text-white truncate">
+                          {video.title}
+                        </div>
+                        <div className="text-xs text-white/50 truncate">
+                          {video.performers || "Unknown"}
+                        </div>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                          isLocked
+                            ? "bg-yellow-500/20 text-yellow-300 border border-yellow-400/30"
+                            : "bg-emerald-500/15 text-emerald-200 border border-emerald-400/30"
+                        }`}
+                      >
+                        {isLocked ? "Premium" : "Play"}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/videos"
+              className="inline-flex items-center rounded-full border border-pink-400/40 bg-pink-500/10 px-5 py-2 text-sm font-semibold text-pink-200 transition hover:border-pink-300/70 hover:bg-pink-500/20"
+            >
+              View All Videos
+            </Link>
+          </div>
+        </section>
 
       </div>
     </main>

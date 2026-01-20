@@ -1,652 +1,447 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { toast } from "sonner";
-import TopNav from "../components/TopNav";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BuyXessTickets from "@/components/raffles/BuyXessTickets";
 
-type RaffleStatusResponse = {
+type RaffleType = "CREDITS" | "XESS";
+
+type RaffleStatusResp = {
   ok: boolean;
+  error?: string;
   weekKey: string;
-  closesAt: string;
-  user: {
-    id: string;
-    tier: string;
-    isDiamond: boolean;
-    hasLinkedWallet: boolean;
-    creditBalance: string;
-    creditBalanceFormatted: string;
-  } | null;
-  credits: {
-    id: string;
-    status: string;
-    userPoolAtomic: string;
-    matchPoolAtomic: string;
-    rolloverAtomic: string;
-    totalPoolAtomic: string;
-    totalPoolFormatted: string;
-    prizes: { first: string; second: string; third: string };
-    totalTickets: number;
-    totalUsers: number;
-    userTickets: number;
-    winProbability: number;
-    winProbabilityFormatted: string;
-    ticketPriceMicro: string;
-  };
-  xess: {
-    id: string;
-    status: string;
-    userPoolAtomic: string;
-    matchPoolAtomic: string;
-    rolloverAtomic: string;
-    totalPoolAtomic: string;
-    totalPoolFormatted: string;
-    prizes: { first: string; second: string; third: string };
-    totalTickets: number;
-    totalUsers: number;
-    userTickets: number;
-    winProbability: number;
-    winProbabilityFormatted: string;
-    ticketPriceAtomic: string;
+  closesAt: string; // ISO
+  creditsBalanceMicro: string;
+  raffles: {
+    credits: null | {
+      id: string;
+      status: "OPEN" | "CLOSED" | "DRAWN";
+      ticketPriceMicro: string | null;
+      totalTickets: string;
+      yourTickets: string;
+      chanceAnyPct: number;
+      pools: { user: string; match: string; rollover: string; total: string };
+    };
+    xess: null | {
+      id: string;
+      status: "OPEN" | "CLOSED" | "DRAWN";
+      ticketPriceAtomic: string | null;
+      totalTickets: string;
+      yourTickets: string;
+      chanceAnyPct: number;
+      pools: { user: string; match: string; rollover: string; total: string };
+    };
   };
   pendingWins: Array<{
     winnerId: string;
-    raffleType: string;
+    raffleType: RaffleType;
     weekKey: string;
     place: number;
     prizeCreditsMicro: string;
     prizeXessAtomic: string;
-    expiresAt: string;
-  }>;
-  previousWinners: Array<{
-    weekKey: string;
-    type: string;
-    place: number;
-    prizeAtomic: string;
-    status: string;
-    displayName: string;
+    expiresAt: string; // ISO
   }>;
 };
 
-function formatCountdown(targetDate: Date): string {
-  const now = new Date();
-  const diff = targetDate.getTime() - now.getTime();
-
-  if (diff <= 0) return "Closed";
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-  return `${minutes}m ${seconds}s`;
+function fmtInt(n: string) {
+  try {
+    return BigInt(n).toLocaleString();
+  } catch {
+    return n;
+  }
 }
 
-function formatMicroCredits(micro: string): string {
-  const val = Number(micro) / 1000;
-  if (val === Math.floor(val)) return val.toFixed(0);
-  return val.toFixed(2);
+function microToCreditsStr(micro: string) {
+  try {
+    const v = BigInt(micro);
+    const whole = v / 1000n;
+    const frac = v % 1000n;
+    if (frac === 0n) return whole.toLocaleString();
+    const fracStr = frac.toString().padStart(3, "0").replace(/0+$/, "");
+    return `${whole.toLocaleString()}.${fracStr}`;
+  } catch {
+    return micro;
+  }
 }
 
-function formatXessAtomic(atomic: string): string {
-  const val = Number(atomic) / 1_000_000_000;
-  if (val === Math.floor(val)) return val.toFixed(0);
-  return val.toFixed(2);
+function atomicToXessStr(atomic: string) {
+  try {
+    const v = BigInt(atomic);
+    const whole = v / 1_000_000_000n;
+    const frac = v % 1_000_000_000n;
+    if (frac === 0n) return whole.toLocaleString();
+    const fracStr = frac.toString().padStart(9, "0").replace(/0+$/, "");
+    return `${whole.toLocaleString()}.${fracStr}`;
+  } catch {
+    return atomic;
+  }
 }
 
-function getOrdinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+function placeLabel(p: number) {
+  if (p === 1) return "1st";
+  if (p === 2) return "2nd";
+  if (p === 3) return "3rd";
+  return `${p}th`;
+}
+
+function Countdown({ closesAtIso }: { closesAtIso: string }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const text = useMemo(() => {
+    const closesAt = new Date(closesAtIso).getTime();
+    const ms = closesAt - now;
+    if (!Number.isFinite(closesAt) || ms <= 0) return "Closed (drawing soon)";
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${d}d ${h}h ${m}m ${sec}s`;
+  }, [closesAtIso, now]);
+
+  return <span className="text-white">{text}</span>;
+}
+
+/**
+ * Minimal credits ticket buyer (uses your existing API /api/raffles/buy/credits)
+ */
+function BuyCreditsTickets({ onSuccess }: { onSuccess: () => void }) {
+  const [qty, setQty] = useState("1");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const qtyBig = useMemo(() => {
+    try {
+      return BigInt(qty.trim() || "0");
+    } catch {
+      return 0n;
+    }
+  }, [qty]);
+
+  const buy = async () => {
+    setErr(null);
+    if (qtyBig <= 0n) {
+      setErr("Enter a valid ticket amount.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const res = await fetch("/api/raffles/buy/credits", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ quantity: qtyBig.toString() }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "buy_failed");
+      onSuccess();
+      setQty("1");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErr(msg);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+      <div className="text-white font-semibold mb-2">Buy Credits Raffle Tickets</div>
+      <div className="text-white/60 text-sm mb-3">
+        Price: <span className="text-white">1 Special Credit</span> per ticket
+      </div>
+
+      <div className="flex gap-2 items-center">
+        <input
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          className="w-28 rounded-lg bg-black/60 border border-white/10 px-3 py-2 text-white"
+          inputMode="numeric"
+          placeholder="1"
+          disabled={busy}
+        />
+        <button
+          onClick={buy}
+          disabled={busy}
+          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold transition disabled:opacity-60"
+        >
+          {busy ? "Buying..." : "Buy Tickets"}
+        </button>
+      </div>
+
+      {err && <div className="mt-3 text-sm text-red-300">{err}</div>}
+    </div>
+  );
 }
 
 export default function RafflesPage() {
-  const router = useRouter();
+  const [data, setData] = useState<RaffleStatusResp | null>(null);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<RaffleStatusResponse | null>(null);
-  const [activeTab, setActiveTab] = useState<"credits" | "xess">("credits");
-  const [countdown, setCountdown] = useState("");
-  const [buying, setBuying] = useState(false);
-  const [claiming, setClaiming] = useState<string | null>(null);
-  const [ticketAmount, setTicketAmount] = useState(1);
+  const [err, setErr] = useState<string | null>(null);
+  const [claimBusy, setClaimBusy] = useState<string | null>(null);
 
-  const fetchStatus = useCallback(async () => {
+  const refetch = useCallback(async () => {
+    setErr(null);
+    setLoading(true);
     try {
       const res = await fetch("/api/raffles/status", { cache: "no-store" });
-      const json = await res.json();
-      if (json.ok) {
-        setData(json);
-      }
-    } catch {
-      console.error("Failed to fetch raffle status");
+      const json = (await res.json().catch(() => null)) as RaffleStatusResp | null;
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "failed_to_load");
+      setData(json);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErr(msg);
+      setData(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+    refetch();
+  }, [refetch]);
 
-  // Update countdown every second
-  useEffect(() => {
-    if (!data?.closesAt) return;
+  const creditsBalance = useMemo(() => microToCreditsStr(data?.creditsBalanceMicro ?? "0"), [data]);
 
-    const updateCountdown = () => {
-      setCountdown(formatCountdown(new Date(data.closesAt)));
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [data?.closesAt]);
-
-  async function handleBuyCreditsTickets() {
-    if (!data?.user?.isDiamond) {
-      toast.error("Diamond membership required");
-      return;
-    }
-
-    setBuying(true);
+  const claim = async (w: RaffleStatusResp["pendingWins"][number]) => {
+    setClaimBusy(w.winnerId);
+    setErr(null);
     try {
-      const res = await fetch("/api/raffles/buy/credits", {
+      const endpoint =
+        w.raffleType === "CREDITS" ? "/api/raffles/claim/credits" : "/api/raffles/claim/xess";
+
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity: ticketAmount }),
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ winnerId: w.winnerId }),
       });
-      const json = await res.json();
 
-      if (json.ok) {
-        toast.success(`Purchased ${ticketAmount} ticket${ticketAmount > 1 ? "s" : ""}`);
-        await fetchStatus();
-        setTicketAmount(1);
-      } else {
-        toast.error(json.message || json.error || "Failed to buy tickets");
-      }
-    } catch {
-      toast.error("Failed to buy tickets");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) throw new Error(json?.error || "claim_failed");
+
+      await refetch();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErr(msg);
     } finally {
-      setBuying(false);
+      setClaimBusy(null);
     }
-  }
-
-  async function handleClaimCredits(winnerId: string) {
-    setClaiming(winnerId);
-    try {
-      const res = await fetch("/api/raffles/claim/credits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ winnerId }),
-      });
-      const json = await res.json();
-
-      if (json.ok) {
-        toast.success("Prize claimed successfully!");
-        await fetchStatus();
-      } else {
-        toast.error(json.message || json.error || "Failed to claim prize");
-      }
-    } catch {
-      toast.error("Failed to claim prize");
-    } finally {
-      setClaiming(null);
-    }
-  }
-
-  async function handleClaimXess(winnerId: string) {
-    setClaiming(winnerId);
-    try {
-      const res = await fetch("/api/raffles/claim/xess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ winnerId }),
-      });
-      const json = await res.json();
-
-      if (json.ok) {
-        toast.success("XESS prize claimed! Check your wallet.");
-        await fetchStatus();
-      } else {
-        toast.error(json.message || json.error || "Failed to claim prize");
-      }
-    } catch {
-      toast.error("Failed to claim prize");
-    } finally {
-      setClaiming(null);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <TopNav />
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  const raffle = activeTab === "credits" ? data?.credits : data?.xess;
-  const pendingWins = data?.pendingWins?.filter((w) =>
-    activeTab === "credits" ? w.raffleType === "CREDITS" : w.raffleType === "XESS"
-  ) || [];
-
-  const maxTickets = activeTab === "credits" && data?.user
-    ? Math.floor(Number(data.user.creditBalance) / Number(data.credits.ticketPriceMicro))
-    : 0;
+  };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <TopNav />
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Weekly Raffles</h1>
-        <p className="text-white/60 mb-8">
-          Win credits or XESS tokens every week! Diamond members can buy tickets with Special Credits.
-        </p>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setActiveTab("credits")}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === "credits"
-                ? "bg-purple-600 text-white"
-                : "bg-white/10 text-white/70 hover:bg-white/20"
-            }`}
-          >
-            Credits Raffle
-          </button>
-          <button
-            onClick={() => setActiveTab("xess")}
-            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === "xess"
-                ? "bg-purple-600 text-white"
-                : "bg-white/10 text-white/70 hover:bg-white/20"
-            }`}
-          >
-            XESS Raffle
-          </button>
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">Raffles</h1>
+        <div className="mt-2 text-white/60">
+          Weekly raffles close every <span className="text-white">Sunday 11:59pm PT</span>. Unclaimed
+          prizes roll into the next week's pot.
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Left Column - Raffle Info */}
-          <div className="space-y-6">
-            {/* Countdown Card */}
-            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 rounded-xl p-6 border border-purple-500/30">
-              <div className="text-sm text-white/60 mb-1">Week {data?.weekKey}</div>
-              <div className="text-2xl font-bold mb-2">Time Remaining</div>
-              <div className="text-4xl font-mono font-bold text-purple-300">{countdown}</div>
-              <div className="text-sm text-white/50 mt-2">
-                Closes: {data?.closesAt ? new Date(data.closesAt).toLocaleString() : "..."}
+      {loading && (
+        <div className="rounded-2xl border border-white/10 bg-black/40 p-6 text-white/70">
+          Loading raffles…
+        </div>
+      )}
+
+      {!loading && err && (
+        <div className="rounded-2xl border border-red-500/30 bg-red-900/20 p-6 text-red-200">
+          {err}
+        </div>
+      )}
+
+      {!loading && data && (
+        <>
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
+              <div className="text-white/60 text-sm">Week Ending (PT)</div>
+              <div className="text-white font-semibold text-lg">{data.weekKey}</div>
+              <div className="mt-2 text-white/60 text-sm">
+                Time left: <Countdown closesAtIso={data.closesAt} />
               </div>
             </div>
 
-            {/* Prize Pool Card */}
-            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold mb-4">Prize Pool</h3>
-
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-white/60">User Pool</span>
-                  <span>
-                    {activeTab === "credits"
-                      ? formatMicroCredits(raffle?.userPoolAtomic || "0")
-                      : formatXessAtomic(raffle?.userPoolAtomic || "0")}{" "}
-                    {activeTab === "credits" ? "Credits" : "XESS"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Match Pool</span>
-                  <span>
-                    {activeTab === "credits"
-                      ? formatMicroCredits(raffle?.matchPoolAtomic || "0")
-                      : formatXessAtomic(raffle?.matchPoolAtomic || "0")}{" "}
-                    {activeTab === "credits" ? "Credits" : "XESS"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Rollover</span>
-                  <span>
-                    {activeTab === "credits"
-                      ? formatMicroCredits(raffle?.rolloverAtomic || "0")
-                      : formatXessAtomic(raffle?.rolloverAtomic || "0")}{" "}
-                    {activeTab === "credits" ? "Credits" : "XESS"}
-                  </span>
-                </div>
-                <div className="border-t border-white/10 pt-3 flex justify-between font-semibold">
-                  <span>Total Pool</span>
-                  <span className="text-purple-300">{raffle?.totalPoolFormatted || "0"}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-yellow-400">1st Place (50%)</span>
-                  <span>
-                    {activeTab === "credits"
-                      ? formatMicroCredits(raffle?.prizes.first || "0")
-                      : formatXessAtomic(raffle?.prizes.first || "0")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">2nd Place (30%)</span>
-                  <span>
-                    {activeTab === "credits"
-                      ? formatMicroCredits(raffle?.prizes.second || "0")
-                      : formatXessAtomic(raffle?.prizes.second || "0")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-amber-600">3rd Place (20%)</span>
-                  <span>
-                    {activeTab === "credits"
-                      ? formatMicroCredits(raffle?.prizes.third || "0")
-                      : formatXessAtomic(raffle?.prizes.third || "0")}
-                  </span>
-                </div>
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
+              <div className="text-white/60 text-sm">Your Special Credits</div>
+              <div className="text-white font-semibold text-lg">{creditsBalance}</div>
+              <div className="mt-2 text-white/50 text-xs">
+                (Credits are stored precisely; decimals are normal.)
               </div>
             </div>
 
-            {/* Stats Card */}
-            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold mb-4">Statistics</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-2xl font-bold">{raffle?.totalTickets || 0}</div>
-                  <div className="text-sm text-white/60">Total Tickets</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{raffle?.totalUsers || 0}</div>
-                  <div className="text-sm text-white/60">Participants</div>
-                </div>
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-5">
+              <div className="text-white/60 text-sm">How winners are picked</div>
+              <div className="text-white/80 text-sm mt-1">
+                More tickets = more entries. We show only your <span className="text-white">chance to win any prize</span>.
+              </div>
+              <div className="text-white/50 text-xs mt-2">
+                Prizes: 1st / 2nd / 3rd. Unclaimed prizes roll over.
               </div>
             </div>
           </div>
 
-          {/* Right Column - User Actions */}
-          <div className="space-y-6">
-            {/* User Status Card */}
-            {data?.user ? (
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <h3 className="text-lg font-semibold mb-4">Your Status</h3>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Membership</span>
-                    <span
-                      className={`font-medium ${
-                        data.user.isDiamond ? "text-purple-400" : "text-white/70"
-                      }`}
-                    >
-                      {data.user.tier.toUpperCase()}
-                    </span>
-                  </div>
-
-                  {activeTab === "credits" && (
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Credit Balance</span>
-                      <span className="font-medium">{data.user.creditBalanceFormatted} Credits</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Your Tickets</span>
-                    <span className="font-medium">{raffle?.userTickets || 0}</span>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Win Chance</span>
-                    <span className="font-medium text-green-400">
-                      {raffle?.winProbabilityFormatted || "0%"}
-                    </span>
-                  </div>
-                </div>
+          {/* Raffles */}
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Credits raffle */}
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
+              <div className="flex items-center justify-between">
+                <div className="text-white font-bold text-xl">Special Credits Raffle</div>
+                <div className="text-white/60 text-sm">{data.raffles.credits?.status ?? "—"}</div>
               </div>
+
+              {data.raffles.credits ? (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                      <div className="text-white/60 text-sm">Your tickets</div>
+                      <div className="text-white font-semibold">{fmtInt(data.raffles.credits.yourTickets)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                      <div className="text-white/60 text-sm">Total tickets</div>
+                      <div className="text-white font-semibold">{fmtInt(data.raffles.credits.totalTickets)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-4 col-span-2">
+                      <div className="text-white/60 text-sm">Chance to win any prize</div>
+                      <div className="text-white font-extrabold text-2xl">
+                        {data.raffles.credits.chanceAnyPct.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-white/60 text-sm mb-2">Prize pool (credits)</div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-white/60">User pool</div>
+                      <div className="text-white text-right">{microToCreditsStr(data.raffles.credits.pools.user)}</div>
+                      <div className="text-white/60">System match</div>
+                      <div className="text-white text-right">{microToCreditsStr(data.raffles.credits.pools.match)}</div>
+                      <div className="text-white/60">Rollover</div>
+                      <div className="text-white text-right">{microToCreditsStr(data.raffles.credits.pools.rollover)}</div>
+                      <div className="text-white/60 font-semibold">Total</div>
+                      <div className="text-white text-right font-semibold">{microToCreditsStr(data.raffles.credits.pools.total)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <BuyCreditsTickets onSuccess={refetch} />
+                  </div>
+                </>
+              ) : (
+                <div className="mt-4 text-white/60">Credits raffle not available.</div>
+              )}
+            </div>
+
+            {/* XESS raffle */}
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
+              <div className="flex items-center justify-between">
+                <div className="text-white font-bold text-xl">XESS Raffle</div>
+                <div className="text-white/60 text-sm">{data.raffles.xess?.status ?? "—"}</div>
+              </div>
+
+              {data.raffles.xess ? (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                      <div className="text-white/60 text-sm">Your tickets</div>
+                      <div className="text-white font-semibold">{fmtInt(data.raffles.xess.yourTickets)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                      <div className="text-white/60 text-sm">Total tickets</div>
+                      <div className="text-white font-semibold">{fmtInt(data.raffles.xess.totalTickets)}</div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-4 col-span-2">
+                      <div className="text-white/60 text-sm">Chance to win any prize</div>
+                      <div className="text-white font-extrabold text-2xl">
+                        {data.raffles.xess.chanceAnyPct.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-white/60 text-sm mb-2">Prize pool (XESS)</div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-white/60">User pool</div>
+                      <div className="text-white text-right">{atomicToXessStr(data.raffles.xess.pools.user)}</div>
+                      <div className="text-white/60">System match</div>
+                      <div className="text-white text-right">{atomicToXessStr(data.raffles.xess.pools.match)}</div>
+                      <div className="text-white/60">Rollover</div>
+                      <div className="text-white text-right">{atomicToXessStr(data.raffles.xess.pools.rollover)}</div>
+                      <div className="text-white/60 font-semibold">Total</div>
+                      <div className="text-white text-right font-semibold">{atomicToXessStr(data.raffles.xess.pools.total)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <BuyXessTickets onSuccess={refetch} />
+                  </div>
+                </>
+              ) : (
+                <div className="mt-4 text-white/60">XESS raffle not available.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Pending prizes */}
+          <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6">
+            <div className="text-white font-bold text-xl">Your prizes</div>
+            <div className="text-white/60 text-sm mt-1">
+              You must claim before expiry. Unclaimed prizes roll into the next week's pot.
+            </div>
+
+            {data.pendingWins.length === 0 ? (
+              <div className="mt-4 text-white/60">No pending prizes right now.</div>
             ) : (
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10 text-center">
-                <p className="text-white/60 mb-4">Sign in to participate in raffles</p>
-                <Link
-                  href="/login"
-                  className="inline-block px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
-                >
-                  Sign In
-                </Link>
-              </div>
-            )}
-
-            {/* Buy Tickets Card */}
-            {data?.user && activeTab === "credits" && (
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <h3 className="text-lg font-semibold mb-4">Buy Tickets</h3>
-
-                {!data.user.isDiamond ? (
-                  <div className="text-center py-4">
-                    <p className="text-white/60 mb-4">Diamond membership required to buy tickets</p>
-                    <Link
-                      href="/signup"
-                      className="inline-block px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
-                    >
-                      Upgrade to Diamond
-                    </Link>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3 mb-4">
-                      <button
-                        onClick={() => setTicketAmount(Math.max(1, ticketAmount - 1))}
-                        className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center"
-                        disabled={buying}
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        value={ticketAmount}
-                        onChange={(e) =>
-                          setTicketAmount(
-                            Math.min(Math.max(1, parseInt(e.target.value) || 1), maxTickets || 1000)
-                          )
-                        }
-                        className="flex-1 bg-white/10 rounded-lg px-4 py-2 text-center font-medium"
-                        min={1}
-                        max={maxTickets || 1000}
-                      />
-                      <button
-                        onClick={() => setTicketAmount(Math.min(ticketAmount + 1, maxTickets || 1000))}
-                        className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center"
-                        disabled={buying}
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <div className="flex gap-2 mb-4">
-                      {[1, 10, 100].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setTicketAmount(Math.min(n, maxTickets || n))}
-                          className="flex-1 py-1 rounded bg-white/10 hover:bg-white/20 text-sm"
-                          disabled={buying}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setTicketAmount(maxTickets || 1)}
-                        className="flex-1 py-1 rounded bg-white/10 hover:bg-white/20 text-sm"
-                        disabled={buying || maxTickets === 0}
-                      >
-                        Max
-                      </button>
-                    </div>
-
-                    <div className="text-sm text-white/60 mb-4">
-                      Cost: {ticketAmount} credit{ticketAmount !== 1 ? "s" : ""} (Max: {maxTickets})
+              <div className="mt-4 space-y-3">
+                {data.pendingWins.map((w) => (
+                  <div
+                    key={w.winnerId}
+                    className="rounded-xl border border-white/10 bg-black/30 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                  >
+                    <div>
+                      <div className="text-white font-semibold">
+                        {w.raffleType === "CREDITS" ? "Credits Raffle" : "XESS Raffle"} — {placeLabel(w.place)}
+                      </div>
+                      <div className="text-white/60 text-sm">
+                        Expires: <span className="text-white">{new Date(w.expiresAt).toLocaleString()}</span>
+                      </div>
+                      <div className="text-white/60 text-sm mt-1">
+                        Prize:{" "}
+                        {w.raffleType === "CREDITS" ? (
+                          <span className="text-white font-mono">{microToCreditsStr(w.prizeCreditsMicro)} credits</span>
+                        ) : (
+                          <span className="text-white font-mono">{atomicToXessStr(w.prizeXessAtomic)} XESS</span>
+                        )}
+                      </div>
                     </div>
 
                     <button
-                      onClick={handleBuyCreditsTickets}
-                      disabled={buying || maxTickets === 0 || raffle?.status !== "OPEN"}
-                      className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:bg-white/10 disabled:text-white/40 font-medium transition-colors"
+                      onClick={() => claim(w)}
+                      disabled={claimBusy === w.winnerId}
+                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold transition disabled:opacity-60"
                     >
-                      {buying ? "Buying..." : "Buy Tickets"}
+                      {claimBusy === w.winnerId ? "Claiming..." : "Claim prize"}
                     </button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* XESS Raffle - Buy Tickets */}
-            {activeTab === "xess" && (
-              <BuyXessTickets onSuccess={fetchStatus} />
-            )}
-
-            {/* Pending Wins */}
-            {pendingWins.length > 0 && (
-              <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 rounded-xl p-6 border border-yellow-500/30">
-                <h3 className="text-lg font-semibold mb-4 text-yellow-400">
-                  Unclaimed Prizes!
-                </h3>
-
-                <div className="space-y-3">
-                  {pendingWins.map((win) => (
-                    <div key={win.winnerId} className="flex items-center justify-between bg-black/30 rounded-lg p-3">
-                      <div>
-                        <div className="font-medium">{getOrdinal(win.place)} Place</div>
-                        <div className="text-sm text-white/60">
-                          {activeTab === "credits"
-                            ? formatMicroCredits(win.prizeCreditsMicro)
-                            : formatXessAtomic(win.prizeXessAtomic)}{" "}
-                          {activeTab === "credits" ? "Credits" : "XESS"}
-                        </div>
-                        <div className="text-xs text-white/40">
-                          Week: {win.weekKey} &middot; Expires: {new Date(win.expiresAt).toLocaleString()}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() =>
-                          activeTab === "credits"
-                            ? handleClaimCredits(win.winnerId)
-                            : handleClaimXess(win.winnerId)
-                        }
-                        disabled={claiming !== null}
-                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:bg-white/10 rounded-lg font-medium transition-colors"
-                      >
-                        {claiming === win.winnerId ? "..." : "Claim"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Previous Winners */}
-        {data?.previousWinners && data.previousWinners.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6">Recent Winners</h2>
-
-            <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left px-4 py-3 text-white/60 font-medium">Week</th>
-                    <th className="text-left px-4 py-3 text-white/60 font-medium">Type</th>
-                    <th className="text-left px-4 py-3 text-white/60 font-medium">Place</th>
-                    <th className="text-left px-4 py-3 text-white/60 font-medium">Winner</th>
-                    <th className="text-right px-4 py-3 text-white/60 font-medium">Prize</th>
-                    <th className="text-right px-4 py-3 text-white/60 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.previousWinners.map((w, i) => (
-                    <tr key={i} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="px-4 py-3 text-sm">{w.weekKey}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            w.type === "CREDITS" ? "bg-purple-600/30 text-purple-300" : "bg-blue-600/30 text-blue-300"
-                          }`}
-                        >
-                          {w.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`font-medium ${
-                            w.place === 1
-                              ? "text-yellow-400"
-                              : w.place === 2
-                                ? "text-gray-400"
-                                : "text-amber-600"
-                          }`}
-                        >
-                          {getOrdinal(w.place)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-sm">{w.displayName}</td>
-                      <td className="px-4 py-3 text-right">
-                        {w.type === "CREDITS"
-                          ? formatMicroCredits(w.prizeAtomic)
-                          : formatXessAtomic(w.prizeAtomic)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span
-                          className={`text-xs px-2 py-1 rounded ${
-                            w.status === "CLAIMED"
-                              ? "bg-green-600/30 text-green-300"
-                              : w.status === "EXPIRED"
-                                ? "bg-red-600/30 text-red-300"
-                                : "bg-yellow-600/30 text-yellow-300"
-                          }`}
-                        >
-                          {w.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {/* Refresh */}
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={refetch}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold transition"
+            >
+              Refresh
+            </button>
           </div>
-        )}
-
-        {/* Info Section */}
-        <div className="mt-12 bg-white/5 rounded-xl p-6 border border-white/10">
-          <h3 className="text-xl font-semibold mb-4">How It Works</h3>
-          <div className="grid md:grid-cols-3 gap-6 text-sm text-white/70">
-            <div>
-              <div className="text-white font-medium mb-2">1. Get Credits</div>
-              <p>
-                Diamond members earn Special Credits daily based on their XESS holdings.
-                Higher holdings = more credits per day.
-              </p>
-            </div>
-            <div>
-              <div className="text-white font-medium mb-2">2. Buy Tickets</div>
-              <p>
-                Use your credits to buy raffle tickets. Each ticket costs 1 credit.
-                More tickets = higher chance to win.
-              </p>
-            </div>
-            <div>
-              <div className="text-white font-medium mb-2">3. Win Prizes</div>
-              <p>
-                Winners are drawn every Sunday night. Top 3 win 50%, 30%, and 20% of the pool.
-                Claim within 7 days or prizes roll over.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
+        </>
+      )}
     </div>
   );
 }

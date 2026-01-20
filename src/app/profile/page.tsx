@@ -39,6 +39,7 @@ type ProfileData = {
     referredById: string | null;
     referredByEmail: string | null;
   };
+  specialCreditsMicro: string;
 };
 
 type AnalyticsData = {
@@ -158,6 +159,11 @@ export default function ProfilePage() {
   }>(null);
   const [claimAllBusy, setClaimAllBusy] = useState(false);
   const [claimAllProgress, setClaimAllProgress] = useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = useState<{
+    count: number;
+    totalXess: string;
+    txSigs: string[];
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -266,6 +272,7 @@ export default function ProfilePage() {
     setClaimAllBusy(true);
     setClaimAllProgress(null);
     setClaimErr(null);
+    setClaimSuccess(null);
 
     try {
       // Get all claimable epochs data
@@ -798,6 +805,32 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Special Credits Card */}
+              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                <h2 className="text-lg font-semibold text-white mb-4">Special Credits</h2>
+                <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-cyan-400/80 uppercase tracking-wide">
+                        Balance
+                      </div>
+                      <div className="text-2xl font-bold text-cyan-400 mt-1">
+                        {(Number(data.specialCreditsMicro) / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
+                      </div>
+                    </div>
+                    <Link
+                      href="/raffles"
+                      className="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm"
+                    >
+                      Play Raffles
+                    </Link>
+                  </div>
+                  <p className="text-xs text-white/50 mt-3">
+                    Diamond members earn special credits daily based on XESS holdings. Use credits to enter the weekly raffle.
+                  </p>
+                </div>
+              </div>
+
               {/* XESS Rewards Card (Diamond only) */}
               {isDiamond && analyticsData && (
                 <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
@@ -1128,16 +1161,16 @@ export default function ProfilePage() {
                     <p className="text-white/60 text-sm mb-4">
                       Were you referred by someone? Enter their referral code to link your account.
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         type="text"
-                        placeholder="Enter referral code (e.g., XESS-ABC123)"
+                        placeholder="Enter code (e.g., XESS-ABC123)"
                         value={refCodeInput}
                         onChange={(e) => {
                           setRefCodeInput(e.target.value.toUpperCase());
                           setRefCodeError(null);
                         }}
-                        className="flex-1 rounded-xl border border-white/10 bg-black/50 px-4 py-2 text-white placeholder:text-white/30 focus:border-purple-400/50 focus:outline-none font-mono"
+                        className="flex-1 rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-white placeholder:text-white/30 focus:border-purple-400/50 focus:outline-none font-mono text-base"
                       />
                       <button
                         onClick={async () => {
@@ -1175,7 +1208,7 @@ export default function ProfilePage() {
                           }
                         }}
                         disabled={refCodeLoading || !refCodeInput.trim()}
-                        className="px-6 py-2 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {refCodeLoading ? "..." : "Submit"}
                       </button>

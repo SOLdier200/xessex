@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatXess, rewardTypeLabel } from "@/lib/formatXess";
+import { formatXess6, rewardTypeLabel } from "@/lib/formatXess";
 
 type WeekSummary = {
   weekKey: string;
@@ -148,11 +148,11 @@ export default function RewardsTab() {
       <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-4">
         <div className="text-sm text-gray-400 mb-1">All-Time History</div>
         <div className="text-2xl font-bold text-white">
-          {formatXess(allTime.total)} <span className="text-purple-400">XESS</span>
+          {formatXess6(allTime.total)} <span className="text-purple-400">XESS</span>
         </div>
         {BigInt(allTime.paid) > 0n && (
           <div className="text-sm text-green-400 mt-1">
-            {formatXess(allTime.paid)} XESS paid
+            {formatXess6(allTime.paid)} XESS paid
           </div>
         )}
       </div>
@@ -189,7 +189,7 @@ export default function RewardsTab() {
                   Week of {formatWeekLabel(weekDetail.weekKey)}
                 </div>
                 <div className="text-xl font-bold text-white">
-                  {formatXess(weekDetail.totals.total)} XESS
+                  {formatXess6(weekDetail.totals.total)} XESS
                 </div>
               </div>
 
@@ -220,12 +220,12 @@ export default function RewardsTab() {
             <div className="flex gap-4 mt-2 text-sm">
               {BigInt(weekDetail.totals.pending) > 0n && (
                 <span className="text-yellow-400">
-                  {formatXess(weekDetail.totals.pending)} pending
+                  {formatXess6(weekDetail.totals.pending)} pending
                 </span>
               )}
               {BigInt(weekDetail.totals.paid) > 0n && (
                 <span className="text-green-400">
-                  {formatXess(weekDetail.totals.paid)} paid
+                  {formatXess6(weekDetail.totals.paid)} paid
                 </span>
               )}
             </div>
@@ -245,7 +245,7 @@ export default function RewardsTab() {
                 </div>
                 <div className="text-right">
                   <div className="text-white font-medium">
-                    {formatXess(data.amount)} XESS
+                    {formatXess6(data.amount)} XESS
                   </div>
                   <div
                     className={`text-xs ${
@@ -282,7 +282,7 @@ export default function RewardsTab() {
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <div className="text-white font-medium">{formatXess(r.amount)} XESS</div>
+                      <div className="text-white font-medium">{formatXess6(r.amount)} XESS</div>
 
                       {isPaid && r.txSig ? (
                         <a
