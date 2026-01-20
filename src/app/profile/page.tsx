@@ -262,6 +262,13 @@ export default function ProfilePage() {
   useEffect(() => {
     if (data?.membership === "DIAMOND") {
       refreshLivePending();
+
+      // Auto-refresh pending data every 4 minutes
+      const interval = setInterval(() => {
+        refreshLivePending();
+      }, 240000);
+
+      return () => clearInterval(interval);
     }
   }, [data?.membership]);
 
@@ -305,6 +312,8 @@ export default function ProfilePage() {
 
       let successCount = 0;
       const totalEpochs = allData.claimableEpochs.length;
+      const claimedTxSigs: string[] = [];
+      let claimedAmountAtomic = 0n;
 
       for (let i = 0; i < totalEpochs; i++) {
         const epoch = allData.claimableEpochs[i];
@@ -380,10 +389,24 @@ export default function ProfilePage() {
           });
 
           successCount++;
+          claimedTxSigs.push(sig);
+          claimedAmountAtomic += BigInt(epoch.amountAtomic);
         } catch (epochErr) {
           console.error(`Failed to claim epoch ${epoch.epoch}:`, epochErr);
           // Continue to next epoch
         }
+      }
+
+      if (successCount > 0) {
+        // Calculate total claimed in XESS (9 decimals)
+        const totalXess = (Number(claimedAmountAtomic) / 1_000_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 });
+        setClaimSuccess({
+          count: successCount,
+          totalXess,
+          txSigs: claimedTxSigs,
+        });
+        // Clear the unclaimed weeks from local state immediately
+        setLivePending((prev) => prev ? { ...prev, unclaimedWeeks: [], totalUnclaimed: "0", totalUnclaimedAtomic: "0" } : null);
       }
 
       if (successCount === totalEpochs) {
@@ -394,8 +417,8 @@ export default function ProfilePage() {
         toast.error("Failed to claim any weeks");
       }
 
-      // Refresh data
-      await Promise.all([refreshClaimSummary(), refreshLivePending()]);
+      // Refresh data in background
+      Promise.all([refreshClaimSummary(), refreshLivePending()]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "CLAIM_ALL_FAILED";
       setClaimErr(msg);
@@ -916,8 +939,45 @@ export default function ProfilePage() {
                     </div>
                   )}
 
+                  {/* Claim Success Message */}
+                  {claimSuccess && (
+                    <div className="mb-4 p-4 bg-emerald-500/20 border border-emerald-400/50 rounded-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-emerald-400 font-semibold">
+                          Successfully Claimed {claimSuccess.totalXess} XESS
+                        </span>
+                      </div>
+                      <p className="text-sm text-white/70 mb-2">
+                        {claimSuccess.count} week{claimSuccess.count > 1 ? "s" : ""} claimed and transferred to your wallet.
+                      </p>
+                      {claimSuccess.txSigs.length > 0 && (
+                        <div className="space-y-1">
+                          {claimSuccess.txSigs.slice(0, 3).map((sig, i) => (
+                            <a
+                              key={sig}
+                              href={`https://explorer.solana.com/tx/${sig}?cluster=${process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "devnet"}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-xs text-emerald-400 hover:text-emerald-300 underline truncate"
+                            >
+                              Tx {i + 1}: {sig.slice(0, 20)}...{sig.slice(-8)}
+                            </a>
+                          ))}
+                          {claimSuccess.txSigs.length > 3 && (
+                            <span className="text-xs text-white/50">
+                              +{claimSuccess.txSigs.length - 3} more transactions
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Unclaimed Weeks */}
-                  {livePending && livePending.unclaimedWeeks.length > 0 && (
+                  {livePending && livePending.unclaimedWeeks.length > 0 && !claimSuccess && (
                     <div className="mb-4 p-4 bg-green-500/10 border border-green-400/30 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <div>
@@ -1162,16 +1222,22 @@ export default function ProfilePage() {
                       Were you referred by someone? Enter their referral code to link your account.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter code (e.g., XESS-ABC123)"
-                        value={refCodeInput}
-                        onChange={(e) => {
-                          setRefCodeInput(e.target.value.toUpperCase());
-                          setRefCodeError(null);
-                        }}
-                        className="flex-1 rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-white placeholder:text-white/30 focus:border-purple-400/50 focus:outline-none font-mono text-base"
-                      />
+                      <div className="flex items-stretch rounded-xl border border-white/10 bg-black/50 overflow-hidden flex-1">
+                        <span className="px-3 py-3 text-white/40 font-mono text-sm border-r border-white/10 bg-black/30">
+                          XESS-
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Enter remaining code"
+                          value={refCodeInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                            setRefCodeInput(raw);
+                            setRefCodeError(null);
+                          }}
+                          className="flex-1 bg-transparent px-4 py-3 text-white placeholder:text-white/30 focus:outline-none font-mono text-base"
+                        />
+                      </div>
                       <button
                         onClick={async () => {
                           if (!refCodeInput.trim()) return;
@@ -1181,7 +1247,7 @@ export default function ProfilePage() {
                             const res = await fetch("/api/profile/set-referrer", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ refCode: refCodeInput.trim() }),
+                              body: JSON.stringify({ refCode: `XESS-${refCodeInput.trim()}` }),
                             });
                             const json = await res.json();
                             if (json.ok) {
