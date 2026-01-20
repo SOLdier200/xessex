@@ -19,9 +19,9 @@ const IID_TO_PLAN = new Map<string, { tier: "MEMBER" | "DIAMOND"; days: number }
   ["429715526",  { tier: "MEMBER", days: 365 }],  // Member 1 year $40
 
   // DIAMOND
-  ["1754587706", { tier: "DIAMOND", days: 30 }],  // Diamond 1 month $18
+  ["355119372", { tier: "DIAMOND", days: 30 }],   // Diamond 1 month $9
   ["552457287",  { tier: "DIAMOND", days: 60 }],  // Diamond 2 months $30
-  ["1689634405", { tier: "DIAMOND", days: 365 }], // Diamond 1 year $100
+  ["2018295600", { tier: "DIAMOND", days: 365 }], // Diamond 1 year $70
 ]);
 
 const PLAN_META: Record<PlanCode, { tier: "MEMBER" | "DIAMOND"; days: number }> = {

@@ -94,14 +94,14 @@ export default function AdminControlsPage() {
           </Link>
         </div>
 
-        {/* Manage Subscriptions Card */}
+        {/* Manage NOWPayments Subscriptions Card */}
         <div className="neon-border rounded-2xl p-6 bg-black/30">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center">
               <span className="text-2xl">💎</span>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Manage Subscriptions</h2>
+              <h2 className="text-lg font-semibold text-white">Manage NOWPayments Subscriptions</h2>
               <p className="text-sm text-white/60">User membership management</p>
             </div>
           </div>
@@ -129,6 +129,25 @@ export default function AdminControlsPage() {
             className="block w-full px-4 py-3 rounded-xl border border-fuchsia-400/50 bg-fuchsia-500/20 text-fuchsia-200 font-semibold hover:bg-fuchsia-500/30 transition text-center"
           >
             Open Rewards
+          </Link>
+        </div>
+
+        {/* Payout Pipeline Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-400/50 flex items-center justify-center">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Payout Pipeline</h2>
+              <p className="text-sm text-white/60">Weekly distribute → claims flow</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/payout-pipeline"
+            className="block w-full px-4 py-3 rounded-xl border border-orange-400/50 bg-orange-500/20 text-orange-200 font-semibold hover:bg-orange-500/30 transition text-center"
+          >
+            Open Pipeline
           </Link>
         </div>
       </div>

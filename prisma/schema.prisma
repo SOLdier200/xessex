@@ -512,6 +512,7 @@ enum AdminActionKey {
   REBUILD_SEARCH_INDEX
   FLUSH_CLOUDFLARE_CACHE
   RECOMPUTE_ANALYTICS
+  BUILD_CLAIM_EPOCH
 }
 
 enum ClaimStatus {
@@ -542,6 +543,7 @@ model ClaimEpoch {
   createdAt    DateTime    @default(now())
   setOnChain   Boolean     @default(false)
   onChainTxSig String?
+  setOnChainAt DateTime?
 
   leaves       ClaimLeaf[]
 }

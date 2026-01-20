@@ -106,7 +106,13 @@ export async function POST(req: Request) {
     orderBy: { epoch: "desc" },
   });
 
+  console.log("[claim/prepare] User:", ctx.user.id, "Wallet:", wallet);
+  console.log("[claim/prepare] Latest on-chain epoch:", epochRow ? `#${epochRow.epoch} (weekKey: ${epochRow.weekKey})` : "NONE");
+
   if (!epochRow) {
+    // Debug: show all epochs
+    const allEpochs = await db.claimEpoch.findMany({ orderBy: { epoch: "desc" }, take: 5 });
+    console.log("[claim/prepare] All epochs:", allEpochs.map(e => ({ epoch: e.epoch, weekKey: e.weekKey, setOnChain: e.setOnChain })));
     return NextResponse.json({
       ok: true,
       claimable: false,
@@ -119,7 +125,12 @@ export async function POST(req: Request) {
     where: { epoch_wallet: { epoch: epochRow.epoch, wallet } },
   });
 
+  console.log("[claim/prepare] Leaf for wallet in epoch", epochRow.epoch, ":", leaf ? `index=${leaf.index}, amount=${leaf.amountAtomic}` : "NOT FOUND");
+
   if (!leaf) {
+    // Debug: show all leaves for this epoch
+    const allLeaves = await db.claimLeaf.findMany({ where: { epoch: epochRow.epoch }, take: 10 });
+    console.log("[claim/prepare] All leaves in epoch:", allLeaves.map(l => ({ wallet: l.wallet.slice(0, 8) + "...", amount: l.amountAtomic.toString() })));
     return NextResponse.json({
       ok: true,
       claimable: false,
@@ -148,9 +159,21 @@ export async function POST(req: Request) {
   // Check if already claimed on-chain
   const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
   const connection = new Connection(rpc, "confirmed");
+
+  console.log("[claim/prepare] Checking on-chain receipt PDA:", receiptPda.toBase58());
+  console.log("[claim/prepare] Using RPC:", rpc);
+
   const receiptInfo = await connection.getAccountInfo(receiptPda);
 
+  console.log("[claim/prepare] Receipt account exists:", !!receiptInfo);
+  if (receiptInfo) {
+    console.log("[claim/prepare] Receipt owner:", receiptInfo.owner.toBase58());
+    console.log("[claim/prepare] Program ID:", getProgramId().toBase58());
+    console.log("[claim/prepare] Owner matches program:", receiptInfo.owner.equals(getProgramId()));
+  }
+
   if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
+    console.log("[claim/prepare] ALREADY CLAIMED - returning early");
     return NextResponse.json({
       ok: true,
       claimable: false,
@@ -159,6 +182,8 @@ export async function POST(req: Request) {
       receipt: receiptPda.toBase58(),
     });
   }
+
+  console.log("[claim/prepare] NOT claimed yet - proceeding with claim data");
 
   // Return claim data with proof
   return NextResponse.json({

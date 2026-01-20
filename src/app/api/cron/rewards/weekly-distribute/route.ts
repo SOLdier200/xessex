@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { monthKeyUTC } from "@/lib/weekKey";
 import { getAdminConfig } from "@/lib/adminConfig";
-import { keccak256, encodePacked } from "viem";
 import { SubscriptionTier, SubscriptionStatus, Prisma } from "@prisma/client";
 
 // Verify cron secret
@@ -348,6 +347,31 @@ export async function POST(req: NextRequest) {
 
     // 5. Comments Pool (Diamond users proportional to diamondComments)
     console.log(`\n[weekly-distribute] === COMMENTS REWARDS ===`);
+
+    // DEBUG: Query raw stats WITHOUT eligibility filter to diagnose issues
+    const rawCommentStats = await db.weeklyUserStat.findMany({
+      where: {
+        weekKey,
+        diamondComments: { gt: 0 },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            solWallet: true,
+            subscription: {
+              select: { tier: true, status: true, expiresAt: true },
+            },
+          },
+        },
+      },
+    });
+    console.log(`[weekly-distribute] RAW comment stats (no eligibility filter): ${rawCommentStats.length} users`);
+    for (const stat of rawCommentStats) {
+      const sub = stat.user.subscription;
+      console.log(`  - User ${stat.userId.slice(0, 8)}... : ${stat.diamondComments} comments, wallet=${stat.user.solWallet ? "YES" : "NO"}, tier=${sub?.tier ?? "NONE"}, status=${sub?.status ?? "NONE"}, expires=${sub?.expiresAt?.toISOString() ?? "null"}`);
+    }
+
     const commentStats = await db.weeklyUserStat.findMany({
       where: {
         weekKey,
@@ -358,6 +382,7 @@ export async function POST(req: NextRequest) {
         user: { select: { id: true, solWallet: true } },
       },
     });
+    console.log(`[weekly-distribute] After Diamond eligibility filter: ${commentStats.length} users`);
 
     if (commentStats.length > 0) {
       const totalComments = commentStats.reduce((sum, s) => sum + s.diamondComments, 0);
@@ -379,7 +404,7 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No eligible Diamond commenters`);
     }
 
-    // Aggregate rewards by user (combine multiple reward types)
+    // Aggregate rewards by user for summary
     const userRewards = new Map<string, { amount: bigint; wallet: string; types: Set<string> }>();
     for (const r of rewards) {
       const existing = userRewards.get(r.userId);
@@ -397,68 +422,46 @@ export async function POST(req: NextRequest) {
 
     console.log(`\n[weekly-distribute] Total rewards: ${rewards.length}, unique users: ${userRewards.size}`);
 
-    // Build merkle tree
-    const leaves: { userId: string; wallet: string; amount: bigint; hash: `0x${string}` }[] = [];
-    let index = 0;
-    for (const [userId, data] of userRewards) {
-      const leaf = keccak256(
-        encodePacked(
-          ["uint256", "address", "uint256"],
-          [BigInt(index), data.wallet as `0x${string}`, data.amount]
-        )
-      );
-      leaves.push({ userId, wallet: data.wallet, amount: data.amount, hash: leaf });
-      index++;
-    }
-
-    // Simple merkle root calculation
-    const merkleRoot = leaves.length > 0
-      ? calculateMerkleRoot(leaves.map(l => l.hash))
-      : "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-    // Generate proofs for each leaf
-    const proofs = generateMerkleProofs(leaves.map(l => l.hash));
+    // Total amount for this week
+    const totalAmount = Array.from(userRewards.values()).reduce((sum, r) => sum + r.amount, 0n);
 
     // Create RewardBatch and RewardEvents in a transaction
+    // NOTE: Merkle tree is built separately by build-week cron using our Solana-compatible merkle library.
+    // RewardEvents are marked PAID here so build-week can aggregate them into a ClaimEpoch.
     const result = await db.$transaction(async (tx) => {
-      // Create batch
+      // Create batch (placeholder merkle root - actual root is in ClaimEpoch)
       const batch = await tx.rewardBatch.create({
         data: {
           weekKey,
-          merkleRoot,
-          totalAmount: Array.from(userRewards.values()).reduce((sum, r) => sum + r.amount, 0n),
+          merkleRoot: "pending_build_week",
+          totalAmount,
           totalUsers: userRewards.size,
         },
       });
 
-      // Create individual RewardEvents
-      let eventIndex = 0;
+      // Create individual RewardEvents with status PAID (claimedAt=null means unclaimed)
       for (const reward of rewards) {
         // Use distinct refType for score-based rewards
         const refType = reward.type === "WEEKLY_LIKES" ? "weekly_score" : `weekly_${reward.type.toLowerCase()}`;
         const refId = `${weekKey}:${reward.userId}:${refType}`;
-        const proof = proofs[eventIndex] || [];
 
         await tx.rewardEvent.create({
           data: {
             userId: reward.userId,
             type: reward.type,
             amount: reward.amount,
-            status: "PENDING",
+            status: "PAID",  // Mark as PAID so build-week picks them up
             weekKey,
             refType,
             refId,
-            merkleIndex: eventIndex,
-            merkleProof: JSON.stringify(proof),
           },
         });
-        eventIndex++;
       }
 
       return batch;
     });
 
-    console.log(`[weekly-distribute] Created batch ${result.id} with merkle root ${merkleRoot}`);
+    console.log(`[weekly-distribute] Created batch ${result.id} for ${userRewards.size} users`);
 
     return NextResponse.json({
       ok: true,
@@ -477,78 +480,16 @@ export async function POST(req: NextRequest) {
       },
       totalUsers: userRewards.size,
       totalRewards: rewards.length,
-      merkleRoot,
+      totalAmount: formatXess(totalAmount),
       batchId: result.id,
+      nextStep: "Run build-week cron to create merkle tree for on-chain claims",
     });
   } catch (error) {
     console.error("[WEEKLY_DISTRIBUTE] Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { ok: false, error: "INTERNAL_ERROR" },
+      { ok: false, error: "INTERNAL_ERROR", message },
       { status: 500 }
     );
   }
-}
-
-// Simple merkle root calculation
-function calculateMerkleRoot(hashes: `0x${string}`[]): string {
-  if (hashes.length === 0) return "0x" + "0".repeat(64);
-  if (hashes.length === 1) return hashes[0];
-
-  const nextLevel: `0x${string}`[] = [];
-  for (let i = 0; i < hashes.length; i += 2) {
-    const left = hashes[i];
-    const right = hashes[i + 1] || hashes[i]; // Duplicate last if odd
-    const combined = left < right
-      ? keccak256(encodePacked(["bytes32", "bytes32"], [left, right]))
-      : keccak256(encodePacked(["bytes32", "bytes32"], [right, left]));
-    nextLevel.push(combined);
-  }
-
-  return calculateMerkleRoot(nextLevel);
-}
-
-// Generate merkle proofs for all leaves
-function generateMerkleProofs(hashes: `0x${string}`[]): `0x${string}`[][] {
-  if (hashes.length <= 1) return hashes.map(() => []);
-
-  const proofs: `0x${string}`[][] = hashes.map(() => []);
-  let currentLevel = [...hashes];
-  let indices = hashes.map((_, i) => i);
-
-  while (currentLevel.length > 1) {
-    const nextLevel: `0x${string}`[] = [];
-
-    for (let i = 0; i < currentLevel.length; i += 2) {
-      const left = currentLevel[i];
-      const right = currentLevel[i + 1] || currentLevel[i];
-
-      // Add sibling to proof for both leaves in this pair
-      for (let j = 0; j < indices.length; j++) {
-        const originalIdx = indices[j];
-        if (Math.floor(originalIdx / 2) === Math.floor(i / 2)) {
-          if (originalIdx % 2 === 0 && i + 1 < currentLevel.length) {
-            proofs[j].push(right);
-          } else if (originalIdx % 2 === 1) {
-            proofs[j].push(left);
-          } else if (i + 1 >= currentLevel.length) {
-            proofs[j].push(left);
-          }
-        }
-      }
-
-      const combined = left < right
-        ? keccak256(encodePacked(["bytes32", "bytes32"], [left, right]))
-        : keccak256(encodePacked(["bytes32", "bytes32"], [right, left]));
-      nextLevel.push(combined);
-    }
-
-    // Update indices for next level
-    for (let j = 0; j < indices.length; j++) {
-      indices[j] = Math.floor(indices[j] / 2);
-    }
-
-    currentLevel = nextLevel;
-  }
-
-  return proofs;
 }

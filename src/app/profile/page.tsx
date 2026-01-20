@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import RewardsTab from "../components/RewardsTab";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
@@ -224,11 +225,11 @@ export default function ProfilePage() {
     setClaimBusy(true);
 
     try {
-      // 1) Get claim payload from prepare endpoint
+      // 1) Get claim payload from prepare endpoint (uses latest on-chain epoch)
       const prepRes = await fetch("/api/rewards/claim/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ epoch: 3 }), // Test epoch 3 (keccak256 hash)
+        body: JSON.stringify({}), // Let server use latest on-chain epoch
       });
       const prep = await prepRes.json();
 
@@ -265,7 +266,18 @@ export default function ProfilePage() {
       const userAtaInfo = await connection.getAccountInfo(userAta);
 
       // 6) Build claim instruction
-      const proofVec: number[][] = Array.isArray(prep.proof) ? prep.proof : [];
+      // Convert hex strings to byte arrays
+      const proofVec: number[][] = Array.isArray(prep.proof)
+        ? prep.proof.map((hex: string) => {
+            // Remove 0x prefix if present
+            const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
+            const bytes: number[] = [];
+            for (let i = 0; i < cleanHex.length; i += 2) {
+              bytes.push(parseInt(cleanHex.slice(i, i + 2), 16));
+            }
+            return bytes;
+          })
+        : [];
 
       const claimIx = await program.methods
         .claim(
@@ -310,21 +322,31 @@ export default function ProfilePage() {
 
       tx.add(claimIx);
 
+      toast.info("Claiming tokens...");
+
       const signed = await provider.signTransaction(tx);
       const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
       await connection.confirmTransaction(sig, "confirmed");
 
-      // 8) Confirm with backend
-      await fetch("/api/rewards/claim/confirm", {
+      // 8) Confirm with backend (marks rewards as claimed in DB)
+      const confirmRes = await fetch("/api/rewards/claim/confirm", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ signature: sig, epoch: prep.epoch }),
       });
+      const confirmData = await confirmRes.json();
+
+      if (confirmData.ok) {
+        toast.success("Claim successful! Tokens transferred to your wallet.");
+      } else {
+        toast.warning("Claimed on-chain but DB update failed. Contact support.");
+      }
 
       await refreshClaimSummary();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "CLAIM_FAILED";
       setClaimErr(msg);
+      toast.error(`Claim failed: ${msg}`);
       await refreshClaimSummary();
     } finally {
       setClaimBusy(false);
@@ -720,30 +742,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
               )}
-
-              {/* TEST: Claim Button (visible to all for testing) */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6 border-yellow-400/50">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div>
-                    <h2 className="text-lg font-semibold text-yellow-400">🧪 Test Claim (Dev Only)</h2>
-                    <p className="text-sm text-white/60">
-                      Linked wallet: <span className="font-mono text-xs">{data.solWallet || data.walletAddress || "None"}</span>
-                    </p>
-                  </div>
-                  <button
-                    onClick={onClaimPendingXess}
-                    disabled={claimBusy}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                      claimBusy
-                        ? "bg-white/10 text-white/50 cursor-not-allowed"
-                        : "bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-400 hover:to-orange-400"
-                    }`}
-                  >
-                    {claimBusy ? "Claiming..." : "Test Claim 1 XESS"}
-                  </button>
-                </div>
-                {claimErr && <div className="mt-3 text-sm text-red-400">{claimErr}</div>}
-              </div>
 
               {/* Diamond Features Teaser (non-Diamond only) */}
               {!isDiamond && (

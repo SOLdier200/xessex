@@ -202,6 +202,20 @@ export default function AdminRewardsClient() {
             {msg}
           </div>
         )}
+
+        {/* Link to Payout Pipeline */}
+        <div className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5 mt-8">
+          <h2 className="font-semibold mb-2 text-orange-400">Test Payout Flow</h2>
+          <p className="text-sm text-white/60 mb-4">
+            Run the weekly distribute → build epoch → on-chain flow to test the rewards pipeline.
+          </p>
+          <Link
+            href="/admin/payout-pipeline"
+            className="inline-block px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 transition-colors text-sm font-medium"
+          >
+            Open Payout Pipeline →
+          </Link>
+        </div>
       </div>
     </div>
   );

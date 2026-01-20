@@ -187,13 +187,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Track Diamond comment activity for weekly rewards (min 20 chars quality gate)
-    if (text.length >= 20) {
+    // Track Diamond comment activity for weekly rewards (min 7 chars quality gate)
+    console.log("[comments] wk", wk, "len", text.length, "user", access.user!.id);
+    if (text.length >= 7) {
+      console.log("[comments] eligible -> increment diamondComments");
       await tx.weeklyUserStat.upsert({
         where: { weekKey_userId: { weekKey: wk, userId: access.user!.id } },
         create: { weekKey: wk, userId: access.user!.id, diamondComments: 1, mvmPoints: 0, scoreReceived: 0 },
         update: { diamondComments: { increment: 1 } },
       });
+    } else {
+      console.log("[comments] NOT eligible -> too short");
     }
 
     return newComment;

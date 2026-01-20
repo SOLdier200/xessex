@@ -78,19 +78,23 @@ export async function GET() {
   });
 
   // Query actual rewards from RewardEvent table (weekly rewards only)
-  const [paidRewards, pendingRewards] = await Promise.all([
+  // PAID + claimedAt = actually claimed by user
+  // PAID + claimedAt null = ready to claim (pending for user)
+  const [claimedRewards, unclaimedRewards] = await Promise.all([
     db.rewardEvent.aggregate({
-      where: { userId, status: "PAID", refType: { startsWith: "weekly" } },
+      where: { userId, status: "PAID", claimedAt: { not: null }, refType: { startsWith: "weekly" } },
       _sum: { amount: true },
     }),
     db.rewardEvent.aggregate({
-      where: { userId, status: "PENDING", refType: { startsWith: "weekly" } },
+      where: { userId, status: "PAID", claimedAt: null, refType: { startsWith: "weekly" } },
       _sum: { amount: true },
     }),
   ]);
 
-  const totalXessPaid = Number(paidRewards._sum.amount ?? 0n);
-  const pendingXess = Number(pendingRewards._sum.amount ?? 0n);
+  // Amounts are stored with 6 decimals - convert to whole XESS for display
+  const DECIMALS = 1_000_000n;
+  const totalXessPaid = Number((claimedRewards._sum.amount ?? 0n) / DECIMALS);
+  const pendingXess = Number((unclaimedRewards._sum.amount ?? 0n) / DECIMALS);
 
   return NextResponse.json({
     ok: true,

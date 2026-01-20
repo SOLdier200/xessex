@@ -35,10 +35,10 @@ const PLAN_META: Record<
     description: "Member yearly",
   },
   D1: {
-    iid: "1754587706",
+    iid: "355119372",
     tier: "DIAMOND",
     days: 30,
-    price: 18,
+    price: 9,
     description: "Diamond 1 month",
   },
   D2: {
@@ -49,10 +49,10 @@ const PLAN_META: Record<
     description: "Diamond 2 months",
   },
   DY: {
-    iid: "1689634405",
+    iid: "2018295600",
     tier: "DIAMOND",
     days: 365,
-    price: 100,
+    price: 70,
     description: "Diamond yearly",
   },
 };
