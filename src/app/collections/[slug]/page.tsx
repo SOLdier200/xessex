@@ -84,6 +84,19 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       if (b.rank != null) return 1;
       return 0;
     });
+  } else if (slug === "2d") {
+    // 2D Animated matches "cartoon" or "hentai" categories
+    videos = allVideos
+      .filter((v) => {
+        const cats = v.categories?.toLowerCase() ?? "";
+        return cats.includes("cartoon") || cats.includes("hentai");
+      })
+      .sort((a, b) => {
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        return 0;
+      });
   } else {
     // Filter by category name, then sort by rank
     const categoryName = slug.replace(/-/g, " ");

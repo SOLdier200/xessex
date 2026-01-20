@@ -50,6 +50,14 @@ model User {
   weeklyStats          WeeklyUserStat[]
   weeklyVoterStats     WeeklyVoterStat[]
 
+  // Raffle & Special Credits relations
+  walletSnapshots      WalletBalanceSnapshot[]
+  specialCreditAccount SpecialCreditAccount?
+  specialCreditLedger  SpecialCreditLedger[]
+  raffleTickets        RaffleTicket[]
+  rafflePurchases      RafflePurchase[]
+  raffleWins           RaffleWinner[]
+
   @@index([referredById])
 }
 
@@ -534,6 +542,26 @@ enum ManualPayStatus {
   EXPIRED
 }
 
+// ========== Raffle & Special Credits Enums ==========
+
+enum RaffleType {
+  CREDITS
+  XESS
+}
+
+enum RaffleStatus {
+  OPEN
+  CLOSED
+  DRAWN
+}
+
+enum WinnerStatus {
+  PENDING
+  CLAIMED
+  EXPIRED
+}
+
+
 // ========== On-Chain Claim System ==========
 
 model ClaimEpoch {
@@ -597,4 +625,150 @@ model ManualPayment {
 
   @@index([status, createdAt])
   @@index([userId, createdAt])
+}
+
+// ========== Raffle & Special Credits Models ==========
+
+model WalletBalanceSnapshot {
+  id            String   @id @default(cuid())
+  wallet        String   @db.VarChar(64) // base58 Solana wallet
+  dateKey       String   // "2026-01-26" PT date
+  weekKey       String   // "2026-01-26" ending Sunday PT
+  balanceAtomic BigInt   // XESS balance (9 decimals)
+  tier          Int      // Tier index (0 = no tier, 1-7 = tiers)
+  createdAt     DateTime @default(now())
+
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([wallet, dateKey])
+  @@index([weekKey])
+  @@index([userId])
+}
+
+model SpecialCreditAccount {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  balanceMicro BigInt   @default(0) // 1 credit = 1000 microcredits
+  carryMicro   BigInt   @default(0) // Fractional carry from daily accrual
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SpecialCreditLedger {
+  id          String   @id @default(cuid())
+  userId      String
+  weekKey     String   // Week this credit change relates to
+  amountMicro BigInt   // Positive = credit, Negative = debit
+  reason      String   // Human-readable reason
+  refType     String   // "DAILY_ACCRUAL", "RAFFLE_BUY_CREDITS", "RAFFLE_PRIZE_CREDITS", etc.
+  refId       String   // Unique ref for idempotency
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([refType, refId])
+  @@index([userId, createdAt])
+  @@index([weekKey])
+}
+
+model Raffle {
+  id                       String       @id @default(cuid())
+  weekKey                  String       // "2026-01-26" ending Sunday PT
+  type                     RaffleType   // CREDITS or XESS
+  status                   RaffleStatus @default(OPEN)
+
+  // Ticket pricing
+  ticketPriceCreditsMicro  BigInt?      // Price per ticket in microcredits (credits raffle)
+  ticketPriceXessAtomic    BigInt?      // Price per ticket in XESS atomic (xess raffle)
+
+  // Credits pools (for type=CREDITS)
+  userPoolCreditsMicro     BigInt       @default(0)
+  matchPoolCreditsMicro    BigInt       @default(0)
+  rolloverCreditsMicro     BigInt       @default(0)
+
+  // XESS pools (for type=XESS)
+  userPoolXessAtomic       BigInt       @default(0)
+  matchPoolXessAtomic      BigInt       @default(0)
+  rolloverXessAtomic       BigInt       @default(0)
+
+  totalTickets             BigInt       @default(0)
+
+  opensAt                  DateTime
+  closesAt                 DateTime
+  drawnAt                  DateTime?
+
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+
+  tickets                  RaffleTicket[]
+  winners                  RaffleWinner[]
+  purchases                RafflePurchase[]
+
+  @@unique([weekKey, type])
+  @@index([status, closesAt])
+}
+
+model RaffleTicket {
+  id        String   @id @default(cuid())
+  raffleId  String
+  userId    String
+  quantity  BigInt   @default(1)
+  createdAt DateTime @default(now())
+
+  raffle    Raffle   @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([raffleId, userId])
+  @@index([userId, createdAt])
+}
+
+model RafflePurchase {
+  id           String     @id @default(cuid())
+  raffleId     String
+  userId       String
+  type         RaffleType
+  txSig        String     @unique // Prevents replay attacks
+  quantity     BigInt
+  amountAtomic BigInt     @default(0)
+  createdAt    DateTime   @default(now())
+
+  raffle       Raffle     @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([raffleId, userId, createdAt])
+}
+
+model RaffleWinner {
+  id                String       @id @default(cuid())
+  raffleId          String
+  userId            String
+  place             Int          // 1, 2, or 3
+  prizeCreditsMicro BigInt       @default(0) // Credits prize (for CREDITS raffle)
+  prizeXessAtomic   BigInt       @default(0) // XESS prize (for XESS raffle)
+  status            WinnerStatus @default(PENDING)
+  expiresAt         DateTime     // Deadline to claim
+  claimedAt         DateTime?
+  txSig             String?      // On-chain tx sig for XESS claims
+  createdAt         DateTime     @default(now())
+
+  raffle            Raffle       @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([raffleId, place])
+  @@index([userId, status])
+  @@index([status, expiresAt])
+}
+
+model RaffleMatchBudget {
+  id                   String   @id @default(cuid())
+  weekKey              String   @unique // Week ending Sunday date
+  creditsMatchCapMicro BigInt   @default(0) // Max credits to match this week
+  creditsMatchedMicro  BigInt   @default(0) // Credits already matched
+  xessMatchCapAtomic   BigInt   @default(0) // Max XESS to match this week
+  xessMatchedAtomic    BigInt   @default(0) // XESS already matched
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }

@@ -42,10 +42,10 @@ const PLAN_META: Record<
     description: "Diamond 1 month",
   },
   D2: {
-    iid: "552457287",
+    iid: "949588916",
     tier: "DIAMOND",
     days: 60,
-    price: 30,
+    price: 17,
     description: "Diamond 2 months",
   },
   DY: {

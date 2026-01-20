@@ -183,7 +183,7 @@ export default function VideoPlayback({
               {currentVideo.isShowcase ? "free" : "premium"}
             </span>
             <span className="text-xs text-white/40">
-              Views: {currentVideo.viewsCount.toLocaleString()}
+              Viewed on Xessex: {currentVideo.viewsCount.toLocaleString()}
             </span>
             {currentVideo.starsCount > 0 && (
               <span className="text-xs text-yellow-400">

@@ -74,6 +74,14 @@ export default function FreeUserModal({
           >
             Purchase Membership
           </button>
+          {!isWalletOnly && (
+            <button
+              onClick={handleLogin}
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30 border border-purple-400/40 text-purple-100 text-sm font-medium transition"
+            >
+              Connect Wallet
+            </button>
+          )}
           <button
             onClick={handleLogout}
             disabled={loading}

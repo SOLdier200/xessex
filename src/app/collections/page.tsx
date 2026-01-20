@@ -38,6 +38,13 @@ export default function CategoriesPage() {
 
   // Count videos per category
   const getCategoryCount = (slug: string): number => {
+    if (slug === "2d") {
+      // 2D Animated matches "cartoon" or "hentai" categories
+      return videos.filter((v) => {
+        const cats = v.categories?.toLowerCase() ?? "";
+        return cats.includes("cartoon") || cats.includes("hentai");
+      }).length;
+    }
     const categoryName = slug.replace("-", " ");
     return videos.filter((v) =>
       v.categories?.toLowerCase().includes(categoryName)

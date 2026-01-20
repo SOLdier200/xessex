@@ -5,6 +5,7 @@ import path from "path";
 import TopNav from "./components/TopNav";
 import WalletStatus from "./components/WalletStatus";
 import VideoSearch from "./components/VideoSearch";
+import AdminManualPaymentNotice from "./components/AdminManualPaymentNotice";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -81,6 +82,7 @@ export default async function HomePage() {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
+        <AdminManualPaymentNotice />
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 mb-6">
             <Link

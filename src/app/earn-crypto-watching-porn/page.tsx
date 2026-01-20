@@ -40,6 +40,10 @@ export default function EarnCryptoWatchingPornPage() {
             Earn Crypto Watching Porn
           </h1>
 
+          <p className="mt-4 text-xl md:text-2xl font-semibold text-pink-400 italic">
+            &ldquo;You used to think a porn addiction was unhealthy, but here at Xessex it&apos;ll make you wealthy!&rdquo;
+          </p>
+
           <p className="mt-4 text-white/70">
             Xessex is a next-generation adult platform where you can earn crypto by watching porn.
             Instead of just consuming content, members earn real digital rewards for watching
@@ -64,9 +68,8 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
           <ul className="mt-4 space-y-2 text-white/70 list-disc list-inside">
             <li>Earn crypto watching adult videos</li>
-            <li>Collect XESS coins for engagement</li>
-            <li>Receive Diamond rewards for activity</li>
-            <li>Use crypto for memberships and unlocks</li>
+            <li>Receive Diamond rewards (XESS Tokens) for engagement on the site from ranking videos, liking comments, making comments, referrals, liquidity pools, rewards for holding XESS tokens, and more</li>
+            <li>Hold XESS coins for membership discounts</li>
             <li>Get paid for time spent watching content</li>
           </ul>
 
@@ -110,7 +113,7 @@ export default function EarnCryptoWatchingPornPage() {
             Xessex uses Solana blockchain technology to make crypto rewards fast and affordable.
           </p>
           <ul className="mt-4 space-y-2 text-white/70 list-disc list-inside">
-            <li>Instant reward payouts</li>
+            <li>Weekly reward payouts</li>
             <li>No high gas fees</li>
             <li>Private wallet-based access</li>
             <li>Secure transactions</li>
@@ -153,6 +156,30 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">
+            Weekly Raffles &amp; Special Credits (Coming Soon)
+          </h2>
+          <p className="mt-4 text-white/70">
+            Hold XESS tokens in your linked wallet and earn daily Special Credits automatically.
+            The more you hold, the more credits you earn — no claiming required, they just appear
+            in your account. Use Special Credits to enter our weekly raffles for a chance to win
+            big prizes from the community pot, boosted by system matching and rollover jackpots
+            from unclaimed prizes.
+          </p>
+          <p className="mt-4 text-white/70">
+            Two raffles run each week: a <strong className="text-pink-400">Special Credits Raffle</strong> (1 credit = 1 ticket)
+            and a <strong className="text-yellow-400">XESS Raffle</strong> (100 XESS = 1 ticket). Prize pools are funded
+            by ticket purchases plus a 1:1 system match, with unclaimed prizes rolling over to
+            create growing jackpots. Winners take 1st place (50%), 2nd place (30%), and 3rd place (20%) —
+            but you must claim your prize before the next draw or it rolls into the next week&apos;s pot!
+          </p>
+          <p className="mt-4 text-white/70">
+            Special Credit rewards are based on your average daily XESS holdings — hold at least
+            100,000 XESS to start earning. Higher tiers unlock more daily credits, up to 500 credits
+            per day for holders of 10 million+ XESS. Plus, a <strong className="text-cyan-400">Keno game</strong> is
+            coming soon for even more ways to play and win!
+          </p>
+
+          <h2 className="mt-8 text-2xl font-semibold text-white">
             Start Earning Crypto Watching Porn Today
           </h2>
           <p className="mt-4 text-white/70">
@@ -164,13 +191,13 @@ export default function EarnCryptoWatchingPornPage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/signup"
-              className="rounded-xl bg-pink-500 px-5 py-3 font-semibold text-black hover:bg-pink-400 transition"
+              className="rounded-xl bg-gradient-to-r from-pink-500 to-pink-400 px-6 py-4 font-bold text-black hover:from-pink-400 hover:to-pink-300 transition shadow-lg shadow-pink-500/30"
             >
               Start Earning Rewards
             </Link>
             <Link
               href="/rewards"
-              className="rounded-xl border border-white/20 bg-white/5 px-5 py-3 font-semibold text-white/80 hover:bg-white/10 transition"
+              className="rounded-xl border border-white/30 bg-white/10 px-6 py-4 font-semibold text-white hover:bg-white/20 transition"
             >
               View Rewards Program
             </Link>

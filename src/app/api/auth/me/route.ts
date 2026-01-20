@@ -4,23 +4,22 @@
  */
 
 import { NextResponse } from "next/server";
-import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
+import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const user = await getCurrentUser();
+  const access = await getAccessContext();
+  const user = access.user;
   if (!user) {
     return NextResponse.json({ ok: true, authed: false, user: null });
   }
 
   const sub = user.subscription ?? null;
-  const active = !!sub && isSubscriptionActive(sub);
-
   const membership =
-    active && sub?.tier === "DIAMOND"
+    access.isAdminOrMod || access.tier === "diamond"
       ? "DIAMOND"
-      : active
+      : access.tier === "member"
         ? "MEMBER"
         : "FREE";
 

@@ -13,9 +13,9 @@ import ReferralCapture from "../components/ReferralCapture";
 const NOWPAYMENTS_IIDS = {
   M90: "1513416538", // Member 90 days $10
   MY:  "429715526",  // Member 1 year $40
-  D1:  "1754587706", // Diamond 30 days $18
-  D2:  "552457287",  // Diamond 60 days $30
-  DY:  "1689634405", // Diamond 1 year $100
+  D1:  "1754587706", // Diamond 30 days $9
+  D2:  "949588916",  // Diamond 60 days $17
+  DY:  "1689634405", // Diamond 1 year $70
 } as const;
 
 const POLL_EVERY_MS = 3000;
@@ -665,14 +665,14 @@ function SignupInner() {
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {diamondCycle === "30days" ? "$18" : diamondCycle === "60days" ? "$30" : "$100"}
+                {diamondCycle === "30days" ? "$9" : diamondCycle === "60days" ? "$17" : "$70"}
               </span>
               <span className="text-white/60">
                 /{diamondCycle === "30days" ? "30 days" : diamondCycle === "60days" ? "60 days" : "year"}
               </span>
             </div>
             {diamondCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $116/year</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $38/year</div>
             )}
           </div>
 
@@ -1049,12 +1049,12 @@ function SignupInner() {
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {ccDiamondCycle === "monthly" ? "$12" : "$100"}
+                {ccDiamondCycle === "monthly" ? "$9" : "$70"}
               </span>
               <span className="text-white/60">/{ccDiamondCycle === "monthly" ? "month" : "year"}</span>
             </div>
             {ccDiamondCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $44/year</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $38/year</div>
             )}
           </div>
 
