@@ -144,6 +144,21 @@ export default function ProfilePage() {
   const [claimBusy, setClaimBusy] = useState(false);
   const [claimErr, setClaimErr] = useState<string | null>(null);
 
+  // Live pending state
+  const [livePending, setLivePending] = useState<null | {
+    currentWeek: {
+      weekKey: string;
+      activity: { scoreReceived: number; diamondComments: number; mvmPoints: number; votesCast: number };
+      estimatedPending: string;
+    };
+    nextPayout: { countdown: string; date: string };
+    unclaimedWeeks: Array<{ epoch: number; weekKey: string; amount: string; amountAtomic: string }>;
+    totalUnclaimed: string;
+    totalUnclaimedAtomic: string;
+  }>(null);
+  const [claimAllBusy, setClaimAllBusy] = useState(false);
+  const [claimAllProgress, setClaimAllProgress] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/profile")
       .then((res) => res.json())
@@ -218,6 +233,171 @@ export default function ProfilePage() {
       refreshClaimSummary();
     }
   }, [data?.membership]);
+
+  // Fetch live pending data
+  async function refreshLivePending() {
+    try {
+      const res = await fetch("/api/rewards/pending", { cache: "no-store" });
+      const j = await res.json();
+      if (j.ok) {
+        setLivePending({
+          currentWeek: j.currentWeek,
+          nextPayout: j.nextPayout,
+          unclaimedWeeks: j.unclaimedWeeks,
+          totalUnclaimed: j.totalUnclaimed,
+          totalUnclaimedAtomic: j.totalUnclaimedAtomic,
+        });
+      }
+    } catch {
+      // Silent fail
+    }
+  }
+
+  useEffect(() => {
+    if (data?.membership === "DIAMOND") {
+      refreshLivePending();
+    }
+  }, [data?.membership]);
+
+  // Claim all unclaimed weeks handler
+  async function onClaimAllUnclaimed() {
+    if (!livePending?.unclaimedWeeks.length) return;
+
+    setClaimAllBusy(true);
+    setClaimAllProgress(null);
+    setClaimErr(null);
+
+    try {
+      // Get all claimable epochs data
+      const allRes = await fetch("/api/rewards/claim/all");
+      const allData = await allRes.json();
+
+      if (!allData.ok || !allData.claimableEpochs?.length) {
+        throw new Error(allData.error || "No claimable epochs");
+      }
+
+      // Connect wallet
+      const provider = (window as any).solana;
+      if (!provider?.isPhantom) throw new Error("PHANTOM_NOT_FOUND");
+      await provider.connect();
+
+      const walletPubkey = new PublicKey(provider.publicKey.toString());
+      const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+      const connection = new Connection(rpc, "confirmed");
+
+      // Fetch IDL
+      const programId = new PublicKey(allData.programId);
+      const idl = await anchor.Program.fetchIdl(programId, { connection } as any);
+      if (!idl) throw new Error("IDL_NOT_FOUND");
+
+      const anchorProvider = { connection, publicKey: walletPubkey } as anchor.Provider;
+      const program = new anchor.Program({ ...idl, address: programId.toBase58() } as anchor.Idl, anchorProvider);
+
+      const mint = new PublicKey(allData.xessMint);
+      const userAta = getAssociatedTokenAddressSync(mint, walletPubkey);
+
+      let successCount = 0;
+      const totalEpochs = allData.claimableEpochs.length;
+
+      for (let i = 0; i < totalEpochs; i++) {
+        const epoch = allData.claimableEpochs[i];
+        setClaimAllProgress(`Claiming ${i + 1}/${totalEpochs} (Week ${epoch.weekKey})...`);
+
+        try {
+          // Convert proof hex to bytes
+          const proofVec: number[][] = Array.isArray(epoch.proof)
+            ? epoch.proof.map((hex: string) => {
+                const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
+                const bytes: number[] = [];
+                for (let j = 0; j < cleanHex.length; j += 2) {
+                  bytes.push(parseInt(cleanHex.slice(j, j + 2), 16));
+                }
+                return bytes;
+              })
+            : [];
+
+          const claimIx = await program.methods
+            .claim(
+              new anchor.BN(epoch.epoch),
+              new anchor.BN(epoch.amountAtomic),
+              epoch.index,
+              proofVec
+            )
+            .accounts({
+              config: new PublicKey(epoch.pdas.config),
+              vaultAuthority: new PublicKey(epoch.pdas.vaultAuthority),
+              epochRoot: new PublicKey(epoch.pdas.epochRoot),
+              receipt: new PublicKey(epoch.pdas.receipt),
+              claimer: walletPubkey,
+              vaultAta: new PublicKey(allData.vaultAta),
+              userAta,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: anchor.web3.SystemProgram.programId,
+            })
+            .instruction();
+
+          const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+          const tx = new Transaction({
+            feePayer: walletPubkey,
+            blockhash,
+            lastValidBlockHeight,
+          });
+
+          // Create ATA if first claim
+          if (i === 0) {
+            const userAtaInfo = await connection.getAccountInfo(userAta);
+            if (!userAtaInfo) {
+              const createAtaIx = createAssociatedTokenAccountInstruction(
+                walletPubkey,
+                userAta,
+                walletPubkey,
+                mint,
+                TOKEN_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID
+              );
+              tx.add(createAtaIx);
+            }
+          }
+
+          tx.add(claimIx);
+
+          const signed = await provider.signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+          await connection.confirmTransaction(sig, "confirmed");
+
+          // Confirm with backend
+          await fetch("/api/rewards/claim/confirm", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ signature: sig, epoch: epoch.epoch }),
+          });
+
+          successCount++;
+        } catch (epochErr) {
+          console.error(`Failed to claim epoch ${epoch.epoch}:`, epochErr);
+          // Continue to next epoch
+        }
+      }
+
+      if (successCount === totalEpochs) {
+        toast.success(`All ${successCount} weeks claimed successfully!`);
+      } else if (successCount > 0) {
+        toast.warning(`Claimed ${successCount}/${totalEpochs} weeks. Some failed.`);
+      } else {
+        toast.error("Failed to claim any weeks");
+      }
+
+      // Refresh data
+      await Promise.all([refreshClaimSummary(), refreshLivePending()]);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "CLAIM_ALL_FAILED";
+      setClaimErr(msg);
+      toast.error(`Claim failed: ${msg}`);
+    } finally {
+      setClaimAllBusy(false);
+      setClaimAllProgress(null);
+    }
+  }
 
   // Claim handler - wired to on-chain program
   async function onClaimPendingXess() {
@@ -665,14 +845,87 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Claim Pending XESS (Diamond only) */}
+              {/* Live Pending & Claim Section (Diamond only) */}
               {isDiamond && (
                 <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                  <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
+
+                  {/* Current Week Activity */}
+                  {livePending?.currentWeek && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 via-black/0 to-pink-500/10 border border-purple-400/20 rounded-xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-white/60">Current Week ({livePending.currentWeek.weekKey})</span>
+                        <span className="text-xs text-purple-400">
+                          Next payout: {livePending.nextPayout.countdown}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                        <div className="bg-black/30 rounded-lg p-2">
+                          <div className="text-white font-semibold">{livePending.currentWeek.activity.scoreReceived}</div>
+                          <div className="text-white/40">Score</div>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-2">
+                          <div className="text-white font-semibold">{livePending.currentWeek.activity.diamondComments}</div>
+                          <div className="text-white/40">Comments</div>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-2">
+                          <div className="text-white font-semibold">{livePending.currentWeek.activity.mvmPoints}</div>
+                          <div className="text-white/40">MVM</div>
+                        </div>
+                        <div className="bg-black/30 rounded-lg p-2">
+                          <div className="text-white font-semibold">{livePending.currentWeek.activity.votesCast}</div>
+                          <div className="text-white/40">Votes</div>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-xs text-white/50">
+                        Estimated payout: ~{livePending.currentWeek.estimatedPending} XESS
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Unclaimed Weeks */}
+                  {livePending && livePending.unclaimedWeeks.length > 0 && (
+                    <div className="mb-4 p-4 bg-green-500/10 border border-green-400/30 rounded-xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <span className="text-green-400 font-semibold">
+                            {livePending.unclaimedWeeks.length} Unclaimed Week{livePending.unclaimedWeeks.length > 1 ? "s" : ""}
+                          </span>
+                          <span className="text-white/60 text-sm ml-2">
+                            Total: {livePending.totalUnclaimed} XESS
+                          </span>
+                        </div>
+                        <button
+                          onClick={onClaimAllUnclaimed}
+                          disabled={claimAllBusy || claimBusy}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                            claimAllBusy || claimBusy
+                              ? "bg-white/10 text-white/50 cursor-not-allowed"
+                              : "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400"
+                          }`}
+                        >
+                          {claimAllBusy ? "Claiming..." : "Claim All"}
+                        </button>
+                      </div>
+                      {claimAllProgress && (
+                        <div className="text-xs text-green-400 mb-2">{claimAllProgress}</div>
+                      )}
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {livePending.unclaimedWeeks.map((week) => (
+                          <div key={week.epoch} className="flex justify-between text-xs text-white/70">
+                            <span>Week {week.weekKey} (Epoch {week.epoch})</span>
+                            <span className="text-green-400">{week.amount} XESS</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Single Week Claim (Legacy) */}
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                      <h2 className="text-lg font-semibold text-white">Claim Rewards</h2>
                       <p className="text-sm text-white/60">
-                        Pending XESS:{" "}
+                        Latest epoch pending:{" "}
                         <span className="text-white font-semibold">
                           {claimSummary?.pendingAmount ?? "..."}
                         </span>
@@ -694,11 +947,12 @@ export default function ProfilePage() {
                         onClick={onClaimPendingXess}
                         disabled={
                           claimBusy ||
+                          claimAllBusy ||
                           !claimSummary?.hasPending ||
                           claimSummary?.claim?.status === "PROCESSING"
                         }
                         className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                          claimBusy || claimSummary?.claim?.status === "PROCESSING"
+                          claimBusy || claimAllBusy || claimSummary?.claim?.status === "PROCESSING"
                             ? "bg-white/10 text-white/50 cursor-not-allowed"
                             : claimSummary?.hasPending
                               ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-400 hover:to-pink-400"
@@ -708,8 +962,8 @@ export default function ProfilePage() {
                         {claimBusy || claimSummary?.claim?.status === "PROCESSING"
                           ? "Claiming..."
                           : claimSummary?.hasPending
-                            ? "Claim Pending XESS"
-                            : "No Pending XESS"}
+                            ? "Claim Latest"
+                            : "No Pending"}
                       </button>
                     </div>
                   </div>

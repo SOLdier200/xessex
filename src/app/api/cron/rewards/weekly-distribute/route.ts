@@ -458,6 +458,24 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // Update paidAtomic on WeeklyUserStat for each user
+      // Convert 6-decimal RewardEvent amounts to 9-decimal on-chain amounts
+      const DECIMAL_CONVERSION = 1000n; // 10^9 / 10^6 = 1000
+      for (const [userId, data] of userRewards) {
+        const paidAtomic9 = data.amount * DECIMAL_CONVERSION;
+        await tx.weeklyUserStat.upsert({
+          where: { weekKey_userId: { weekKey, userId } },
+          create: {
+            weekKey,
+            userId,
+            paidAtomic: paidAtomic9,
+          },
+          update: {
+            paidAtomic: paidAtomic9,
+          },
+        });
+      }
+
       return batch;
     });
 

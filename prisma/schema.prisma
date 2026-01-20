@@ -350,6 +350,8 @@ model WeeklyUserStat {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   scoreReceived   Int      @default(0)
+  pendingAtomic   BigInt   @default(0) // Accumulated pending XESS for this week (9 decimals)
+  paidAtomic      BigInt   @default(0) // Finalized/paid XESS for this week (9 decimals)
   user            User     @relation(fields: [userId], references: [id])
 
   @@unique([weekKey, userId])
