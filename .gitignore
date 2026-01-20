@@ -56,3 +56,6 @@ ai-media/
 .~lock.*
 devnet-id.json
 .config/solana/*.json
+backups/
+deploy.sh
+ecosystem.config.cjs
