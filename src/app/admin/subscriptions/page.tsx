@@ -6,6 +6,8 @@ import Link from "next/link";
 type Tier = "MEMBER" | "DIAMOND";
 type Status = "ACTIVE" | "PENDING" | "PARTIAL" | "EXPIRED" | "CANCELED";
 
+type PaymentMethod = "CRYPTO" | "CARD" | "CASHAPP";
+
 type Row = {
   id: string;
   userId: string;
@@ -18,6 +20,10 @@ type Row = {
   nowPaymentsInvoiceId: string | null;
   nowPaymentsPaymentId: string | null;
   lastTxSig: string | null;
+  paymentMethod: PaymentMethod;
+  amountCents: number | null;
+  manualPaymentId: string | null;
+  verifyCode: string | null;
   user: { id: string; email: string | null; createdAt: string };
 };
 
@@ -60,19 +66,22 @@ export default function AdminSubscriptionsPage() {
 
   const [status, setStatus] = useState<string>("");
   const [tier, setTier] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [partialOnly, setPartialOnly] = useState(false);
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(50);
+  const [showTxModal, setShowTxModal] = useState<string | null>(null);
 
   const params = useMemo(() => {
     const sp = new URLSearchParams();
     if (status) sp.set("status", status);
     if (tier) sp.set("tier", tier);
+    if (paymentMethod) sp.set("paymentMethod", paymentMethod);
     if (q.trim()) sp.set("q", q.trim());
     if (partialOnly) sp.set("partialOnly", "1");
     sp.set("limit", String(limit));
     return sp.toString();
-  }, [status, tier, q, partialOnly, limit]);
+  }, [status, tier, paymentMethod, q, partialOnly, limit]);
 
   async function load() {
     setLoading(true);
@@ -216,6 +225,20 @@ export default function AdminSubscriptionsPage() {
             </select>
           </div>
 
+          <div>
+            <div className="mb-1 text-xs text-gray-400">Payment</div>
+            <select
+              className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <option value="">All</option>
+              <option value="CRYPTO">Crypto</option>
+              <option value="CARD">Card</option>
+              <option value="CASHAPP">CashApp</option>
+            </select>
+          </div>
+
           <label className="flex items-center gap-2 pb-2">
             <input
               type="checkbox"
@@ -266,13 +289,13 @@ export default function AdminSubscriptionsPage() {
                 <th className="p-3">User</th>
                 <th className="p-3">Tier</th>
                 <th className="p-3">Status</th>
+                <th className="p-3">Method</th>
+                <th className="p-3">Amount</th>
                 <th className="p-3">Expires</th>
-                <th className="p-3">Order</th>
-                <th className="p-3">Payment</th>
-                <th className="p-3">Invoice</th>
-                <th className="p-3">TX</th>
+                <th className="p-3">Order / Code</th>
                 <th className="p-3">Updated</th>
                 <th className="p-3">Actions</th>
+                <th className="p-3">TX</th>
               </tr>
             </thead>
             <tbody>
@@ -284,11 +307,26 @@ export default function AdminSubscriptionsPage() {
                   </td>
                   <td className="p-3">{r.tier}</td>
                   <td className={`p-3 ${statusColor(r.status)}`}>{r.status}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      r.paymentMethod === "CASHAPP"
+                        ? "bg-green-500/20 text-green-400"
+                        : r.paymentMethod === "CARD"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-purple-500/20 text-purple-400"
+                    }`}>
+                      {r.paymentMethod || "CRYPTO"}
+                    </span>
+                  </td>
+                  <td className="p-3 text-gray-300">
+                    {r.amountCents ? `$${(r.amountCents / 100).toFixed(2)}` : "—"}
+                  </td>
                   <td className="p-3 text-gray-300">{fmt(r.expiresAt)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.nowPaymentsOrderId, 18)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.nowPaymentsPaymentId, 14)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.nowPaymentsInvoiceId, 14)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.lastTxSig, 14)}</td>
+                  <td className="p-3 font-mono text-xs text-gray-400">
+                    {r.paymentMethod === "CASHAPP"
+                      ? (r.verifyCode || "—")
+                      : trunc(r.nowPaymentsOrderId, 18)}
+                  </td>
                   <td className="p-3 text-gray-400">{fmt(r.updatedAt)}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
@@ -312,6 +350,19 @@ export default function AdminSubscriptionsPage() {
                       </button>
                     </div>
                   </td>
+                  <td className="p-3">
+                    {r.lastTxSig ? (
+                      <button
+                        className="rounded border border-cyan-600/50 px-2 py-1 text-xs text-cyan-400 hover:bg-cyan-900/30"
+                        onClick={() => setShowTxModal(r.lastTxSig)}
+                        title="View Transaction"
+                      >
+                        View TX
+                      </button>
+                    ) : (
+                      <span className="text-gray-600">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && !loading && !error && (
@@ -327,8 +378,53 @@ export default function AdminSubscriptionsPage() {
 
         <div className="mt-4 text-xs text-gray-500">
           Admin access is controlled by <code className="text-gray-400">ADMIN_WALLETS</code> env var.
-          Search supports email, order_id, payment_id, invoice_id, and tx hash.
+          Search supports email, order_id, payment_id, invoice_id, tx hash, and verify code.
         </div>
+
+        {/* TX Modal */}
+        {showTxModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Transaction ID</h3>
+                <button
+                  onClick={() => setShowTxModal(null)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="bg-black/50 rounded-lg p-4 font-mono text-sm text-cyan-400 break-all">
+                {showTxModal}
+              </div>
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(showTxModal);
+                    alert("Copied to clipboard!");
+                  }}
+                  className="flex-1 rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+                >
+                  Copy TX
+                </button>
+                <a
+                  href={`https://solscan.io/tx/${showTxModal}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 rounded-lg border border-cyan-600/50 bg-cyan-500/20 px-4 py-2 text-sm text-cyan-400 hover:bg-cyan-500/30 text-center"
+                >
+                  View on Solscan
+                </a>
+                <button
+                  onClick={() => setShowTxModal(null)}
+                  className="rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

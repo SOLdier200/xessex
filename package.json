@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -12,6 +13,10 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
+    "@metaplex-foundation/js": "^0.20.1",
+    "@metaplex-foundation/mpl-token-metadata": "2.10.0",
+    "@metaplex-foundation/umi": "^1.4.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.4.1",
     "@prisma/client": "^6.19.1",
     "@solana-mobile/wallet-adapter-mobile": "^2.2.5",
     "@solana/spl-token": "^0.4.14",

@@ -51,6 +51,13 @@ export async function GET() {
   });
   const specialCreditsMicro = specialCreditAccount?.balanceMicro ?? 0n;
 
+  // Check for pending manual payments (Cash App)
+  const pendingManualPayment = await db.manualPayment.findFirst({
+    where: { userId: user.id, status: "PENDING" },
+    select: { id: true, planCode: true, requestedTier: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+
   return NextResponse.json({
     ok: true,
     authed: true,
@@ -77,5 +84,13 @@ export async function GET() {
       referredByEmail,
     },
     specialCreditsMicro: specialCreditsMicro.toString(),
+    pendingManualPayment: pendingManualPayment
+      ? {
+          id: pendingManualPayment.id,
+          planCode: pendingManualPayment.planCode,
+          requestedTier: pendingManualPayment.requestedTier,
+          createdAt: pendingManualPayment.createdAt.toISOString(),
+        }
+      : null,
   });
 }

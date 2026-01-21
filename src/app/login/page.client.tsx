@@ -29,6 +29,12 @@ export default function LoginPageClient() {
           </div>
 
           <EmailLoginBox />
+
+          <div className="mt-4 text-center">
+            <a href="/signup" className="text-pink-400 hover:text-pink-300 text-sm underline">
+              Sign up with Email
+            </a>
+          </div>
         </div>
 
         <div className="text-center text-white/40 text-sm">or</div>

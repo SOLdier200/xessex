@@ -78,9 +78,10 @@ export default function CashAppPaymentPage() {
     setSignupError(null);
 
     try {
-      const refCode = signupRefCode.trim() ||
-        (typeof window !== "undefined" ? localStorage.getItem("ref_code") : null) ||
-        undefined;
+      const refCode = signupRefCode.trim()
+        ? `XESS-${signupRefCode.trim()}`
+        : (typeof window !== "undefined" ? localStorage.getItem("ref_code") : null) ||
+          undefined;
 
       const res = await fetch("/api/auth/email/register-for-checkout", {
         method: "POST",
@@ -198,7 +199,26 @@ export default function CashAppPaymentPage() {
                   <li className="flex items-start gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold">3</span>
                     <span>
-                      <strong className="text-white">Important:</strong> Include your verification code <strong className="text-green-400">{verifyCode}</strong> in the payment note
+                      <strong className="text-white">Important:</strong> Include your verification code{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(verifyCode);
+                          toast.success("Code copied to clipboard!");
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/20 hover:bg-green-500/30 transition group relative"
+                        title="Copy code to clipboard"
+                      >
+                        <strong className="text-green-400">{verifyCode}</strong>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                          Copy code to clipboard
+                        </span>
+                      </button>
+                      {" "}in the payment note
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -240,7 +260,7 @@ export default function CashAppPaymentPage() {
 
         <div className="max-w-lg mx-auto">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold neon-text">Pay with Cash App</h1>
+            <h1 className="text-2xl font-bold neon-text">Pay with <span className="text-[#00D632]">Cash App</span></h1>
             <p className="mt-2 text-white/70">Complete your {plan.label} purchase</p>
           </div>
 
@@ -374,14 +394,22 @@ export default function CashAppPaymentPage() {
 
               <div>
                 <label className="text-xs text-white/60">Referral code (optional)</label>
-                <input
-                  type="text"
-                  value={signupRefCode}
-                  onChange={(e) => setSignupRefCode(e.target.value.toUpperCase())}
-                  disabled={signupBusy}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-purple-400/70 font-mono placeholder:font-sans"
-                  placeholder="e.g., XESS-ABC123"
-                />
+                <div className="mt-1 flex items-stretch rounded-xl border border-white/10 bg-black/50 overflow-hidden focus-within:border-purple-400/70">
+                  <span className="px-3 py-2 text-white/40 font-mono text-sm border-r border-white/10 bg-black/30 flex items-center">
+                    XESS-
+                  </span>
+                  <input
+                    type="text"
+                    value={signupRefCode}
+                    onChange={(e) => {
+                      const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                      setSignupRefCode(raw);
+                    }}
+                    disabled={signupBusy}
+                    className="flex-1 bg-transparent px-3 py-2 text-white placeholder:text-white/30 focus:outline-none font-mono"
+                    placeholder="ABC123"
+                  />
+                </div>
               </div>
 
               {signupError && <div className="text-xs text-red-300">{signupError}</div>}

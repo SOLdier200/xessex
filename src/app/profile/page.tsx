@@ -40,6 +40,12 @@ type ProfileData = {
     referredByEmail: string | null;
   };
   specialCreditsMicro: string;
+  pendingManualPayment: {
+    id: string;
+    planCode: string;
+    requestedTier: string;
+    createdAt: string;
+  } | null;
 };
 
 type AnalyticsData = {
@@ -759,10 +765,26 @@ export default function ProfilePage() {
                           {data.sub.expiresAt ? formatDate(data.sub.expiresAt) : "N/A"}
                         </span>
                       </div>
+
+                      {data.pendingManualPayment && (
+                        <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl">
+                          <p className="text-sm text-yellow-300">
+                            <strong>Note:</strong> Your Cash App payment is pending confirmation. Once your payment is verified, your full subscription time will be updated below.
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
 
-                  {data.membership === "FREE" && (
+                  {data.membership === "FREE" && data.pendingManualPayment && (
+                    <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl">
+                      <p className="text-sm text-yellow-300">
+                        <strong>Note:</strong> Your Cash App payment is pending confirmation. Once your payment is verified, your full subscription time will be activated.
+                      </p>
+                    </div>
+                  )}
+
+                  {data.membership === "FREE" && !data.pendingManualPayment && (
                     <div className="mt-4 p-4 bg-sky-500/10 border border-sky-400/30 rounded-xl">
                       <p className="text-sm text-sky-300 mb-3">
                         Upgrade to Member to unlock full access to all videos!

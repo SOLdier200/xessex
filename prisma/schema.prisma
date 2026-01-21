@@ -146,10 +146,20 @@ model Subscription {
   lastTxSig            String?
   nowPaymentsOrderId   String?            @unique
   cancelAtPeriodEnd    Boolean            @default(false)
+  paymentMethod        PaymentMethod      @default(CRYPTO)
+  amountCents          Int?
+  manualPaymentId      String?
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([expiresAt])
+  @@index([paymentMethod])
+}
+
+enum PaymentMethod {
+  CRYPTO
+  CARD
+  CASHAPP
 }
 
 model Video {
@@ -544,7 +554,8 @@ enum ManualPayStatus {
 // ========== Rewards Drawing & Special Credits Enums ==========
 
 enum RaffleType {
-  CREDITS // Special Credits drawing only (no XESS drawing)
+  CREDITS // Special Credits drawing only
+  XESS    // Legacy - kept for database compatibility
 }
 
 enum RaffleStatus {

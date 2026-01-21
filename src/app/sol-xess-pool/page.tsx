@@ -33,68 +33,11 @@ export default function SolXessPoolPage() {
           SOL/XESS Liquidity Pool
         </h1>
 
-        <p className="text-white/60 mb-8">
-          View and track the SOL/XESS liquidity pool on Solana.
-        </p>
-
-        <div className="space-y-8">
-          <section className="bg-gray-900/50 border border-green-500/30 rounded-2xl p-6">
-            <h2 className="text-2xl font-semibold mb-4 text-green-300">Pool Statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-sm text-white/50">Total Liquidity</div>
-                <div className="text-xl font-semibold">Coming Soon</div>
-              </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-sm text-white/50">24h Volume</div>
-                <div className="text-xl font-semibold">Coming Soon</div>
-              </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-sm text-white/50">XESS Price</div>
-                <div className="text-xl font-semibold">Coming Soon</div>
-              </div>
-              <div className="bg-black/30 rounded-xl p-4">
-                <div className="text-sm text-white/50">Pool APY</div>
-                <div className="text-xl font-semibold">Coming Soon</div>
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-gray-900/50 border border-emerald-500/30 rounded-2xl p-6">
-            <h2 className="text-2xl font-semibold mb-4 text-emerald-300">Pool Information</h2>
-            <p className="text-white/70 mb-4">
-              The SOL/XESS liquidity pool will be available on Raydium. Pool details and links
-              will be published once the token launches.
-            </p>
-            <button
-              disabled
-              className="px-6 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-semibold opacity-50 cursor-not-allowed"
-            >
-              View on Raydium (Coming Soon)
-            </button>
-          </section>
-
-          <section className="bg-gray-900/50 border border-teal-500/30 rounded-2xl p-6">
-            <h2 className="text-2xl font-semibold mb-4 text-teal-300">How to Provide Liquidity</h2>
-            <ol className="space-y-3 text-white/70">
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/30 flex items-center justify-center text-sm font-semibold text-teal-300">1</span>
-                <span>Connect your Solana wallet to Raydium</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/30 flex items-center justify-center text-sm font-semibold text-teal-300">2</span>
-                <span>Navigate to the SOL/XESS pool</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/30 flex items-center justify-center text-sm font-semibold text-teal-300">3</span>
-                <span>Add equal value of SOL and XESS tokens</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/30 flex items-center justify-center text-sm font-semibold text-teal-300">4</span>
-                <span>Confirm the transaction and start earning fees</span>
-              </li>
-            </ol>
-          </section>
+        <div className="mt-12 flex flex-col items-center justify-center text-center">
+          <div className="text-6xl mb-6">🌊</div>
+          <p className="text-2xl text-white/80 font-medium">
+            Link to Orca Devnet Pool coming very soon...
+          </p>
         </div>
       </div>
     </main>

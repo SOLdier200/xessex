@@ -237,10 +237,11 @@ function SignupInner() {
           return;
         }
 
-        // Get referral code - prefer form input, fall back to localStorage
-        const refCode = signupRefCode.trim() ||
-          (typeof window !== "undefined" ? localStorage.getItem("ref_code") : null) ||
-          undefined;
+        // Get referral code - prefer form input (prepend XESS-), fall back to localStorage
+        const refCode = signupRefCode.trim()
+          ? `XESS-${signupRefCode.trim()}`
+          : (typeof window !== "undefined" ? localStorage.getItem("ref_code") : null) ||
+            undefined;
 
         const res = await fetch("/api/auth/email/register-for-checkout", {
           method: "POST",
@@ -1280,14 +1281,22 @@ function SignupInner() {
 
               <div>
                 <label className="text-xs text-white/60">Referral code (optional)</label>
-                <input
-                  type="text"
-                  value={signupRefCode}
-                  onChange={(e) => setSignupRefCode(e.target.value.toUpperCase())}
-                  disabled={signupBusy || signupRegistered}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-white outline-none focus:border-purple-400/70 font-mono placeholder:font-sans"
-                  placeholder="e.g., XESS-ABC123"
-                />
+                <div className="mt-1 flex items-stretch rounded-xl border border-white/10 bg-black/50 overflow-hidden focus-within:border-purple-400/70">
+                  <span className="px-3 py-2 text-white/40 font-mono text-sm border-r border-white/10 bg-black/30 flex items-center">
+                    XESS-
+                  </span>
+                  <input
+                    type="text"
+                    value={signupRefCode}
+                    onChange={(e) => {
+                      const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                      setSignupRefCode(raw);
+                    }}
+                    disabled={signupBusy || signupRegistered}
+                    className="flex-1 bg-transparent px-3 py-2 text-white placeholder:text-white/30 focus:outline-none font-mono"
+                    placeholder="ABC123"
+                  />
+                </div>
               </div>
 
               {signupError && <div className="text-xs text-red-300">{signupError}</div>}

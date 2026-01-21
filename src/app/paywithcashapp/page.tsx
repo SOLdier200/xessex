@@ -36,7 +36,7 @@ export default function PayWithCashAppPage() {
         </Link>
 
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold neon-text">Pay with Cash App</h1>
+          <h1 className="text-3xl font-bold neon-text">Pay with <span className="text-[#00D632]">Cash App</span></h1>
           <p className="mt-2 text-white/70">Select the plan that&apos;s right for you</p>
         </div>
 

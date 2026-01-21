@@ -64,7 +64,7 @@ export default function ManualPaymentsPanel() {
   }
 
   return (
-    <div className="neon-border rounded-2xl p-6 bg-black/30">
+    <div id="manual-payments" className="neon-border rounded-2xl p-6 bg-black/30">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center">
           <span className="text-2xl">💸</span>

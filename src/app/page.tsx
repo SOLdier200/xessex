@@ -138,7 +138,21 @@ export default async function HomePage() {
             </Link>
         </div>
 
-        <VideoSearch videos={videos} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
+        <VideoSearch videos={videos.slice(0, 20)} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
+
+        {videos.length > 20 && (
+          <div className="mt-6 text-center">
+            <Link
+              href="/videos"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-pink-500/20 border border-pink-400/40 text-pink-300 font-semibold hover:bg-pink-500/30 transition"
+            >
+              View All Videos
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </Link>
+          </div>
+        )}
 
         <section className="mt-10 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8">
           <h1 className="text-2xl md:text-3xl font-semibold text-white">

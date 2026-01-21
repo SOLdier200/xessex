@@ -43,12 +43,18 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         status: "ACTIVE",
         expiresAt,
         cancelAtPeriodEnd: false,
+        paymentMethod: "CASHAPP",
+        amountCents: mp.amountUsd,
+        manualPaymentId: mp.id,
       },
       update: {
         tier: mp.requestedTier,
         status: "ACTIVE",
         expiresAt,
         cancelAtPeriodEnd: false,
+        paymentMethod: "CASHAPP",
+        amountCents: mp.amountUsd,
+        manualPaymentId: mp.id,
       },
     });
   });
