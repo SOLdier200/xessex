@@ -20,10 +20,11 @@ export function ClaimPendingXessButton() {
     setLoading(true);
 
     try {
+      // Backend auto-detects the latest on-chain epoch
       const resp = await fetch("/api/rewards/claim/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ epoch: 1 }),
+        body: JSON.stringify({}),
       });
 
       const prep = (await resp.json()) as any;
