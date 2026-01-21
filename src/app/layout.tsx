@@ -138,8 +138,8 @@ export default function RootLayout({
               Tokenomics
             </Link>
             <span>•</span>
-            <Link href="/raffles" className="hover:text-white transition">
-              Raffles
+            <Link href="/rewards-drawing" className="hover:text-white transition">
+              Rewards Drawing
             </Link>
             <span>•</span>
             <Link href="/earn-crypto-watching-porn" className="hover:text-white transition">
@@ -164,6 +164,10 @@ export default function RootLayout({
             <span>•</span>
             <Link href="/refund-policy" className="hover:text-white transition">
               Refund & Cancellation Policy
+            </Link>
+            <span>•</span>
+            <Link href="/contact" className="hover:text-white transition">
+              Contact Us
             </Link>
             <span>•</span>
             <Link href="/leave" className="hover:text-white transition">
@@ -198,7 +202,6 @@ export default function RootLayout({
               support@xessex.me
             </a>
           </p>
-          <p className="text-center mt-2 text-white/40">Sacramento, CA 95834</p>
 
           {/* Donate Button - Bottom Right */}
           <div className="flex justify-end px-4 mt-4 mr-5">

@@ -37,6 +37,7 @@ interface VideoSearchProps {
 }
 
 export default function VideoSearch({ videos, canViewPremium = true, showcaseSlugs = [] }: VideoSearchProps) {
+  const MAX_PREVIEW = 50;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [duration, setDuration] = useState("any");
@@ -107,6 +108,9 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     return result;
   }, [videos, search, category, duration, sort, canViewPremium, showcaseSlugs]);
 
+  const limitedVideos = filteredVideos.slice(0, MAX_PREVIEW);
+  const isLimited = filteredVideos.length > MAX_PREVIEW;
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Search is already reactive via useMemo
@@ -118,7 +122,9 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-semibold neon-text">Browse Videos</h2>
           <p className="text-sm text-white/70">
-            {filteredVideos.length} of {videos.length} videos
+            {isLimited
+              ? `Showing ${limitedVideos.length} of ${filteredVideos.length} videos`
+              : `${filteredVideos.length} of ${videos.length} videos`}
           </p>
         </div>
 
@@ -186,7 +192,12 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
           <h2 className="text-lg font-semibold neon-text">
             {search || category !== "all" || duration !== "any" ? "Search Results" : "All Videos"}
           </h2>
-          <span className="text-sm text-white/60">{filteredVideos.length} videos</span>
+          <span className="text-sm text-white/60">
+            {isLimited
+              ? `Showing ${limitedVideos.length} of ${filteredVideos.length}`
+              : `${filteredVideos.length}`}{" "}
+            videos
+          </span>
         </div>
 
         {filteredVideos.length === 0 ? (
@@ -195,7 +206,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {filteredVideos.map((v) => {
+            {limitedVideos.map((v) => {
               const isShowcase = showcaseSlugs.includes(v.viewkey);
               const isLocked = !canViewPremium && !isShowcase;
 
@@ -298,6 +309,17 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {isLimited && (
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/videos"
+              className="inline-flex items-center rounded-full border border-pink-400/40 bg-pink-500/10 px-5 py-2 text-sm font-semibold text-pink-200 transition hover:border-pink-300/70 hover:bg-pink-500/20"
+            >
+              View All Videos
+            </Link>
           </div>
         )}
       </section>

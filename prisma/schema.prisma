@@ -50,12 +50,11 @@ model User {
   weeklyStats          WeeklyUserStat[]
   weeklyVoterStats     WeeklyVoterStat[]
 
-  // Raffle & Special Credits relations
+  // Rewards Drawing & Special Credits relations
   walletSnapshots      WalletBalanceSnapshot[]
   specialCreditAccount SpecialCreditAccount?
   specialCreditLedger  SpecialCreditLedger[]
   raffleTickets        RaffleTicket[]
-  rafflePurchases      RafflePurchase[]
   raffleWins           RaffleWinner[]
 
   @@index([referredById])
@@ -542,11 +541,10 @@ enum ManualPayStatus {
   EXPIRED
 }
 
-// ========== Raffle & Special Credits Enums ==========
+// ========== Rewards Drawing & Special Credits Enums ==========
 
 enum RaffleType {
-  CREDITS
-  XESS
+  CREDITS // Special Credits drawing only (no XESS drawing)
 }
 
 enum RaffleStatus {
@@ -674,25 +672,20 @@ model SpecialCreditLedger {
   @@index([weekKey])
 }
 
+// Rewards Drawing (Special Credits only - no XESS, no cash value)
 model Raffle {
   id                       String       @id @default(cuid())
   weekKey                  String       // "2026-01-26" ending Sunday PT
-  type                     RaffleType   // CREDITS or XESS
+  type                     RaffleType   // CREDITS only
   status                   RaffleStatus @default(OPEN)
 
-  // Ticket pricing
-  ticketPriceCreditsMicro  BigInt?      // Price per ticket in microcredits (credits raffle)
-  ticketPriceXessAtomic    BigInt?      // Price per ticket in XESS atomic (xess raffle)
+  // Entry cost (Special Credits)
+  ticketPriceCreditsMicro  BigInt?      // Cost per entry in microcredits
 
-  // Credits pools (for type=CREDITS)
-  userPoolCreditsMicro     BigInt       @default(0)
-  matchPoolCreditsMicro    BigInt       @default(0)
-  rolloverCreditsMicro     BigInt       @default(0)
-
-  // XESS pools (for type=XESS)
-  userPoolXessAtomic       BigInt       @default(0)
-  matchPoolXessAtomic      BigInt       @default(0)
-  rolloverXessAtomic       BigInt       @default(0)
+  // Prize pools (Special Credits only)
+  userPoolCreditsMicro     BigInt       @default(0)  // User entries pool
+  matchPoolCreditsMicro    BigInt       @default(0)  // System match pool
+  rolloverCreditsMicro     BigInt       @default(0)  // Unclaimed prizes rollover
 
   totalTickets             BigInt       @default(0)
 
@@ -705,7 +698,6 @@ model Raffle {
 
   tickets                  RaffleTicket[]
   winners                  RaffleWinner[]
-  purchases                RafflePurchase[]
 
   @@unique([weekKey, type])
   @@index([status, closesAt])
@@ -725,33 +717,16 @@ model RaffleTicket {
   @@index([userId, createdAt])
 }
 
-model RafflePurchase {
-  id           String     @id @default(cuid())
-  raffleId     String
-  userId       String
-  type         RaffleType
-  txSig        String     @unique // Prevents replay attacks
-  quantity     BigInt
-  amountAtomic BigInt     @default(0)
-  createdAt    DateTime   @default(now())
-
-  raffle       Raffle     @relation(fields: [raffleId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([raffleId, userId, createdAt])
-}
-
+// Drawing winner (Special Credits prize only)
 model RaffleWinner {
   id                String       @id @default(cuid())
   raffleId          String
   userId            String
   place             Int          // 1, 2, or 3
-  prizeCreditsMicro BigInt       @default(0) // Credits prize (for CREDITS raffle)
-  prizeXessAtomic   BigInt       @default(0) // XESS prize (for XESS raffle)
+  prizeCreditsMicro BigInt       @default(0) // Special Credits prize (no cash value)
   status            WinnerStatus @default(PENDING)
   expiresAt         DateTime     // Deadline to claim
   claimedAt         DateTime?
-  txSig             String?      // On-chain tx sig for XESS claims
   createdAt         DateTime     @default(now())
 
   raffle            Raffle       @relation(fields: [raffleId], references: [id], onDelete: Cascade)
@@ -762,13 +737,12 @@ model RaffleWinner {
   @@index([status, expiresAt])
 }
 
+// System match budget for rewards drawing (promotional, not user-funded)
 model RaffleMatchBudget {
   id                   String   @id @default(cuid())
   weekKey              String   @unique // Week ending Sunday date
   creditsMatchCapMicro BigInt   @default(0) // Max credits to match this week
   creditsMatchedMicro  BigInt   @default(0) // Credits already matched
-  xessMatchCapAtomic   BigInt   @default(0) // Max XESS to match this week
-  xessMatchedAtomic    BigInt   @default(0) // XESS already matched
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

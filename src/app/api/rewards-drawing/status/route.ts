@@ -1,0 +1,118 @@
+/**
+ * Rewards Drawing Status API
+ *
+ * GET /api/rewards-drawing/status
+ *
+ * Returns current drawing state for UI including:
+ * - User's credit balance
+ * - Pool breakdown (user + match + rollover + total)
+ * - User's entries and win probability
+ * - Pending wins (credits only - no XESS)
+ */
+
+import { NextResponse } from "next/server";
+import { db } from "@/lib/prisma";
+import { getAccessContext } from "@/lib/access";
+import { raffleWeekInfo } from "@/lib/raffleWeekPT";
+import { ensureWeekRaffles } from "@/lib/rafflesEnsure";
+import { chanceAnyPrizePct } from "@/lib/raffleOdds";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  const ctx = await getAccessContext();
+
+  const now = new Date();
+  const { weekKey, opensAt, closesAt } = raffleWeekInfo(now);
+  await ensureWeekRaffles({ weekKey, opensAt, closesAt });
+
+  // Get user's credit balance
+  let creditsBalanceMicro = "0";
+
+  if (ctx.user?.id) {
+    const specialAcct = await db.specialCreditAccount.findUnique({
+      where: { userId: ctx.user.id },
+    });
+    creditsBalanceMicro = (specialAcct?.balanceMicro ?? 0n).toString();
+  }
+
+  // Fetch credits drawing only (no XESS)
+  const creditsRaffle = await db.raffle.findUnique({
+    where: { weekKey_type: { weekKey, type: "CREDITS" } },
+  });
+
+  // User's entries (if logged in)
+  let userTickets = 0n;
+  if (ctx.user?.id && creditsRaffle) {
+    const agg = await db.raffleTicket.aggregate({
+      where: { raffleId: creditsRaffle.id, userId: ctx.user.id },
+      _sum: { quantity: true },
+    });
+    userTickets = BigInt(agg._sum.quantity ?? 0);
+  }
+
+  // Calculate win probability
+  const chanceAnyPct = creditsRaffle
+    ? chanceAnyPrizePct(userTickets, creditsRaffle.totalTickets)
+    : 0;
+
+  // Build drawing response
+  let drawing = null;
+  if (creditsRaffle) {
+    const userPool = creditsRaffle.userPoolCreditsMicro;
+    const matchPool = creditsRaffle.matchPoolCreditsMicro;
+    const rollover = creditsRaffle.rolloverCreditsMicro;
+    const total = userPool + matchPool + rollover;
+
+    drawing = {
+      id: creditsRaffle.id,
+      status: creditsRaffle.status,
+      ticketPriceMicro: creditsRaffle.ticketPriceCreditsMicro?.toString() ?? null,
+      totalTickets: creditsRaffle.totalTickets.toString(),
+      yourTickets: userTickets.toString(),
+      chanceAnyPct,
+      pools: {
+        user: userPool.toString(),
+        match: matchPool.toString(),
+        rollover: rollover.toString(),
+        total: total.toString(),
+      },
+    };
+  }
+
+  // Pending wins (credits only)
+  const pendingWins = ctx.user?.id
+    ? await db.raffleWinner.findMany({
+        where: {
+          userId: ctx.user.id,
+          status: "PENDING",
+          raffle: { type: "CREDITS" },
+        },
+        include: { raffle: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+
+  return NextResponse.json({
+    ok: true,
+    weekKey,
+    closesAt: closesAt.toISOString(),
+    creditsBalanceMicro,
+    drawing,
+    pendingWins: pendingWins.map((w) => ({
+      winnerId: w.id,
+      weekKey: w.raffle.weekKey,
+      place: w.place,
+      prizeCreditsMicro: w.prizeCreditsMicro.toString(),
+      expiresAt: w.expiresAt.toISOString(),
+    })),
+    rules: {
+      creditsPurchasable: false,
+      creditsCashValue: false,
+      creditsConvertibleToToken: false,
+      creditsWithdrawable: false,
+      creditsRedeemableForMoney: false,
+      allowedUses: ["REWARDS_DRAWING_TICKETS", "MEMBERSHIP_MONTHS_ONLY"],
+    },
+  });
+}

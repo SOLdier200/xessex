@@ -1,12 +1,15 @@
 /**
- * Buy Credits Raffle Tickets
+ * Enter Rewards Drawing with Special Credits
  *
- * POST /api/raffles/buy/credits
+ * POST /api/rewards-drawing/enter
  *
- * Body: { quantity: number }
+ * Body: { quantity: string } - number of entries
  *
- * Deducts credits from user's SpecialCreditAccount.
- * 1 credit = 1 ticket
+ * Spends Special Credits to enter the weekly drawing.
+ * 1 Special Credit = 1 entry
+ *
+ * Note: Special Credits are NOT purchasable and have NO cash value.
+ * Credits are earned in-app based on eligibility.
  */
 
 import { NextResponse } from "next/server";
@@ -14,7 +17,7 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { raffleWeekInfo } from "@/lib/raffleWeekPT";
 import { ensureWeekRaffles } from "@/lib/rafflesEnsure";
-import { RAFFLE_CREDIT_TICKET_MICRO } from "@/lib/rewardsConstants";
+import { DRAWING_TICKET_MICRO } from "@/lib/rewardsConstants";
 
 export const runtime = "nodejs";
 
@@ -27,9 +30,15 @@ export async function POST(req: Request) {
   const userId = ctx.user.id;
 
   const body = await req.json().catch(() => ({}));
-  const qty = BigInt(body?.quantity ?? 0);
+  let qty: bigint;
+  try {
+    qty = BigInt(body?.quantity ?? 0);
+  } catch {
+    return NextResponse.json({ ok: false, error: "invalid_quantity" }, { status: 400 });
+  }
+
   if (qty <= 0n) {
-    return NextResponse.json({ ok: false, error: "bad_quantity" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "quantity_must_be_positive" }, { status: 400 });
   }
 
   const { weekKey, opensAt, closesAt } = raffleWeekInfo(new Date());
@@ -40,10 +49,10 @@ export async function POST(req: Request) {
   });
 
   if (!raffle || raffle.status !== "OPEN") {
-    return NextResponse.json({ ok: false, error: "raffle_not_open" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "drawing_not_open" }, { status: 400 });
   }
 
-  const costMicro = qty * RAFFLE_CREDIT_TICKET_MICRO;
+  const costMicro = qty * DRAWING_TICKET_MICRO;
 
   try {
     await db.$transaction(async (tx) => {
@@ -67,8 +76,8 @@ export async function POST(req: Request) {
           userId,
           weekKey,
           amountMicro: -costMicro,
-          reason: `Bought ${qty.toString()} raffle ticket(s)`,
-          refType: "RAFFLE_BUY_CREDITS",
+          reason: `Rewards drawing entry (${qty.toString()} entr${qty === 1n ? "y" : "ies"})`,
+          refType: "DRAWING_ENTRY",
           refId: `${raffle.id}:${userId}:${Date.now()}`,
         },
       });

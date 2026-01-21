@@ -69,7 +69,7 @@ export default function EarnCryptoWatchingPornPage() {
           <ul className="mt-4 space-y-2 text-white/70 list-disc list-inside">
             <li>Earn crypto watching adult videos</li>
             <li>Receive Diamond rewards (XESS Tokens) for engagement on the site from ranking videos, liking comments, making comments, referrals, liquidity pools, rewards for holding XESS tokens, and more</li>
-            <li>Hold XESS coins for membership discounts</li>
+            <li>Hold XESS tokens to earn Special Credit rewards which can be redeemed for free membership month(s)</li>
             <li>Get paid for time spent watching content</li>
           </ul>
 
@@ -97,13 +97,10 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
           <ul className="mt-4 space-y-2 text-white/70 list-disc list-inside">
             <li>XESS Coin - the main reward token</li>
-            <li>Diamond XESS - premium rewards</li>
             <li>Activity-based bonuses</li>
-            <li>Seasonal crypto rewards</li>
           </ul>
           <p className="mt-4 text-white/70">
-            These tokens can be used for memberships, unlocking premium content, and future access
-            features. Rewards are tracked transparently and distributed automatically.
+            Special Credits are distributed automatically based on how much XESS your wallet is holding during the daily snapshot.
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">
@@ -141,8 +138,7 @@ export default function EarnCryptoWatchingPornPage() {
             Safe, Private, and Members-Only
           </h2>
           <p className="mt-4 text-white/70">
-            Privacy matters. Xessex is members-only, age-restricted, and designed to reduce
-            tracking. Wallet-based access options and encrypted sessions help you stay in control
+            Xessex is members-only and age-restricted along with being RTA compliant. Wallet-based access options and encrypted sessions help you stay in control
             while earning rewards and accessing premium content.
           </p>
 
@@ -156,27 +152,26 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">
-            Weekly Raffles &amp; Special Credits (Coming Soon)
+            Weekly Reward Drawing &amp; Special Credits (Coming Soon)
           </h2>
           <p className="mt-4 text-white/70">
             Hold XESS tokens in your linked wallet and earn daily Special Credits automatically.
             The more you hold, the more credits you earn — no claiming required, they just appear
-            in your account. Use Special Credits to enter our weekly raffles for a chance to win
+            in your account. Use Special Credits to enter our weekly reward drawing for a chance to win
             big prizes from the community pot, boosted by system matching and rollover jackpots
             from unclaimed prizes.
           </p>
           <p className="mt-4 text-white/70">
-            Two raffles run each week: a <strong className="text-pink-400">Special Credits Raffle</strong> (1 credit = 1 ticket)
-            and a <strong className="text-yellow-400">XESS Raffle</strong> (100 XESS = 1 ticket). Prize pools are funded
-            by ticket purchases plus a 1:1 system match, with unclaimed prizes rolling over to
-            create growing jackpots. Winners take 1st place (50%), 2nd place (30%), and 3rd place (20%) —
-            but you must claim your prize before the next draw or it rolls into the next week&apos;s pot!
+            Enter the weekly <strong className="text-pink-400">Special Credits Reward Drawing</strong> (1 credit = 1 ticket).
+            Prize pools are funded by ticket purchases plus a 1:1 system match, with unclaimed prizes
+            rolling over to create growing jackpots. Winners take 1st place (50%), 2nd place (30%),
+            and 3rd place (20%) — but you must claim your prize before the next draw or it rolls
+            into the next week&apos;s pot!
           </p>
           <p className="mt-4 text-white/70">
             Special Credit rewards are based on your average daily XESS holdings — hold at least
             100,000 XESS to start earning. Higher tiers unlock more daily credits, up to 500 credits
-            per day for holders of 10 million+ XESS. Plus, a <strong className="text-cyan-400">Keno game</strong> is
-            coming soon for even more ways to play and win!
+            per day for holders of 10 million+ XESS.
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">

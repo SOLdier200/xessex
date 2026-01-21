@@ -842,14 +842,14 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <Link
-                      href="/raffles"
+                      href="/rewards-drawing"
                       className="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm"
                     >
-                      Play Raffles
+                      Enter Drawing
                     </Link>
                   </div>
                   <p className="text-xs text-white/50 mt-3">
-                    Diamond members earn special credits daily based on XESS holdings. Use credits to enter the weekly raffle.
+                    Diamond members earn special credits daily based on eligibility. Use credits to enter the weekly drawing or redeem for membership.
                   </p>
                 </div>
               </div>

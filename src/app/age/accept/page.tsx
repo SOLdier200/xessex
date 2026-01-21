@@ -2,7 +2,7 @@ import Link from "next/link";
 import AcceptClient from "./AcceptClient";
 
 type AgeAcceptPageProps = {
-  searchParams?: { next?: string | string[] };
+  searchParams?: any;
 };
 
 function sanitizeNext(nextValue: string | null | undefined) {
@@ -12,8 +12,9 @@ function sanitizeNext(nextValue: string | null | undefined) {
   return nextValue;
 }
 
-export default function AgeAcceptPage({ searchParams }: AgeAcceptPageProps) {
-  const nextValue = searchParams?.next;
+export default async function AgeAcceptPage({ searchParams }: AgeAcceptPageProps) {
+  const resolvedParams = await Promise.resolve(searchParams);
+  const nextValue = resolvedParams?.next;
   const nextParam = Array.isArray(nextValue) ? nextValue[0] : nextValue;
   const next = sanitizeNext(nextParam);
 

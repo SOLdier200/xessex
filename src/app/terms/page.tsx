@@ -156,7 +156,38 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">9. Prohibited Conduct</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">9. Rewards Credits System</h2>
+          <p>
+            Users may earn non-transferable &quot;Special Credits&quot; (&quot;Credits&quot;) through participation in the Xessex platform, including but not limited to holding Xess tokens in a compatible wallet. Credits are issued solely as a loyalty reward and have no monetary value. Credits cannot be purchased, sold, traded, transferred, exchanged for cryptocurrency, exchanged for cash, or redeemed for any item of monetary value.
+          </p>
+          <p className="mt-3">
+            Credits may only be redeemed for platform-specific benefits such as membership extensions or other non-monetary digital perks offered by the site. Credits do not represent any financial interest, ownership interest, or right to receive compensation of any kind.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.1 Reward Drawings</h3>
+          <p>
+            From time to time, the platform may offer optional reward drawings (&quot;Drawings&quot;) in which users may choose to spend Credits for a chance to receive additional Credits. Participation in Drawings is entirely optional. Drawings do not require payment, cryptocurrency, or any item of value to enter. Only Credits may be used to participate.
+          </p>
+          <p className="mt-3">
+            Prizes awarded in Drawings consist exclusively of additional Credits, which retain the same non-monetary, non-transferable nature described above. Drawings do not provide cash, cryptocurrency, or any item of monetary value.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.2 No Gambling or Wagering</h3>
+          <p>
+            The platform does not offer gambling, wagering, or games of chance involving money, cryptocurrency, or items of value. Credits cannot be used as a substitute for money or cryptocurrency. Credits cannot be withdrawn, cashed out, or exchanged for anything of monetary value.
+          </p>
+          <p className="mt-3">
+            All activities involving Credits are intended solely as loyalty rewards and entertainment features within the platform.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.3 No Financial Returns</h3>
+          <p>
+            Holding Xess tokens does not entitle users to financial returns, interest, dividends, staking rewards, or any form of passive income. Any Credits earned through holding Xess tokens are loyalty rewards and not financial compensation. Xess tokens are not investment products, and the platform does not promote them as such.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">10. Prohibited Conduct</h2>
           <p>You may not:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
             <li>Access Xessex if under 18</li>
@@ -168,7 +199,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">10. Disclaimers</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">11. Disclaimers</h2>
           <p>
             Xessex is provided &quot;as is.&quot; We do not guarantee uptime, availability, or accuracy of embedded third-party content.
           </p>
@@ -178,28 +209,28 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">11. Limitation of Liability</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">12. Limitation of Liability</h2>
           <p>
             To the fullest extent allowed by law, Xessex is not liable for any damages arising from your use of the Platform, including exposure to adult content or third-party media.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">12. Termination</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">13. Termination</h2>
           <p>
             We may suspend or terminate access at any time for violations of these Terms or misuse.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">13. Changes to These Terms</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">14. Changes to These Terms</h2>
           <p>
             We may update these Terms at any time. Continued use of Xessex after changes means you accept the updated Terms.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">14. Contact</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">15. Contact</h2>
           <p>For legal, compliance, or support inquiries:</p>
           <p className="mt-2">
             <a href="mailto:support@xessex.me" className="text-pink-400 hover:underline">support@xessex.me</a>

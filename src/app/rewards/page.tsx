@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import TopNav from "../components/TopNav";
 
 export default function RewardsPage() {
@@ -11,6 +12,16 @@ export default function RewardsPage() {
       <div className="mx-auto max-w-4xl px-5 py-10">
         {/* Header */}
         <div className="text-center mb-10">
+          <Link href="/" className="inline-block mb-6">
+            <Image
+              src="/logos/neonmainlogo1.png"
+              alt="Xessex"
+              width={285}
+              height={95}
+              className="h-[60px] md:h-[80px] w-auto mx-auto"
+              priority
+            />
+          </Link>
           <h1 className="text-4xl md:text-5xl font-bold neon-text mb-4">
             Earn XESS Rewards
           </h1>
