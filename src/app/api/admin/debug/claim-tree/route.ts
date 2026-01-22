@@ -65,7 +65,7 @@ async function getOnChainRoot(epoch: bigint): Promise<{ found: boolean; rootHex?
 export async function GET(req: NextRequest) {
   // Auth check - must be admin
   const ctx = await getAccessContext();
-  if (!ctx.isAdmin && !ctx.isMod) {
+  if (!ctx.isAdminOrMod) {
     return NextResponse.json({ error: "admin_required" }, { status: 403 });
   }
 
@@ -173,14 +173,8 @@ export async function GET(req: NextRequest) {
         leafHash: toHex32(leafBuf),
         proofValid,
         proofValidAgainstRoot: targetEpoch.rootHex,
+        proofError: proofValid ? null : "Proof does NOT verify against stored root. Tree may be corrupted.",
       };
-
-      if (!proofValid) {
-        result.walletLookup = {
-          ...result.walletLookup,
-          proofError: "Proof does NOT verify against stored root. Tree may be corrupted.",
-        };
-      }
     }
   }
 
