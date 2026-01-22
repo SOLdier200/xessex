@@ -26,6 +26,7 @@ interface ClaimableEpoch {
   amountAtomic: string;
   index: number;
   proof: string[]; // hex strings
+  claimer: string; // base58 wallet address
   pdas: {
     config: string;
     vaultAuthority: string;
@@ -126,6 +127,7 @@ export async function GET() {
       amountAtomic: leaf.amountAtomic.toString(),
       index: leaf.index,
       proof: leaf.proofHex as string[],
+      claimer: claimerPk.toBase58(),
       pdas: {
         config: configPda.toBase58(),
         vaultAuthority: vaultAuthority.toBase58(),

@@ -16,6 +16,15 @@ import {
 } from "@solana/spl-token";
 import * as anchor from "@coral-xyz/anchor";
 
+// Strict hex-to-bytes converter for merkle proof elements (must be exactly 32 bytes)
+function hexToU8_32(hex: string): number[] {
+  const h = hex.trim().startsWith("0x") ? hex.trim().slice(2) : hex.trim();
+  if (h.length !== 64) throw new Error(`Bad proof element length: ${h.length} hex chars (expected 64)`);
+  const buf = Buffer.from(h, "hex");
+  if (buf.length !== 32) throw new Error(`Bad proof element bytes: ${buf.length} (expected 32)`);
+  return Array.from(buf);
+}
+
 type ProfileData = {
   ok: boolean;
   authed: boolean;
@@ -326,17 +335,13 @@ export default function ProfilePage() {
         setClaimAllProgress(`Claiming ${i + 1}/${totalEpochs} (Week ${epoch.weekKey})...`);
 
         try {
-          // Convert proof hex to bytes
-          const proofVec: number[][] = Array.isArray(epoch.proof)
-            ? epoch.proof.map((hex: string) => {
-                const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
-                const bytes: number[] = [];
-                for (let j = 0; j < cleanHex.length; j += 2) {
-                  bytes.push(parseInt(cleanHex.slice(j, j + 2), 16));
-                }
-                return bytes;
-              })
-            : [];
+          // Wallet mismatch guard for this epoch
+          if (epoch.claimer && walletPubkey.toBase58() !== epoch.claimer) {
+            throw new Error(`WALLET_MISMATCH: expected ${epoch.claimer} got ${walletPubkey.toBase58()}`);
+          }
+
+          // Convert proof hex to bytes using strict converter
+          const proofVec: number[][] = Array.isArray(epoch.proof) ? epoch.proof.map(hexToU8_32) : [];
 
           const claimIx = await program.methods
             .claim(
@@ -404,8 +409,11 @@ export default function ProfilePage() {
       }
 
       if (successCount > 0) {
-        // Calculate total claimed in XESS (9 decimals)
-        const totalXess = (Number(claimedAmountAtomic) / 1_000_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 });
+        // Calculate total claimed in XESS (9 decimals) - use BigInt to avoid precision loss
+        const wholeXess = claimedAmountAtomic / 1_000_000_000n;
+        const remainder = claimedAmountAtomic % 1_000_000_000n;
+        const decimal = Number(remainder) / 1_000_000_000;
+        const totalXess = (Number(wholeXess) + decimal).toLocaleString(undefined, { maximumFractionDigits: 2 });
         setClaimSuccess({
           count: successCount,
           totalXess,
@@ -481,19 +489,13 @@ export default function ProfilePage() {
       const userAta = getAssociatedTokenAddressSync(mint, walletPubkey);
       const userAtaInfo = await connection.getAccountInfo(userAta);
 
-      // 6) Build claim instruction
-      // Convert hex strings to byte arrays
-      const proofVec: number[][] = Array.isArray(prep.proof)
-        ? prep.proof.map((hex: string) => {
-            // Remove 0x prefix if present
-            const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
-            const bytes: number[] = [];
-            for (let i = 0; i < cleanHex.length; i += 2) {
-              bytes.push(parseInt(cleanHex.slice(i, i + 2), 16));
-            }
-            return bytes;
-          })
-        : [];
+      // 6) Wallet mismatch guard - prevent BadProof from signing with wrong wallet
+      if (prep.claimer && walletPubkey.toBase58() !== prep.claimer) {
+        throw new Error(`WALLET_MISMATCH: expected ${prep.claimer} got ${walletPubkey.toBase58()}`);
+      }
+
+      // 7) Build claim instruction - use strict proof conversion
+      const proofVec: number[][] = Array.isArray(prep.proof) ? prep.proof.map(hexToU8_32) : [];
 
       const claimIx = await program.methods
         .claim(
