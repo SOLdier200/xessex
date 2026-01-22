@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
   });
 
-  // For CashApp payments, fetch the verifyCode from ManualPayment
+  // For CashApp payments, fetch the verifyCode and amountUsd from ManualPayment
   const manualPaymentIds = rows
     .filter((r) => r.paymentMethod === "CASHAPP" && r.manualPaymentId)
     .map((r) => r.manualPaymentId as string);
@@ -63,16 +63,21 @@ export async function GET(req: NextRequest) {
   const manualPayments = manualPaymentIds.length
     ? await db.manualPayment.findMany({
         where: { id: { in: manualPaymentIds } },
-        select: { id: true, verifyCode: true },
+        select: { id: true, verifyCode: true, amountUsd: true },
       })
     : [];
 
-  const verifyCodeMap = new Map(manualPayments.map((mp) => [mp.id, mp.verifyCode]));
+  const manualPaymentMap = new Map(manualPayments.map((mp) => [mp.id, mp]));
 
-  const enrichedRows = rows.map((r) => ({
-    ...r,
-    verifyCode: r.manualPaymentId ? verifyCodeMap.get(r.manualPaymentId) || null : null,
-  }));
+  const enrichedRows = rows.map((r) => {
+    const mp = r.manualPaymentId ? manualPaymentMap.get(r.manualPaymentId) : null;
+    return {
+      ...r,
+      verifyCode: mp?.verifyCode || null,
+      // Use ManualPayment.amountUsd for CashApp, otherwise use Subscription.amountCents
+      amountCents: mp?.amountUsd ?? r.amountCents ?? null,
+    };
+  });
 
   const nextCursor = rows.length === limit ? rows[rows.length - 1].id : null;
 

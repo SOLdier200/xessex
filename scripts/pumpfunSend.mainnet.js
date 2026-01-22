@@ -10,13 +10,20 @@ import {
 import fs from "fs";
 import readline from "readline";
 
+// ---------- CONFIG ----------
+
+// Mainnet RPC
 const connection = new Connection("https://api.mainnet-beta.solana.com");
+
+// Your mainnet mint
 const MINT_ADDRESS = "PASTE_MAINNET_MINT_HERE";
 const mint = new PublicKey(MINT_ADDRESS);
 
+// Keypair directory
 const KEYPAIR_DIR = "/home/sol/.config/xessex/";
 const TREASURY_KEYPAIR_PATH = KEYPAIR_DIR + "treasury.mainnet.json";
 
+// Load payer (Solana CLI)
 const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
@@ -25,6 +32,7 @@ const payer = Keypair.fromSecretKey(
   )
 );
 
+// Load or create treasury keypair
 function loadOrCreateTreasuryKeypair() {
   if (fs.existsSync(TREASURY_KEYPAIR_PATH)) {
     return Keypair.fromSecretKey(
@@ -41,6 +49,7 @@ function loadOrCreateTreasuryKeypair() {
   }
 }
 
+// Prompt helper
 function ask(q) {
   const rl = readline.createInterface({
     input: process.stdin,
@@ -58,24 +67,28 @@ function ask(q) {
   console.log("Mint:", mint.toBase58());
   console.log("Payer:", payer.publicKey.toBase58());
 
-  const destWalletStr = await ask("Enter destination wallet: ");
-  const destinationWallet = new PublicKey(destWalletStr);
+  // Pump.fun wallet address (user chooses)
+  const pumpWalletStr = await ask("Enter the pump.fun wallet address: ");
+  const pumpWallet = new PublicKey(pumpWalletStr);
 
-  const amountStr = await ask("Enter how many whole tokens to send: ");
+  // Amount to send
+  const amountStr = await ask("Enter how many whole tokens to send to pump.fun: ");
   const sendAmountTokens = BigInt(amountStr);
 
-  const treasuryChoice = await ask("Send tokens to treasury? (yes/no): ");
+  // Treasury optional
+  const treasuryChoice = await ask("Send tokens to treasury as well? (yes/no): ");
 
   let treasuryAmountTokens = 0n;
   const treasury = loadOrCreateTreasuryKeypair();
 
   if (treasuryChoice.toLowerCase() === "yes") {
-    const treasuryAmountStr = await ask("Enter treasury amount: ");
+    const treasuryAmountStr = await ask("Enter how many tokens to send to treasury: ");
     treasuryAmountTokens = BigInt(treasuryAmountStr);
   }
 
   console.log("Treasury wallet:", treasury.publicKey.toBase58());
 
+  // Create ATAs
   const payerAta = await getOrCreateAssociatedTokenAccount(
     connection,
     payer,
@@ -83,11 +96,11 @@ function ask(q) {
     payer.publicKey
   );
 
-  const destAta = await getOrCreateAssociatedTokenAccount(
+  const pumpAta = await getOrCreateAssociatedTokenAccount(
     connection,
     payer,
     mint,
-    destinationWallet
+    pumpWallet
   );
 
   const treasuryAta = await getOrCreateAssociatedTokenAccount(
@@ -97,19 +110,26 @@ function ask(q) {
     treasury.publicKey
   );
 
+  console.log("Payer ATA:", payerAta.address.toBase58());
+  console.log("Pump.fun ATA:", pumpAta.address.toBase58());
+  console.log("Treasury ATA:", treasuryAta.address.toBase58());
+
+  // Convert to base units
   const sendAmountBaseUnits = sendAmountTokens * 10n ** 9n;
   const treasuryAmountBaseUnits = treasuryAmountTokens * 10n ** 9n;
 
+  // Transfer to pump.fun
   const sig1 = await transfer(
     connection,
     payer,
     payerAta.address,
-    destAta.address,
+    pumpAta.address,
     payer,
     sendAmountBaseUnits
   );
-  console.log("Sent to destination. Tx:", sig1);
+  console.log("Sent to pump.fun. Tx:", sig1);
 
+  // Optional treasury transfer
   if (treasuryAmountTokens > 0n) {
     const sig2 = await transfer(
       connection,

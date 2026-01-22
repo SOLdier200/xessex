@@ -8,12 +8,16 @@ import { NextResponse } from "next/server";
 
 const COOKIE_NAME = process.env.XESSEX_SESSION_COOKIE || "xessex_session";
 
-// Share cookies across apex + www (even though www now redirects)
-const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".xessex.me" : undefined;
+// Determine if we're on a real production domain (not localhost)
+const SITE_URL = process.env.SITE_URL || "";
+const isRealProduction = SITE_URL.includes("xessex.me");
+
+// Share cookies across apex + www (only on real production domain)
+const COOKIE_DOMAIN = isRealProduction ? ".xessex.me" : undefined;
 
 const BASE = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: SITE_URL.startsWith("https://"),
   sameSite: "lax" as const,
   path: "/",
   domain: COOKIE_DOMAIN,

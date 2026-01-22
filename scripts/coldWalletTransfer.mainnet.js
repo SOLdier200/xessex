@@ -9,36 +9,38 @@ import {
 } from "@solana/spl-token";
 import fs from "fs";
 
-// ---------- CONFIG ----------
+// Mainnet RPC
+const connection = new Connection("https://api.mainnet-beta.solana.com");
 
-// Devnet RPC
-const connection = new Connection("https://api.devnet.solana.com");
-
-// Your mint (from createToken.devnet.js output)
-const MINT_ADDRESS = "DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu";
+// Mainnet mint
+const MINT_ADDRESS = "PASTE_MAINNET_MINT_HERE";
 const mint = new PublicKey(MINT_ADDRESS);
 
-// Cold wallet public key (string from Phantom, etc.)
-const COLD_WALLET_ADDRESS = "3HztXasxNEMASQErs3RUucZtzNCRdH7xuKnMb5PrTdiS";
+// Cold wallet
+const COLD_WALLET_ADDRESS = "PASTE_COLD_WALLET_HERE";
 const coldWallet = new PublicKey(COLD_WALLET_ADDRESS);
 
-// Treasury wallet keypair file
-const TREASURY_KEYPAIR_PATH = "./treasury.json";
+// Keypair dir
+const KEYPAIR_DIR = "/home/sol/.config/xessex/";
+const TREASURY_KEYPAIR_PATH = KEYPAIR_DIR + "treasury.mainnet.json";
 
-// Amounts (in whole tokens)
-const COLD_WALLET_TOKENS = 150_000_000n; // 150M
-// ----------------------------
+// Amount
+const COLD_WALLET_TOKENS = 150_000_000n;
 
-// Load your Solana CLI keypair (payer/owner of initial supply)
-const secret = JSON.parse(
-  fs.readFileSync(`${process.env.HOME}/.config/solana/id.json`, "utf8")
+// Payer (CLI)
+const payer = Keypair.fromSecretKey(
+  Uint8Array.from(
+    JSON.parse(
+      fs.readFileSync(`${process.env.HOME}/.config/solana/id.json`, "utf8")
+    )
+  )
 );
-const payer = Keypair.fromSecretKey(new Uint8Array(secret));
 
 function loadOrCreateTreasuryKeypair() {
   if (fs.existsSync(TREASURY_KEYPAIR_PATH)) {
-    const raw = JSON.parse(fs.readFileSync(TREASURY_KEYPAIR_PATH, "utf8"));
-    return Keypair.fromSecretKey(new Uint8Array(raw));
+    return Keypair.fromSecretKey(
+      Uint8Array.from(JSON.parse(fs.readFileSync(TREASURY_KEYPAIR_PATH)))
+    );
   } else {
     const kp = Keypair.generate();
     fs.writeFileSync(
@@ -58,34 +60,31 @@ function loadOrCreateTreasuryKeypair() {
   const treasury = loadOrCreateTreasuryKeypair();
   console.log("Treasury wallet:", treasury.publicKey.toBase58());
 
-  // 1. Get payer ATA (source)
   const payerAta = await getOrCreateAssociatedTokenAccount(
     connection,
     payer,
     mint,
     payer.publicKey
   );
-  console.log("Payer ATA:", payerAta.address.toBase58());
 
-  // 2. Get/create cold wallet ATA (destination)
   const coldAta = await getOrCreateAssociatedTokenAccount(
     connection,
-    payer,        // payer for ATA creation
+    payer,
     mint,
     coldWallet
   );
-  console.log("Cold wallet ATA:", coldAta.address.toBase58());
 
-  // 3. Get/create treasury ATA
   const treasuryAta = await getOrCreateAssociatedTokenAccount(
     connection,
-    payer,        // payer for ATA creation
+    payer,
     mint,
     treasury.publicKey
   );
+
+  console.log("Payer ATA:", payerAta.address.toBase58());
+  console.log("Cold wallet ATA:", coldAta.address.toBase58());
   console.log("Treasury ATA:", treasuryAta.address.toBase58());
 
-  // 4. Transfer 150M tokens (remember 9 decimals)
   const amountBaseUnits = COLD_WALLET_TOKENS * 10n ** 9n;
 
   const sig = await transfer(
@@ -93,7 +92,7 @@ function loadOrCreateTreasuryKeypair() {
     payer,
     payerAta.address,
     coldAta.address,
-    payer, // owner of source ATA
+    payer,
     amountBaseUnits
   );
 

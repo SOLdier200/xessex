@@ -33,11 +33,35 @@ export default function SolXessPoolPage() {
           SOL/XESS Liquidity Pool
         </h1>
 
-        <div className="mt-12 flex flex-col items-center justify-center text-center">
-          <div className="text-6xl mb-6">🌊</div>
-          <p className="text-2xl text-white/80 font-medium">
-            Link to Orca Devnet Pool coming very soon...
-          </p>
+        <div className="mt-8 space-y-6">
+          <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-green-500/10 p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="text-4xl">🌊</div>
+              <div>
+                <h2 className="text-xl font-bold text-emerald-400">Orca Pool for Devnet XESS</h2>
+                <p className="text-white/60 text-sm">Trade SOL/XESS on Orca (Devnet)</p>
+              </div>
+            </div>
+            <a
+              href="https://www.orca.so/pools?chainId=solanaDevnet&tokens=So11111111111111111111111111111111111111112&tokens=DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-400 font-semibold hover:bg-emerald-500/30 transition"
+            >
+              Open Orca Pool
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          </div>
+
+          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-900/10 p-4">
+            <p className="text-yellow-400 text-sm">
+              <strong>Note:</strong> This is the Devnet pool for testing. Mainnet pool will be available after launch.
+            </p>
+          </div>
         </div>
       </div>
     </main>

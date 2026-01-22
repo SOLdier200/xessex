@@ -8,22 +8,26 @@ import {
   transfer,
 } from "@solana/spl-token";
 import fs from "fs";
-import readline from "readline";
 
-// ---------------- CONFIG ----------------
-
-// DEVNET RPC
+// Devnet RPC
 const connection = new Connection("https://api.devnet.solana.com");
 
 // Devnet mint
 const MINT_ADDRESS = "DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu";
 const mint = new PublicKey(MINT_ADDRESS);
 
-// Keypair directory
+// Cold wallet
+const COLD_WALLET_ADDRESS = "3HztXasxNEMASQErs3RUucZtzNCRdH7xuKnMb5PrTdiS";
+const coldWallet = new PublicKey(COLD_WALLET_ADDRESS);
+
+// Keypair dir
 const KEYPAIR_DIR = "/home/sol/.config/xessex/";
 const TREASURY_KEYPAIR_PATH = KEYPAIR_DIR + "treasury.devnet.json";
 
-// Load payer (Solana CLI)
+// Amount
+const COLD_WALLET_TOKENS = 150_000_000n;
+
+// Payer (CLI)
 const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
@@ -48,38 +52,13 @@ function loadOrCreateTreasuryKeypair() {
   }
 }
 
-function ask(q) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) =>
-    rl.question(q, (ans) => {
-      rl.close();
-      resolve(ans.trim());
-    })
-  );
-}
-
 (async () => {
   console.log("Mint:", mint.toBase58());
   console.log("Payer:", payer.publicKey.toBase58());
+  console.log("Cold wallet:", coldWallet.toBase58());
 
-  const destWalletStr = await ask("Enter destination wallet: ");
-  const destinationWallet = new PublicKey(destWalletStr);
-
-  const amountStr = await ask("Enter how many whole tokens to send: ");
-  const sendAmountTokens = BigInt(amountStr);
-
-  const treasuryChoice = await ask("Send tokens to treasury? (yes/no): ");
-
-  let treasuryAmountTokens = 0n;
   const treasury = loadOrCreateTreasuryKeypair();
-
-  if (treasuryChoice.toLowerCase() === "yes") {
-    const treasuryAmountStr = await ask("Enter treasury amount: ");
-    treasuryAmountTokens = BigInt(treasuryAmountStr);
-  }
+  console.log("Treasury wallet:", treasury.publicKey.toBase58());
 
   const payerAta = await getOrCreateAssociatedTokenAccount(
     connection,
@@ -88,11 +67,11 @@ function ask(q) {
     payer.publicKey
   );
 
-  const destAta = await getOrCreateAssociatedTokenAccount(
+  const coldAta = await getOrCreateAssociatedTokenAccount(
     connection,
     payer,
     mint,
-    destinationWallet
+    coldWallet
   );
 
   const treasuryAta = await getOrCreateAssociatedTokenAccount(
@@ -102,30 +81,20 @@ function ask(q) {
     treasury.publicKey
   );
 
-  const sendAmountBaseUnits = sendAmountTokens * 10n ** 9n;
-  const treasuryAmountBaseUnits = treasuryAmountTokens * 10n ** 9n;
+  console.log("Payer ATA:", payerAta.address.toBase58());
+  console.log("Cold wallet ATA:", coldAta.address.toBase58());
+  console.log("Treasury ATA:", treasuryAta.address.toBase58());
 
-  const sig1 = await transfer(
+  const amountBaseUnits = COLD_WALLET_TOKENS * 10n ** 9n;
+
+  const sig = await transfer(
     connection,
     payer,
     payerAta.address,
-    destAta.address,
+    coldAta.address,
     payer,
-    sendAmountBaseUnits
+    amountBaseUnits
   );
-  console.log("Sent to destination. Tx:", sig1);
 
-  if (treasuryAmountTokens > 0n) {
-    const sig2 = await transfer(
-      connection,
-      payer,
-      payerAta.address,
-      treasuryAta.address,
-      payer,
-      treasuryAmountBaseUnits
-    );
-    console.log("Treasury funded. Tx:", sig2);
-  }
-
-  console.log("Done.");
+  console.log("Transferred to cold wallet. Tx:", sig);
 })();

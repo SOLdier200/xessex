@@ -5,36 +5,32 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
-
 import {
   createMint,
   getOrCreateAssociatedTokenAccount,
   mintTo,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-
 import pkg from "@metaplex-foundation/mpl-token-metadata";
-const {
-  createCreateMetadataAccountV3Instruction,
-} = pkg;
-
+const { createCreateMetadataAccountV3Instruction } = pkg;
 import fs from "fs";
 
-// Load your Solana CLI keypair
-const secret = JSON.parse(
-  fs.readFileSync(`${process.env.HOME}/.config/solana/id.json`, "utf8")
+// Payer: Solana CLI keypair
+const payer = Keypair.fromSecretKey(
+  Uint8Array.from(
+    JSON.parse(
+      fs.readFileSync(`${process.env.HOME}/.config/solana/id.json`, "utf8")
+    )
+  )
 );
-const payer = Keypair.fromSecretKey(new Uint8Array(secret));
 
 const connection = new Connection("https://api.mainnet-beta.solana.com");
 
-// Token Metadata Program ID
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
 (async () => {
-  // 1. Create mint with 9 decimals (LEGACY TOKEN PROGRAM)
   const mint = await createMint(
     connection,
     payer,
@@ -48,7 +44,6 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
 
   console.log("Mint:", mint.toBase58());
 
-  // 2. Create ATA for payer
   const ata = await getOrCreateAssociatedTokenAccount(
     connection,
     payer,
@@ -56,21 +51,12 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
     payer.publicKey
   );
 
-  // 3. Mint 1,000,000,000 tokens (with 9 decimals)
   const totalSupply = 1_000_000_000n * 10n ** 9n;
 
-  await mintTo(
-    connection,
-    payer,
-    mint,
-    ata.address,
-    payer,
-    totalSupply
-  );
+  await mintTo(connection, payer, mint, ata.address, payer, totalSupply);
 
   console.log("Minted supply:", totalSupply.toString());
 
-  // 4. Derive metadata PDA
   const [metadataPda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("metadata"),
@@ -80,7 +66,6 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
     TOKEN_METADATA_PROGRAM_ID
   );
 
-  // 5. Create metadata
   const metadataIx = createCreateMetadataAccountV3Instruction(
     {
       metadata: metadataPda,
@@ -100,7 +85,7 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
           collection: null,
           uses: null,
         },
-        isMutable: true, // mainnet version stays mutable until you confirm
+        isMutable: true,
         collectionDetails: null,
       },
     }
@@ -110,6 +95,5 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   const sig = await sendAndConfirmTransaction(connection, tx, [payer]);
 
   console.log("Metadata tx:", sig);
-
-  console.log("Authorities NOT revoked. Review everything before locking the token.");
+  console.log("Authorities NOT revoked. Review everything before locking.");
 })();

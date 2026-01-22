@@ -19,7 +19,6 @@ type Row = {
   nowPaymentsOrderId: string | null;
   nowPaymentsInvoiceId: string | null;
   nowPaymentsPaymentId: string | null;
-  lastTxSig: string | null;
   paymentMethod: PaymentMethod;
   amountCents: number | null;
   manualPaymentId: string | null;
@@ -70,7 +69,6 @@ export default function AdminSubscriptionsPage() {
   const [partialOnly, setPartialOnly] = useState(false);
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(50);
-  const [showTxModal, setShowTxModal] = useState<string | null>(null);
 
   const params = useMemo(() => {
     const sp = new URLSearchParams();
@@ -144,13 +142,11 @@ export default function AdminSubscriptionsPage() {
 
   async function lookup(r: Row) {
     const orderId = r.nowPaymentsOrderId || "";
-    const tx = r.lastTxSig || "";
     const invoiceId = r.nowPaymentsInvoiceId || "";
     const paymentId = r.nowPaymentsPaymentId || "";
 
     const sp = new URLSearchParams();
     if (orderId) sp.set("order_id", orderId);
-    else if (tx) sp.set("tx", tx);
     else if (paymentId) sp.set("payment_id", paymentId);
     else if (invoiceId) sp.set("invoice_id", invoiceId);
 
@@ -295,7 +291,6 @@ export default function AdminSubscriptionsPage() {
                 <th className="p-3">Order / Code</th>
                 <th className="p-3">Updated</th>
                 <th className="p-3">Actions</th>
-                <th className="p-3">TX</th>
               </tr>
             </thead>
             <tbody>
@@ -350,24 +345,11 @@ export default function AdminSubscriptionsPage() {
                       </button>
                     </div>
                   </td>
-                  <td className="p-3">
-                    {r.lastTxSig ? (
-                      <button
-                        className="rounded border border-cyan-600/50 px-2 py-1 text-xs text-cyan-400 hover:bg-cyan-900/30"
-                        onClick={() => setShowTxModal(r.lastTxSig)}
-                        title="View Transaction"
-                      >
-                        View TX
-                      </button>
-                    ) : (
-                      <span className="text-gray-600">—</span>
-                    )}
-                  </td>
                 </tr>
               ))}
               {rows.length === 0 && !loading && !error && (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={10}>
+                  <td className="p-6 text-center text-gray-500" colSpan={9}>
                     No results.
                   </td>
                 </tr>
@@ -378,53 +360,8 @@ export default function AdminSubscriptionsPage() {
 
         <div className="mt-4 text-xs text-gray-500">
           Admin access is controlled by <code className="text-gray-400">ADMIN_WALLETS</code> env var.
-          Search supports email, order_id, payment_id, invoice_id, tx hash, and verify code.
+          Search supports email, order_id, payment_id, invoice_id, and verify code.
         </div>
-
-        {/* TX Modal */}
-        {showTxModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full mx-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Transaction ID</h3>
-                <button
-                  onClick={() => setShowTxModal(null)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="bg-black/50 rounded-lg p-4 font-mono text-sm text-cyan-400 break-all">
-                {showTxModal}
-              </div>
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(showTxModal);
-                    alert("Copied to clipboard!");
-                  }}
-                  className="flex-1 rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
-                >
-                  Copy TX
-                </button>
-                <a
-                  href={`https://solscan.io/tx/${showTxModal}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 rounded-lg border border-cyan-600/50 bg-cyan-500/20 px-4 py-2 text-sm text-cyan-400 hover:bg-cyan-500/30 text-center"
-                >
-                  View on Solscan
-                </a>
-                <button
-                  onClick={() => setShowTxModal(null)}
-                  className="rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
