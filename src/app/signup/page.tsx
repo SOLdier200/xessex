@@ -405,7 +405,9 @@ function SignupInner() {
           setIsMember(true);
         }
 
-        if (!authed || (membership === "FREE" && !hasEmail)) {
+        // Only show signup modal if user is not authenticated
+        // Wallet-only users who are authed should proceed directly to payment options
+        if (!authed) {
           setSignupPlan(null);
           setSignupSelectOpen(true);
         }
@@ -721,11 +723,11 @@ function SignupInner() {
           </div>
 
           <button
-            onClick={() => setDiamondBetaModalOpen(true)}
+            onClick={() => handleNowPayments(diamondPlan)}
             disabled={loading || waiting}
             className={`mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block disabled:opacity-50 disabled:cursor-not-allowed ${loading ? "opacity-50" : ""}`}
           >
-            {isMember ? "Upgrade to Diamond" : "Become a Diamond Member"}
+            {loadingPlan === diamondPlan ? "Redirecting to payment..." : isMember ? "Upgrade to Diamond" : "Become a Diamond Member"}
           </button>
           {/* Original Diamond checkout button - restore when ready:
           <button

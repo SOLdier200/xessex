@@ -48,9 +48,11 @@ export default async function VideosPage() {
           )}
 
           {/* All Videos sorted by rank */}
-          <h2 className="text-lg font-semibold neon-text mb-4">
-            {canViewPremium ? "All Videos" : "Free Videos"}
-          </h2>
+          <p className="text-sm text-white/70 mb-4">
+            {canViewPremium
+              ? "The best videos the internet has to offer, highly curated by our well paid diamond members for your enjoyment!"
+              : "Free Videos"}
+          </p>
 
           {videos.length === 0 ? (
             <div className="text-white/60">No videos available.</div>

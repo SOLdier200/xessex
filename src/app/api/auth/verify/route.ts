@@ -9,6 +9,7 @@ import nacl from "tweetnacl";
 import { db } from "@/lib/prisma";
 import { createSession, getCurrentUser } from "@/lib/auth";
 import { setSessionCookie } from "@/lib/authCookies";
+import { generateReferralCode } from "@/lib/referral";
 
 export const runtime = "nodejs";
 
@@ -50,12 +51,30 @@ export async function POST(req: Request) {
     }
 
     // Create or fetch wallet user (email fields stay null)
-    const user = await db.user.upsert({
-      where: { walletAddress: w },
-      update: {},
-      create: { walletAddress: w },
-      select: { id: true, email: true, solWallet: true },
-    });
+    // Retry loop for referralCode unique constraint collisions
+    let user: { id: string; email: string | null; solWallet: string | null; referralCode: string | null } | null = null;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        user = await db.user.upsert({
+          where: { walletAddress: w },
+          update: {},
+          create: { walletAddress: w, referralCode: generateReferralCode() },
+          select: { id: true, email: true, solWallet: true, referralCode: true },
+        });
+        break;
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Retry only if unique constraint on referralCode
+        if (!msg.includes("Unique constraint") || !msg.includes("referralCode")) {
+          throw e;
+        }
+        // Continue to next attempt
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json({ ok: false, error: "Failed to create user" }, { status: 500, headers: noCache });
+    }
 
     // Auto-backfill solWallet for wallet-native users (no email, solWallet is null)
     // This makes them payout-eligible immediately
@@ -64,6 +83,24 @@ export async function POST(req: Request) {
         where: { id: user.id },
         data: { solWallet: w, solWalletLinkedAt: new Date() },
       }).catch(() => {});
+    }
+
+    // Backfill referral code for existing users who don't have one
+    if (!user.referralCode) {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        try {
+          await db.user.update({
+            where: { id: user.id },
+            data: { referralCode: generateReferralCode() },
+          });
+          break;
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          if (!msg.includes("Unique constraint") || !msg.includes("referralCode")) {
+            break; // Non-collision error, just skip
+          }
+        }
+      }
     }
 
     // Ensure 1:1 subscription row exists (helps NOWPayments upsert & access checks)

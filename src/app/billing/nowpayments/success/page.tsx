@@ -65,6 +65,11 @@ function SuccessContent() {
         We're confirming your payment now. You should have access immediately
         (provisional), then it locks in once the network confirms.
       </p>
+      <p className="mt-2 text-sm opacity-70">
+        Even if it says access until: 3 days, this is only temporary and will change
+        as soon as blockchain confirmations happen, and your account will be updated
+        with the full membership time you purchased.
+      </p>
 
       <div className="mt-6 rounded-xl border p-4">
         <div className="text-sm">

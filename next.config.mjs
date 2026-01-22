@@ -12,6 +12,20 @@ const nextConfig = {
       fullUrl: true,
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/membership",
+        destination: "/signup",
+        permanent: true,
+      },
+      {
+        source: "/members",
+        destination: "/signup",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
