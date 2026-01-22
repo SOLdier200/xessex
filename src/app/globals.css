@@ -139,3 +139,104 @@ a {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Leaderboard rank pulse animations */
+.animate-pulse-gold {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+
+.animate-pulse-silver {
+  animation: pulse-silver 2s ease-in-out infinite;
+}
+
+.animate-pulse-bronze {
+  animation: pulse-bronze 2s ease-in-out infinite;
+}
+
+@keyframes pulse-gold {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.4), 0 0 10px rgba(234, 179, 8, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.6), 0 0 25px rgba(234, 179, 8, 0.4), 0 0 35px rgba(234, 179, 8, 0.2);
+  }
+}
+
+@keyframes pulse-silver {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(209, 213, 219, 0.4), 0 0 10px rgba(209, 213, 219, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(209, 213, 219, 0.6), 0 0 25px rgba(209, 213, 219, 0.4), 0 0 35px rgba(209, 213, 219, 0.2);
+  }
+}
+
+@keyframes pulse-bronze {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(217, 119, 6, 0.4), 0 0 10px rgba(217, 119, 6, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(217, 119, 6, 0.6), 0 0 25px rgba(217, 119, 6, 0.4), 0 0 35px rgba(217, 119, 6, 0.2);
+  }
+}
+
+/* Leaderboard rank NUMBER pulse animations */
+.animate-pulse-gold-text {
+  animation: pulse-gold-text 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-silver-text {
+  animation: pulse-silver-text 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-bronze-text {
+  animation: pulse-bronze-text 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-pink-text {
+  animation: pulse-pink-text 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-gold-text {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(234, 179, 8, 0.5), 0 0 10px rgba(234, 179, 8, 0.3);
+    opacity: 0.8;
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(234, 179, 8, 0.8), 0 0 20px rgba(234, 179, 8, 0.5), 0 0 30px rgba(234, 179, 8, 0.3);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-silver-text {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(209, 213, 219, 0.5), 0 0 10px rgba(209, 213, 219, 0.3);
+    opacity: 0.8;
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(209, 213, 219, 0.8), 0 0 20px rgba(209, 213, 219, 0.5), 0 0 30px rgba(209, 213, 219, 0.3);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-bronze-text {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(217, 119, 6, 0.5), 0 0 10px rgba(217, 119, 6, 0.3);
+    opacity: 0.8;
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(217, 119, 6, 0.8), 0 0 20px rgba(217, 119, 6, 0.5), 0 0 30px rgba(217, 119, 6, 0.3);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-pink-text {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(236, 72, 153, 0.5), 0 0 10px rgba(236, 72, 153, 0.3);
+    opacity: 0.8;
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.5), 0 0 30px rgba(236, 72, 153, 0.3);
+    opacity: 1;
+  }
+}

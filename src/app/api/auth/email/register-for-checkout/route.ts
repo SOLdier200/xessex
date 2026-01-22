@@ -4,12 +4,14 @@ import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { setSessionCookie } from "@/lib/authCookies";
+import { generateReferralCode } from "@/lib/referral";
 
 export const runtime = "nodejs";
 
 const Body = z.object({
   email: z.string().email().max(254),
   password: z.string().min(5),
+  refCode: z.string().optional().nullable(),
 });
 
 /**
@@ -36,14 +38,48 @@ export async function POST(req: NextRequest) {
 
   const passHash = await bcrypt.hash(password, 12);
 
-  const user = await db.user.create({
-    data: {
-      email,
-      passHash,
-      // walletAddress stays null (email-only user)
-    },
-    select: { id: true, email: true },
-  });
+  // Look up referrer if refCode provided
+  const refCode = parsed.data.refCode?.trim() || null;
+  let referredById: string | null = null;
+  if (refCode) {
+    const referrer = await db.user.findUnique({
+      where: { referralCode: refCode },
+      select: { id: true },
+    });
+    if (referrer) {
+      referredById = referrer.id;
+    }
+  }
+
+  // Create user with unique referral code (retry on collision)
+  let user: { id: string; email: string | null } | null = null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      user = await db.user.create({
+        data: {
+          email,
+          passHash,
+          referralCode: generateReferralCode(),
+          referredById,
+          referredAt: referredById ? new Date() : null,
+          // walletAddress stays null (email-only user)
+        },
+        select: { id: true, email: true },
+      });
+      break;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Retry only if unique constraint on referralCode
+      if (!msg.includes("Unique constraint") || !msg.includes("referralCode")) {
+        throw e;
+      }
+      // Continue to next attempt
+    }
+  }
+
+  if (!user) {
+    return NextResponse.json({ ok: false, error: "USER_CREATE_FAILED" }, { status: 500 });
+  }
 
   // Ensure subscription row exists (1:1) - tier will be set by billing start route
   await db.subscription.create({

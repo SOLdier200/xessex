@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import { weekKeyUTC } from "@/lib/weekKey";
 
 const ONE_MIN = 60_000;
+
+// Score weights for mod voting
+const MOD_LIKE_SCORE = 15;
+const MOD_DISLIKE_SCORE = -20;
+
+function getScoreDelta(value: number): number {
+  return value === 1 ? MOD_LIKE_SCORE : MOD_DISLIKE_SCORE;
+}
 
 /**
  * POST /api/mod/comments/vote
  * Admin/Mod hidden vote on comments (not displayed publicly)
  * Rules: flip ≤5
+ *
+ * Score weights:
+ * - Mod LIKE: +15
+ * - Mod DISLIKE: -20
  */
 export async function POST(req: NextRequest) {
   const access = await getAccessContext();
@@ -41,7 +54,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const comment = await db.comment.findUnique({ where: { id: commentId } });
+  const comment = await db.comment.findUnique({
+    where: { id: commentId },
+    select: { id: true, authorId: true, status: true, score: true },
+  });
   if (!comment || comment.status !== "ACTIVE") {
     return NextResponse.json(
       { ok: false, error: "COMMENT_NOT_FOUND" },
@@ -56,19 +72,57 @@ export async function POST(req: NextRequest) {
   });
 
   const now = Date.now();
+  const wk = weekKeyUTC(new Date());
 
   if (!existing) {
-    // Create new vote
-    const created = await db.commentModVote.create({
-      data: {
-        commentId,
-        modId: access.user.id,
-        value,
-        flipCount: 0,
-        lastChangedAt: new Date(),
-      },
+    // Create new vote and update scores
+    const scoreDelta = getScoreDelta(value);
+
+    const result = await db.$transaction(async (tx) => {
+      const created = await tx.commentModVote.create({
+        data: {
+          commentId,
+          modId: access.user!.id,
+          value,
+          flipCount: 0,
+          lastChangedAt: new Date(),
+        },
+      });
+
+      // Update comment score
+      await tx.comment.update({
+        where: { id: commentId },
+        data: { score: { increment: scoreDelta } },
+      });
+
+      // Update weekly score for author (positive deltas only)
+      if (scoreDelta > 0) {
+        await tx.weeklyUserStat.upsert({
+          where: { weekKey_userId: { weekKey: wk, userId: comment.authorId } },
+          create: {
+            weekKey: wk,
+            userId: comment.authorId,
+            scoreReceived: scoreDelta,
+            diamondComments: 0,
+            mvmPoints: 0,
+          },
+          update: { scoreReceived: { increment: scoreDelta } },
+        });
+      }
+
+      // Update all-time stats for author (positive deltas only)
+      if (scoreDelta > 0) {
+        await tx.allTimeUserStat.upsert({
+          where: { userId: comment.authorId },
+          create: { userId: comment.authorId, scoreReceived: scoreDelta },
+          update: { scoreReceived: { increment: scoreDelta } },
+        });
+      }
+
+      return created;
     });
-    return NextResponse.json({ ok: true, vote: created });
+
+    return NextResponse.json({ ok: true, vote: result });
   }
 
   // Same vote - no-op
@@ -92,14 +146,52 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Update vote (flip)
-  const updated = await db.commentModVote.update({
-    where: { id: existing.id },
-    data: {
-      value,
-      flipCount: { increment: 1 },
-      lastChangedAt: new Date(),
-    },
+  // Update vote (flip) and recalculate scores
+  const oldScoreDelta = getScoreDelta(existing.value);
+  const newScoreDelta = getScoreDelta(value);
+  const netScoreDelta = newScoreDelta - oldScoreDelta;
+
+  const updated = await db.$transaction(async (tx) => {
+    const vote = await tx.commentModVote.update({
+      where: { id: existing.id },
+      data: {
+        value,
+        flipCount: { increment: 1 },
+        lastChangedAt: new Date(),
+      },
+    });
+
+    // Update comment score
+    await tx.comment.update({
+      where: { id: commentId },
+      data: { score: { increment: netScoreDelta } },
+    });
+
+    // Update weekly score for author (positive deltas only)
+    if (netScoreDelta > 0) {
+      await tx.weeklyUserStat.upsert({
+        where: { weekKey_userId: { weekKey: wk, userId: comment.authorId } },
+        create: {
+          weekKey: wk,
+          userId: comment.authorId,
+          scoreReceived: netScoreDelta,
+          diamondComments: 0,
+          mvmPoints: 0,
+        },
+        update: { scoreReceived: { increment: netScoreDelta } },
+      });
+    }
+
+    // Update all-time stats for author (positive deltas only)
+    if (netScoreDelta > 0) {
+      await tx.allTimeUserStat.upsert({
+        where: { userId: comment.authorId },
+        create: { userId: comment.authorId, scoreReceived: netScoreDelta },
+        update: { scoreReceived: { increment: netScoreDelta } },
+      });
+    }
+
+    return vote;
   });
 
   return NextResponse.json({ ok: true, vote: updated });

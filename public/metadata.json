@@ -1,0 +1,15 @@
+{
+  "name": "Xessex",
+  "symbol": "XESS",
+  "description": "The fixed-supply token of the Xessex ecosystem.",
+  "image": "https://xessex.me/favicon.ico",
+  "attributes": [],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://xessex.me/favicon.ico",
+        "type": "image/x-icon"
+      }
+    ]
+  }
+}

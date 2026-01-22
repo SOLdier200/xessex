@@ -5,6 +5,7 @@ import path from "path";
 import TopNav from "./components/TopNav";
 import WalletStatus from "./components/WalletStatus";
 import VideoSearch from "./components/VideoSearch";
+import AdminManualPaymentNotice from "./components/AdminManualPaymentNotice";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -21,6 +22,7 @@ type ApprovedVideo = {
   status: string;
   note: string | null;
   favorite: number;
+  rank?: number | null;
 };
 
 function getApprovedVideos(): ApprovedVideo[] {
@@ -50,22 +52,37 @@ function formatViews(views: number | null): string {
 // These are still used by Featured/Top Ranked sections
 
 export default async function HomePage() {
-  const videos = getApprovedVideos();
+  const approvedVideos = getApprovedVideos();
   const access = await getAccessContext();
   const canViewPremium = access.canViewAllVideos;
 
-  // Get showcase video slugs from database
-  const showcaseVideos = await db.video.findMany({
-    where: { isShowcase: true },
-    select: { slug: true },
+  // Get showcase video slugs and all video ranks from database
+  const dbVideos = await db.video.findMany({
+    select: { slug: true, rank: true, isShowcase: true },
+    orderBy: { rank: "asc" },
   });
-  const showcaseSlugs = showcaseVideos.map((v) => v.slug);
+
+  // Create a map of slug -> rank
+  const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
+  const showcaseSlugs = dbVideos.filter((v) => v.isShowcase).map((v) => v.slug);
+
+  // Merge rank into approved videos and sort by rank
+  const videos = approvedVideos
+    .map((v) => ({ ...v, rank: rankMap.get(v.viewkey) ?? null }))
+    .sort((a, b) => {
+      // Videos with rank come first, sorted by rank ascending
+      if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
+      if (a.rank !== null) return -1;
+      if (b.rank !== null) return 1;
+      return 0;
+    });
 
   return (
     <main className="min-h-screen">
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
+        <AdminManualPaymentNotice />
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 mb-6">
             <Link
@@ -73,8 +90,7 @@ export default async function HomePage() {
               className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
             >
               <div>
-                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Discover</span>
-                <Image src="/logos/textlogo/collections.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
+                <Image src="/logos/textlogo/collections.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">Evaluate content from different Collections.</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -87,8 +103,7 @@ export default async function HomePage() {
               className="group flex h-full flex-col justify-between rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/25 via-black/0 to-yellow-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(234,179,8,0.18)] transition hover:-translate-y-0.5 hover:border-yellow-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/70"
             >
               <div>
-                <span className="text-xs uppercase tracking-[0.22em] text-yellow-400/80">Earn Money</span>
-                <Image src="/logos/textlogo/membersignup.png" alt="Member Signup" width={1230} height={238} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
+                <Image src="/logos/textlogo/membersignup.png" alt="Member Signup" width={1230} height={238} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">Start earning <span className="text-green-400 font-bold">$</span> for viewing and grading content!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -101,8 +116,7 @@ export default async function HomePage() {
               className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
             >
               <div>
-                <span className="text-xs uppercase tracking-[0.22em] text-white/60">Xessex Login</span>
-                <Image src="/logos/textlogo/memberlogin.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
+                <Image src="/logos/textlogo/memberlogin.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">One-click sign in for Ultimate Access!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -115,8 +129,7 @@ export default async function HomePage() {
               className="group flex h-full flex-col justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-br from-purple-500/20 via-black/0 to-purple-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(168,85,247,0.2)] transition hover:-translate-y-0.5 hover:border-purple-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300/70"
             >
               <div>
-                <span className="text-xs uppercase tracking-[0.22em] text-purple-400/80">Leaderboard</span>
-                <Image src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="mt-1 h-[30px] w-auto" />
+                <Image src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
                 <p className="mt-2 text-sm text-white/70">See top ranked Diamond Members!</p>
               </div>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
@@ -125,7 +138,48 @@ export default async function HomePage() {
             </Link>
         </div>
 
-        <VideoSearch videos={videos} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
+        <VideoSearch videos={videos.slice(0, 20)} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
+
+        {videos.length > 20 && (
+          <div className="mt-6 text-center">
+            <Link
+              href="/videos"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-pink-500/20 border border-pink-400/40 text-pink-300 font-semibold hover:bg-pink-500/30 transition"
+            >
+              View All Videos
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </Link>
+          </div>
+        )}
+
+        <section className="mt-10 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8">
+          <h1 className="text-2xl md:text-3xl font-semibold text-white">
+            HD Porn Videos, Premium Sex Content & Crypto Rewards
+          </h1>
+          <p className="mt-4 text-white/70">
+            Xessex is a next-generation adult platform offering high-quality HD porn and premium sex
+            videos. Every release is curated, verified, and ranked by the community.
+          </p>
+          <p className="mt-4 text-white/70">
+            Members can earn crypto rewards for watching videos, engaging with content, and
+            supporting creators. Xessex runs on Solana, enabling fast rewards with XESS tokens and
+            Diamond tiers for premium access.
+          </p>
+          <p className="mt-4 text-white/70">
+            If you are looking for the best porn online and top-ranked XXX videos with a modern,
+            reward-driven experience, Xessex delivers quality, speed, and privacy.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/earn-crypto-watching-porn"
+              className="text-sm font-semibold text-pink-300 hover:text-pink-200 transition"
+            >
+              Learn how to earn crypto watching porn
+            </Link>
+          </div>
+        </section>
 
         {/* Featured & Top Ranked Videos */}
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -200,7 +254,8 @@ export default async function HomePage() {
 
           {/* Top Ranked Video */}
           {videos.length > 0 && (() => {
-            const topRanked = [...videos].sort((a, b) => (b.views || 0) - (a.views || 0))[0];
+            // Get actual #1 ranked video (videos already sorted by rank)
+            const topRanked = videos[0];
             const isTopShowcase = showcaseSlugs.includes(topRanked.viewkey);
             const isTopLocked = !canViewPremium && !isTopShowcase;
 
@@ -266,20 +321,6 @@ export default async function HomePage() {
               </section>
             );
           })()}
-        </div>
-
-        {/* Donation Button */}
-        <div className="mt-10 flex justify-center">
-          <a
-            href="https://nowpayments.io/donation?api_key=MF8F5CP-PZZM46H-NKRW6NQ-682CJ2K"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            <img
-              src="https://nowpayments.io/images/embeds/donation-button-black.svg"
-              alt="Crypto donation button by NOWPayments"
-            />
-          </a>
         </div>
 
       </div>

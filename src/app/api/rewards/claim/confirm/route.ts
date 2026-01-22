@@ -1,0 +1,198 @@
+import { NextResponse } from "next/server";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { getAccessContext } from "@/lib/access";
+import { db } from "@/lib/prisma";
+
+const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+
+// Lazy-loaded to avoid build-time failures when env vars are not set
+function getProgramId() {
+  return new PublicKey(process.env.NEXT_PUBLIC_XESS_CLAIM_PROGRAM_ID!);
+}
+function getXessMint() {
+  return new PublicKey(process.env.XESS_MINT!);
+}
+function getVaultAta() {
+  return new PublicKey(process.env.XESS_VAULT_ATA!);
+}
+
+function u64LE(n: bigint) {
+  const b = Buffer.alloc(8);
+  b.writeBigUInt64LE(n);
+  return b;
+}
+
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  const signature: string | undefined = body.signature;
+  const epochStr: string | undefined = body.epoch;
+
+  if (!signature) return NextResponse.json({ error: "missing_signature" }, { status: 400 });
+  if (!epochStr) return NextResponse.json({ error: "missing_epoch" }, { status: 400 });
+
+  const epoch = BigInt(epochStr);
+
+  // ========== TESTING MODE (bypasses DB entirely) ==========
+  const testMode = process.env.XESS_CLAIM_TESTMODE === "1";
+  const TEST_CLAIMER = "J1ssN9Fr6qeNN1CUphVV8XaaPbx2YHpt1gv9SLupJTMe";
+
+  if (testMode) {
+    const claimerPk = new PublicKey(TEST_CLAIMER);
+    const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+    const connection = new Connection(rpc, "confirmed");
+
+    // Just verify tx exists and receipt was created
+    const [receiptPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
+      getProgramId()
+    );
+
+    const receiptInfo = await connection.getAccountInfo(receiptPda, "confirmed");
+    if (!receiptInfo) {
+      return NextResponse.json({ error: "receipt_missing" }, { status: 400 });
+    }
+
+    const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
+
+    return NextResponse.json({
+      ok: true,
+      testMode: true,
+      receipt: receiptPda.toBase58(),
+      userAta: userAta.toBase58(),
+      signature,
+    });
+  }
+  // ========== END TESTING MODE ==========
+
+  // ========== PRODUCTION MODE ==========
+  const ctx = await getAccessContext();
+  if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // Must have a linked wallet; claims are wallet-signed
+  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  if (!wallet) return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
+  const claimerPk = new PublicKey(wallet);
+
+  // Receipt PDA
+  const [receiptPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
+    getProgramId()
+  );
+
+  const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+  const connection = new Connection(rpc, "confirmed");
+
+  // Get the leaf to find the weekKey
+  const leaf = await db.claimLeaf.findUnique({
+    where: { epoch_wallet: { epoch: Number(epoch), wallet } },
+  });
+
+  // IDEMPOTENT: If receipt already exists, return success
+  const receiptInfo = await connection.getAccountInfo(receiptPda, "confirmed");
+  if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
+    // Already claimed - update DB if needed using weekKey and return ok
+    if (leaf?.weekKey) {
+      await db.rewardEvent.updateMany({
+        where: {
+          userId: ctx.user.id,
+          weekKey: leaf.weekKey,
+          status: "PAID",
+          claimedAt: null,
+        },
+        data: { claimedAt: new Date(), txSig: signature },
+      });
+    }
+
+    const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
+    return NextResponse.json({
+      ok: true,
+      alreadyClaimed: true,
+      receipt: receiptPda.toBase58(),
+      userAta: userAta.toBase58(),
+    });
+  }
+
+  // Verify the transaction
+  const tx = await connection.getTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
+  });
+
+  if (!tx) return NextResponse.json({ error: "tx_not_found" }, { status: 404 });
+  if (tx.meta?.err) return NextResponse.json({ error: "tx_failed", metaErr: tx.meta.err }, { status: 400 });
+
+  const msg = tx.transaction.message;
+  const keys = msg.getAccountKeys().staticAccountKeys;
+
+  // Ensure our program is in the transaction account keys
+  if (!keys.some((k) => k.equals(getProgramId()))) {
+    return NextResponse.json({ error: "wrong_program" }, { status: 400 });
+  }
+
+  // Re-check receipt after tx verification (it should exist now)
+  const receiptInfoAfter = await connection.getAccountInfo(receiptPda, "confirmed");
+  if (!receiptInfoAfter) return NextResponse.json({ error: "receipt_missing" }, { status: 400 });
+  if (!receiptInfoAfter.owner.equals(getProgramId())) {
+    return NextResponse.json({ error: "receipt_wrong_owner" }, { status: 400 });
+  }
+
+  // Get expected amount from leaf (already fetched above)
+  const expected = leaf?.amountAtomic ?? 1000000000n;
+
+  // Validate the SPL transfer: vault ATA -> user ATA
+  const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
+
+  const inner = tx.meta?.innerInstructions ?? [];
+  let transferred = 0n;
+
+  for (const group of inner) {
+    for (const ix of group.instructions) {
+      const prog = keys[ix.programIdIndex];
+      if (!prog?.equals(TOKEN_PROGRAM_ID)) continue;
+
+      const data = Buffer.from(ix.data, "base64");
+      if (data.length < 9) continue;
+      if (data[0] !== 3) continue; // SPL Token Transfer
+
+      const amount = data.readBigUInt64LE(1);
+
+      const acctIdx = ix.accounts;
+      if (acctIdx.length < 2) continue;
+
+      const src = keys[acctIdx[0]];
+      const dst = keys[acctIdx[1]];
+
+      if (src?.equals(getVaultAta()) && dst?.equals(userAta)) {
+        transferred += amount;
+      }
+    }
+  }
+
+  if (transferred < expected) {
+    return NextResponse.json(
+      { error: "transfer_too_small", expected: expected.toString(), transferred: transferred.toString() },
+      { status: 400 }
+    );
+  }
+
+  // Mark rewards as claimed using weekKey
+  if (leaf?.weekKey) {
+    await db.rewardEvent.updateMany({
+      where: {
+        userId: ctx.user.id,
+        weekKey: leaf.weekKey,
+        status: "PAID",
+        claimedAt: null,
+      },
+      data: { claimedAt: new Date(), txSig: signature },
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    receipt: receiptPda.toBase58(),
+    userAta: userAta.toBase58(),
+    transferred: transferred.toString(),
+  });
+}

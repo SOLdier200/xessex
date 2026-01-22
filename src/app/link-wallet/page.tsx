@@ -1,161 +1,99 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import bs58 from "bs58";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import TopNav from "../components/TopNav";
+import AccountWalletStatus from "@/components/AccountWalletStatus";
+import WalletActions from "@/components/WalletActions";
 
-export default function LinkWalletPage() {
+function detectIos() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes("iphone") ||
+    ua.includes("ipad") ||
+    (ua.includes("mac") && (navigator as any).maxTouchPoints > 1)
+  );
+}
+
+function LinkWalletContent() {
   const router = useRouter();
-  const { publicKey, signMessage, connected } = useWallet();
+  const { connected } = useWallet();
+  const { setVisible } = useWalletModal();
 
-  const [status, setStatus] = useState<"idle" | "signing" | "verifying" | "success" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const ios = useMemo(detectIos, []);
+  const [authed, setAuthed] = useState<boolean | null>(null);
 
-  // Check if user is logged in and needs wallet link
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
-        if (!d.ok || !d.authed) {
-          router.push("/login");
-          return;
-        }
-        if (d.membership !== "DIAMOND") {
-          router.push("/");
-          return;
-        }
-        if (!d.needsSolWalletLink) {
-          // Already has wallet linked
-          router.push("/");
-          return;
-        }
+        const ok = !!d?.user;
+        setAuthed(ok);
+        if (!ok) router.push("/login?next=/link-wallet");
       })
-      .catch(() => router.push("/login"));
+      .catch(() => {
+        setAuthed(false);
+        router.push("/login?next=/link-wallet");
+      });
   }, [router]);
 
-  const handleLinkWallet = async () => {
-    if (!publicKey || !signMessage) {
-      setError("Please connect your wallet first");
-      return;
-    }
+  if (authed === null) {
+    return (
+      <main className="max-w-lg mx-auto px-4 py-12 text-white/60">Loading…</main>
+    );
+  }
 
-    setStatus("signing");
-    setError(null);
+  return (
+    <main className="max-w-lg mx-auto px-4 py-12 space-y-6">
+      <AccountWalletStatus />
 
-    try {
-      // 1. Get challenge from server
-      const challengeRes = await fetch("/api/auth/wallet-link/challenge", {
-        method: "POST",
-      });
-      const challengeData = await challengeRes.json();
+      <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8">
+        <h1 className="text-2xl font-bold text-white mb-2">Link Wallet</h1>
+        <p className="text-white/60 mb-6">
+          Connect your wallet and link it to your account by signing a message.
+        </p>
 
-      if (!challengeData.ok) {
-        throw new Error(challengeData.error || "Failed to get challenge");
-      }
+        {!connected && (
+          <button
+            onClick={() => setVisible(true)}
+            className="w-full py-3 px-6 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/15 transition"
+          >
+            Connect Wallet
+          </button>
+        )}
 
-      const { message, nonce } = challengeData;
+        {ios && (
+          <div className="mt-3 text-xs text-white/50">
+            iOS tip: if wallet connect fails in Safari, open xessex.me inside Phantom/Solflare's in-app browser.
+          </div>
+        )}
 
-      // 2. Sign the message
-      const msgBytes = new TextEncoder().encode(message);
-      const signature = await signMessage(msgBytes);
-      const signatureB58 = bs58.encode(signature);
+        <div className="mt-6">
+          {/* On this page we only care about linking (not wallet-native sign-in). */}
+          <WalletActions showWalletSignIn={false} />
+        </div>
 
-      setStatus("verifying");
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <button
+            onClick={() => router.push("/")}
+            className="w-full py-3 px-6 rounded-xl bg-white/10 border border-white/20 text-white/80 hover:bg-white/20 transition"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
 
-      // 3. Verify with server
-      const verifyRes = await fetch("/api/auth/wallet-link/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wallet: publicKey.toBase58(),
-          signature: signatureB58,
-          nonce,
-        }),
-      });
-      const verifyData = await verifyRes.json();
-
-      if (!verifyData.ok) {
-        throw new Error(verifyData.error || "Failed to verify signature");
-      }
-
-      setStatus("success");
-
-      // Redirect after short delay
-      setTimeout(() => {
-        router.push("/");
-        router.refresh();
-      }, 1500);
-    } catch (err) {
-      setStatus("error");
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    }
-  };
-
+export default function LinkWalletPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black">
       <TopNav />
-
-      <main className="max-w-lg mx-auto px-4 py-12">
-        <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8">
-          <h1 className="text-2xl font-bold text-white mb-2">Link Your Wallet</h1>
-          <p className="text-white/60 mb-6">
-            Connect and sign with your Solana wallet to link it to your Diamond account.
-            This enables you to receive Xess payments and interact with on-chain features.
-          </p>
-
-          <div className="space-y-4">
-            {/* Wallet Connect Button */}
-            <div className="flex flex-col items-center gap-4">
-              <WalletMultiButton className="!bg-gradient-to-r !from-purple-500/20 !to-pink-500/20 !border !border-purple-400/40 !rounded-xl !py-3 !px-6 !text-white !font-medium hover:!from-purple-500/30 hover:!to-pink-500/30 !transition" />
-
-              {connected && publicKey && (
-                <div className="text-sm text-white/60">
-                  Connected: {publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)}
-                </div>
-              )}
-            </div>
-
-            {/* Link Button */}
-            {connected && publicKey && (
-              <button
-                onClick={handleLinkWallet}
-                disabled={status === "signing" || status === "verifying" || status === "success"}
-                className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 border border-yellow-400/40 text-yellow-100 font-medium transition disabled:opacity-50"
-              >
-                {status === "idle" && "Sign & Link Wallet"}
-                {status === "signing" && "Signing message..."}
-                {status === "verifying" && "Verifying..."}
-                {status === "success" && "Wallet Linked!"}
-                {status === "error" && "Try Again"}
-              </button>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-400/30 text-red-300 text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Success Message */}
-            {status === "success" && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-sm">
-                Your wallet has been linked! Redirecting...
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-white/10">
-            <p className="text-xs text-white/40">
-              By linking your wallet, you agree to use it for receiving payments and
-              interacting with Xessex features. You can only link one wallet per account.
-            </p>
-          </div>
-        </div>
-      </main>
+      <LinkWalletContent />
     </div>
   );
 }

@@ -3,10 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-function getOrigin(req: NextRequest) {
-  const proto = req.headers.get("x-forwarded-proto") || "https";
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "xessex.me";
-  return `${proto}://${host.split(",")[0].trim()}`;
+// Hardcode canonical origin - no more guessing from headers
+function getOrigin(_: NextRequest) {
+  return "https://xessex.me";
 }
 
 function sanitizeNext(v: string | null) {
@@ -22,8 +21,19 @@ function hashCode(code: string) {
   return h.toString(16);
 }
 
+// Cookie domain for cross-subdomain sharing
+const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".xessex.me" : undefined;
+
+const guardCookieBase = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "lax" as const,
+  path: "/",
+  domain: COOKIE_DOMAIN,
+};
+
 export async function GET(req: NextRequest) {
-  console.log("=== EXCHANGE ROUTE HIT v8 ===");
+  console.log("=== EXCHANGE ROUTE HIT v9 ===");
 
   const origin = getOrigin(req);
   const url = new URL(req.url);
@@ -34,7 +44,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 
-  // ✅ ONE-TIME GUARD: if we already processed this exact `code`, skip.
+  // ONE-TIME GUARD: if we already processed this exact `code`, skip.
   // This prevents the "first success, second fail" pattern.
   const codeKey = `sb_code_done_${hashCode(code)}`;
   const alreadyDone = req.cookies.get(codeKey)?.value === "1";
@@ -46,13 +56,10 @@ export async function GET(req: NextRequest) {
   // Redirect response that we can attach cookies to
   const res = NextResponse.redirect(`${origin}/auth/callback?next=${encodeURIComponent(next)}`);
 
-  // ✅ mark the code as "done" immediately to stop retries racing in
+  // mark the code as "done" immediately to stop retries racing in
   // short TTL is enough (OAuth codes are one-time anyway)
   res.cookies.set(codeKey, "1", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
+    ...guardCookieBase,
     maxAge: 60 * 5, // 5 minutes
   });
 
@@ -79,10 +86,7 @@ export async function GET(req: NextRequest) {
 
     // if exchange failed, clear the guard so a fresh attempt can work
     res.cookies.set(codeKey, "0", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
+      ...guardCookieBase,
       maxAge: 0,
     });
 

@@ -1,30 +1,61 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { NextResponse } from "next/server";
-import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
+import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ ok: true, authed: false });
+  const access = await getAccessContext();
+  const user = access.user;
+  if (!user) {
+    return NextResponse.json({ ok: true, authed: false, user: null });
+  }
 
   const sub = user.subscription ?? null;
-  const active = !!sub && isSubscriptionActive(sub);
-
   const membership =
-    active && sub?.tier === "DIAMOND"
+    access.isAdminOrMod || access.tier === "diamond"
       ? "DIAMOND"
-      : active
+      : access.tier === "member"
         ? "MEMBER"
         : "FREE";
 
+  let authProvider: "google" | "email" | "wallet" | "unknown" = "unknown";
+  if (user.email) {
+    if (user.passHash) {
+      authProvider = "email";
+    } else if (user.supabaseId) {
+      authProvider = "google";
+    } else {
+      authProvider = "email";
+    }
+  } else if (user.walletAddress || user.solWallet) {
+    authProvider = "wallet";
+  }
+
   // Check if Diamond email user needs to link wallet
-  // Email users link via solWallet, wallet-only users use walletAddress
   const hasLinkedWallet = !!user.walletAddress || !!user.solWallet;
   const needsSolWalletLink = membership === "DIAMOND" && !!user.email && !hasLinkedWallet;
 
+  // Return standardized user object (new shape) + backward compat fields
   return NextResponse.json({
     ok: true,
     authed: true,
+    authProvider,
+
+    // New standardized shape
+    user: {
+      id: user.id,
+      email: user.email ?? null,
+      role: membership,
+      solWallet: user.solWallet ?? null,
+      walletAddress: user.walletAddress ?? null,
+    },
+
+    // Legacy fields for backward compatibility
     membership,
     walletAddress: user.walletAddress ?? user.solWallet ?? null,
     hasEmail: !!user.email,

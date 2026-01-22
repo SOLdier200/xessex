@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
 
 type Comment = {
   id: string;
@@ -15,13 +14,6 @@ type Comment = {
   userVote: number | null;
   voteLocked?: boolean;
   secondsLeftToFlip?: number;
-};
-
-type AuthStatus = {
-  authenticated: boolean;
-  tier: "free" | "member" | "diamond";
-  canComment: boolean;
-  canVoteComments: boolean;
 };
 
 function formatDate(dateStr: string): string {
@@ -55,59 +47,57 @@ interface CommentsProps {
   videoId: string;
   canPost?: boolean;
   canVote?: boolean;
+  isAdminOrMod?: boolean;
 }
 
-export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
+type GradeState = {
+  open: boolean;
+  commentId: string | null;
+  busy: boolean;
+  error?: string;
+};
+
+export default function Comments({
+  videoId,
+  canPost,
+  canVote,
+  isAdminOrMod,
+}: CommentsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [text, setText] = useState("");
   const [hasPostedComment, setHasPostedComment] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [authStatus, setAuthStatus] = useState<AuthStatus>({
-    authenticated: false,
-    tier: "free",
-    canComment: false,
-    canVoteComments: false,
+
+  const [grade, setGrade] = useState<GradeState>({
+    open: false,
+    commentId: null,
+    busy: false,
   });
 
-  // Use props if provided, otherwise fall back to fetched auth status
-  const effectiveCanPost = canPost ?? authStatus.canComment;
-  const effectiveCanVote = canVote ?? authStatus.canVoteComments;
+  // Use props directly - no auth fetch needed since server provides all permissions
+  const effectiveCanPost = !!canPost;
+  const effectiveCanVote = !!canVote;
+  const canGrade = !!isAdminOrMod;
 
   useEffect(() => {
-    // Only fetch auth status if props aren't provided
-    if (canPost === undefined || canVote === undefined) {
-      fetch("/api/auth/status")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.ok) {
-            setAuthStatus({
-              authenticated: data.authenticated,
-              tier: data.tier,
-              canComment: data.canComment,
-              canVoteComments: data.canVoteComments,
-            });
-          }
-        })
-        .catch(() => {});
-    }
-  }, [canPost, canVote]);
+    setLoading(true);
+    setComments([]);
+    setHasPostedComment(false);
+    setCurrentUserId(null);
+    setSubmitting(false);
+    setText("");
 
-  useEffect(() => {
     fetch(`/api/comments?videoId=${videoId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
           setComments(data.comments);
-          // Check if user already has a comment (API returns hasUserComment)
-          if (data.hasUserComment) {
-            setHasPostedComment(true);
-          }
-          // Store current user ID for self-vote prevention
-          if (data.currentUserId) {
-            setCurrentUserId(data.currentUserId);
-          }
+
+          if (data.hasUserComment) setHasPostedComment(true);
+
+          if (data.currentUserId) setCurrentUserId(data.currentUserId);
         }
       })
       .catch(console.error)
@@ -156,7 +146,6 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
       return;
     }
 
-    // Check if this comment's vote is locked
     const comment = comments.find((c) => c.id === commentId);
     if (comment?.voteLocked) {
       toast.error("Your vote on this comment is locked");
@@ -209,6 +198,66 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
     }
   };
 
+  const openGrade = (commentId: string) => {
+    if (!canGrade) return;
+    setGrade({ open: true, commentId, busy: false, error: undefined });
+  };
+
+  const closeGrade = () => {
+    if (grade.busy) return;
+    setGrade({ open: false, commentId: null, busy: false, error: undefined });
+  };
+
+  const submitGrade = async (direction: 1 | -1) => {
+    if (!grade.open || !grade.commentId || grade.busy) return;
+
+    setGrade({ ...grade, busy: true, error: undefined });
+
+    try {
+      const res = await fetch("/api/mod/videos/adjust-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceCommentId: grade.commentId,
+          direction,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        const err = data?.error || "FAILED";
+
+        if (err === "ALREADY_SOURCED_BY_YOU") {
+          toast.error("You already graded using this comment.");
+        } else if (err === "ALREADY_SOURCED") {
+          toast.error("That comment was already sourced for this video.");
+        } else if (err === "UNAUTHORIZED") {
+          toast.error("Please log in.");
+        } else if (err === "FORBIDDEN") {
+          toast.error("Admins/Mods only.");
+        } else if (err === "COMMENT_NOT_FOUND") {
+          toast.error("Comment not found (or not active).");
+        } else if (err === "VIDEO_NOT_FOUND") {
+          toast.error("Video not found.");
+        } else if (err === "BAD_REQUEST") {
+          toast.error("Bad request.");
+        } else {
+          toast.error(err);
+        }
+
+        setGrade({ ...grade, busy: false, error: err });
+        return;
+      }
+
+      toast.success(`Graded! Video score is now ${data.adminScore}.`);
+      setGrade({ open: false, commentId: null, busy: false, error: undefined });
+    } catch {
+      toast.error("Failed to grade");
+      setGrade({ ...grade, busy: false, error: "NETWORK_ERROR" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Commented badge for Diamond members who have commented */}
@@ -220,12 +269,7 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <span className="text-sm font-semibold text-green-400">Commented</span>
         </div>
@@ -267,9 +311,7 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
       {loading ? (
         <div className="text-center text-white/50 py-8">Loading comments...</div>
       ) : comments.length === 0 ? (
-        <div className="text-center text-white/50 py-8">
-          No comments yet.
-        </div>
+        <div className="text-center text-white/50 py-8">No comments yet.</div>
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => {
@@ -283,95 +325,106 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-pink-300 text-sm">
-                      {comment.authorWallet}
-                    </span>
-                    <span className="text-[10px] text-white/30 font-mono">
-                      #{comment.id.slice(-6)}
-                    </span>
+                    <span className="font-medium text-pink-300 text-sm">{comment.authorWallet}</span>
+                    <span className="text-[10px] text-white/30 font-mono">#{comment.id.slice(-6)}</span>
                   </div>
-                  <span className="text-xs text-white/40">
-                    {formatDate(comment.createdAt)}
-                  </span>
+                  <span className="text-xs text-white/40">{formatDate(comment.createdAt)}</span>
                 </div>
+
                 <p className="text-white/90 text-sm mb-3 whitespace-pre-wrap break-words">
                   {comment.body}
                 </p>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => handleVote(comment.id, 1)}
-                    disabled={voteDisabled}
-                    title={
-                      isOwnComment
-                        ? "You can't rate your own comment"
-                        : !effectiveCanVote
-                        ? "Paid members can vote"
-                        : comment.voteLocked
-                        ? "Vote locked"
-                        : comment.userVote
-                        ? `You can change once within ${comment.secondsLeftToFlip ?? 0}s`
-                        : "Vote"
-                    }
-                    className={`flex items-center gap-1 text-sm transition ${
-                      comment.userVote === 1
-                        ? "text-green-400"
-                        : !voteDisabled
-                        ? "text-white/50 hover:text-green-400"
-                        : "text-white/30 cursor-not-allowed"
-                    }`}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill={comment.userVote === 1 ? "currentColor" : "none"}
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => handleVote(comment.id, 1)}
+                      disabled={voteDisabled}
+                      title={
+                        isOwnComment
+                          ? "You can't rate your own comment"
+                          : !effectiveCanVote
+                          ? "Paid members can vote"
+                          : comment.voteLocked
+                          ? "Vote locked"
+                          : comment.userVote
+                          ? `You can change once within ${comment.secondsLeftToFlip ?? 0}s`
+                          : "Vote"
+                      }
+                      className={`flex items-center gap-1 text-sm transition ${
+                        comment.userVote === 1
+                          ? "text-green-400"
+                          : !voteDisabled
+                          ? "text-white/50 hover:text-green-400"
+                          : "text-white/30 cursor-not-allowed"
+                      }`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                      />
-                    </svg>
-                    <span>{comment.memberLikes}</span>
-                  </button>
-                  <button
-                    onClick={() => handleVote(comment.id, -1)}
-                    disabled={voteDisabled}
-                    title={
-                      isOwnComment
-                        ? "You can't rate your own comment"
-                        : !effectiveCanVote
-                        ? "Paid members can vote"
-                        : comment.voteLocked
-                        ? "Vote locked"
-                        : comment.userVote
-                        ? `You can change once within ${comment.secondsLeftToFlip ?? 0}s`
-                        : "Vote"
-                    }
-                    className={`flex items-center gap-1 text-sm transition ${
-                      comment.userVote === -1
-                        ? "text-red-400"
-                        : !voteDisabled
-                        ? "text-white/50 hover:text-red-400"
-                        : "text-white/30 cursor-not-allowed"
-                    }`}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill={comment.userVote === -1 ? "currentColor" : "none"}
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      <svg
+                        className="w-4 h-4"
+                        fill={comment.userVote === 1 ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                        />
+                      </svg>
+                      <span>{comment.memberLikes}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleVote(comment.id, -1)}
+                      disabled={voteDisabled}
+                      title={
+                        isOwnComment
+                          ? "You can't rate your own comment"
+                          : !effectiveCanVote
+                          ? "Paid members can vote"
+                          : comment.voteLocked
+                          ? "Vote locked"
+                          : comment.userVote
+                          ? `You can change once within ${comment.secondsLeftToFlip ?? 0}s`
+                          : "Vote"
+                      }
+                      className={`flex items-center gap-1 text-sm transition ${
+                        comment.userVote === -1
+                          ? "text-red-400"
+                          : !voteDisabled
+                          ? "text-white/50 hover:text-red-400"
+                          : "text-white/30 cursor-not-allowed"
+                      }`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
-                      />
-                    </svg>
-                    <span>{comment.memberDislikes}</span>
-                  </button>
+                      <svg
+                        className="w-4 h-4"
+                        fill={comment.userVote === -1 ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"
+                        />
+                      </svg>
+                      <span>{comment.memberDislikes}</span>
+                    </button>
+                  </div>
+
+                  {/* Grade button (Admin/Mod only) */}
+                  {canGrade && (
+                    <button
+                      type="button"
+                      onClick={() => openGrade(comment.id)}
+                      className="px-3 py-1.5 rounded-xl border border-yellow-400/30 bg-yellow-400/10 text-yellow-200 text-xs font-semibold hover:bg-yellow-400/15 transition"
+                      title="Grade the VIDEO admin score using this comment as the source"
+                    >
+                      Grade
+                    </button>
+                  )}
                 </div>
 
                 {/* Vote lock status hint */}
@@ -390,6 +443,66 @@ export default function Comments({ videoId, canPost, canVote }: CommentsProps) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Grade modal */}
+      {grade.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/90 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-white font-semibold">Grade Video</div>
+                <div className="text-xs text-white/50 mt-0.5">
+                  Adjust the video admin score by +1 or -1. This will award 1 MVM point
+                  to the sourced comment&apos;s author (once per mod).
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeGrade}
+                disabled={grade.busy}
+                className="text-white/60 hover:text-white disabled:opacity-40"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {grade.error && (
+              <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                Error: {grade.error}
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => submitGrade(1)}
+                disabled={grade.busy}
+                className="flex-1 px-4 py-2 rounded-xl bg-green-500/80 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
+              >
+                {grade.busy ? "Working..." : "Up (+1)"}
+              </button>
+              <button
+                type="button"
+                onClick={() => submitGrade(-1)}
+                disabled={grade.busy}
+                className="flex-1 px-4 py-2 rounded-xl bg-red-500/70 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
+              >
+                {grade.busy ? "Working..." : "Down (-1)"}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeGrade}
+              disabled={grade.busy}
+              className="mt-3 w-full px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white text-sm font-medium transition"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>

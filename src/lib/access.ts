@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
 
 export type AccessTier = "free" | "member" | "diamond";

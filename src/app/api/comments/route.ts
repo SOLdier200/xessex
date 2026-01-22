@@ -1,7 +1,13 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { truncWallet } from "@/lib/scoring";
+import { weekKeyUTC } from "@/lib/weekKey";
 
 const FLIP_WINDOW_MS = 60_000;
 
@@ -90,7 +96,15 @@ export async function GET(req: NextRequest) {
     ? comments.some((c) => c.authorId === userId)
     : false;
 
-  return NextResponse.json({ ok: true, comments: shaped, hasUserComment, currentUserId: userId });
+  const isAdminOrMod = !!access.isAdminOrMod;
+
+  return NextResponse.json({
+    ok: true,
+    comments: shaped,
+    hasUserComment,
+    currentUserId: userId,
+    isAdminOrMod,
+  });
 }
 
 /**
@@ -155,18 +169,38 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Create comment - permanent, no edit/delete routes exist
-  const comment = await db.comment.create({
-    data: {
-      videoId,
-      authorId: access.user.id,
-      body: text,
-      memberLikes: 0,
-      memberDislikes: 0,
-    },
-    include: {
-      author: { select: { walletAddress: true, email: true } },
-    },
+  const wk = weekKeyUTC(new Date());
+
+  // Create comment and track stats in a transaction
+  const comment = await db.$transaction(async (tx) => {
+    const newComment = await tx.comment.create({
+      data: {
+        videoId,
+        authorId: access.user!.id,
+        body: text,
+        memberLikes: 0,
+        memberDislikes: 0,
+        score: 0,
+      },
+      include: {
+        author: { select: { walletAddress: true, email: true } },
+      },
+    });
+
+    // Track Diamond comment activity for weekly rewards (min 7 chars quality gate)
+    console.log("[comments] wk", wk, "len", text.length, "user", access.user!.id);
+    if (text.length >= 7) {
+      console.log("[comments] eligible -> increment diamondComments");
+      await tx.weeklyUserStat.upsert({
+        where: { weekKey_userId: { weekKey: wk, userId: access.user!.id } },
+        create: { weekKey: wk, userId: access.user!.id, diamondComments: 1, mvmPoints: 0, scoreReceived: 0 },
+        update: { diamondComments: { increment: 1 } },
+      });
+    } else {
+      console.log("[comments] NOT eligible -> too short");
+    }
+
+    return newComment;
   });
 
   return NextResponse.json({

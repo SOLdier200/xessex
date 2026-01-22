@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type GoogleSignupButtonProps = {
@@ -13,11 +13,49 @@ export default function GoogleSignupButton({
   redirectTo,
 }: GoogleSignupButtonProps) {
   const [busy, setBusy] = useState(false);
+  const [authDisabled, setAuthDisabled] = useState(false);
+  const [authProvider, setAuthProvider] = useState<
+    "google" | "email" | "wallet" | "unknown" | null
+  >(null);
+
+  const refreshAuthState = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me", { method: "GET", cache: "no-store" });
+      const data = await res.json().catch(() => null);
+      const authed = !!data?.authed && !!data?.user;
+      const provider =
+        typeof data?.authProvider === "string" ? data.authProvider : null;
+      const hasEmail = !!(data?.user?.email || data?.email);
+      setAuthDisabled(authed && hasEmail);
+      setAuthProvider(provider);
+    } catch {
+      setAuthDisabled(false);
+      setAuthProvider(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAuthState();
+    const onAuth = () => refreshAuthState();
+    window.addEventListener("auth-changed", onAuth);
+    return () => window.removeEventListener("auth-changed", onAuth);
+  }, [refreshAuthState]);
 
   const signIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || authDisabled) return;
     setBusy(true);
+
+    // Guard against in-app browsers where Google OAuth often fails
+    const ua = navigator.userAgent || "";
+    const isInApp =
+      /FBAN|FBAV|Instagram|Line|MicroMessenger|Snapchat|Pinterest|wv|; wv\)/i.test(ua);
+
+    if (isInApp) {
+      alert("Google sign-in may fail inside in-app browsers. Open xessex.me in Chrome/Safari and try again.");
+      setBusy(false);
+      return;
+    }
 
     // Use current origin so PKCE cookies match the redirect host
     // (www.xessex.me cookies won't be sent to xessex.me)
@@ -69,13 +107,13 @@ export default function GoogleSignupButton({
     <button
       type="button"
       onClick={signIn}
-      disabled={busy}
+      disabled={busy || authDisabled}
       className="w-full flex items-center justify-center gap-3
         bg-white text-black font-semibold py-3 rounded-xl
         hover:bg-gray-100 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <img src="/google.svg" alt="Google" className="w-5 h-5" />
-      {busy ? "Redirecting..." : label}
+      {busy ? "Redirecting..." : authProvider === "google" && authDisabled ? "Signed in" : label}
     </button>
   );
 }

@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const status = (sp.get("status") || "").toUpperCase();
   const tier = (sp.get("tier") || "").toUpperCase();
+  const paymentMethod = (sp.get("paymentMethod") || "").toUpperCase();
   const q = (sp.get("q") || "").trim();
   const partialOnly = sp.get("partialOnly") === "1";
   const limit = Math.min(Number(sp.get("limit") || 50), 200);
@@ -31,12 +32,17 @@ export async function GET(req: NextRequest) {
     where.tier = tier as "MEMBER" | "DIAMOND";
   }
 
+  if (paymentMethod && ["CRYPTO", "CARD", "CASHAPP"].includes(paymentMethod)) {
+    where.paymentMethod = paymentMethod as "CRYPTO" | "CARD" | "CASHAPP";
+  }
+
   if (q) {
     where.OR = [
       { nowPaymentsOrderId: { contains: q, mode: "insensitive" } },
       { nowPaymentsPaymentId: { contains: q, mode: "insensitive" } },
       { nowPaymentsInvoiceId: { contains: q, mode: "insensitive" } },
       { lastTxSig: { contains: q, mode: "insensitive" } },
+      { manualPaymentId: { contains: q, mode: "insensitive" } },
       { user: { email: { contains: q, mode: "insensitive" } } },
     ];
   }
@@ -49,7 +55,31 @@ export async function GET(req: NextRequest) {
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
   });
 
+  // For CashApp payments, fetch the verifyCode and amountUsd from ManualPayment
+  const manualPaymentIds = rows
+    .filter((r) => r.paymentMethod === "CASHAPP" && r.manualPaymentId)
+    .map((r) => r.manualPaymentId as string);
+
+  const manualPayments = manualPaymentIds.length
+    ? await db.manualPayment.findMany({
+        where: { id: { in: manualPaymentIds } },
+        select: { id: true, verifyCode: true, amountUsd: true },
+      })
+    : [];
+
+  const manualPaymentMap = new Map(manualPayments.map((mp) => [mp.id, mp]));
+
+  const enrichedRows = rows.map((r) => {
+    const mp = r.manualPaymentId ? manualPaymentMap.get(r.manualPaymentId) : null;
+    return {
+      ...r,
+      verifyCode: mp?.verifyCode || null,
+      // Use ManualPayment.amountUsd for CashApp, otherwise use Subscription.amountCents
+      amountCents: mp?.amountUsd ?? r.amountCents ?? null,
+    };
+  });
+
   const nextCursor = rows.length === limit ? rows[rows.length - 1].id : null;
 
-  return NextResponse.json({ ok: true, rows, nextCursor });
+  return NextResponse.json({ ok: true, rows: enrichedRows, nextCursor });
 }

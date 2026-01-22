@@ -9,20 +9,11 @@ export default async function VideosPage() {
   const access = await getAccessContext();
   const canViewPremium = access.canViewAllVideos;
 
-  // Free users only see showcase videos
-  const showcaseVideos = await db.video.findMany({
-    where: { isShowcase: true },
-    orderBy: { createdAt: "desc" },
-    take: 3,
+  // Fetch all videos sorted by rank - premium users see all, free users see only showcase
+  const videos = await db.video.findMany({
+    where: canViewPremium ? {} : { isShowcase: true },
+    orderBy: { rank: "asc" },
   });
-
-  // Premium videos only fetched for paid users
-  const premiumVideos = canViewPremium
-    ? await db.video.findMany({
-        where: { isShowcase: false },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
 
   return (
     <main className="min-h-screen">
@@ -56,14 +47,16 @@ export default async function VideosPage() {
             </div>
           )}
 
-          {/* Showcase (always visible) */}
-          <h2 className="text-lg font-semibold neon-text mb-4">Showcase</h2>
+          {/* All Videos sorted by rank */}
+          <h2 className="text-lg font-semibold neon-text mb-4">
+            {canViewPremium ? "All Videos" : "Free Videos"}
+          </h2>
 
-          {showcaseVideos.length === 0 ? (
-            <div className="text-white/60">No showcase videos configured.</div>
+          {videos.length === 0 ? (
+            <div className="text-white/60">No videos available.</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {showcaseVideos.map((v) => (
+              {videos.map((v) => (
                 <Link
                   key={v.id}
                   href={`/videos/${v.slug}`}
@@ -77,9 +70,18 @@ export default async function VideosPage() {
                         className="w-full h-full object-cover"
                       />
                     )}
-                    <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200">
-                      FREE
+                    {/* Rank Badge */}
+                    <span
+                      className="absolute top-1.5 left-1.5 min-w-[22px] h-5 flex items-center justify-center text-xs font-bold px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                      style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                    >
+                      #{v.rank}
                     </span>
+                    {v.isShowcase && (
+                      <span className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200">
+                        FREE
+                      </span>
+                    )}
                   </div>
                   <div className="p-3">
                     <div className="text-sm font-semibold text-white line-clamp-2 group-hover:text-pink-300 transition">
@@ -94,52 +96,6 @@ export default async function VideosPage() {
                 </Link>
               ))}
             </div>
-          )}
-
-          {/* Premium (ONLY for paid users - no titles shown to free users) */}
-          {canViewPremium && (
-            <>
-              <h2 className="text-lg font-semibold neon-text mt-10 mb-4">
-                Premium
-              </h2>
-
-              {premiumVideos.length === 0 ? (
-                <div className="text-white/60">No premium videos yet.</div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {premiumVideos.map((v) => (
-                    <Link
-                      key={v.id}
-                      href={`/videos/${v.slug}`}
-                      className="neon-border rounded-xl bg-black/30 overflow-hidden group"
-                    >
-                      <div className="aspect-video bg-black/60 relative">
-                        {v.thumbnailUrl && (
-                          <img
-                            src={v.thumbnailUrl}
-                            alt={v.title}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                        <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 border border-pink-400/30 text-pink-200">
-                          PREMIUM
-                        </span>
-                      </div>
-                      <div className="p-3">
-                        <div className="text-sm font-semibold text-white line-clamp-2 group-hover:text-pink-300 transition">
-                          {v.title}
-                        </div>
-                        {v.avgStars > 0 && (
-                          <div className="mt-1 text-xs text-yellow-400">
-                            ★ {v.avgStars.toFixed(1)} ({v.starsCount})
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </>
           )}
         </div>
       </div>

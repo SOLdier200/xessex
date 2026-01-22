@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import PendingManualBadge from "../components/PendingManualBadge";
 
 type Toast = {
   id: number;
@@ -339,10 +340,17 @@ export default function AdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold neon-text">Admin Panel</h1>
+          <h1 className="text-3xl font-bold neon-text">Admin Video Selector</h1>
           <p className="text-white/60 text-sm mt-1">FTS5 search + keyset pagination</p>
         </div>
         <div className="flex gap-3 flex-wrap">
+          <Link
+            href="/admin/controls"
+            className="px-4 py-2 rounded-full border border-purple-400/50 bg-purple-500/20 text-white text-sm font-semibold hover:bg-purple-500/30 transition flex items-center"
+          >
+            Admin Controls
+            <PendingManualBadge />
+          </Link>
           <Link
             href="/admin/review"
             className="px-4 py-2 rounded-full border border-sky-400/50 bg-sky-500/20 text-white text-sm font-semibold hover:bg-sky-500/30 transition"

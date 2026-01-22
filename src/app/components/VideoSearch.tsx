@@ -13,6 +13,7 @@ type Video = {
   categories: string | null;
   performers: string | null;
   favorite: number;
+  rank?: number | null;
 };
 
 function formatDuration(seconds: number | null): string {
@@ -36,10 +37,11 @@ interface VideoSearchProps {
 }
 
 export default function VideoSearch({ videos, canViewPremium = true, showcaseSlugs = [] }: VideoSearchProps) {
+  const MAX_PREVIEW = 50;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [duration, setDuration] = useState("any");
-  const [sort, setSort] = useState("new");
+  const [sort, setSort] = useState("rank");
 
   const filteredVideos = useMemo(() => {
     let result = [...videos];
@@ -76,12 +78,20 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     }
 
     // Sort
-    if (sort === "top") {
+    if (sort === "rank") {
+      result.sort((a, b) => {
+        // Videos with rank come first, sorted ascending
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        return 0;
+      });
+    } else if (sort === "top") {
       result.sort((a, b) => (b.views || 0) - (a.views || 0));
     } else if (sort === "duration") {
       result.sort((a, b) => (b.duration || 0) - (a.duration || 0));
     }
-    // "new" keeps original order (already sorted by newest from data source)
+    // "new" keeps original order
 
     // For free users, put showcase (free) videos at the top
     if (!canViewPremium && showcaseSlugs.length > 0) {
@@ -98,6 +108,9 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     return result;
   }, [videos, search, category, duration, sort, canViewPremium, showcaseSlugs]);
 
+  const limitedVideos = filteredVideos.slice(0, MAX_PREVIEW);
+  const isLimited = filteredVideos.length > MAX_PREVIEW;
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Search is already reactive via useMemo
@@ -107,9 +120,11 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     <>
       <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold neon-text">Browse Videos</h1>
+          <h2 className="text-2xl font-semibold neon-text">Browse Videos</h2>
           <p className="text-sm text-white/70">
-            {filteredVideos.length} of {videos.length} videos
+            {isLimited
+              ? `Showing ${limitedVideos.length} of ${filteredVideos.length} videos`
+              : `${filteredVideos.length} of ${videos.length} videos`}
           </p>
         </div>
 
@@ -162,8 +177,9 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
               onChange={(e) => setSort(e.target.value)}
               className="w-full rounded-xl bg-black/40 neon-border px-3 py-2 text-white text-sm"
             >
+              <option value="rank">Rank</option>
               <option value="new">Newest</option>
-              <option value="top">Top rated</option>
+              <option value="top">Most Viewed</option>
               <option value="duration">Duration</option>
             </select>
           </div>
@@ -176,7 +192,12 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
           <h2 className="text-lg font-semibold neon-text">
             {search || category !== "all" || duration !== "any" ? "Search Results" : "All Videos"}
           </h2>
-          <span className="text-sm text-white/60">{filteredVideos.length} videos</span>
+          <span className="text-sm text-white/60">
+            {isLimited
+              ? `Showing ${limitedVideos.length} of ${filteredVideos.length}`
+              : `${filteredVideos.length}`}{" "}
+            videos
+          </span>
         </div>
 
         {filteredVideos.length === 0 ? (
@@ -185,7 +206,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {filteredVideos.map((v) => {
+            {limitedVideos.map((v) => {
               const isShowcase = showcaseSlugs.includes(v.viewkey);
               const isLocked = !canViewPremium && !isShowcase;
 
@@ -249,16 +270,25 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                         No Thumbnail
                       </div>
                     )}
+                    {/* Rank Badge */}
+                    {v.rank != null && (
+                      <div
+                        className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                        style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                      >
+                        #{v.rank}
+                      </div>
+                    )}
                     <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
                       {formatDuration(v.duration)}
                     </div>
                     {v.favorite === 1 && (
-                      <div className="absolute top-2 left-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
+                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
                         ★
                       </div>
                     )}
                     {isShowcase && !canViewPremium && (
-                      <div className="absolute top-2 left-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
+                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
                         FREE
                       </div>
                     )}
@@ -279,6 +309,17 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {isLimited && (
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/videos"
+              className="inline-flex items-center rounded-full border border-pink-400/40 bg-pink-500/10 px-5 py-2 text-sm font-semibold text-pink-200 transition hover:border-pink-300/70 hover:bg-pink-500/20"
+            >
+              View All Videos
+            </Link>
           </div>
         )}
       </section>

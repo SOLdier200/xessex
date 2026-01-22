@@ -1,16 +1,25 @@
 {
   "name": "xessex",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "all": "fuser -k 3001/tcp 2>/dev/null; next build && (wslview http://localhost:3001 >/dev/null 2>&1 &) && next start -p 3001"
+    "all": "fuser -k 3001/tcp 2>/dev/null; next build --webpack && (wslview http://localhost:3001 >/dev/null 2>&1 &) && next start -p 3001"
   },
   "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@metaplex-foundation/js": "^0.20.1",
+    "@metaplex-foundation/mpl-token-metadata": "2.10.0",
+    "@metaplex-foundation/umi": "^1.4.1",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.4.1",
     "@prisma/client": "^6.19.1",
+    "@solana-mobile/wallet-adapter-mobile": "^2.2.5",
+    "@solana/spl-token": "^0.4.14",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@solana/wallet-adapter-wallets": "^0.19.37",
@@ -19,13 +28,19 @@
     "@supabase/supabase-js": "^2.90.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.5.0",
+    "bip39": "^3.1.0",
+    "bn.js": "^5.2.2",
     "bs58": "^6.0.0",
+    "ed25519-hd-key": "^1.3.0",
+    "js-sha3": "^0.9.3",
     "next": "16.1.1",
+    "pino-pretty": "^10.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "resend": "^6.7.0",
     "sonner": "^2.0.7",
     "tweetnacl": "^1.0.3",
+    "viem": "^2.44.4",
     "zod": "^4.3.5"
   },
   "devDependencies": {
@@ -41,6 +56,7 @@
     "postcss": "^8.5.6",
     "prisma": "^6.19.1",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

@@ -2,25 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
-const safe = {
-  get(getter: () => string | null) {
-    try { return getter(); } catch { return null; }
-  },
-  cookieIncludes(s: string) {
-    try { return document.cookie.includes(s); } catch { return false; }
-  },
-  removeRedirectFlag() {
-    try { sessionStorage.removeItem("age_ok_redirect"); } catch {}
-  },
-};
-
-function sanitizeNext(nextValue: string | null) {
-  if (!nextValue) return "/";
-  if (!nextValue.startsWith("/") || nextValue.startsWith("//")) return "/";
-  if (nextValue.startsWith("/age")) return "/";
-  return nextValue;
-}
+import { getAgeGateOk } from "@/lib/ageGateState";
 
 export function AgeGateEnforcer() {
   const router = useRouter();
@@ -28,40 +10,29 @@ export function AgeGateEnforcer() {
   const sp = useSearchParams();
 
   useEffect(() => {
-    const nextParam = safe.get(() => sp?.get("next"));
-    const next = sanitizeNext(nextParam);
+    // Allow search engine crawlers to access content without age gate
+    const isBot = /googlebot|bingbot|slurp|duckduckbot|baiduspider|yandex/i.test(
+      navigator.userAgent
+    );
+    if (isBot) return;
 
-    const redirectOk = safe.get(() => sessionStorage.getItem("age_ok_redirect")) === "1";
-    const localOk = safe.get(() => localStorage.getItem("age_ok_tab")) === "1";
-    const sessionOk = safe.get(() => sessionStorage.getItem("age_ok_tab")) === "1";
-    const ageOkCookie = safe.cookieIncludes("age_ok=1");
-    const ageVerifiedCookie =
-      safe.cookieIncludes("age_verified=true") || safe.cookieIncludes("age_verified=1");
-    const ok = redirectOk || localOk || sessionOk || ageOkCookie || ageVerifiedCookie;
+    const ok = getAgeGateOk();
 
-    if (pathname.startsWith("/age")) {
-      if (ok) {
-        router.replace(next || "/");
-      }
-      return;
-    }
+    if (pathname.startsWith("/age")) return;
 
     if (
       pathname.startsWith("/leave") ||
       pathname.startsWith("/parental-controls") ||
       pathname.startsWith("/terms") ||
-      pathname.startsWith("/auth/callback")
+      pathname.startsWith("/privacy") ||
+      pathname.startsWith("/2257") ||
+      pathname.startsWith("/auth/callback") ||
+      pathname.startsWith("/login") ||
+      pathname.startsWith("/signup") ||
+      pathname.startsWith("/forgot-password")
     ) return;
 
-    if (ok) {
-      if (!ageVerifiedCookie && (redirectOk || localOk || sessionOk || ageOkCookie)) {
-        try {
-          document.cookie = "age_verified=true; path=/; max-age=31536000; samesite=lax";
-        } catch {}
-      }
-      safe.removeRedirectFlag();
-      return;
-    }
+    if (ok) return;
 
     const searchStr = sp?.toString();
     const redirectTo = pathname + (searchStr ? `?${searchStr}` : "");

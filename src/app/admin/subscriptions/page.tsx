@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Tier = "MEMBER" | "DIAMOND";
 type Status = "ACTIVE" | "PENDING" | "PARTIAL" | "EXPIRED" | "CANCELED";
+
+type PaymentMethod = "CRYPTO" | "CARD" | "CASHAPP";
 
 type Row = {
   id: string;
@@ -16,7 +19,10 @@ type Row = {
   nowPaymentsOrderId: string | null;
   nowPaymentsInvoiceId: string | null;
   nowPaymentsPaymentId: string | null;
-  lastTxSig: string | null;
+  paymentMethod: PaymentMethod;
+  amountCents: number | null;
+  manualPaymentId: string | null;
+  verifyCode: string | null;
   user: { id: string; email: string | null; createdAt: string };
 };
 
@@ -59,6 +65,7 @@ export default function AdminSubscriptionsPage() {
 
   const [status, setStatus] = useState<string>("");
   const [tier, setTier] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [partialOnly, setPartialOnly] = useState(false);
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(50);
@@ -67,11 +74,12 @@ export default function AdminSubscriptionsPage() {
     const sp = new URLSearchParams();
     if (status) sp.set("status", status);
     if (tier) sp.set("tier", tier);
+    if (paymentMethod) sp.set("paymentMethod", paymentMethod);
     if (q.trim()) sp.set("q", q.trim());
     if (partialOnly) sp.set("partialOnly", "1");
     sp.set("limit", String(limit));
     return sp.toString();
-  }, [status, tier, q, partialOnly, limit]);
+  }, [status, tier, paymentMethod, q, partialOnly, limit]);
 
   async function load() {
     setLoading(true);
@@ -134,13 +142,11 @@ export default function AdminSubscriptionsPage() {
 
   async function lookup(r: Row) {
     const orderId = r.nowPaymentsOrderId || "";
-    const tx = r.lastTxSig || "";
     const invoiceId = r.nowPaymentsInvoiceId || "";
     const paymentId = r.nowPaymentsPaymentId || "";
 
     const sp = new URLSearchParams();
     if (orderId) sp.set("order_id", orderId);
-    else if (tx) sp.set("tx", tx);
     else if (paymentId) sp.set("payment_id", paymentId);
     else if (invoiceId) sp.set("invoice_id", invoiceId);
 
@@ -169,7 +175,15 @@ export default function AdminSubscriptionsPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-7xl p-6">
-        <h1 className="mb-6 text-2xl font-bold">Admin: Subscriptions</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Admin: Subscriptions</h1>
+          <Link
+            href="/admin"
+            className="rounded-full border border-pink-400/50 bg-pink-500/20 px-4 py-2 text-sm font-semibold hover:bg-pink-500/30 transition"
+          >
+            Back to Admin Panel
+          </Link>
+        </div>
 
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-400">
@@ -204,6 +218,20 @@ export default function AdminSubscriptionsPage() {
               <option value="">All</option>
               <option value="MEMBER">MEMBER</option>
               <option value="DIAMOND">DIAMOND</option>
+            </select>
+          </div>
+
+          <div>
+            <div className="mb-1 text-xs text-gray-400">Payment</div>
+            <select
+              className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm"
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+            >
+              <option value="">All</option>
+              <option value="CRYPTO">Crypto</option>
+              <option value="CARD">Card</option>
+              <option value="CASHAPP">CashApp</option>
             </select>
           </div>
 
@@ -257,11 +285,10 @@ export default function AdminSubscriptionsPage() {
                 <th className="p-3">User</th>
                 <th className="p-3">Tier</th>
                 <th className="p-3">Status</th>
+                <th className="p-3">Method</th>
+                <th className="p-3">Amount</th>
                 <th className="p-3">Expires</th>
-                <th className="p-3">Order</th>
-                <th className="p-3">Payment</th>
-                <th className="p-3">Invoice</th>
-                <th className="p-3">TX</th>
+                <th className="p-3">Order / Code</th>
                 <th className="p-3">Updated</th>
                 <th className="p-3">Actions</th>
               </tr>
@@ -275,11 +302,26 @@ export default function AdminSubscriptionsPage() {
                   </td>
                   <td className="p-3">{r.tier}</td>
                   <td className={`p-3 ${statusColor(r.status)}`}>{r.status}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      r.paymentMethod === "CASHAPP"
+                        ? "bg-green-500/20 text-green-400"
+                        : r.paymentMethod === "CARD"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-purple-500/20 text-purple-400"
+                    }`}>
+                      {r.paymentMethod || "CRYPTO"}
+                    </span>
+                  </td>
+                  <td className="p-3 text-gray-300">
+                    {r.amountCents ? `$${(r.amountCents / 100).toFixed(2)}` : "—"}
+                  </td>
                   <td className="p-3 text-gray-300">{fmt(r.expiresAt)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.nowPaymentsOrderId, 18)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.nowPaymentsPaymentId, 14)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.nowPaymentsInvoiceId, 14)}</td>
-                  <td className="p-3 font-mono text-xs text-gray-400">{trunc(r.lastTxSig, 14)}</td>
+                  <td className="p-3 font-mono text-xs text-gray-400">
+                    {r.paymentMethod === "CASHAPP"
+                      ? (r.verifyCode || "—")
+                      : trunc(r.nowPaymentsOrderId, 18)}
+                  </td>
                   <td className="p-3 text-gray-400">{fmt(r.updatedAt)}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
@@ -307,7 +349,7 @@ export default function AdminSubscriptionsPage() {
               ))}
               {rows.length === 0 && !loading && !error && (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={10}>
+                  <td className="p-6 text-center text-gray-500" colSpan={9}>
                     No results.
                   </td>
                 </tr>
@@ -318,7 +360,7 @@ export default function AdminSubscriptionsPage() {
 
         <div className="mt-4 text-xs text-gray-500">
           Admin access is controlled by <code className="text-gray-400">ADMIN_WALLETS</code> env var.
-          Search supports email, order_id, payment_id, invoice_id, and tx hash.
+          Search supports email, order_id, payment_id, invoice_id, and verify code.
         </div>
       </div>
     </div>

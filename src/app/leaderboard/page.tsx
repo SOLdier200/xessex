@@ -7,26 +7,27 @@ import TopNav from "../components/TopNav";
 
 type LeaderboardData = {
   mvm: { user: string; utilizedComments: number }[];
-  karat: { user: string; memberLikes: number }[];
+  karat: { user: string; totalScore: number }[];
   rewards: { user: string; xessEarned: number }[];
   referrals: { user: string; referralCount: number }[];
 };
 
 function getRankStyle(rank: number): string {
   if (rank === 0)
-    return "bg-gradient-to-r from-yellow-500/30 to-yellow-600/20 border-yellow-400/50";
+    return "bg-black/30 border-yellow-400 animate-pulse-gold";
   if (rank === 1)
-    return "bg-gradient-to-r from-gray-400/30 to-gray-500/20 border-gray-300/50";
+    return "bg-black/30 border-gray-300 animate-pulse-silver";
   if (rank === 2)
-    return "bg-gradient-to-r from-amber-600/30 to-amber-700/20 border-amber-500/50";
+    return "bg-black/30 border-amber-600 animate-pulse-bronze";
   return "bg-black/30 border-white/10";
 }
 
-function getRankBadge(rank: number): string {
-  if (rank === 0) return "👑";
-  if (rank === 1) return "🥈";
-  if (rank === 2) return "🥉";
-  return "💎";
+function getRankNumberStyle(rank: number): string {
+  if (rank === 0) return "animate-pulse-gold-text text-yellow-400";
+  if (rank === 1) return "animate-pulse-silver-text text-gray-300";
+  if (rank === 2) return "animate-pulse-bronze-text text-amber-600";
+  if (rank >= 3 && rank <= 9) return "animate-pulse-pink-text text-pink-500";
+  return "text-white/70";
 }
 
 export default function LeaderboardPage() {
@@ -34,7 +35,8 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
     "mvm" | "karat" | "rewards" | "referrals"
-  >("mvm");
+  >("karat");
+  const [isDiamond, setIsDiamond] = useState(false);
 
   useEffect(() => {
     fetch("/api/leaderboard")
@@ -45,11 +47,21 @@ export default function LeaderboardPage() {
         }
       })
       .finally(() => setLoading(false));
+
+    // Check if user is Diamond member
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((d) => {
+        if (d.ok && d.membership === "DIAMOND") {
+          setIsDiamond(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const tabs = [
+    { id: "karat", label: "Karat Kruncher", desc: "Highest Score" },
     { id: "mvm", label: "MVM", desc: "Most Valuable Member" },
-    { id: "karat", label: "Karat Kruncher", desc: "Most Member Likes" },
     { id: "rewards", label: "Rewards", desc: "XESS Earned" },
     { id: "referrals", label: "Referrals", desc: "Members Referred" },
   ] as const;
@@ -65,6 +77,13 @@ export default function LeaderboardPage() {
         >
           ← Back to Home
         </Link>
+
+        {/* Status Notice */}
+        <div className="mb-6 p-4 rounded-xl bg-yellow-500/20 border border-yellow-400/50 animate-pulse">
+          <p className="text-yellow-300 text-sm md:text-base text-center font-medium">
+            Leaderboard and Diamond Membership features + Xess Payments are still being implemented, but Regular Membership is already available.
+          </p>
+        </div>
 
         {/* Header */}
         <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 mb-6">
@@ -138,11 +157,8 @@ export default function LeaderboardPage() {
                           idx
                         )} border-l-4 transition hover:bg-white/5`}
                       >
-                        <div className="w-10 text-xl md:text-2xl font-bold text-center text-white/70">
+                        <div className={`w-10 text-xl md:text-2xl font-bold text-center ${getRankNumberStyle(idx)}`}>
                           {idx + 1}
-                        </div>
-                        <div className="text-xl md:text-2xl">
-                          {getRankBadge(idx)}
                         </div>
                         <div className="flex-1">
                           <div className="font-semibold text-white font-mono text-sm">
@@ -177,11 +193,8 @@ export default function LeaderboardPage() {
                           idx
                         )} border-l-4 transition hover:bg-white/5`}
                       >
-                        <div className="w-10 text-xl md:text-2xl font-bold text-center text-white/70">
+                        <div className={`w-10 text-xl md:text-2xl font-bold text-center ${getRankNumberStyle(idx)}`}>
                           {idx + 1}
-                        </div>
-                        <div className="text-xl md:text-2xl">
-                          {getRankBadge(idx)}
                         </div>
                         <div className="flex-1">
                           <div className="font-semibold text-white font-mono text-sm">
@@ -190,10 +203,10 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-pink-400">
-                            {entry.memberLikes}
+                            {entry.totalScore}
                           </div>
                           <div className="text-xs text-white/50">
-                            member likes
+                            Total Score
                           </div>
                         </div>
                       </div>
@@ -216,11 +229,8 @@ export default function LeaderboardPage() {
                           idx
                         )} border-l-4 transition hover:bg-white/5`}
                       >
-                        <div className="w-10 text-xl md:text-2xl font-bold text-center text-white/70">
+                        <div className={`w-10 text-xl md:text-2xl font-bold text-center ${getRankNumberStyle(idx)}`}>
                           {idx + 1}
-                        </div>
-                        <div className="text-xl md:text-2xl">
-                          {getRankBadge(idx)}
                         </div>
                         <div className="flex-1">
                           <div className="font-semibold text-white font-mono text-sm">
@@ -253,11 +263,8 @@ export default function LeaderboardPage() {
                           idx
                         )} border-l-4 transition hover:bg-white/5`}
                       >
-                        <div className="w-10 text-xl md:text-2xl font-bold text-center text-white/70">
+                        <div className={`w-10 text-xl md:text-2xl font-bold text-center ${getRankNumberStyle(idx)}`}>
                           {idx + 1}
-                        </div>
-                        <div className="text-xl md:text-2xl">
-                          {getRankBadge(idx)}
                         </div>
                         <div className="flex-1">
                           <div className="font-semibold text-white font-mono text-sm">
@@ -279,23 +286,26 @@ export default function LeaderboardPage() {
           </section>
         )}
 
-        {/* Call to Action */}
-        <section className="mt-6 neon-border rounded-2xl p-4 md:p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-center">
-          <h3 className="text-lg md:text-xl font-bold text-white">
-            Want to climb the Diamond Ladder?
-          </h3>
-          <p className="mt-2 text-sm md:text-base text-white/70">
-            Register as a Diamond Member and start earning{" "}
-            <span className="text-green-400 font-bold">XESS</span> for your
-            contributions!
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-black font-semibold hover:from-purple-400 hover:to-pink-400 transition"
-          >
-            Become a Diamond Member
-          </Link>
-        </section>
+        {/* Call to Action (non-Diamond only) */}
+        {!isDiamond && (
+          <section className="mt-6 neon-border rounded-2xl p-4 md:p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-center">
+            <h3 className="text-lg md:text-xl font-bold text-white">
+              Want to climb the Diamond Ladder?
+            </h3>
+            <p className="mt-2 text-sm md:text-base text-white/70">
+              Register as a Diamond Member and start earning{" "}
+              <span className="text-green-400 font-bold">XESS</span> for your
+              contributions!
+            </p>
+            <Link
+              href="/signup"
+              className="inline-block mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-extrabold hover:from-purple-400 hover:to-pink-400 transition shadow-lg"
+              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
+            >
+              Become a Diamond Member
+            </Link>
+          </section>
+        )}
       </div>
     </main>
   );

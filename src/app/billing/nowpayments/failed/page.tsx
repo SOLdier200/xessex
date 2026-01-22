@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 function FailedContent() {
   const sp = useSearchParams();
@@ -9,6 +10,16 @@ function FailedContent() {
 
   return (
     <div className="mx-auto max-w-xl p-6">
+      <div className="flex justify-center mb-6">
+        <Image
+          src="/logos/neonmainlogo1.png"
+          alt="Xessex"
+          width={180}
+          height={60}
+          priority
+          className="h-14 w-auto"
+        />
+      </div>
       <h1 className="text-2xl font-semibold">Payment canceled or failed</h1>
       <p className="mt-2 text-sm opacity-80">
         No worries — you can try again. If you saw a wallet error, pick a

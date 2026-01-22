@@ -5,7 +5,7 @@ import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 
-type Plan = "M60" | "MY" | "D1" | "D2" | "DY";
+type Plan = "M90" | "MY" | "D1" | "D2" | "DY";
 
 const NOWPAYMENTS_API_BASE = "https://api.nowpayments.io/v1";
 
@@ -20,12 +20,12 @@ const PLAN_META: Record<
     preferLowMinCoins?: boolean;
   }
 > = {
-  M60: {
-    iid: "1094581819",
+  M90: {
+    iid: "1513416538",
     tier: "MEMBER",
-    days: 60,
+    days: 90,
     price: 10,
-    description: "Member 60 days",
+    description: "Member 90 days",
   },
   MY: {
     iid: "429715526",
@@ -35,24 +35,24 @@ const PLAN_META: Record<
     description: "Member yearly",
   },
   D1: {
-    iid: "1754587706",
+    iid: "355119372",
     tier: "DIAMOND",
     days: 30,
-    price: 18,
+    price: 9,
     description: "Diamond 1 month",
   },
   D2: {
-    iid: "552457287",
+    iid: "949588916",
     tier: "DIAMOND",
     days: 60,
-    price: 30,
+    price: 17,
     description: "Diamond 2 months",
   },
   DY: {
-    iid: "1689634405",
+    iid: "2018295600",
     tier: "DIAMOND",
     days: 365,
-    price: 100,
+    price: 70,
     description: "Diamond yearly",
   },
 };

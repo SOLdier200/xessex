@@ -1,3 +1,8 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { getVideos, getStats, getCategories, type CurationStatus, type Cursor } from "@/lib/db";
 

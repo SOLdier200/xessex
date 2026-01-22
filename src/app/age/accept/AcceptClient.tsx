@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+import { setAgeGateOk } from "@/lib/ageGateState";
 
 type AcceptClientProps = {
   next?: string;
@@ -21,20 +20,7 @@ export default function AcceptClient({ next }: AcceptClientProps) {
   const safeNext = sanitizeNext(next);
 
   useEffect(() => {
-    try {
-      const secure = window.location.protocol === "https:";
-      const cookieSuffix = `path=/; max-age=${ONE_YEAR_SECONDS}; samesite=lax${secure ? "; secure" : ""}`;
-
-      document.cookie = `age_ok=1; ${cookieSuffix}`;
-      document.cookie = `age_verified=true; ${cookieSuffix}`;
-
-      localStorage.setItem("age_ok_tab", "1");
-      sessionStorage.setItem("age_ok_tab", "1");
-      sessionStorage.setItem("age_ok_redirect", "1");
-    } catch {
-      // ignore storage errors
-    }
-
+    setAgeGateOk(true);
     router.replace(safeNext || "/");
   }, [safeNext, router]);
 

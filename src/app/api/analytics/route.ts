@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
-import { computeCommentScore } from "@/lib/scoring";
 
 /**
  * GET /api/analytics
@@ -65,13 +64,6 @@ export async function GET() {
     totalModLikes += modLikes;
     totalModDislikes += modDislikes;
 
-    const score = computeCommentScore({
-      memberLikes,
-      memberDislikes,
-      modLikes,
-      modDislikes,
-    });
-
     return {
       sourceId: c.id,
       createdAt: c.createdAt.toISOString(),
@@ -81,13 +73,28 @@ export async function GET() {
       modLikes,
       modDislikes,
       utilized: utilizedSet.has(c.id),
-      score,
+      score: c.score,
     };
   });
 
-  // Rewards stubs (until payout system is implemented)
-  const totalXessPaid = 0;
-  const pendingXess = 0;
+  // Query actual rewards from RewardEvent table (weekly rewards only)
+  // PAID + claimedAt = actually claimed by user
+  // PAID + claimedAt null = ready to claim (pending for user)
+  const [claimedRewards, unclaimedRewards] = await Promise.all([
+    db.rewardEvent.aggregate({
+      where: { userId, status: "PAID", claimedAt: { not: null }, refType: { startsWith: "weekly" } },
+      _sum: { amount: true },
+    }),
+    db.rewardEvent.aggregate({
+      where: { userId, status: "PAID", claimedAt: null, refType: { startsWith: "weekly" } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  // Amounts are stored with 6 decimals - convert to whole XESS for display
+  const DECIMALS = 1_000_000n;
+  const totalXessPaid = Number((claimedRewards._sum.amount ?? 0n) / DECIMALS);
+  const pendingXess = Number((unclaimedRewards._sum.amount ?? 0n) / DECIMALS);
 
   return NextResponse.json({
     ok: true,

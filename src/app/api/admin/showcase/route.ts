@@ -11,7 +11,7 @@ export async function GET() {
   const current = await db.video.findMany({
     where: { isShowcase: true },
     select: { slug: true, title: true },
-    orderBy: { createdAt: "desc" },
+    orderBy: { rank: "asc" },
     take: 3,
   });
 
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   const current = await db.video.findMany({
     where: { isShowcase: true },
     select: { slug: true, title: true },
-    orderBy: { createdAt: "desc" },
+    orderBy: { rank: "asc" },
     take: 3,
   });
 

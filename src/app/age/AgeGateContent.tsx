@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 type AgeGateContentProps = {
   next?: string;
 };
@@ -9,25 +7,23 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10 relative overflow-hidden">
       {/* Background logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <Image
+        <img
           src="/logos/xessexcoinlogo2.png"
           alt=""
-          width={800}
-          height={800}
           className="w-[80vmin] h-[80vmin] object-contain opacity-20"
-          priority
+          loading="eager"
+          decoding="async"
         />
       </div>
       <div className="w-full max-w-2xl relative z-10">
-        <div className="rounded-2xl p-4 md:p-8 bg-black">
+        <div className="rounded-2xl p-4 md:p-8 bg-black/60 backdrop-blur-sm">
           <div className="flex justify-center mb-4">
-            <Image
+            <img
               src="/logos/neonmainlogo1.png"
               alt="Xessex"
-              width={400}
-              height={150}
               className="w-[101px] md:w-[137px] h-auto"
-              priority
+              loading="eager"
+              decoding="async"
             />
           </div>
 
@@ -75,8 +71,15 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-3 text-white/50 text-sm">
-            <span>© Xessex.me 2026</span>
-            <img src="/logos/rta.gif" alt="RTA - Restricted to Adults" width={88} height={31} />
+            <span>© Xessex.me {new Date().getFullYear()}</span>
+            <img
+              src="/logos/rta.gif"
+              alt="RTA - Restricted to Adults"
+              width={88}
+              height={31}
+              loading="eager"
+              decoding="async"
+            />
           </div>
         </div>
       </div>

@@ -72,9 +72,9 @@ export default function AnalyticsPage() {
         <TopNav />
         <div className="px-4 md:px-6 pb-10">
           <div className="neon-border rounded-2xl p-8 bg-black/30 text-center mt-8">
-            <h1 className="text-2xl font-bold text-white mb-4">
+            <h2 className="text-2xl font-bold text-white mb-4">
               Login Required
-            </h1>
+            </h2>
             <p className="text-white/70 mb-6">
               Please log in to view your analytics.
             </p>
@@ -96,9 +96,9 @@ export default function AnalyticsPage() {
         <TopNav />
         <div className="px-4 md:px-6 pb-10">
           <div className="neon-border rounded-2xl p-8 bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/10 text-center mt-8 border-yellow-400/30">
-            <h1 className="text-2xl font-bold text-yellow-400 mb-4">
+            <h2 className="text-2xl font-bold text-yellow-400 mb-4">
               Diamond Members Only
-            </h1>
+            </h2>
             <p className="text-white/70 mb-6">
               Analytics are exclusively available to Diamond Members.
             </p>
@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
         <TopNav />
         <div className="px-4 md:px-6 pb-10">
           <div className="neon-border rounded-2xl p-8 bg-black/30 text-center mt-8">
-            <h1 className="text-2xl font-bold text-red-400 mb-4">Error</h1>
+            <h2 className="text-2xl font-bold text-red-400 mb-4">Error</h2>
             <p className="text-white/70">{error || "Failed to load analytics"}</p>
           </div>
         </div>

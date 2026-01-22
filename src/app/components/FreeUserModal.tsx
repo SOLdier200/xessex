@@ -7,10 +7,12 @@ export default function FreeUserModal({
   open,
   onClose,
   onLogoutComplete,
+  isWalletOnly = false,
 }: {
   open: boolean;
   onClose: () => void;
   onLogoutComplete: () => void;
+  isWalletOnly?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,10 @@ export default function FreeUserModal({
 
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+
+      // Dispatch auth-changed event so all components can react
+      window.dispatchEvent(new CustomEvent("auth-changed"));
+
       onLogoutComplete();
       onClose();
     } catch (err) {
@@ -28,6 +34,11 @@ export default function FreeUserModal({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogin = () => {
+    onClose();
+    router.push("/login");
   };
 
   const handlePurchase = () => {
@@ -43,16 +54,34 @@ export default function FreeUserModal({
       <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/90 p-6">
         <h2 className="text-lg font-semibold text-white mb-2">Account Options</h2>
         <p className="text-sm text-white/60 mb-6">
-          Your account is created. Purchase a membership to unlock full access.
+          {isWalletOnly
+            ? "Your wallet is connected. Login with email or purchase a membership to unlock full access."
+            : "Your account is created. Purchase a membership to unlock full access."}
         </p>
 
         <div className="flex flex-col gap-3">
+          {isWalletOnly && (
+            <button
+              onClick={handleLogin}
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30 border border-sky-400/40 text-sky-100 text-sm font-medium transition"
+            >
+              Login
+            </button>
+          )}
           <button
             onClick={handlePurchase}
             className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-400/40 text-amber-100 text-sm font-medium transition"
           >
             Purchase Membership
           </button>
+          {!isWalletOnly && (
+            <button
+              onClick={handleLogin}
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30 border border-purple-400/40 text-purple-100 text-sm font-medium transition"
+            >
+              Connect Wallet
+            </button>
+          )}
           <button
             onClick={handleLogout}
             disabled={loading}

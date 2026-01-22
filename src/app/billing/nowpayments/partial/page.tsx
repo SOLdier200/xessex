@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 function PartialContent() {
   const sp = useSearchParams();
@@ -9,6 +10,16 @@ function PartialContent() {
 
   return (
     <div className="mx-auto max-w-xl p-6">
+      <div className="flex justify-center mb-6">
+        <Image
+          src="/logos/neonmainlogo1.png"
+          alt="Xessex"
+          width={180}
+          height={60}
+          priority
+          className="h-14 w-auto"
+        />
+      </div>
       <h1 className="text-2xl font-semibold">Partial payment received</h1>
       <p className="mt-2 text-sm opacity-80">
         We received an underpayment for this invoice. This usually happens when
