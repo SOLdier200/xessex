@@ -82,7 +82,9 @@ export function rewardTypeLabel(type: string): string {
     case "WEEKLY_MVM":
       return "MVM Bonus";
     case "WEEKLY_COMMENTS":
-      return "Diamond Comments";
+      return "Comments";
+    case "ALLTIME_LIKES":
+      return "Most Likes Ever";
     case "REF_L1":
       return "Referral (L1)";
     case "REF_L2":

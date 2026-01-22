@@ -274,6 +274,19 @@ export default function ProfilePage() {
     }
   }
 
+  // Refresh analytics data (updates Total XESS Paid / Pending display)
+  async function refreshAnalytics() {
+    try {
+      const res = await fetch("/api/analytics", { cache: "no-store" });
+      const json = await res.json();
+      if (json.ok) {
+        setAnalyticsData(json);
+      }
+    } catch {
+      // Silent fail
+    }
+  }
+
   useEffect(() => {
     if (data?.membership === "DIAMOND") {
       refreshLivePending();
@@ -431,8 +444,12 @@ export default function ProfilePage() {
         toast.error("Failed to claim any weeks");
       }
 
-      // Refresh data in background
-      Promise.all([refreshClaimSummary(), refreshLivePending()]);
+      // Refresh all data to update UI
+      await Promise.all([
+        refreshClaimSummary(),
+        refreshLivePending(),
+        refreshAnalytics(),
+      ]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "CLAIM_ALL_FAILED";
       setClaimErr(msg);
@@ -560,7 +577,12 @@ export default function ProfilePage() {
         toast.warning("Claimed on-chain but DB update failed. Contact support.");
       }
 
-      await refreshClaimSummary();
+      // Refresh all data to update UI
+      await Promise.all([
+        refreshClaimSummary(),
+        refreshLivePending(),
+        refreshAnalytics(),
+      ]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "CLAIM_FAILED";
       setClaimErr(msg);
@@ -1695,7 +1717,7 @@ export default function ProfilePage() {
                       <div className="text-2xl font-bold text-green-400">
                         {analyticsData.totals.utilizedComments}
                       </div>
-                      <div className="text-xs text-white/60 mt-1">Utilized (MVM)</div>
+                      <div className="text-xs text-white/60 mt-1">Sourced</div>
                     </div>
 
                     <div className="neon-border rounded-xl p-4 bg-black/30">
@@ -1770,11 +1792,11 @@ export default function ProfilePage() {
                                 <td className="py-3 text-center">
                                   {c.utilized ? (
                                     <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                                      MVM
+                                      Sourced
                                     </span>
                                   ) : (
                                     <span className="px-2 py-0.5 rounded text-xs bg-white/10 text-white/40">
-                                      Pending
+                                      N/A
                                     </span>
                                   )}
                                 </td>
@@ -1792,7 +1814,7 @@ export default function ProfilePage() {
                   {/* Legend */}
                   <div className="mt-4 text-xs text-white/40">
                     <p>
-                      <strong>MVM</strong> = Most Valuable Member - your comment was used to adjust a video&apos;s score
+                      <strong>Sourced</strong> = Your comment was used to adjust a video&apos;s score
                     </p>
                   </div>
                 </>

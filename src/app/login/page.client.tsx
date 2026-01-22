@@ -46,6 +46,9 @@ export default function LoginPageClient() {
             Connect your wallet, sign in with wallet, or link your wallet to your account.
           </p>
           <p className="mt-2 text-xs text-yellow-400/80">
+            Note: Mobile users will have to download Phantom to connect wallet.
+          </p>
+          <p className="mt-1 text-xs text-yellow-400/80">
             Note: iPhone (iOS) users must open in Phantom to connect your wallet.
           </p>
           <div className="mt-6">
