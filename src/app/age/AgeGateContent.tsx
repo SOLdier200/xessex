@@ -5,18 +5,20 @@ type AgeGateContentProps = {
 export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10 relative overflow-hidden">
-      {/* Background logo */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <img
-          src="/logos/xessexcoinlogo2.png"
-          alt=""
-          className="w-[80vmin] h-[80vmin] object-contain opacity-20"
-          loading="eager"
-          decoding="async"
-        />
-      </div>
       <div className="w-full max-w-2xl relative z-10">
-        <div className="rounded-2xl p-4 md:p-8 bg-black/60 backdrop-blur-sm">
+        <div className="rounded-2xl p-4 md:p-8 bg-black/60 relative overflow-hidden">
+          {/* See-through logo behind the box content */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <img
+              src="/logos/xessexcoinlogo2.png"
+              alt=""
+              className="w-[60%] h-[60%] object-contain opacity-10"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+          {/* Content above the watermark */}
+          <div className="relative z-10">
           <div className="flex justify-center mb-4">
             <img
               src="/logos/neonmainlogo1.png"
@@ -80,6 +82,7 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
               loading="eager"
               decoding="async"
             />
+          </div>
           </div>
         </div>
       </div>

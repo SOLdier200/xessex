@@ -13,6 +13,8 @@ import { setSessionCookie } from "@/lib/authCookies";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
+
   try {
     const { wallet, message, signature } = await req.json();
 
@@ -21,7 +23,7 @@ export async function POST(req: Request) {
     const s = String(signature ?? "");
 
     if (!w || !m || !s) {
-      return NextResponse.json({ ok: false, error: "Missing fields" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Missing fields" }, { status: 400, headers: noCache });
     }
 
     const pubkeyBytes = bs58.decode(w);
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
     const msgBytes = new TextEncoder().encode(m);
 
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
-    if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401 });
+    if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
 
     // Check if user is already logged in with a different account
     const currentUser = await getCurrentUser();
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
         // Let UI offer "Link wallet" or "Switch account"
         return NextResponse.json(
           { ok: false, error: "WALLET_NOT_LINKED", wallet: w },
-          { status: 409 }
+          { status: 409, headers: noCache }
         );
       }
     }
@@ -75,9 +77,9 @@ export async function POST(req: Request) {
     const { token, expiresAt } = await createSession(user.id);
     await setSessionCookie(token, expiresAt);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: noCache });
   } catch (err) {
     console.error("Verify error:", err);
-    return NextResponse.json({ ok: false, error: "Verify failed" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Verify failed" }, { status: 500, headers: noCache });
   }
 }

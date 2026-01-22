@@ -219,6 +219,15 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   const provisionalExpiresAt = addMinutes(now, 45);
 
+  // Check for existing subscription to preserve ACTIVE status and expiresAt
+  const existing = await db.subscription.findUnique({
+    where: { userId: access.user.id },
+  });
+
+  // Determine if we should preserve ACTIVE status
+  const isCurrentlyActive = existing?.status === "ACTIVE" &&
+    existing.expiresAt && existing.expiresAt.getTime() > now.getTime();
+
   const sub = await db.subscription.upsert({
     where: { userId: access.user.id },
     create: {
@@ -229,14 +238,20 @@ export async function POST(req: NextRequest) {
       nowPaymentsOrderId: orderId,
       nowPaymentsPaymentId: null,
       expiresAt: provisionalExpiresAt,
+      paymentMethod: "CRYPTO",
     },
     update: {
       tier: meta.tier,
-      status: "PENDING",
+      // Preserve ACTIVE status if currently active - don't downgrade to PENDING
+      status: isCurrentlyActive ? "ACTIVE" : "PENDING",
       nowPaymentsInvoiceId: null,
       nowPaymentsOrderId: orderId,
       nowPaymentsPaymentId: null,
-      expiresAt: provisionalExpiresAt,
+      // Preserve existing expiresAt if currently active and it's further out
+      expiresAt: isCurrentlyActive && existing.expiresAt && existing.expiresAt.getTime() > provisionalExpiresAt.getTime()
+        ? existing.expiresAt
+        : provisionalExpiresAt,
+      paymentMethod: "CRYPTO",
     },
   });
 
@@ -281,12 +296,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Fallback to hosted invoice link using iid
+  // NOTE: Do NOT store meta.iid as nowPaymentsInvoiceId - it's a shared template ID,
+  // not a unique invoice. Multiple users share the same iid, which breaks IPN correlation.
+  // We rely on order_id for correlation instead.
   const fallbackUrl = `https://nowpayments.io/payment/?iid=${meta.iid}&order_id=${encodeURIComponent(orderId)}`;
 
-  await db.subscription.update({
-    where: { id: sub.id },
-    data: { nowPaymentsInvoiceId: meta.iid },
-  });
+  // Keep nowPaymentsInvoiceId as null for hosted invoices - order_id is our correlation key
+  // The iid is just a template reference, not a unique payment identifier
 
   return NextResponse.json({
     ok: true,

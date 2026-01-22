@@ -56,20 +56,21 @@ const Body = z.object({
  * Rate limited to 5 attempts per minute per IP.
  */
 export async function POST(req: NextRequest) {
+  const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
   const ip = getClientIp(req);
   const rateCheck = checkRateLimit(ip);
 
   if (!rateCheck.allowed) {
     return NextResponse.json(
       { ok: false, error: "RATE_LIMITED", retryAfter: rateCheck.retryAfter },
-      { status: 429 }
+      { status: 429, headers: noCache }
     );
   }
 
   const json = await req.json().catch(() => null);
   const parsed = Body.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "INVALID_INPUT" }, { status: 400, headers: noCache });
   }
 
   const email = parsed.data.email.toLowerCase().trim();
@@ -81,12 +82,12 @@ export async function POST(req: NextRequest) {
   });
 
   if (!user?.passHash) {
-    return NextResponse.json({ ok: false, error: "USER_NOT_FOUND" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "USER_NOT_FOUND" }, { status: 401, headers: noCache });
   }
 
   const ok = await bcrypt.compare(password, user.passHash);
   if (!ok) {
-    return NextResponse.json({ ok: false, error: "INVALID_PASSWORD" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "INVALID_PASSWORD" }, { status: 401, headers: noCache });
   }
 
   const { token, expiresAt } = await createSession(user.id);
@@ -100,5 +101,5 @@ export async function POST(req: NextRequest) {
     active && sub?.tier === "DIAMOND" ? "DIAMOND" :
     active ? "MEMBER" : "FREE";
 
-  return NextResponse.json({ ok: true, membership });
+  return NextResponse.json({ ok: true, membership }, { headers: noCache });
 }

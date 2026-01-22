@@ -1452,8 +1452,14 @@ function SignupInner() {
             </button>
 
             <div className="text-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-yellow-500/20 border border-yellow-400/50 flex items-center justify-center mx-auto mb-3">
-                <span className="text-3xl">💎</span>
+              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-3">
+                <Image
+                  src="/logos/diamond3.png"
+                  alt="Diamond"
+                  width={80}
+                  height={80}
+                  className="object-contain"
+                />
               </div>
               <h2 className="text-xl font-bold text-yellow-300">Diamond Membership Beta</h2>
             </div>

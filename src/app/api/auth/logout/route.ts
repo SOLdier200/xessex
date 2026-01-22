@@ -22,5 +22,7 @@ export async function POST() {
 
   await clearSessionCookie();
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true }, {
+    headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
+  });
 }

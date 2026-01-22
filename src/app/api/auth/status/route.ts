@@ -4,6 +4,7 @@ import { truncWallet } from "@/lib/scoring";
 
 export async function GET() {
   const access = await getAccessContext();
+  const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
   if (!access.user) {
     return NextResponse.json({
@@ -16,7 +17,7 @@ export async function GET() {
       canComment: false,
       canVoteComments: false,
       canRateStars: false,
-    });
+    }, { headers: noCache });
   }
 
   return NextResponse.json({
@@ -30,5 +31,5 @@ export async function GET() {
     canVoteComments: access.canVoteComments,
     canRateStars: access.canRateStars,
     wallet: truncWallet(access.user.walletAddress, access.user.email),
-  });
+  }, { headers: noCache });
 }

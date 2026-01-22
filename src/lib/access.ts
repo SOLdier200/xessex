@@ -34,9 +34,23 @@ export async function getAccessContext() {
     !!(user?.solWallet && ADMIN_WALLETS.has(user.solWallet));
   const isAdminOrMod = hasAdminRole || walletInAllowlist;
 
-  // Diamond email users who haven't linked a wallet yet
-  const hasLinkedWallet = !!user?.walletAddress || !!user?.solWallet;
-  const needsSolWalletLink = tier === "diamond" && !!user?.email && !hasLinkedWallet;
+  // Wallet tracking - separate auth wallet (identity) from payout wallet (rewards)
+  // walletAddress = auth wallet (used for sign-in / identity)
+  // solWallet = payout wallet (where rewards go, can be same as auth or different)
+  const hasAuthWallet = !!user?.walletAddress;
+  const hasPayoutWallet = !!user?.solWallet;
+  const hasAnyWallet = hasAuthWallet || hasPayoutWallet;
+
+  // Diamond policy: must have an auth wallet to use Diamond-only features
+  // This allows email users to buy Diamond, but they must link wallet to use features
+  const diamondReady = tier === "diamond" && hasAuthWallet;
+
+  // Prompt flags for UI
+  const needsAuthWalletLink = tier === "diamond" && !hasAuthWallet;
+  const needsPayoutWalletLink = tier === "diamond" && !hasPayoutWallet;
+
+  // Legacy compatibility - keep this for existing code that uses it
+  const needsSolWalletLink = needsAuthWalletLink || needsPayoutWalletLink;
 
   return {
     user,
@@ -45,10 +59,22 @@ export async function getAccessContext() {
     tier,
     isAuthed: !!user,
     isAdminOrMod,
-    needsSolWalletLink,
+
+    // Wallet status
+    hasAuthWallet,
+    hasPayoutWallet,
+    hasAnyWallet,
+
+    // Diamond activation
+    diamondReady,
+    needsAuthWalletLink,
+    needsPayoutWalletLink,
+    needsSolWalletLink, // legacy compat
+
+    // Permissions - Diamond-only actions require diamondReady (wallet linked)
     canViewAllVideos: isAdminOrMod || tier === "member" || tier === "diamond",
-    canComment: isAdminOrMod || tier === "diamond",
-    canRateStars: isAdminOrMod || tier === "diamond",
+    canComment: isAdminOrMod || diamondReady,
+    canRateStars: isAdminOrMod || diamondReady,
     canVoteComments: isAdminOrMod || tier === "member" || tier === "diamond",
   };
 }

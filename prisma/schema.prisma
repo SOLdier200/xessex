@@ -162,6 +162,46 @@ enum PaymentMethod {
   CASHAPP
 }
 
+// Stores NOWPayments IPN callbacks that couldn't be linked to a subscription.
+// Used for manual reconciliation when payment comes in but user's subscription row is missing.
+model NowPaymentsUnlinked {
+  id                   String   @id @default(cuid())
+  nowPaymentsOrderId   String?  @unique
+  nowPaymentsPaymentId String?
+  nowPaymentsInvoiceId String?
+  paymentStatus        String?
+  payload              Json     // Full IPN payload for debugging
+  reconciledAt         DateTime? // When/if this was manually linked
+  reconciledSubId      String?  // Subscription ID it was linked to
+  createdAt            DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([paymentStatus])
+}
+
+// Logs ALL NOWPayments IPN callbacks for debugging and audit trail.
+// Stores raw payload so you can debug correlation issues.
+model NowPaymentsIpnLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Parsed fields for easy search
+  orderId   String?
+  paymentId String?
+  invoiceId String?
+  status    String?
+  amount    String?
+  currency  String?
+
+  // Full raw payload (stores the complete IPN for debugging)
+  raw       String   @db.Text
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
 model Video {
   id           String                 @id @default(cuid())
   slug         String                 @unique

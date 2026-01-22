@@ -5,9 +5,11 @@ import { db } from "@/lib/prisma";
 export const runtime = "nodejs";
 
 export async function GET() {
+  const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
+
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ ok: true, authed: false });
+    return NextResponse.json({ ok: true, authed: false }, { headers: noCache });
   }
 
   const sub = user.subscription ?? null;
@@ -92,5 +94,5 @@ export async function GET() {
           createdAt: pendingManualPayment.createdAt.toISOString(),
         }
       : null,
-  });
+  }, { headers: noCache });
 }

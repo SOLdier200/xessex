@@ -10,9 +10,11 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const access = await getAccessContext();
+  const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
+
   const user = access.user;
   if (!user) {
-    return NextResponse.json({ ok: true, authed: false, user: null });
+    return NextResponse.json({ ok: true, authed: false, user: null }, { headers: noCache });
   }
 
   const sub = user.subscription ?? null;
@@ -64,5 +66,5 @@ export async function GET() {
     sub: sub
       ? { tier: sub.tier, status: sub.status, expiresAt: sub.expiresAt }
       : null,
-  });
+  }, { headers: noCache });
 }

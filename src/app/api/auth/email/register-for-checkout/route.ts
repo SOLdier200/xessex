@@ -82,14 +82,22 @@ export async function POST(req: NextRequest) {
   }
 
   // Ensure subscription row exists (1:1) - tier will be set by billing start route
-  await db.subscription.create({
-    data: {
-      userId: user.id,
-      tier: "MEMBER", // placeholder; start route will set proper tier
-      status: "PENDING",
-      expiresAt: null,
-    },
-  }).catch(() => {});
+  // Use findUnique + create to avoid race conditions and never swallow errors
+  const existingSub = await db.subscription.findUnique({
+    where: { userId: user.id },
+  });
+
+  if (!existingSub) {
+    await db.subscription.create({
+      data: {
+        userId: user.id,
+        tier: "MEMBER", // placeholder; start route will set proper tier
+        status: "PENDING",
+        expiresAt: null,
+        paymentMethod: "CRYPTO",
+      },
+    });
+  }
 
   // Create session + set cookie
   const { token, expiresAt } = await createSession(user.id);

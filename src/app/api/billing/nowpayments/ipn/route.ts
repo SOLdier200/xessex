@@ -158,6 +158,29 @@ export async function POST(req: NextRequest) {
   // Read raw body for signature verification
   const raw = await req.text();
 
+  // Log ALL IPN callbacks for debugging (before any validation)
+  // This helps debug correlation issues and understand what NOWPayments sends
+  let parsedForLog: Record<string, unknown> | null = null;
+  try {
+    parsedForLog = JSON.parse(raw);
+  } catch {
+    // Not valid JSON - still log it
+  }
+
+  await db.nowPaymentsIpnLog.create({
+    data: {
+      raw,
+      orderId: parsedForLog?.order_id ? String(parsedForLog.order_id) : null,
+      paymentId: parsedForLog?.payment_id ? String(parsedForLog.payment_id) : null,
+      invoiceId: parsedForLog?.invoice_id ? String(parsedForLog.invoice_id) : null,
+      status: parsedForLog?.payment_status ? String(parsedForLog.payment_status) : null,
+      amount: parsedForLog?.price_amount ? String(parsedForLog.price_amount) : null,
+      currency: parsedForLog?.price_currency ? String(parsedForLog.price_currency) : null,
+    },
+  }).catch((e) => {
+    console.warn("[IPN] Failed to log IPN:", e instanceof Error ? e.message : "unknown");
+  });
+
   if (!sig || !secret) {
     console.error("[IPN] Missing signature or secret");
     return NextResponse.json({ ok: false, error: "MISSING_SIG_OR_SECRET" }, { status: 400 });
@@ -205,17 +228,32 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (!sub && invoiceId) {
-    // Fallback only; log warning as this is not unique across users
-    console.warn("[IPN] Falling back to invoiceId correlation (not unique!)", { invoiceId });
-    sub = await db.subscription.findFirst({
-      where: { nowPaymentsInvoiceId: invoiceId },
-    });
-  }
+  // NOTE: We intentionally do NOT fall back to invoiceId for correlation.
+  // The invoiceId from hosted invoices (iid) is a shared template ID - multiple users
+  // share the same iid, which would cause payments to be linked to the wrong user.
+  // Only order_id (unique per checkout) and payment_id (unique per payment) are safe.
 
-  // If not found, acknowledge to prevent retries but log it
+  // If not found, store in NowPaymentsUnlinked table for manual reconciliation
   if (!sub) {
-    console.warn(`[IPN] No subscription found for orderId=${orderId}, invoiceId=${invoiceId}, paymentId=${paymentId}`);
+    console.warn(`[IPN] No subscription found for orderId=${orderId}, paymentId=${paymentId}`);
+
+    // Store unlinked IPN for later reconciliation (if table exists)
+    try {
+      await db.nowPaymentsUnlinked.create({
+        data: {
+          nowPaymentsOrderId: orderId,
+          nowPaymentsPaymentId: paymentId,
+          nowPaymentsInvoiceId: invoiceId,
+          paymentStatus,
+          payload: payload as object,
+        },
+      });
+      console.log("[IPN] Stored unlinked payment for reconciliation");
+    } catch (e) {
+      // Table might not exist yet - just log
+      console.warn("[IPN] Could not store unlinked payment:", e instanceof Error ? e.message : "unknown");
+    }
+
     return NextResponse.json({ ok: true, unlinked: true });
   }
 
@@ -223,11 +261,13 @@ export async function POST(req: NextRequest) {
   const txHash = extractTxHash(payload);
 
   // Store latest provider ids + tx hash for debugging/admin lookup
+  // NOTE: We do NOT update nowPaymentsInvoiceId from IPN because hosted invoice iids are
+  // shared across users. Only order_id and payment_id are unique and safe to store.
   await db.subscription.update({
     where: { id: sub.id },
     data: {
       nowPaymentsOrderId: orderId ?? sub.nowPaymentsOrderId,
-      nowPaymentsInvoiceId: invoiceId ?? sub.nowPaymentsInvoiceId,
+      // Don't overwrite invoiceId from IPN - it might be a shared iid
       nowPaymentsPaymentId: paymentId ?? sub.nowPaymentsPaymentId,
       lastTxSig: txHash ?? sub.lastTxSig,
       // Revoke immediately on bad outcomes (also removes provisional access window)
