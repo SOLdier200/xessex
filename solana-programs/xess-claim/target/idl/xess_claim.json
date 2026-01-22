@@ -386,6 +386,50 @@
           }
         }
       ]
+    },
+    {
+      "name": "set_mint",
+      "discriminator": [
+        166,
+        129,
+        167,
+        223,
+        137,
+        118,
+        212,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_mint",
+          "type": "pubkey"
+        }
+      ]
     }
   ],
   "accounts": [

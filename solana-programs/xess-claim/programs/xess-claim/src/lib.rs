@@ -31,6 +31,12 @@ pub mod xess_claim {
         Ok(())
     }
 
+    pub fn set_mint(ctx: Context<SetMint>, new_mint: Pubkey) -> Result<()> {
+        require_keys_eq!(ctx.accounts.admin.key(), ctx.accounts.config.admin, XessError::NotAdmin);
+        ctx.accounts.config.xess_mint = new_mint;
+        Ok(())
+    }
+
     pub fn claim(
         ctx: Context<Claim>,
         epoch: u64,
@@ -163,6 +169,14 @@ pub struct SetEpochRoot<'info> {
 
 #[derive(Accounts)]
 pub struct SetAdmin<'info> {
+    #[account(mut, seeds = [b"config"], bump)]
+    pub config: Account<'info, Config>,
+
+    pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetMint<'info> {
     #[account(mut, seeds = [b"config"], bump)]
     pub config: Account<'info, Config>,
 
