@@ -630,7 +630,14 @@ export default function ProfilePage() {
 
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold neon-text">Your Profile</h1>
+            <Image
+              src="/logos/textlogo/profile.png"
+              alt="Your Profile"
+              width={938}
+              height={276}
+              priority
+              className="h-[50px] md:h-[65px] w-auto mx-auto"
+            />
             <p className="mt-2 text-white/70">Manage your account and view membership details</p>
           </div>
 

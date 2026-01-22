@@ -132,6 +132,33 @@ export default function TopNav() {
               <PendingManualBadge />
             </Link>
           )}
+          {/* Leaderboard */}
+          <Link
+            href="/leaderboard"
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center justify-center rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-300 transition active:bg-amber-500/30"
+          >
+            Leaderboard
+          </Link>
+          {/* Signup & Login - only show when not logged in */}
+          {!isLoggedIn && (
+            <>
+              <Link
+                href="/signup"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition active:bg-emerald-500/30"
+              >
+                Sign Up
+              </Link>
+              <Link
+                href="/login"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-center rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-3 text-sm font-semibold text-sky-300 transition active:bg-sky-500/30"
+              >
+                Login
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 

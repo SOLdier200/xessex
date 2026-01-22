@@ -12,7 +12,7 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
             <img
               src="/logos/xessexcoinlogo2.png"
               alt=""
-              className="w-[60%] h-[60%] object-contain opacity-10"
+              className="w-[77%] h-[77%] object-contain opacity-25"
               loading="eager"
               decoding="async"
             />
