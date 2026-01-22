@@ -47,10 +47,12 @@ export async function getAccessContext() {
 
   // Prompt flags for UI
   const needsAuthWalletLink = tier === "diamond" && !hasAuthWallet;
-  const needsPayoutWalletLink = tier === "diamond" && !hasPayoutWallet;
 
-  // Legacy compatibility - keep this for existing code that uses it
-  const needsSolWalletLink = needsAuthWalletLink || needsPayoutWalletLink;
+  // Payout wallet is optional — never required
+  const needsPayoutWalletLink = false;
+
+  // Legacy compatibility - treat as needsAuthWalletLink (most important gating)
+  const needsSolWalletLink = needsAuthWalletLink;
 
   return {
     user,

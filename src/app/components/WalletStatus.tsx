@@ -10,7 +10,9 @@ type AuthData = {
   authed: boolean;
   membership: "DIAMOND" | "MEMBER" | "FREE";
   walletAddress: string | null;
-  needsSolWalletLink: boolean;
+  needsAuthWalletLink: boolean;
+  needsPayoutWalletLink: boolean;
+  needsSolWalletLink: boolean; // legacy compat
   hasEmail: boolean;
   email: string | null;
 };
@@ -37,6 +39,8 @@ export default function WalletStatus() {
             authed: true,
             membership: d.membership,
             walletAddress: d.walletAddress,
+            needsAuthWalletLink: d.needsAuthWalletLink ?? d.needsSolWalletLink ?? false,
+            needsPayoutWalletLink: d.needsPayoutWalletLink ?? false,
             needsSolWalletLink: d.needsSolWalletLink ?? false,
             hasEmail: d.hasEmail ?? false,
             email: d.email ?? null,
@@ -88,8 +92,8 @@ export default function WalletStatus() {
   const isFreeWalletOnly = authed && membership === "FREE" && !hasEmail && hasWallet;
   const isFreeOrNoUser = !authed || (membership === "FREE" && !hasEmail && !hasWallet);
   const isMember = authed && membership === "MEMBER";
-  const isDiamondNoWallet = authed && membership === "DIAMOND" && auth?.needsSolWalletLink;
-  const isDiamondWithWallet = authed && membership === "DIAMOND" && !auth?.needsSolWalletLink;
+  const isDiamondNoWallet = authed && membership === "DIAMOND" && auth?.needsAuthWalletLink;
+  const isDiamondWithWallet = authed && membership === "DIAMOND" && !auth?.needsAuthWalletLink;
 
   // Handle click based on state
   const handleClick = () => {
@@ -102,7 +106,7 @@ export default function WalletStatus() {
       // Authenticated free user - show modal with Logout/Purchase options
       setShowFreeUserModal(true);
     } else if (isDiamondNoWallet) {
-      router.push("/link-wallet");
+      router.push("/link-auth-wallet");
     } else {
       // Member or Diamond with wallet - show logout modal
       setShowLogoutModal(true);
@@ -166,8 +170,8 @@ export default function WalletStatus() {
     borderClass = "border-yellow-400/50";
     dotColor = "bg-yellow-400";
     textColor = "text-yellow-400";
-    title = "Diamond Member--Needs Linked Wallet!";
-    subtitle = auth?.email ? `Logged in as ${auth.email}` : "Click to link wallet";
+    title = "Diamond Member--Link Wallet for Full Access!";
+    subtitle = auth?.email ? `${auth.email} - Click to link wallet` : "Click to link wallet";
   } else if (isDiamondWithWallet) {
     bgClass = "bg-gradient-to-r from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30";
     borderClass = "border-sky-400/50";

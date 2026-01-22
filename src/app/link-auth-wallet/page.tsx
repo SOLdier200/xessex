@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import TopNav from "../components/TopNav";
@@ -18,13 +18,17 @@ function detectIos() {
   );
 }
 
-function LinkWalletContent() {
+function LinkAuthWalletContent() {
   const router = useRouter();
+  const sp = useSearchParams();
   const { connected } = useWallet();
   const { setVisible } = useWalletModal();
 
   const ios = useMemo(detectIos, []);
   const [authed, setAuthed] = useState<boolean | null>(null);
+
+  // allow ?next=...
+  const next = useMemo(() => sp.get("next") || "/account", [sp]);
 
   useEffect(() => {
     fetch("/api/auth/me", { cache: "no-store" })
@@ -32,18 +36,16 @@ function LinkWalletContent() {
       .then((d) => {
         const ok = !!d?.user;
         setAuthed(ok);
-        if (!ok) router.push("/login?next=/link-wallet");
+        if (!ok) router.push(`/login?next=${encodeURIComponent(`/link-auth-wallet?next=${encodeURIComponent(next)}`)}`);
       })
       .catch(() => {
         setAuthed(false);
-        router.push("/login?next=/link-wallet");
+        router.push(`/login?next=${encodeURIComponent(`/link-auth-wallet?next=${encodeURIComponent(next)}`)}`);
       });
-  }, [router]);
+  }, [router, next]);
 
   if (authed === null) {
-    return (
-      <main className="max-w-lg mx-auto px-4 py-12 text-white/60">Loading…</main>
-    );
+    return <main className="max-w-lg mx-auto px-4 py-12 text-white/60">Loading...</main>;
   }
 
   return (
@@ -51,9 +53,10 @@ function LinkWalletContent() {
       <AccountWalletStatus />
 
       <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8">
-        <h1 className="text-2xl font-bold text-white mb-2">Set Payout Wallet <span className="text-white/50 text-base font-normal">(optional)</span></h1>
+        <h1 className="text-2xl font-bold text-white mb-2">Link Auth Wallet</h1>
         <p className="text-white/60 mb-6">
-          This is where <span className="text-green-400 font-medium">XESS rewards</span> get sent. Defaults to your auth wallet if not set. You&apos;ll sign a message - no transaction.
+          Link a wallet to your account for <span className="text-white font-medium">wallet login</span> and{" "}
+          <span className="text-yellow-300 font-medium">Diamond access</span>. You&apos;ll sign a message - no transaction.
         </p>
 
         {!connected && (
@@ -67,13 +70,19 @@ function LinkWalletContent() {
 
         {ios && (
           <div className="mt-3 text-xs text-white/50">
-            iOS tip: if wallet connect fails in Safari, open xessex.me inside Phantom/Solflare's in-app browser.
+            iOS tip: if wallet connect fails in Safari, open xessex.me inside Phantom/Solflare&apos;s in-app browser.
           </div>
         )}
 
         <div className="mt-6">
-          {/* On this page we only care about linking (not wallet-native sign-in). */}
-          <WalletActions showWalletSignIn={false} />
+          {/* Link-only, but using AUTH endpoints */}
+          <WalletActions
+            showWalletSignIn={false}
+            linkChallengeUrl="/api/auth/auth-wallet-link/challenge"
+            linkVerifyUrl="/api/auth/auth-wallet-link/verify"
+            linkHref="/link-auth-wallet"
+            onLinked={() => router.push(next)}
+          />
         </div>
 
         <div className="mt-6 pt-4 border-t border-white/10">
@@ -89,11 +98,19 @@ function LinkWalletContent() {
   );
 }
 
-export default function LinkWalletPage() {
+function LinkAuthWalletInner() {
+  return (
+    <Suspense fallback={<main className="max-w-lg mx-auto px-4 py-12 text-white/60">Loading...</main>}>
+      <LinkAuthWalletContent />
+    </Suspense>
+  );
+}
+
+export default function LinkAuthWalletPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black">
       <TopNav />
-      <LinkWalletContent />
+      <LinkAuthWalletInner />
     </div>
   );
 }

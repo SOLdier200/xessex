@@ -31,7 +31,24 @@ function short(addr?: string | null) {
   return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
 }
 
-export default function WalletActions({ showWalletSignIn = true }: { showWalletSignIn?: boolean }) {
+type WalletActionsProps = {
+  showWalletSignIn?: boolean;
+  // Allow different linking endpoints (payout vs auth-wallet)
+  linkChallengeUrl?: string;
+  linkVerifyUrl?: string;
+  // Where the "Link this wallet" CTA should point in the guided 409 box
+  linkHref?: string;
+  // Optional callback after successful link
+  onLinked?: () => void;
+};
+
+export default function WalletActions({
+  showWalletSignIn = true,
+  linkChallengeUrl = "/api/auth/wallet-link/challenge",
+  linkVerifyUrl = "/api/auth/wallet-link/verify",
+  linkHref = "/link-wallet",
+  onLinked,
+}: WalletActionsProps) {
   const { setVisible } = useWalletModal();
   const wallet = useWallet();
 
@@ -147,8 +164,8 @@ export default function WalletActions({ showWalletSignIn = true }: { showWalletS
 
     setBusy("link");
     try {
-      setStatus("Requesting link challenge…");
-      const challengeRes = await fetch("/api/auth/wallet-link/challenge", { method: "POST" });
+      setStatus("Requesting link challenge...");
+      const challengeRes = await fetch(linkChallengeUrl, { method: "POST" });
       const challengeData = await challengeRes.json();
 
       if (!challengeData.ok) {
@@ -163,8 +180,8 @@ export default function WalletActions({ showWalletSignIn = true }: { showWalletS
       const signatureBytes = await wallet.signMessage(msgBytes);
       const signature = bs58.encode(signatureBytes);
 
-      setStatus("Verifying link…");
-      const verifyRes = await fetch("/api/auth/wallet-link/verify", {
+      setStatus("Verifying link...");
+      const verifyRes = await fetch(linkVerifyUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -186,6 +203,7 @@ export default function WalletActions({ showWalletSignIn = true }: { showWalletS
       } catch {}
       window.dispatchEvent(new Event("auth-changed"));
       await refreshMe();
+      onLinked?.();
     } catch (e: any) {
       setStatus(e?.message || "Failed to link wallet.");
     } finally {
@@ -286,7 +304,7 @@ export default function WalletActions({ showWalletSignIn = true }: { showWalletS
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <a
-              href="/link-wallet"
+              href={linkHref}
               className="rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black hover:bg-yellow-300"
             >
               Link this wallet

@@ -54,6 +54,8 @@ function SignupInner() {
   const [waiting, setWaiting] = useState(false);
   const [pollMsg, setPollMsg] = useState<string>("");
 
+  const [signupSelectOpen, setSignupSelectOpen] = useState(false);
+  const [walletDownloadOpen, setWalletDownloadOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
   const [signupPlan, setSignupPlan] = useState<keyof typeof NOWPAYMENTS_IIDS | null>(null);
   const [signupEmail, setSignupEmail] = useState("");
@@ -405,12 +407,12 @@ function SignupInner() {
 
         if (!authed || (membership === "FREE" && !hasEmail)) {
           setSignupPlan(null);
-          setSignupOpen(true);
+          setSignupSelectOpen(true);
         }
       })
       .catch(() => {
         setSignupPlan(null);
-        setSignupOpen(true);
+        setSignupSelectOpen(true);
       });
   }, [searchParams, waiting]);
 
@@ -1197,13 +1199,13 @@ function SignupInner() {
           Login Here
         </Link>
         <span className="ml-2 text-white/50">
-          Create Account with Email{" "}
+          Create Account{" "}
           <button
             type="button"
             onClick={() => {
               setSignupPlan(null);
               setSignupError(null);
-              setSignupOpen(true);
+              setSignupSelectOpen(true);
             }}
             className="text-sky-400 hover:underline"
           >
@@ -1429,6 +1431,225 @@ function SignupInner() {
               className="mt-4 text-xs text-white/60 hover:text-white disabled:opacity-50"
             >
               Back to create account
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Account Signup Select Modal */}
+      {signupSelectOpen && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setSignupSelectOpen(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl neon-border bg-black/90 p-6">
+            <button
+              type="button"
+              onClick={() => setSignupSelectOpen(false)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <h2 className="text-xl font-semibold text-white mb-2 text-center">Create Your Account</h2>
+            <p className="text-sm text-white/60 mb-6 text-center">
+              Choose how you want to sign up
+            </p>
+
+            <div className="space-y-4">
+              {/* Email Signup Option */}
+              <button
+                onClick={() => {
+                  setSignupSelectOpen(false);
+                  setSignupOpen(true);
+                }}
+                className="w-full p-4 rounded-xl border border-sky-400/30 bg-sky-500/10 hover:bg-sky-500/20 transition text-left group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-500/30 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-semibold text-lg">Sign up with Email</h3>
+                    <p className="text-white/60 text-sm mt-1">
+                      Great choice for users who just want a basic membership to view all content, comments, and more.
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Wallet Signup Option */}
+              <button
+                onClick={() => {
+                  setSignupSelectOpen(false);
+                  window.location.href = "/login?next=/signup";
+                }}
+                className="w-full p-4 rounded-xl border border-yellow-400/40 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 hover:from-yellow-500/20 hover:to-purple-500/20 transition text-left group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow-500/30 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-400">
+                      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+                      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+                      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-yellow-300 font-semibold text-lg">Create account with Wallet</h3>
+                    <p className="text-white/60 text-sm mt-1">
+                      The best choice if you plan on being a Diamond Member and interacting with crypto on the site, earning Xess Coin for viewing and rating videos.
+                    </p>
+                    <p className="text-yellow-400/70 text-xs mt-2">
+                      Wallet sign-in creates your account automatically.
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Wallet Download Info */}
+            <div className="mt-5 p-3 rounded-xl bg-purple-500/10 border border-purple-400/30">
+              <p className="text-sm text-white/70">
+                You&apos;ll need a Phantom, Backpack, or Solflare wallet to connect your Diamond Membership.{" "}
+                <button
+                  type="button"
+                  onClick={() => setWalletDownloadOpen(true)}
+                  className="text-purple-400 hover:text-purple-300 underline font-medium"
+                >
+                  Download a wallet here
+                </button>
+              </p>
+            </div>
+
+            {/* Privacy Note */}
+            <div className="mt-4 text-center">
+              <p className="text-xs text-white/50">
+                Diamond members only need a wallet — email is optional. If privacy is a concern, Diamond wallet-only is a good option.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Download Modal */}
+      {walletDownloadOpen && (
+        <div className="fixed inset-0 z-[85] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setWalletDownloadOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
+            <button
+              type="button"
+              onClick={() => setWalletDownloadOpen(false)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+
+            <h2 className="text-xl font-semibold text-white mb-2 text-center">Download a Solana Wallet</h2>
+            <p className="text-sm text-white/60 mb-6 text-center">
+              Choose your preferred wallet to get started
+            </p>
+
+            <div className="space-y-3">
+              {/* Phantom */}
+              <a
+                href="https://phantom.app/download"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl border border-purple-400/30 bg-purple-500/10 hover:bg-purple-500/20 transition"
+              >
+                <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8">
+                    <circle cx="64" cy="64" r="64" fill="#AB9FF2"/>
+                    <path d="M110.584 62.467H99.142C99.142 42.788 83.282 27 63.513 27C44.055 27 28.406 42.256 27.885 61.604C27.346 81.685 45.165 99.068 65.336 99.068H69.317C86.793 99.068 110.584 80.652 110.584 62.467Z" fill="url(#paint0_linear)"/>
+                    <circle cx="44.729" cy="56.771" r="7.498" fill="white"/>
+                    <circle cx="72.344" cy="56.771" r="7.498" fill="white"/>
+                    <defs>
+                      <linearGradient id="paint0_linear" x1="69.234" y1="27" x2="69.234" y2="99.068" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="white"/>
+                        <stop offset="1" stopColor="white" stopOpacity="0.82"/>
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold">Phantom</h3>
+                  <p className="text-white/60 text-xs">Most popular Solana wallet</p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+
+              {/* Backpack */}
+              <a
+                href="https://backpack.app/downloads"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl border border-red-400/30 bg-red-500/10 hover:bg-red-500/20 transition"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
+                    <path d="M20 8H4C2.9 8 2 8.9 2 10V20C2 21.1 2.9 22 4 22H20C21.1 22 22 21.1 22 20V10C22 8.9 21.1 8 20 8Z" fill="white"/>
+                    <path d="M8 8V6C8 3.8 9.8 2 12 2C14.2 2 16 3.8 16 6V8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold">Backpack</h3>
+                  <p className="text-white/60 text-xs">Multi-chain wallet with xNFT support</p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+
+              {/* Solflare */}
+              <a
+                href="https://solflare.com/download"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl border border-orange-400/30 bg-orange-500/10 hover:bg-orange-500/20 transition"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
+                    <path d="M24 4L28.09 14.26L39 16.27L31 24.52L32.18 35.73L24 31.27L15.82 35.73L17 24.52L9 16.27L19.91 14.26L24 4Z" fill="white"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold">Solflare</h3>
+                  <p className="text-white/60 text-xs">Feature-rich Solana wallet</p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+            </div>
+
+            <div className="mt-5 p-3 rounded-xl bg-sky-500/10 border border-sky-400/30">
+              <p className="text-xs text-sky-200">
+                <strong>Tip:</strong> After installing, create a new wallet and securely save your recovery phrase. You&apos;ll use this wallet to sign in and receive Xess rewards.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setWalletDownloadOpen(false)}
+              className="mt-4 w-full py-2 text-white/60 hover:text-white text-sm transition"
+            >
+              Close
             </button>
           </div>
         </div>

@@ -39,8 +39,14 @@ export async function GET() {
   }
 
   // Check if Diamond email user needs to link wallet
-  const hasLinkedWallet = !!user.walletAddress || !!user.solWallet;
-  const needsSolWalletLink = membership === "DIAMOND" && !!user.email && !hasLinkedWallet;
+  // Auth wallet (walletAddress) = login + Diamond actions
+  const needsAuthWalletLink = membership === "DIAMOND" && !!user.email && !user.walletAddress;
+
+  // Payout wallet is optional; never required
+  const needsPayoutWalletLink = false;
+
+  // Legacy compat (old field name)
+  const needsSolWalletLink = needsAuthWalletLink;
 
   // Return standardized user object (new shape) + backward compat fields
   return NextResponse.json({
@@ -62,7 +68,9 @@ export async function GET() {
     walletAddress: user.walletAddress ?? user.solWallet ?? null,
     hasEmail: !!user.email,
     email: user.email ?? null,
-    needsSolWalletLink,
+    needsAuthWalletLink,
+    needsPayoutWalletLink,
+    needsSolWalletLink, // back-compat: same as needsAuthWalletLink
     sub: sub
       ? { tier: sub.tier, status: sub.status, expiresAt: sub.expiresAt }
       : null,

@@ -213,6 +213,11 @@ export async function POST(req: NextRequest) {
   }
 
   const meta = PLAN_META[plan];
+
+  // Diamond requires an auth wallet (walletAddress) to be linked
+  if (meta.tier === "DIAMOND" && !access.user.walletAddress) {
+    return NextResponse.json({ ok: false, error: "DIAMOND_REQUIRES_WALLET" }, { status: 400 });
+  }
   const orderId = makeOrderId(plan);
   const baseUrl = resolveBaseUrl(req);
 
