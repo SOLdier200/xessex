@@ -9,10 +9,11 @@ import FreeUserModal from "./FreeUserModal";
 type AuthData = {
   authed: boolean;
   membership: "DIAMOND" | "MEMBER" | "FREE";
-  walletAddress: string | null;
+  authWallet: string | null;
+  payoutWallet: string | null;
+  effectivePayoutWallet: string | null;
   needsAuthWalletLink: boolean;
   needsPayoutWalletLink: boolean;
-  needsSolWalletLink: boolean; // legacy compat
   hasEmail: boolean;
   email: string | null;
 };
@@ -30,37 +31,46 @@ export default function WalletStatus() {
   // Detect wallet adapter name for styling
   const walletName = wallet?.adapter?.name?.toLowerCase() ?? "";
 
-  const fetchAuth = useCallback(() => {
-    fetch(`/api/auth/me?_=${Date.now()}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.ok && d.authed) {
-          setAuth({
-            authed: true,
-            membership: d.membership,
-            walletAddress: d.walletAddress,
-            needsAuthWalletLink: d.needsAuthWalletLink ?? d.needsSolWalletLink ?? false,
-            needsPayoutWalletLink: d.needsPayoutWalletLink ?? false,
-            needsSolWalletLink: d.needsSolWalletLink ?? false,
-            hasEmail: d.hasEmail ?? false,
-            email: d.email ?? null,
-          });
-        } else {
-          setAuth(null);
-        }
-      })
-      .catch(() => setAuth(null))
-      .finally(() => setLoading(false));
+  const fetchAuth = useCallback((delay = 0) => {
+    const doFetch = () => {
+      fetch(`/api/auth/me?_=${Date.now()}`, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.ok && d.authed) {
+            setAuth({
+              authed: true,
+              membership: d.membership,
+              authWallet: d.authWallet ?? null,
+              payoutWallet: d.payoutWallet ?? null,
+              effectivePayoutWallet: d.effectivePayoutWallet ?? null,
+              needsAuthWalletLink: d.needsAuthWalletLink ?? false,
+              needsPayoutWalletLink: d.needsPayoutWalletLink ?? false,
+              hasEmail: d.hasEmail ?? false,
+              email: d.email ?? null,
+            });
+          } else {
+            setAuth(null);
+          }
+        })
+        .catch(() => setAuth(null))
+        .finally(() => setLoading(false));
+    };
+    if (delay > 0) {
+      setTimeout(doFetch, delay);
+    } else {
+      doFetch();
+    }
   }, []);
 
   useEffect(() => {
-    fetchAuth();
+    fetchAuth(0);
   }, [pathname, fetchAuth]);
 
-  // Listen for auth-changed custom event (dispatched after login/logout)
+  // Listen for auth-changed custom event (dispatched after login/logout/wallet-link)
   useEffect(() => {
     const handleAuthChange = () => {
-      fetchAuth();
+      // Small delay to ensure database has committed changes
+      fetchAuth(100);
     };
     window.addEventListener("auth-changed", handleAuthChange);
     return () => window.removeEventListener("auth-changed", handleAuthChange);
@@ -75,8 +85,8 @@ export default function WalletStatus() {
     router.refresh();
   };
 
-  const shortAddress = auth?.walletAddress
-    ? `${auth.walletAddress.slice(0, 4)}...${auth.walletAddress.slice(-4)}`
+  const shortAddress = auth?.authWallet
+    ? `${auth.authWallet.slice(0, 4)}...${auth.authWallet.slice(-4)}`
     : null;
 
   // Don't show anything while loading
@@ -86,11 +96,11 @@ export default function WalletStatus() {
   const authed = !!auth?.authed;
   const membership = auth?.membership ?? "FREE";
   const hasEmail = !!auth?.hasEmail;
-  const hasWallet = !!auth?.walletAddress;
+  const hasAuthWallet = !!auth?.authWallet;
 
   const isAuthedFree = authed && membership === "FREE" && hasEmail;
-  const isFreeWalletOnly = authed && membership === "FREE" && !hasEmail && hasWallet;
-  const isFreeOrNoUser = !authed || (membership === "FREE" && !hasEmail && !hasWallet);
+  const isFreeWalletOnly = authed && membership === "FREE" && !hasEmail && hasAuthWallet;
+  const isFreeOrNoUser = !authed || (membership === "FREE" && !hasEmail && !hasAuthWallet);
   const isMember = authed && membership === "MEMBER";
   const isDiamondNoWallet = authed && membership === "DIAMOND" && auth?.needsAuthWalletLink;
   const isDiamondWithWallet = authed && membership === "DIAMOND" && !auth?.needsAuthWalletLink;

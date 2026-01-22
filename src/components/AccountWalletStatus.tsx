@@ -9,12 +9,18 @@ type MeResp =
       ok: true;
       authed: true;
       membership: "DIAMOND" | "MEMBER" | "FREE";
+      // New clear wallet fields
+      authWallet: string | null;
+      payoutWallet: string | null;
+      effectivePayoutWallet: string | null;
+      needsAuthWalletLink: boolean;
+      needsPayoutWalletLink: boolean;
       user: {
         id: string;
         email: string | null;
         role: "DIAMOND" | "MEMBER" | "FREE";
-        solWallet: string | null;     // payout
-        walletAddress: string | null; // auth
+        solWallet: string | null;
+        walletAddress: string | null;
       };
     };
 
@@ -70,8 +76,21 @@ export default function AccountWalletStatus() {
   const walletLabel =
     connected && connectedWallet ? shortAddress(connectedWallet) : "Not connected";
 
-  const authWallet = me?.authed ? me.user.walletAddress : null;
-  const payoutWallet = me?.authed ? me.user.solWallet : null;
+  // Use the new clear fields from API
+  const authWallet = me?.authed ? me.authWallet : null;
+  const payoutWallet = me?.authed ? me.payoutWallet : null;
+  const effectivePayoutWallet = me?.authed ? me.effectivePayoutWallet : null;
+
+  // Payout display: show actual payout wallet, or "Defaults to auth" if using fallback
+  const payoutDisplay = loading
+    ? "Loading..."
+    : !me?.authed
+    ? "Not signed in"
+    : payoutWallet
+    ? matchLabel(connectedWallet, payoutWallet)
+    : authWallet
+    ? `Defaults to auth (${shortAddress(authWallet)})`
+    : "Not set";
 
   return (
     <div className="neon-border rounded-2xl p-4 bg-black/30 text-sm space-y-2">
@@ -88,16 +107,14 @@ export default function AccountWalletStatus() {
       <div className="pt-2 border-t border-white/10 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <span className="text-white/60">Auth wallet (login)</span>
-          <span className="text-white/90 font-semibold">
-            {loading ? "Loading..." : matchLabel(connectedWallet, authWallet)}
+          <span className={`font-semibold ${authWallet ? "text-white/90" : "text-yellow-400"}`}>
+            {loading ? "Loading..." : authWallet ? matchLabel(connectedWallet, authWallet) : "Not linked"}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-white/60">Payout wallet (rewards)</span>
-          <span className="text-white/90 font-semibold">
-            {loading ? "Loading..." : matchLabel(connectedWallet, payoutWallet)}
-          </span>
+          <span className="text-white/90 font-semibold">{payoutDisplay}</span>
         </div>
       </div>
     </div>

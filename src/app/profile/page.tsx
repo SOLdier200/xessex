@@ -636,7 +636,7 @@ export default function ProfilePage() {
               width={938}
               height={276}
               priority
-              className="h-[50px] md:h-[65px] w-auto mx-auto"
+              className="h-[180px] md:h-[234px] w-auto mx-auto"
             />
             <p className="mt-2 text-white/70">Manage your account and view membership details</p>
           </div>

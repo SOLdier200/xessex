@@ -5,12 +5,17 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
 
-type MeUser = {
-  id: string;
-  email?: string | null;
-  role: string;
-  solWallet?: string | null;
-  walletAddress?: string | null;
+type MeData = {
+  user: {
+    id: string;
+    email?: string | null;
+    role: string;
+    solWallet?: string | null;
+    walletAddress?: string | null;
+  } | null;
+  authWallet: string | null;
+  payoutWallet: string | null;
+  needsAuthWalletLink: boolean;
 };
 
 function detectPlatform() {
@@ -53,7 +58,7 @@ export default function WalletActions({
   const wallet = useWallet();
 
   const p = useMemo(detectPlatform, []);
-  const [me, setMe] = useState<MeUser | null>(null);
+  const [meData, setMeData] = useState<MeData | null>(null);
   const [meLoaded, setMeLoaded] = useState(false);
 
   const [status, setStatus] = useState<string>("");
@@ -62,17 +67,27 @@ export default function WalletActions({
 
   const pk = wallet.publicKey?.toBase58() ?? null;
 
-  const isAuthed = !!me;
+  const isAuthed = !!meData?.user;
+  // Connected wallet matches auth wallet OR payout wallet
   const isLinked =
-    !!me &&
+    !!meData?.user &&
     !!pk &&
-    (me.solWallet === pk || me.walletAddress === pk);
+    (meData.authWallet === pk || meData.payoutWallet === pk);
 
   async function refreshMe() {
     setMeLoaded(false);
     try {
       const d = await fetch("/api/auth/me", { cache: "no-store" }).then((r) => r.json());
-      setMe(d?.user ?? null);
+      if (d?.authed && d?.user) {
+        setMeData({
+          user: d.user,
+          authWallet: d.authWallet ?? null,
+          payoutWallet: d.payoutWallet ?? null,
+          needsAuthWalletLink: d.needsAuthWalletLink ?? false,
+        });
+      } else {
+        setMeData(null);
+      }
     } finally {
       setMeLoaded(true);
     }

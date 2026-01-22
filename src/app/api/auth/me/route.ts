@@ -38,39 +38,56 @@ export async function GET() {
     authProvider = "wallet";
   }
 
-  // Check if Diamond email user needs to link wallet
-  // Auth wallet (walletAddress) = login + Diamond actions
-  const needsAuthWalletLink = membership === "DIAMOND" && !!user.email && !user.walletAddress;
+  // ─────────────────────────────────────────────────────────────
+  // WALLET FIELDS (clear, no fallback confusion)
+  // ─────────────────────────────────────────────────────────────
+  const authWallet = user.walletAddress ?? null;       // used for login + Diamond features
+  const payoutWallet = user.solWallet ?? null;         // where rewards go (optional)
+  const effectivePayoutWallet = payoutWallet ?? authWallet; // actual destination
 
-  // Payout wallet is optional; never required
-  const needsPayoutWalletLink = false;
+  // ─────────────────────────────────────────────────────────────
+  // FLAGS (correct logic, no "always false" confusion)
+  // ─────────────────────────────────────────────────────────────
+  // Auth wallet needed if: user is authed AND has no auth wallet set
+  const needsAuthWalletLink = !authWallet;
 
-  // Legacy compat (old field name)
+  // Payout wallet is optional - defaults to auth wallet if not set
+  // Show prompt only if user has no effective payout destination
+  const needsPayoutWalletLink = !effectivePayoutWallet;
+
+  // Legacy compat
   const needsSolWalletLink = needsAuthWalletLink;
 
-  // Return standardized user object (new shape) + backward compat fields
+  // Return clean response
   return NextResponse.json({
     ok: true,
     authed: true,
     authProvider,
+    membership,
 
-    // New standardized shape
+    // ─── New clear wallet fields ───
+    authWallet,
+    payoutWallet,
+    effectivePayoutWallet,
+
+    // ─── Clear flags ───
+    needsAuthWalletLink,
+    needsPayoutWalletLink,
+
+    // ─── User object ───
     user: {
       id: user.id,
       email: user.email ?? null,
       role: membership,
-      solWallet: user.solWallet ?? null,
-      walletAddress: user.walletAddress ?? null,
+      walletAddress: authWallet,
+      solWallet: payoutWallet,
     },
 
-    // Legacy fields for backward compatibility
-    membership,
-    walletAddress: user.walletAddress ?? user.solWallet ?? null,
+    // ─── Legacy fields (for old UI code) ───
     hasEmail: !!user.email,
     email: user.email ?? null,
-    needsAuthWalletLink,
-    needsPayoutWalletLink,
-    needsSolWalletLink, // back-compat: same as needsAuthWalletLink
+    walletAddress: authWallet, // NO fallback - auth wallet only
+    needsSolWalletLink,
     sub: sub
       ? { tier: sub.tier, status: sub.status, expiresAt: sub.expiresAt }
       : null,
