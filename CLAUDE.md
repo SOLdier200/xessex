@@ -182,3 +182,35 @@ When wallet sign-in returns 409, WalletActions shows guided modal with:
 
 ### Video Rank System
 `src/lib/videoRank.ts` - Recomputes video rankings using ROW_NUMBER() over avgStars, adminScore, starsCount, createdAt
+
+### Admin Subscriptions Page Enhancements (Jan 2026)
+Enhanced `/admin/subscriptions` with Expected vs Paid price tracking and grand totals.
+
+**Files Modified:**
+- `src/app/api/admin/subscriptions/list/route.ts` - API with plan catalog and totals
+- `src/app/admin/subscriptions/page.tsx` - UI with mismatch highlighting and footer totals
+
+**Plan Catalog (in API route):**
+```typescript
+// NOWPayments (parsed from orderId prefix like sx_M90_...)
+NOW_PLAN_USD_CENTS: { M90: 1000, MY: 4000, D1: 900, D2: 3000, DY: 7000 }
+
+// CashApp (from ManualPayment.planCode)
+member_monthly: 400, member_yearly: 4000, diamond_monthly: 900, diamond_yearly: 7000
+```
+
+**New API Response Fields:**
+- `expectedUsdCents` - Plan price from catalog (not recorded amount)
+- `paidDisplay` - Actual paid amount from provider (e.g., "$9.00" or "0.069 SOL")
+- `totalsAll` - Grand totals for entire filter: `{ count, expectedUsdCents, paidUsdCents, paidUsdCount, paidNonUsdCount }`
+
+**UI Features:**
+- Two columns: Expected | Paid (with mismatch detection)
+- Paid cell highlighting:
+  - Gray = normal (matches expected or crypto)
+  - Yellow = mismatch (paid differs from expected)
+  - Red = underpaid (paid < expected)
+- Tooltip on hover shows expected amount
+- Footer with two rows:
+  1. Page totals (current loaded rows)
+  2. Grand totals (all matching subscriptions for current filter)

@@ -2,12 +2,12 @@
   "name": "Xessex",
   "symbol": "XESS",
   "description": "The fixed-supply token of the Xessex ecosystem.",
-  "image": "https://xessex.me/logo.png",
+  "image": "https://ipfs.io/ipfs/bafkreidcaumfysw4i4fiawxh7ms5bqjmi7lk6yjxa5esw4qngyj7kg4bqa",
   "attributes": [],
   "properties": {
     "files": [
       {
-        "uri": "https://xessex.me/logo.png",
+        "uri": "https://ipfs.io/ipfs/bafkreidcaumfysw4i4fiawxh7ms5bqjmi7lk6yjxa5esw4qngyj7kg4bqa",
         "type": "image/png"
       }
     ]

@@ -83,26 +83,64 @@ export async function POST(req: Request) {
   const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
   const connection = new Connection(rpc, "confirmed");
 
-  // Get the leaf to find the weekKey
+  // Get the leaf to find the weekKey - REQUIRED for history tracking
   const leaf = await db.claimLeaf.findUnique({
     where: { epoch_wallet: { epoch: Number(epoch), wallet } },
   });
 
+  // Hard-fail if no ClaimLeaf exists - cannot record history without it
+  if (!leaf) {
+    return NextResponse.json({ error: "no_claim_leaf" }, { status: 400 });
+  }
+
+  const weekKey = leaf.weekKey;
+
+  // Helper function to ensure RewardEvent exists and is marked claimed
+  async function markClaimedInDb(txSig: string) {
+    // First, try to update existing RewardEvent rows (remove status constraint)
+    const updated = await db.rewardEvent.updateMany({
+      where: {
+        userId: ctx.user!.id,
+        weekKey,
+        claimedAt: null,
+      },
+      data: { claimedAt: new Date(), txSig },
+    });
+
+    // If no rows were updated, create a synthetic RewardEvent so history is preserved
+    if (updated.count === 0) {
+      const syntheticRefId = `claim-${ctx.user!.id}-${weekKey}`;
+      await db.rewardEvent.upsert({
+        where: {
+          refType_refId: {
+            refType: "CLAIM",
+            refId: syntheticRefId,
+          },
+        },
+        create: {
+          userId: ctx.user!.id,
+          weekKey,
+          type: "WEEKLY_HOLDER",
+          amount: leaf.amountAtomic,
+          status: "PAID",
+          refType: "CLAIM",
+          refId: syntheticRefId,
+          claimedAt: new Date(),
+          txSig,
+        },
+        update: {
+          claimedAt: new Date(),
+          txSig,
+        },
+      });
+    }
+  }
+
   // IDEMPOTENT: If receipt already exists, return success
   const receiptInfo = await connection.getAccountInfo(receiptPda, "confirmed");
   if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-    // Already claimed - update DB if needed using weekKey and return ok
-    if (leaf?.weekKey) {
-      await db.rewardEvent.updateMany({
-        where: {
-          userId: ctx.user.id,
-          weekKey: leaf.weekKey,
-          status: "PAID",
-          claimedAt: null,
-        },
-        data: { claimedAt: new Date(), txSig: signature },
-      });
-    }
+    // Already claimed - ensure DB is updated and return ok
+    await markClaimedInDb(signature);
 
     const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
     return NextResponse.json({
@@ -137,8 +175,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "receipt_wrong_owner" }, { status: 400 });
   }
 
-  // Get expected amount from leaf (already fetched above)
-  const expected = leaf?.amountAtomic ?? 1000000000n;
+  // Get expected amount from leaf (guaranteed to exist from earlier check)
+  const expected = leaf.amountAtomic;
 
   // Validate the SPL transfer: vault ATA -> user ATA
   const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
@@ -177,17 +215,7 @@ export async function POST(req: Request) {
   }
 
   // Mark rewards as claimed using weekKey
-  if (leaf?.weekKey) {
-    await db.rewardEvent.updateMany({
-      where: {
-        userId: ctx.user.id,
-        weekKey: leaf.weekKey,
-        status: "PAID",
-        claimedAt: null,
-      },
-      data: { claimedAt: new Date(), txSig: signature },
-    });
-  }
+  await markClaimedInDb(signature);
 
   return NextResponse.json({
     ok: true,

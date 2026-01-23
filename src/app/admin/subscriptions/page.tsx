@@ -23,8 +23,28 @@ type Row = {
   amountCents: number | null;
   manualPaymentId: string | null;
   verifyCode: string | null;
+  expectedUsdCents: number | null;
+  paidDisplay: string | null;
   user: { id: string; email: string | null; createdAt: string };
 };
+
+function usdFromCents(cents: number | null) {
+  if (cents == null) return "—";
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function centsToUsd(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function usdStringToCents(s: string | null | undefined): number | null {
+  if (!s) return null;
+  const t = s.trim();
+  if (!t.startsWith("$")) return null;
+  const n = Number(t.replace("$", ""));
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 100);
+}
 
 function fmt(dt: string | null) {
   if (!dt) return "—";
@@ -58,10 +78,19 @@ function statusColor(status: Status) {
   }
 }
 
+type TotalsAll = {
+  count: number;
+  expectedUsdCents: number;
+  paidUsdCents: number;
+  paidUsdCount: number;
+  paidNonUsdCount: number;
+};
+
 export default function AdminSubscriptionsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalsAll, setTotalsAll] = useState<TotalsAll | null>(null);
 
   const [status, setStatus] = useState<string>("");
   const [tier, setTier] = useState<string>("");
@@ -81,6 +110,28 @@ export default function AdminSubscriptionsPage() {
     return sp.toString();
   }, [status, tier, paymentMethod, q, partialOnly, limit]);
 
+  const totals = useMemo(() => {
+    let expectedCents = 0;
+    let paidUsdCents = 0;
+    let paidUsdCount = 0;
+    let paidNonUsdCount = 0;
+
+    for (const r of rows) {
+      if (typeof r.expectedUsdCents === "number") expectedCents += r.expectedUsdCents;
+
+      const paidCents = usdStringToCents(r.paidDisplay);
+      if (paidCents != null) {
+        paidUsdCents += paidCents;
+        paidUsdCount += 1;
+      } else if (r.paidDisplay) {
+        // has a value but not USD (e.g. SOL/BNB)
+        paidNonUsdCount += 1;
+      }
+    }
+
+    return { expectedCents, paidUsdCents, paidUsdCount, paidNonUsdCount };
+  }, [rows]);
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -96,7 +147,15 @@ export default function AdminSubscriptionsPage() {
         setRows([]);
         return;
       }
-      setRows(json.rows || []);
+      const incoming: Row[] = Array.isArray(json.rows) ? json.rows : [];
+      setRows(
+        incoming.map((r) => ({
+          ...r,
+          expectedUsdCents: r.expectedUsdCents ?? null,
+          paidDisplay: r.paidDisplay ?? null,
+        }))
+      );
+      setTotalsAll(json.totalsAll || null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -279,14 +338,15 @@ export default function AdminSubscriptionsPage() {
         </div>
 
         <div className="overflow-auto rounded-xl border border-gray-800">
-          <table className="w-full min-w-[1200px] text-sm">
+          <table className="w-full min-w-[1300px] text-sm">
             <thead className="border-b border-gray-800 bg-gray-900/50">
               <tr className="text-left text-gray-400">
                 <th className="p-3">User</th>
                 <th className="p-3">Tier</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Method</th>
-                <th className="p-3">Amount</th>
+                <th className="p-3">Expected</th>
+                <th className="p-3">Paid</th>
                 <th className="p-3">Expires</th>
                 <th className="p-3">Order / Code</th>
                 <th className="p-3">Actions</th>
@@ -319,7 +379,43 @@ export default function AdminSubscriptionsPage() {
                     })()}
                   </td>
                   <td className="p-3 text-gray-300">
-                    {r.amountCents ? `$${(r.amountCents / 100).toFixed(2)}` : "—"}
+                    {usdFromCents(r.expectedUsdCents)}
+                  </td>
+                  <td className="p-3">
+                    {(() => {
+                      const expected = r.expectedUsdCents;
+                      const paid = r.paidDisplay;
+
+                      const expectedStr =
+                        expected != null ? `$${(expected / 100).toFixed(2)}` : null;
+
+                      const isUnderpaid =
+                        expectedStr &&
+                        paid &&
+                        paid.startsWith("$") &&
+                        parseFloat(paid.slice(1)) < parseFloat(expectedStr.slice(1));
+
+                      const isMismatch =
+                        expectedStr &&
+                        paid &&
+                        paid.startsWith("$") &&
+                        paid !== expectedStr;
+
+                      return (
+                        <span
+                          title={isMismatch ? `Expected ${expectedStr}` : undefined}
+                          className={
+                            isUnderpaid
+                              ? "text-red-400 font-semibold"
+                              : isMismatch
+                              ? "text-yellow-400 font-semibold"
+                              : "text-gray-300"
+                          }
+                        >
+                          {paid || "—"}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-3 text-gray-300">{fmt(r.expiresAt)}</td>
                   <td className="p-3 font-mono text-xs text-gray-400">
@@ -353,12 +449,49 @@ export default function AdminSubscriptionsPage() {
               ))}
               {rows.length === 0 && !loading && !error && (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={8}>
+                  <td className="p-6 text-center text-gray-500" colSpan={9}>
                     No results.
                   </td>
                 </tr>
               )}
             </tbody>
+            <tfoot className="border-t border-gray-800 bg-gray-900/40">
+              {/* Page totals */}
+              <tr className="border-b border-gray-800/30">
+                <td className="p-3 text-gray-500 text-xs" colSpan={4}>
+                  Page totals ({rows.length} rows)
+                </td>
+                <td className="p-3 text-gray-400">
+                  {centsToUsd(totals.expectedCents)}
+                </td>
+                <td className="p-3 text-gray-400">
+                  {centsToUsd(totals.paidUsdCents)}
+                  <span className="text-xs text-gray-600 ml-1">
+                    ({totals.paidUsdCount} USD{totals.paidNonUsdCount > 0 ? `, ${totals.paidNonUsdCount} crypto` : ""})
+                  </span>
+                </td>
+                <td className="p-3" colSpan={3} />
+              </tr>
+              {/* Grand totals */}
+              <tr>
+                <td className="p-3 text-gray-400 font-medium" colSpan={4}>
+                  All matches: {totalsAll ? totalsAll.count : "—"}
+                </td>
+                <td className="p-3 font-semibold text-gray-200">
+                  {totalsAll ? centsToUsd(totalsAll.expectedUsdCents) : "—"}
+                </td>
+                <td className="p-3 font-semibold text-gray-200">
+                  {totalsAll ? centsToUsd(totalsAll.paidUsdCents) : "—"}
+                  {totalsAll && (
+                    <div className="text-xs font-normal text-gray-500">
+                      USD rows: {totalsAll.paidUsdCount}
+                      {totalsAll.paidNonUsdCount > 0 ? ` • Non-USD: ${totalsAll.paidNonUsdCount}` : ""}
+                    </div>
+                  )}
+                </td>
+                <td className="p-3" colSpan={3} />
+              </tr>
+            </tfoot>
           </table>
         </div>
 

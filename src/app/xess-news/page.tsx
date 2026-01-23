@@ -53,46 +53,77 @@ export default function XessNewsPage() {
         </Link>
 
         <div className="space-y-6">
-          {/* Placeholder news items */}
+          {/* Devnet Launch Announcement */}
+          <article className="bg-gradient-to-br from-green-900/40 to-emerald-900/30 border-2 border-green-400/50 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 text-xs font-bold bg-green-500/30 text-green-300 rounded-full uppercase tracking-wide">
+                  Milestone
+                </span>
+                <span className="text-sm text-green-400/70">January 2026</span>
+              </div>
+              <h2 className="text-2xl font-bold mb-3 text-white">XESS Coin Officially Live on Devnet!</h2>
+              <div className="space-y-3 text-white/80">
+                <p>
+                  We&apos;re thrilled to announce that <span className="text-green-300 font-semibold">XESS Coin is now live on Solana Devnet</span>!
+                  Our payout pipeline is complete and fully operational. We&apos;re currently locking in the automatic
+                  payment feature as we prepare for the next major milestone.
+                </p>
+                <p>
+                  <span className="text-green-300 font-semibold">Coming Soon:</span> XESS will launch on Mainnet and go live on
+                  <span className="text-green-300 font-semibold"> Pump.Fun</span> with <span className="text-green-300 font-semibold">35% of the total supply</span> available
+                  for sale in our ICO — open to the <span className="underline">public ONLY</span>.
+                </p>
+                <p className="text-lg font-semibold text-green-300 pt-2">
+                  We are here for the people, not special interests. This project belongs to the people!
+                </p>
+              </div>
+            </div>
+          </article>
+
+          {/* Weekly Rewards - Now Live */}
           <article className="bg-gray-900/50 border border-pink-500/30 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2 py-1 text-xs font-semibold bg-pink-500/20 text-pink-300 rounded-full">
-                Announcement
+                Live
               </span>
-              <span className="text-sm text-white/50">Coming Soon</span>
+              <span className="text-sm text-white/50">January 2026</span>
             </div>
-            <h2 className="text-xl font-semibold mb-2 text-white">XESS Token Launch</h2>
+            <h2 className="text-xl font-semibold mb-2 text-white">Weekly Rewards Pipeline Complete</h2>
             <p className="text-white/70">
-              We&apos;re preparing for the official XESS token launch. Stay tuned for more details
-              about the launch date, initial distribution, and how to participate.
+              The weekly rewards distribution system is now fully operational on Devnet. Diamond members
+              earn XESS tokens through likes received, MVM contributions, comments, and referrals.
+              Claim your rewards every week via on-chain merkle proofs.
             </p>
           </article>
 
           <article className="bg-gray-900/50 border border-purple-500/30 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2 py-1 text-xs font-semibold bg-purple-500/20 text-purple-300 rounded-full">
-                Feature
+                ICO
               </span>
               <span className="text-sm text-white/50">Coming Soon</span>
             </div>
-            <h2 className="text-xl font-semibold mb-2 text-white">Weekly Rewards Program</h2>
+            <h2 className="text-xl font-semibold mb-2 text-white">Pump.Fun Launch - 35% Public ICO</h2>
             <p className="text-white/70">
-              Diamond members will earn XESS tokens through our weekly rewards program.
-              Get rewarded for likes received, MVM points, and referrals.
+              XESS will launch on Pump.Fun with 35% of the total supply available exclusively to the public.
+              No VCs, no special interest allocations — just a fair launch for the community.
+              This is crypto for the people.
             </p>
           </article>
 
           <article className="bg-gray-900/50 border border-blue-500/30 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2 py-1 text-xs font-semibold bg-blue-500/20 text-blue-300 rounded-full">
-                Update
+                Roadmap
               </span>
               <span className="text-sm text-white/50">Coming Soon</span>
             </div>
-            <h2 className="text-xl font-semibold mb-2 text-white">Liquidity Pool Launch</h2>
+            <h2 className="text-xl font-semibold mb-2 text-white">Mainnet Launch</h2>
             <p className="text-white/70">
-              The SOL/XESS liquidity pool will be available on Raydium, enabling
-              seamless trading and swapping of XESS tokens.
+              After final testing on Devnet, XESS will deploy to Solana Mainnet. The automatic
+              payment feature will enable seamless weekly reward distributions directly to your wallet.
             </p>
           </article>
 
