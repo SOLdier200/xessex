@@ -289,7 +289,6 @@ export default function AdminSubscriptionsPage() {
                 <th className="p-3">Amount</th>
                 <th className="p-3">Expires</th>
                 <th className="p-3">Order / Code</th>
-                <th className="p-3">Updated</th>
                 <th className="p-3">Actions</th>
               </tr>
             </thead>
@@ -303,26 +302,31 @@ export default function AdminSubscriptionsPage() {
                   <td className="p-3">{r.tier}</td>
                   <td className={`p-3 ${statusColor(r.status)}`}>{r.status}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      r.paymentMethod === "CASHAPP"
-                        ? "bg-green-500/20 text-green-400"
-                        : r.paymentMethod === "CARD"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-purple-500/20 text-purple-400"
-                    }`}>
-                      {r.paymentMethod || "CRYPTO"}
-                    </span>
+                    {(() => {
+                      // Determine actual payment method (fallback to CashApp if manualPaymentId exists)
+                      const method = r.paymentMethod || (r.manualPaymentId ? "CASHAPP" : "CRYPTO");
+                      return (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          method === "CASHAPP"
+                            ? "bg-green-500/20 text-green-400"
+                            : method === "CARD"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-purple-500/20 text-purple-400"
+                        }`}>
+                          {method}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-3 text-gray-300">
                     {r.amountCents ? `$${(r.amountCents / 100).toFixed(2)}` : "—"}
                   </td>
                   <td className="p-3 text-gray-300">{fmt(r.expiresAt)}</td>
                   <td className="p-3 font-mono text-xs text-gray-400">
-                    {r.paymentMethod === "CASHAPP"
+                    {(r.paymentMethod === "CASHAPP" || r.manualPaymentId)
                       ? (r.verifyCode || "—")
                       : trunc(r.nowPaymentsOrderId, 18)}
                   </td>
-                  <td className="p-3 text-gray-400">{fmt(r.updatedAt)}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -349,7 +353,7 @@ export default function AdminSubscriptionsPage() {
               ))}
               {rows.length === 0 && !loading && !error && (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={9}>
+                  <td className="p-6 text-center text-gray-500" colSpan={8}>
                     No results.
                   </td>
                 </tr>

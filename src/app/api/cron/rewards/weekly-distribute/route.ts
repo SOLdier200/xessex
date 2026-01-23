@@ -22,9 +22,15 @@ function getWeeklyEmission(weekIndex: number): bigint {
 }
 
 // Pool split percentages (in basis points, 10000 = 100%)
-const LIKES_POOL_BPS = 7500n;    // 75%
+const LIKES_POOL_BPS = 7000n;    // 70%
 const MVM_POOL_BPS = 2000n;      // 20%
 const COMMENTS_POOL_BPS = 500n;  // 5%
+const REFERRALS_POOL_BPS = 500n; // 5%
+
+// Referral tiers (% of earner's rewards, capped by referral pool budget)
+const REF_L1_BPS = 1000n; // 10% of earner's rewards
+const REF_L2_BPS = 300n;  // 3%
+const REF_L3_BPS = 100n;  // 1%
 
 // Ladder percentages for top 50
 const LADDER_PERCENTS: number[] = [
@@ -41,7 +47,54 @@ interface UserReward {
   userId: string;
   walletAddress: string;
   amount: bigint;
-  type: "WEEKLY_LIKES" | "WEEKLY_MVM" | "WEEKLY_COMMENTS" | "WEEKLY_VOTER" | "ALLTIME_LIKES";
+  type: "WEEKLY_LIKES" | "WEEKLY_MVM" | "WEEKLY_COMMENTS" | "WEEKLY_VOTER" | "ALLTIME_LIKES" | "REF_L1" | "REF_L2" | "REF_L3";
+}
+
+/**
+ * Get referral chain for a user (up to 3 levels)
+ * Returns [L1, L2, L3] userIds with their wallets (if they exist and have wallets linked)
+ */
+async function getReferralChain(userId: string): Promise<{ id: string; wallet: string }[]> {
+  const chain: { id: string; wallet: string }[] = [];
+
+  const u1 = await db.user.findUnique({
+    where: { id: userId },
+    select: { referredById: true },
+  });
+  if (!u1?.referredById) return chain;
+
+  // L1 - direct referrer
+  const l1User = await db.user.findUnique({
+    where: { id: u1.referredById },
+    select: { id: true, solWallet: true, referredById: true },
+  });
+  if (l1User?.solWallet) {
+    chain.push({ id: l1User.id, wallet: l1User.solWallet });
+  }
+
+  if (!l1User?.referredById) return chain;
+
+  // L2 - referrer's referrer
+  const l2User = await db.user.findUnique({
+    where: { id: l1User.referredById },
+    select: { id: true, solWallet: true, referredById: true },
+  });
+  if (l2User?.solWallet) {
+    chain.push({ id: l2User.id, wallet: l2User.solWallet });
+  }
+
+  if (!l2User?.referredById) return chain;
+
+  // L3 - L2's referrer
+  const l3User = await db.user.findUnique({
+    where: { id: l2User.referredById },
+    select: { id: true, solWallet: true },
+  });
+  if (l3User?.solWallet) {
+    chain.push({ id: l3User.id, wallet: l3User.solWallet });
+  }
+
+  return chain;
 }
 
 function formatXess(amount: bigint): string {
@@ -155,6 +208,7 @@ export async function POST(req: NextRequest) {
     const likesPool = (totalEmission * LIKES_POOL_BPS) / 10000n;
     const mvmPool = (totalEmission * MVM_POOL_BPS) / 10000n;
     const commentsPool = (totalEmission * COMMENTS_POOL_BPS) / 10000n;
+    const referralsPool = (totalEmission * REFERRALS_POOL_BPS) / 10000n;
 
     // Likes pool sub-pools
     const weeklyDiamondPool = (likesPool * weeklyDiamondBps) / 10000n;
@@ -163,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[weekly-distribute] Week ${weekKey} (index ${weekIndex})`);
     console.log(`[weekly-distribute] Emission: ${formatXess(totalEmission)} XESS`);
-    console.log(`[weekly-distribute] Pools - Likes: ${formatXess(likesPool)}, MVM: ${formatXess(mvmPool)}, Comments: ${formatXess(commentsPool)}`);
+    console.log(`[weekly-distribute] Pools - Likes: ${formatXess(likesPool)}, MVM: ${formatXess(mvmPool)}, Comments: ${formatXess(commentsPool)}, Referrals: ${formatXess(referralsPool)}`);
     console.log(`[weekly-distribute] Likes sub-pools - Weekly: ${formatXess(weeklyDiamondPool)}, AllTime: ${formatXess(allTimeLikesPool)}, Voter: ${formatXess(memberVoterPool)}`);
 
     const rewards: UserReward[] = [];
@@ -404,6 +458,109 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No eligible Diamond commenters`);
     }
 
+    // 6. Referral Rewards (% of each earner's rewards, capped by referral pool budget)
+    console.log(`\n[weekly-distribute] === REFERRAL REWARDS ===`);
+
+    // Track base earnings by user (for calculating referral shares)
+    const earnedByUser = new Map<string, bigint>();
+    for (const r of rewards) {
+      const current = earnedByUser.get(r.userId) || 0n;
+      earnedByUser.set(r.userId, current + r.amount);
+    }
+
+    interface RefReward {
+      userId: string;
+      walletAddress: string;
+      amount: bigint;
+      type: "REF_L1" | "REF_L2" | "REF_L3";
+      earnerId: string;
+    }
+
+    const referralOwed: RefReward[] = [];
+    let totalReferralOwed = 0n;
+
+    for (const [earnerId, earned] of earnedByUser.entries()) {
+      if (earned <= 0n) continue;
+
+      const chain = await getReferralChain(earnerId);
+      if (chain.length === 0) continue;
+
+      // L1 - direct referrer gets 10% of earner's rewards
+      if (chain[0]) {
+        const a1 = (earned * REF_L1_BPS) / 10000n;
+        if (a1 > 0n) {
+          referralOwed.push({
+            userId: chain[0].id,
+            walletAddress: chain[0].wallet,
+            amount: a1,
+            type: "REF_L1",
+            earnerId,
+          });
+          totalReferralOwed += a1;
+        }
+      }
+
+      // L2 - referrer's referrer gets 3%
+      if (chain[1]) {
+        const a2 = (earned * REF_L2_BPS) / 10000n;
+        if (a2 > 0n) {
+          referralOwed.push({
+            userId: chain[1].id,
+            walletAddress: chain[1].wallet,
+            amount: a2,
+            type: "REF_L2",
+            earnerId,
+          });
+          totalReferralOwed += a2;
+        }
+      }
+
+      // L3 - L2's referrer gets 1%
+      if (chain[2]) {
+        const a3 = (earned * REF_L3_BPS) / 10000n;
+        if (a3 > 0n) {
+          referralOwed.push({
+            userId: chain[2].id,
+            walletAddress: chain[2].wallet,
+            amount: a3,
+            type: "REF_L3",
+            earnerId,
+          });
+          totalReferralOwed += a3;
+        }
+      }
+    }
+
+    console.log(`[weekly-distribute] Total referral owed: ${formatXess(totalReferralOwed)} XESS`);
+    console.log(`[weekly-distribute] Referral budget: ${formatXess(referralsPool)} XESS`);
+
+    // Scale down if owed exceeds budget
+    const scale = totalReferralOwed > referralsPool
+      ? (referralsPool * 1_000_000n) / totalReferralOwed
+      : 1_000_000n;
+
+    if (scale < 1_000_000n) {
+      console.log(`[weekly-distribute] Scaling referrals to ${(Number(scale) / 10000).toFixed(2)}%`);
+    }
+
+    let refCreated = 0;
+    for (const r of referralOwed) {
+      const scaled = (r.amount * scale) / 1_000_000n;
+      if (scaled <= 0n) continue;
+
+      rewards.push({
+        userId: r.userId,
+        walletAddress: r.walletAddress,
+        amount: scaled,
+        type: r.type,
+      });
+      refCreated++;
+
+      const tierLabel = r.type;
+      console.log(`  ${tierLabel}: ${r.userId.slice(0, 8)}... (from ${r.earnerId.slice(0, 8)}...) - ${formatXess(scaled)} XESS`);
+    }
+    console.log(`[weekly-distribute] Created ${refCreated} referral rewards`);
+
     // Aggregate rewards by user for summary
     const userRewards = new Map<string, { amount: bigint; wallet: string; types: Set<string> }>();
     for (const r of rewards) {
@@ -490,6 +647,7 @@ export async function POST(req: NextRequest) {
         likes: formatXess(likesPool),
         mvm: formatXess(mvmPool),
         comments: formatXess(commentsPool),
+        referrals: formatXess(referralsPool),
       },
       subPools: {
         weeklyDiamond: formatXess(weeklyDiamondPool),

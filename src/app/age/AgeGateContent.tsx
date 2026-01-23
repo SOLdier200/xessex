@@ -6,28 +6,30 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-6 md:py-10 relative overflow-hidden">
       <div className="w-full max-w-2xl relative z-10">
+        {/* Neon logo above the box */}
+        <div className="flex justify-center mb-6">
+          <img
+            src="/logos/mainsitelogo.png"
+            alt="Xessex"
+            className="w-[120px] md:w-[160px] h-auto"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+
         <div className="rounded-2xl p-4 md:p-8 bg-black/60 relative overflow-hidden">
           {/* See-through logo behind the box content */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
             <img
               src="/logos/xessexcoinlogo2.png"
               alt=""
-              className="w-[77%] h-[77%] object-contain opacity-25"
+              className="w-[77%] h-[77%] object-contain opacity-[0.18]"
               loading="eager"
               decoding="async"
             />
           </div>
           {/* Content above the watermark */}
           <div className="relative z-10">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/logos/neonmainlogo1.png"
-              alt="Xessex"
-              className="w-[101px] md:w-[137px] h-auto"
-              loading="eager"
-              decoding="async"
-            />
-          </div>
 
           <h1 className="text-xl md:text-3xl font-semibold text-center">
             THIS IS AN <span className="text-pink-400 animate-pulse">ADULT WEBSITE</span>

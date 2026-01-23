@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import AccountWalletStatus from "@/components/AccountWalletStatus";
 import WalletActions from "@/components/WalletActions";
 import EmailLoginBox from "@/components/EmailLoginBox";
@@ -13,7 +14,7 @@ export default function LoginPageClient() {
 
         {/* Member Login */}
         <div className="neon-border rounded-2xl p-6 bg-black/30">
-          <h1 className="text-2xl font-semibold neon-text">Member Login</h1>
+          <Image src="/logos/textlogo/siteset3/login100.png" alt="Member Login" width={938} height={276} className="h-[44px] w-auto" />
           <p className="mt-2 text-sm text-white/70">
             Sign in with your email or Google account.
           </p>

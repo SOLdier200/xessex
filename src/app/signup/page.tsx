@@ -475,8 +475,7 @@ function SignupInner() {
       )}
 
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold neon-text">Choose Your Membership</h1>
-        <p className="mt-2 text-white/70">Select the plan that&apos;s right for you</p>
+        <Image src="/logos/textlogo/siteset3/memberselect100.png" alt="Select Membership" width={938} height={276} className="h-[128px] w-auto mx-auto" />
 
         {/* Payment Method Tabs */}
         <div className="flex justify-center mt-6">
@@ -527,7 +526,7 @@ function SignupInner() {
           )}
 
           <div className="text-center">
-            <Image src="/logos/textlogo/member.png" alt="Member" width={974} height={286} priority fetchPriority="high" className="h-[58px] w-auto mx-auto" />
+            <Image src="/logos/textlogo/siteset3/member100.png" alt="Member" width={974} height={286} priority fetchPriority="high" className="h-[58px] w-auto mx-auto" />
 
             {/* Billing Toggle */}
             <div className="flex justify-center mt-3">
@@ -627,7 +626,7 @@ function SignupInner() {
           )}
 
           <div className="text-center relative z-10">
-            <Image src="/logos/textlogo/diamonmember.png" alt="Diamond Member" width={1536} height={282} priority fetchPriority="high" className="h-[62px] w-auto mx-auto" />
+            <Image src="/logos/textlogo/siteset3/diamond100.png" alt="Diamond Member" width={1536} height={282} priority fetchPriority="high" className="h-[62px] w-auto mx-auto" />
 
             {/* Billing Toggle */}
             <div className="flex justify-center mt-3">
@@ -723,11 +722,10 @@ function SignupInner() {
           </div>
 
           <button
-            onClick={() => handleNowPayments(diamondPlan)}
-            disabled={loading || waiting}
-            className={`mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block disabled:opacity-50 disabled:cursor-not-allowed ${loading ? "opacity-50" : ""}`}
+            onClick={() => setDiamondBetaModalOpen(true)}
+            className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block"
           >
-            {loadingPlan === diamondPlan ? "Redirecting to payment..." : isMember ? "Upgrade to Diamond" : "Become a Diamond Member"}
+            {isMember ? "Upgrade to Diamond" : "Become a Diamond Member"}
           </button>
           {/* Original Diamond checkout button - restore when ready:
           <button
@@ -758,7 +756,7 @@ function SignupInner() {
           )}
 
           <div className="text-center">
-            <Image src="/logos/textlogo/member.png" alt="Member" width={974} height={286} priority className="h-[58px] w-auto mx-auto" />
+            <Image src="/logos/textlogo/siteset3/member100.png" alt="Member" width={974} height={286} priority className="h-[58px] w-auto mx-auto" />
 
             {/* Billing Toggle */}
             <div className="flex justify-center mt-3">
@@ -842,7 +840,7 @@ function SignupInner() {
           )}
 
           <div className="text-center relative z-10">
-            <Image src="/logos/textlogo/diamonmember.png" alt="Diamond Member" width={1536} height={282} priority className="h-[62px] w-auto mx-auto" />
+            <Image src="/logos/textlogo/siteset3/diamond100.png" alt="Diamond Member" width={1536} height={282} priority className="h-[62px] w-auto mx-auto" />
 
             {/* Billing Toggle */}
             <div className="flex justify-center mt-3">
@@ -940,7 +938,7 @@ function SignupInner() {
           )}
 
           <div className="text-center">
-            <Image src="/logos/textlogo/member.png" alt="Member" width={974} height={286} priority className="h-[58px] w-auto mx-auto" />
+            <Image src="/logos/textlogo/siteset3/member100.png" alt="Member" width={974} height={286} priority className="h-[58px] w-auto mx-auto" />
 
             {/* Billing Toggle */}
             <div className="flex justify-center mt-3">
@@ -1024,7 +1022,7 @@ function SignupInner() {
           )}
 
           <div className="text-center relative z-10">
-            <Image src="/logos/textlogo/diamonmember.png" alt="Diamond Member" width={1536} height={282} priority className="h-[62px] w-auto mx-auto" />
+            <Image src="/logos/textlogo/siteset3/diamond100.png" alt="Diamond Member" width={1536} height={282} priority className="h-[62px] w-auto mx-auto" />
 
             {/* Billing Toggle */}
             <div className="flex justify-center mt-3">

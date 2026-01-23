@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type Video = {
   viewkey: string;
@@ -37,11 +38,12 @@ interface VideoSearchProps {
 }
 
 export default function VideoSearch({ videos, canViewPremium = true, showcaseSlugs = [] }: VideoSearchProps) {
-  const MAX_PREVIEW = 50;
+  const VIDEOS_PER_PAGE = 50;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [duration, setDuration] = useState("any");
   const [sort, setSort] = useState("rank");
+  const [page, setPage] = useState(1);
 
   const filteredVideos = useMemo(() => {
     let result = [...videos];
@@ -108,23 +110,53 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     return result;
   }, [videos, search, category, duration, sort, canViewPremium, showcaseSlugs]);
 
-  const limitedVideos = filteredVideos.slice(0, MAX_PREVIEW);
-  const isLimited = filteredVideos.length > MAX_PREVIEW;
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, category, duration, sort]);
+
+  const totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
+  const startIndex = (page - 1) * VIDEOS_PER_PAGE;
+  const endIndex = startIndex + VIDEOS_PER_PAGE;
+  const paginatedVideos = filteredVideos.slice(startIndex, endIndex);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Search is already reactive via useMemo
   };
 
+  const goToPage = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (page <= 3) {
+        pages.push(1, 2, 3, 4, "...", totalPages);
+      } else if (page >= totalPages - 2) {
+        pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", page - 1, page, page + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  };
+
   return (
     <>
       <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
         <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-semibold neon-text">Browse Videos</h2>
+          <img src="/logos/textlogo/siteset3/seachvids1200.png" alt="Browse Videos" className="h-[55px] max-w-[275px] object-contain" />
           <p className="text-sm text-white/70">
-            {isLimited
-              ? `Showing ${limitedVideos.length} of ${filteredVideos.length} videos`
-              : `${filteredVideos.length} of ${videos.length} videos`}
+            {filteredVideos.length} videos found
+            {totalPages > 1 && ` • Page ${page} of ${totalPages}`}
           </p>
         </div>
 
@@ -193,10 +225,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
             {search || category !== "all" || duration !== "any" ? "Search Results" : "All Videos"}
           </h2>
           <span className="text-sm text-white/60">
-            {isLimited
-              ? `Showing ${limitedVideos.length} of ${filteredVideos.length}`
-              : `${filteredVideos.length}`}{" "}
-            videos
+            Showing {startIndex + 1}–{Math.min(endIndex, filteredVideos.length)} of {filteredVideos.length} videos
           </span>
         </div>
 
@@ -206,7 +235,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {limitedVideos.map((v) => {
+            {paginatedVideos.map((v) => {
               const isShowcase = showcaseSlugs.includes(v.viewkey);
               const isLocked = !canViewPremium && !isShowcase;
 
@@ -312,14 +341,44 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
           </div>
         )}
 
-        {isLimited && (
-          <div className="mt-6 flex justify-center">
-            <Link
-              href="/videos"
-              className="inline-flex items-center rounded-full border border-pink-400/40 bg-pink-500/10 px-5 py-2 text-sm font-semibold text-pink-200 transition hover:border-pink-300/70 hover:bg-pink-500/20"
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex justify-center items-center gap-2">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className="px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white/70 hover:bg-white/10 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              View All Videos
-            </Link>
+              ← Prev
+            </button>
+
+            <div className="flex gap-1">
+              {getPageNumbers().map((p, i) => (
+                p === "..." ? (
+                  <span key={`ellipsis-${i}`} className="px-3 py-2 text-white/50">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p as number)}
+                    className={`px-3 py-2 rounded-lg transition ${
+                      page === p
+                        ? "bg-pink-500/30 border border-pink-400/50 text-pink-200 font-semibold"
+                        : "bg-black/40 border border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              ))}
+            </div>
+
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages}
+              className="px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white/70 hover:bg-white/10 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
           </div>
         )}
       </section>

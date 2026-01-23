@@ -14,15 +14,15 @@ const TOTAL_SUPPLY = 1_000_000_000;
 const ALLOCATIONS: Allocation[] = [
   {
     name: "Pump.fun public launch",
-    pct: 30,
-    amount: 300_000_000,
+    pct: 35,
+    amount: 350_000_000,
     purpose: "Bonding curve sale → price discovery → Raydium liquidity",
     notes: ["Public launch allocation for open price discovery and initial liquidity formation."],
   },
   {
     name: "User Rewards (emissions)",
-    pct: 30,
-    amount: 300_000_000,
+    pct: 20,
+    amount: 200_000_000,
     purpose: "Likes, MVM, comments, holder drip",
     notes: [
       "Distributed based on on-site activity + weekly systems (likes/MVM/comments).",
@@ -38,8 +38,8 @@ const ALLOCATIONS: Allocation[] = [
   },
   {
     name: "Liquidity reserve",
-    pct: 10,
-    amount: 100_000_000,
+    pct: 15,
+    amount: 150_000_000,
     purpose: "Extra LP for Raydium, Orca, etc",
     notes: ["Used to deepen liquidity and support additional pools as the ecosystem grows."],
   },
@@ -86,11 +86,11 @@ export default function TokenomicsPage() {
         <div className="flex items-center justify-between mb-6">
           <Link href="/">
             <Image
-              src="/logos/neonmainlogo1.png"
+              src="/logos/mainsitelogo.png"
               alt="Xessex"
               width={285}
               height={95}
-              className="h-[40px] md:h-[60px] w-auto"
+              className="h-[144px] md:h-[216px] w-auto"
               priority
             />
           </Link>
@@ -111,20 +111,6 @@ export default function TokenomicsPage() {
                 Fixed-supply design with a clean, transparent allocation model.
               </p>
 
-              <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                <Link
-                  href="/terms"
-                  className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition"
-                >
-                  Terms
-                </Link>
-                <Link
-                  href="/privacy"
-                  className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition"
-                >
-                  Privacy
-                </Link>
-              </div>
             </div>
 
             {/* Fixed supply badge */}

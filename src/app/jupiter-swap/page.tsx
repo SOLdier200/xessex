@@ -77,6 +77,29 @@ export default function JupiterSwapPage() {
             </ul>
           </section>
 
+          <section className="bg-gray-900/50 border border-emerald-500/30 rounded-2xl p-6">
+            <h2 className="text-2xl font-semibold mb-4 text-emerald-300">SOL/XESS Liquidity Pool</h2>
+            <p className="text-white/70 mb-4">
+              View and trade on the SOL/XESS liquidity pool on Orca.
+            </p>
+            <a
+              href="https://www.orca.so/pools?chainId=solanaDevnet&tokens=So11111111111111111111111111111111111111112&tokens=DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-400 font-semibold hover:bg-emerald-500/30 transition"
+            >
+              Open Orca Pool
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+            <p className="text-yellow-400 text-sm mt-4">
+              <strong>Note:</strong> This is the Devnet pool for testing. Mainnet pool will be available after launch.
+            </p>
+          </section>
+
           <section className="bg-gray-900/50 border border-yellow-500/30 rounded-2xl p-6">
             <h2 className="text-2xl font-semibold mb-4 text-yellow-300">How to Swap</h2>
             <ol className="space-y-3 text-white/70">

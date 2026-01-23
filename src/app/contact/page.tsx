@@ -6,7 +6,7 @@ export default function ContactPage() {
     <main className="max-w-3xl mx-auto px-6 py-12">
       <Link href="/" className="inline-block mb-8">
         <Image
-          src="/logos/neonmainlogo1.png"
+          src="/logos/mainsitelogo.png"
           alt="Xessex"
           width={200}
           height={60}

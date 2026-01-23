@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 type DrawingStatusResp = {
   ok: boolean;
@@ -203,7 +204,7 @@ export default function RewardsDrawingPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="mb-6">
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Weekly Rewards Drawing</h1>
+        <Image src="/logos/textlogo/siteset3/weeklyrew100.png" alt="Weekly Rewards Drawing" width={938} height={276} className="h-[133px] w-auto" />
         <div className="mt-2 text-white/60">
           Drawings close every <span className="text-white">Sunday 11:59pm PT</span>. Unclaimed
           prizes roll into the next week&apos;s pool.

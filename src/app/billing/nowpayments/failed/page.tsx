@@ -12,7 +12,7 @@ function FailedContent() {
     <div className="mx-auto max-w-xl p-6">
       <div className="flex justify-center mb-6">
         <Image
-          src="/logos/neonmainlogo1.png"
+          src="/logos/mainsitelogo.png"
           alt="Xessex"
           width={180}
           height={60}

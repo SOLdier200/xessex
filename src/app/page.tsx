@@ -4,7 +4,6 @@ import fs from "fs";
 import path from "path";
 import TopNav from "./components/TopNav";
 import WalletStatus from "./components/WalletStatus";
-import VideoSearch from "./components/VideoSearch";
 import AdminManualPaymentNotice from "./components/AdminManualPaymentNotice";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
@@ -84,61 +83,132 @@ export default async function HomePage() {
       <div className="px-4 md:px-6 pb-10">
         <AdminManualPaymentNotice />
         {/* Quick actions */}
-        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 mb-6">
-            <Link
-              href="/collections"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"
-            >
-              <div>
-                <Image src="/logos/textlogo/collections.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
-                <p className="mt-2 text-sm text-white/70">Evaluate content from different Collections.</p>
-              </div>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
-                Explore
-              </span>
-            </Link>
-
-            <Link
-              href="/signup"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/25 via-black/0 to-yellow-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(234,179,8,0.18)] transition hover:-translate-y-0.5 hover:border-yellow-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300/70"
-            >
-              <div>
-                <Image src="/logos/textlogo/membersignup.png" alt="Member Signup" width={1230} height={238} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
-                <p className="mt-2 text-sm text-white/70">Start earning <span className="text-green-400 font-bold">$</span> for viewing and grading content!</p>
-              </div>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
-                Join Now
-              </span>
-            </Link>
-
-            <Link
-              href="/login"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/20 via-black/0 to-sky-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(56,189,248,0.2)] transition hover:-translate-y-0.5 hover:border-sky-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
-            >
-              <div>
-                <Image src="/logos/textlogo/memberlogin.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
-                <p className="mt-2 text-sm text-white/70">One-click sign in for Ultimate Access!</p>
-              </div>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
-                Diamond Connect
-              </span>
-            </Link>
-
-            <Link
-              href="/leaderboard"
-              className="group flex h-full flex-col justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-br from-purple-500/20 via-black/0 to-purple-500/10 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(168,85,247,0.2)] transition hover:-translate-y-0.5 hover:border-purple-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300/70"
-            >
-              <div>
-                <Image src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="mt-1 h-[44px] w-auto" />
-                <p className="mt-2 text-sm text-white/70">See top ranked Diamond Members!</p>
-              </div>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
-                View Rankings
-              </span>
-            </Link>
+        <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-6">
+          <Link href="/collections" className="hover:opacity-80 transition">
+            <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="h-[40px] md:h-[50px] w-auto" />
+          </Link>
+          <Link href="/signup" className="hover:opacity-80 transition">
+            <Image src="/logos/textlogo/siteset3/signup5.png" alt="Member Signup" width={1230} height={238} priority fetchPriority="high" className="h-[40px] md:h-[50px] w-auto" />
+          </Link>
+          <Link href="/login" className="hover:opacity-80 transition">
+            <Image src="/logos/textlogo/siteset3/login100.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="h-[40px] md:h-[50px] w-auto" />
+          </Link>
+          <Link href="/leaderboard" className="hover:opacity-80 transition">
+            <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="h-[44px] md:h-[55px] w-auto" />
+          </Link>
         </div>
 
-        <VideoSearch videos={videos.slice(0, 20)} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
+        {/* Top 20 Videos */}
+        <section className="neon-border rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>
+          <div className="mb-4">
+            <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[32px] w-auto" />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {videos.slice(0, 20).map((v) => {
+              const isShowcase = showcaseSlugs.includes(v.viewkey);
+              const isLocked = !canViewPremium && !isShowcase;
+
+              if (isLocked) {
+                return (
+                  <div
+                    key={v.viewkey}
+                    className="neon-border rounded-2xl bg-black/30 overflow-hidden relative"
+                  >
+                    <div className="relative aspect-video bg-black/60">
+                      {v.primary_thumb ? (
+                        <img
+                          src={v.primary_thumb}
+                          alt=""
+                          className="w-full h-full object-cover blur-lg scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/30 blur-md">
+                          No Thumbnail
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div className="text-center">
+                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs text-yellow-300 font-semibold mt-1 block">PREMIUM</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 md:p-3">
+                      <div className="font-semibold text-white/40 text-xs md:text-sm line-clamp-2 blur-sm select-none">
+                        {v.title}
+                      </div>
+                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/30 truncate blur-sm">
+                        {v.performers || "Unknown"}
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/30">
+                        <span>{formatDuration(v.duration)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={v.viewkey}
+                  href={`/videos/${v.viewkey}`}
+                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
+                >
+                  <div className="relative aspect-video bg-black/60">
+                    {v.primary_thumb ? (
+                      <img
+                        src={v.primary_thumb}
+                        alt={v.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/30">
+                        No Thumbnail
+                      </div>
+                    )}
+                    {v.rank != null && (
+                      <div
+                        className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                        style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                      >
+                        #{v.rank}
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                      {formatDuration(v.duration)}
+                    </div>
+                    {v.favorite === 1 && (
+                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
+                        ★
+                      </div>
+                    )}
+                    {isShowcase && !canViewPremium && (
+                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
+                        FREE
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-2 md:p-3">
+                    <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
+                      {v.title}
+                    </div>
+                    <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
+                      {v.performers || "Unknown"}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
+                      <span>{formatViews(v.views)} views</span>
+                      <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
 
         {videos.length > 20 && (
           <div className="mt-6 text-center">

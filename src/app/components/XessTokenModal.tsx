@@ -25,14 +25,6 @@ const tokenLinks = [
     hoverGradient: "hover:from-blue-500/30 hover:to-cyan-500/30",
   },
   {
-    label: "SOL/XESS Pool",
-    href: "/sol-xess-pool",
-    description: "View liquidity pool information",
-    gradient: "from-green-500/20 to-emerald-500/20",
-    border: "border-green-400/40",
-    hoverGradient: "hover:from-green-500/30 hover:to-emerald-500/30",
-  },
-  {
     label: "Jupiter Swap",
     href: "/jupiter-swap",
     description: "Swap tokens on Jupiter",

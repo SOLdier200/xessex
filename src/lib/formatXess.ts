@@ -91,6 +91,8 @@ export function rewardTypeLabel(type: string): string {
       return "Referral (L2)";
     case "REF_L3":
       return "Referral (L3)";
+    case "WEEKLY_VOTER":
+      return "Votes Cast";
     default:
       return type;
   }

@@ -28,13 +28,13 @@ export default function TopNav() {
   return (
     <header className="px-4 md:px-6 py-4 md:py-5 safe-top">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/" onClick={() => setMenuOpen(false)}>
+        <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
           <Image
-            src="/logos/neonmainlogo1.png"
+            src="/logos/mainsitelogo.png"
             alt="Xessex"
             width={285}
             height={95}
-            className="h-[50px] md:h-[95px] w-auto"
+            className="h-[81px] md:h-[155px] w-auto"
             priority
           />
         </Link>

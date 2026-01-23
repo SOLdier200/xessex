@@ -14,7 +14,7 @@ export default function RewardsPage() {
         <div className="text-center mb-10">
           <Link href="/" className="inline-block mb-6">
             <Image
-              src="/logos/neonmainlogo1.png"
+              src="/logos/mainsitelogo.png"
               alt="Xessex"
               width={285}
               height={95}

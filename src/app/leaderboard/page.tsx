@@ -100,7 +100,7 @@ export default function LeaderboardPage() {
               />
             </div>
             <div>
-              <Image src="/logos/textlogo/diamondladder.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="h-8 md:h-10 w-auto" />
+              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="h-[42px] md:h-[52px] w-auto" />
               <p className="mt-1 text-sm md:text-base text-white/70">
                 Top ranked Diamond Members
               </p>

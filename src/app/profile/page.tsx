@@ -630,15 +630,21 @@ export default function ProfilePage() {
 
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-6">
-            <Image
-              src="/logos/textlogo/profile.png"
-              alt="Your Profile"
-              width={938}
-              height={276}
-              priority
-              className="h-[180px] md:h-[234px] w-auto mx-auto"
-            />
-            <p className="mt-2 text-white/70">Manage your account and view membership details</p>
+            <div className="relative inline-block">
+              <Image
+                src="/logos/profile2.png"
+                alt="Your Profile"
+                width={938}
+                height={276}
+                priority
+                className="h-[180px] md:h-[234px] w-auto mx-auto opacity-85 blur-[0.5px]"
+                style={{
+                  maskImage: "radial-gradient(ellipse 90% 80% at 50% 40%, black 40%, transparent 100%)",
+                  WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 50% 40%, black 40%, transparent 100%)",
+                  filter: "drop-shadow(0 0 40px rgba(236,72,153,0.25))",
+                }}
+              />
+            </div>
           </div>
 
           {/* Tabs */}
