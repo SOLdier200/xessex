@@ -120,8 +120,8 @@ export async function POST(req: Request) {
         create: {
           userId: ctx.user!.id,
           weekKey,
-          type: "WEEKLY_HOLDER",
-          amount: leaf.amountAtomic,
+          type: "WEEKLY_LIKES",
+          amount: leaf!.amountAtomic,
           status: "PAID",
           refType: "CLAIM",
           refId: syntheticRefId,
