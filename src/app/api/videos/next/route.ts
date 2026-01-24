@@ -12,6 +12,7 @@ const VIDEO_SELECT = {
   embedUrl: true,
   isShowcase: true,
   viewsCount: true,
+  sourceViews: true,
   avgStars: true,
   starsCount: true,
 };

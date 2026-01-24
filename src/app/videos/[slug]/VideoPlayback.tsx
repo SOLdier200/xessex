@@ -15,6 +15,7 @@ type VideoPayload = {
   embedUrl: string;
   isShowcase: boolean;
   viewsCount: number;
+  sourceViews: number;
   avgStars: number;
   starsCount: number;
 };
@@ -182,8 +183,11 @@ export default function VideoPlayback({
             >
               {currentVideo.isShowcase ? "free" : "premium"}
             </span>
-            <span className="text-xs text-white/40">
-              Viewed on Xessex: {currentVideo.viewsCount.toLocaleString()}
+            <span className="text-xs text-white/30">
+              PH Views: {currentVideo.sourceViews.toLocaleString()}
+            </span>
+            <span className="text-xs text-white/50">
+              Xessex Views: {currentVideo.viewsCount.toLocaleString()}
             </span>
             {currentVideo.starsCount > 0 && (
               <span className="text-xs text-yellow-400">

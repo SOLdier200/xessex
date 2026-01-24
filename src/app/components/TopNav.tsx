@@ -45,7 +45,7 @@ export default function TopNav() {
 
         {/* Right side: All nav links in one row with WalletStatus between Login and Collections */}
         <div className="flex flex-col items-end gap-2 mt-[10px]">
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-nowrap items-center justify-end gap-3">
             <Link href="/signup" className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/signup5.png" alt="Sign Up" width={1230} height={238} priority className="h-[36px] w-auto" />
             </Link>
@@ -53,18 +53,18 @@ export default function TopNav() {
               <Image src="/logos/textlogo/siteset3/login100.png" alt="Login" width={982} height={247} priority className="h-[36px] w-auto" />
             </Link>
             <WalletStatus />
-            <Link href="/collections" className="hover:opacity-80 transition">
-              <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority className="h-[36px] w-auto" />
+            <Link href="/collections" className="hover:opacity-80 transition shrink-0">
+              <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority className="h-[33px] w-auto" />
             </Link>
-            <Link href="/leaderboard" className="hover:opacity-80 transition">
+            <Link href="/leaderboard" className="hover:opacity-80 transition shrink-0">
               <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority className="h-[40px] w-auto" />
             </Link>
-            <button onClick={() => setShowXessTokenModal(true)} className="hover:opacity-80 transition">
-              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[36px] w-auto" />
+            <button onClick={() => setShowXessTokenModal(true)} className="hover:opacity-80 transition shrink-0">
+              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[35px] w-auto" />
             </button>
             {isLoggedIn && (
-              <Link href="/profile" className="hover:opacity-80 transition">
-                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[36px] w-auto" />
+              <Link href="/profile" className="hover:opacity-80 transition shrink-0">
+                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[33px] w-auto" />
               </Link>
             )}
           </div>
@@ -127,7 +127,7 @@ export default function TopNav() {
         >
           <div className="flex flex-col items-center gap-3 pb-2">
             <Link href="/collections" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-              <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} className="h-[32px] w-auto" />
+              <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} className="h-[30px] w-auto" />
             </Link>
             <Link href="/signup" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/signup5.png" alt="Sign Up" width={1230} height={238} className="h-[32px] w-auto" />
@@ -145,11 +145,11 @@ export default function TopNav() {
               }}
               className="hover:opacity-80 transition"
             >
-              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[32px] w-auto" />
+              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[31px] w-auto" />
             </button>
             {isLoggedIn && (
               <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[32px] w-auto" />
+                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[30px] w-auto" />
               </Link>
             )}
           </div>

@@ -154,6 +154,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
           embedUrl: video.embedUrl,
           isShowcase: video.isShowcase,
           viewsCount: video.viewsCount,
+          sourceViews: video.sourceViews,
           avgStars: video.avgStars,
           starsCount: video.starsCount,
         }}

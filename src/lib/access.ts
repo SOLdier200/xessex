@@ -73,10 +73,10 @@ export async function getAccessContext() {
     needsPayoutWalletLink,
     needsSolWalletLink, // legacy compat
 
-    // Permissions - Diamond-only actions require diamondReady (wallet linked)
+    // Permissions - Diamond tier gets full access (wallet link optional for features)
     canViewAllVideos: isAdminOrMod || tier === "member" || tier === "diamond",
-    canComment: isAdminOrMod || diamondReady,
-    canRateStars: isAdminOrMod || diamondReady,
+    canComment: isAdminOrMod || tier === "diamond",
+    canRateStars: isAdminOrMod || tier === "diamond",
     canVoteComments: isAdminOrMod || tier === "member" || tier === "diamond",
   };
 }
