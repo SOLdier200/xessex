@@ -10,87 +10,137 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+function inferAuthProvider(user: NonNullable<Awaited<ReturnType<typeof getAccessContext>>["user"]>) {
+  // Match your schema fields exactly
+  if (user.walletAddress) return "wallet" as const;
+  if (user.email && user.passHash) return "email" as const;
+  if (user.email) return "email" as const;
+  return "unknown" as const;
+}
+
 export async function GET() {
-  const access = await getAccessContext();
   const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
-  const user = access.user;
-  if (!user) {
-    return NextResponse.json({ ok: true, authed: false, user: null }, { headers: noCache });
+  const access = await getAccessContext();
+
+  // Not logged in
+  if (!access.user) {
+    return NextResponse.json(
+      {
+        ok: true,
+        authed: false,
+        user: null,
+
+        membership: "FREE",
+        authProvider: "unknown",
+
+        // Trial fields (defaults)
+        trialUsed: false,
+        trialEndsAt: null,
+        isTrial: false,
+        trialDaysLeft: 0,
+        canStartTrial: false,
+        trialDurationDays: 14,
+
+        // Permissions (defaults)
+        canViewAllVideos: false,
+        canComment: false,
+        canRateStars: false,
+        canVoteComments: false,
+
+        // Wallet / tier helpers (defaults)
+        hasAuthWallet: false,
+        hasPayoutWallet: false,
+        hasAnyWallet: false,
+        diamondReady: false,
+        needsAuthWalletLink: false,
+        needsPayoutWalletLink: false,
+        needsSolWalletLink: false,
+
+        // Role
+        isAdminOrMod: false,
+      },
+      { headers: noCache }
+    );
   }
 
-  const sub = user.subscription ?? null;
-  const membership =
-    access.isAdminOrMod || access.tier === "diamond"
-      ? "DIAMOND"
-      : access.tier === "member"
-        ? "MEMBER"
-        : "FREE";
+  const u = access.user;
+  const sub = access.sub;
+  const authProvider = inferAuthProvider(u);
 
-  let authProvider: "google" | "email" | "wallet" | "unknown" = "unknown";
-  if (user.email) {
-    if (user.passHash) {
-      authProvider = "email";
-    } else if (user.supabaseId) {
-      authProvider = "google";
-    } else {
-      authProvider = "email";
-    }
-  } else if (user.walletAddress || user.solWallet) {
-    authProvider = "wallet";
-  }
+  return NextResponse.json(
+    {
+      ok: true,
+      authed: access.isAuthed,
 
-  // ─────────────────────────────────────────────────────────────
-  // WALLET FIELDS (clear, no fallback confusion)
-  // ─────────────────────────────────────────────────────────────
-  const authWallet = user.walletAddress ?? null;       // used for login + Diamond features
-  const payoutWallet = user.solWallet ?? null;         // where rewards go (optional)
-  const effectivePayoutWallet = payoutWallet ?? authWallet; // actual destination
+      user: {
+        id: u.id,
+        memberId: u.memberId,
+        role: u.role,
+        createdAt: u.createdAt.toISOString(),
 
-  // ─────────────────────────────────────────────────────────────
-  // FLAGS (only Diamond users need wallet linking)
-  // ─────────────────────────────────────────────────────────────
-  // Auth wallet needed only for Diamond tier (wallet is Diamond-only requirement)
-  const needsAuthWalletLink = access.tier === "diamond" && !authWallet;
+        email: u.email,
+        walletAddress: u.walletAddress,
+        solWallet: u.solWallet,
+        solWalletLinkedAt: u.solWalletLinkedAt ? u.solWalletLinkedAt.toISOString() : null,
 
-  // Payout wallet prompt only for Diamond without any payout destination
-  const needsPayoutWalletLink = access.tier === "diamond" && !effectivePayoutWallet;
+        // Trial fields on User (source of truth for "ever used trial" + dates)
+        trialUsed: u.trialUsed,
+        trialStartedAt: u.trialStartedAt ? u.trialStartedAt.toISOString() : null,
+        trialEndsAt: u.trialEndsAt ? u.trialEndsAt.toISOString() : null,
 
-  // Legacy compat
-  const needsSolWalletLink = needsAuthWalletLink;
+        // Subscription (status already exists here, as you noted)
+        subscription: sub
+          ? {
+              id: sub.id,
+              userId: sub.userId,
+              tier: sub.tier,
+              status: sub.status,
+              expiresAt: sub.expiresAt ? sub.expiresAt.toISOString() : null,
+              paymentMethod: sub.paymentMethod,
+              cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+              amountCents: sub.amountCents,
+              manualPaymentId: sub.manualPaymentId,
+              nowPaymentsPaymentId: sub.nowPaymentsPaymentId,
+              nowPaymentsInvoiceId: sub.nowPaymentsInvoiceId,
+              nowPaymentsOrderId: sub.nowPaymentsOrderId,
+              lastTxSig: sub.lastTxSig,
+              createdAt: sub.createdAt.toISOString(),
+              updatedAt: sub.updatedAt.toISOString(),
+            }
+          : null,
+      },
 
-  // Return clean response
-  return NextResponse.json({
-    ok: true,
-    authed: true,
-    authProvider,
-    membership,
+      // Membership + access summary
+      membership: access.tier === "diamond" ? "DIAMOND" : access.tier === "member" ? "MEMBER" : "FREE",
+      authProvider,
+      active: access.active,
+      tier: access.tier,
+      isAdminOrMod: access.isAdminOrMod,
 
-    // ─── New clear wallet fields ───
-    authWallet,
-    payoutWallet,
-    effectivePayoutWallet,
+      // Wallet status (from access.ts)
+      hasAuthWallet: access.hasAuthWallet,
+      hasPayoutWallet: access.hasPayoutWallet,
+      hasAnyWallet: access.hasAnyWallet,
+      diamondReady: access.diamondReady,
+      needsAuthWalletLink: access.needsAuthWalletLink,
+      needsPayoutWalletLink: access.needsPayoutWalletLink,
+      needsSolWalletLink: access.needsSolWalletLink,
 
-    // ─── Clear flags ───
-    needsAuthWalletLink,
-    needsPayoutWalletLink,
+      // Trial status (computed in access.ts)
+      isTrial: access.isOnTrial,
+      trialUsed: access.trialUsed,
+      trialEndsAt: access.trialEndsAt ? access.trialEndsAt.toISOString() : null,
+      trialDaysLeft: access.trialDaysLeft,
+      canStartTrial: access.canStartTrial,
+      trialDurationDays: access.trialDurationDays,
 
-    // ─── User object ───
-    user: {
-      id: user.id,
-      email: user.email ?? null,
-      role: membership,
-      walletAddress: authWallet,
-      solWallet: payoutWallet,
+      // Permissions (computed in access.ts)
+      canViewAllVideos: access.canViewAllVideos,
+      canComment: access.canComment,
+      canRateStars: access.canRateStars,
+      canVoteComments: access.canVoteComments,
     },
-
-    // ─── Legacy fields (for old UI code) ───
-    hasEmail: !!user.email,
-    email: user.email ?? null,
-    walletAddress: authWallet, // NO fallback - auth wallet only
-    needsSolWalletLink,
-    sub: sub
-      ? { tier: sub.tier, status: sub.status, expiresAt: sub.expiresAt }
-      : null,
-  }, { headers: noCache });
+    { headers: noCache }
+  );
 }

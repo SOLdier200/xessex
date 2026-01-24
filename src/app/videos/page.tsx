@@ -5,6 +5,8 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import TopNav from "../components/TopNav";
 import VideoSearch from "../components/VideoSearch";
+import TrialBanner from "../components/TrialBanner";
+import DiamondTeaser from "../components/DiamondTeaser";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +66,12 @@ export default async function VideosPage() {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
+        {/* Trial status banner (for trial users) */}
+        <TrialBanner />
+
+        {/* Diamond upsell (for trial/member users) */}
+        {canViewPremium && <div className="mb-4"><DiamondTeaser /></div>}
+
         {!canViewPremium && (
           <div className="mb-6 neon-border rounded-2xl p-4 bg-black/30">
             <div className="text-white/70 text-sm">

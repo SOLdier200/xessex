@@ -3,9 +3,11 @@
  * Proprietary and confidential.
  */
 
-import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
+import { getCurrentUser, isSubscriptionActive, hasSubscriptionAccess, isTrialActive } from "@/lib/auth";
 
 export type AccessTier = "free" | "member" | "diamond";
+
+const TRIAL_DURATION_DAYS = 14;
 
 // Env-based admin allowlist (comma-separated wallet addresses)
 const ADMIN_WALLETS = new Set(
@@ -19,7 +21,22 @@ export async function getAccessContext() {
   const user = await getCurrentUser();
   const sub = user?.subscription ?? null;
 
-  const active = !!sub && isSubscriptionActive(sub);
+  // Use hasSubscriptionAccess for content gating (includes PENDING/PARTIAL provisional access)
+  const active = !!sub && hasSubscriptionAccess(sub);
+
+  // Use isSubscriptionActive for checking if truly subscribed (ACTIVE/TRIAL only)
+  const fullySubscribed = !!sub && isSubscriptionActive(sub);
+
+  // Trial status
+  const isOnTrial = sub?.status === "TRIAL" && active;
+  const trialUsed = user?.trialUsed ?? false;
+  const trialEndsAt = user?.trialEndsAt ?? null;
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+  // PENDING/PARTIAL users can still start trials (fullySubscribed is false for them)
+  const canStartTrial = !!user && !trialUsed && !fullySubscribed;
+
   const tier: AccessTier =
     active && sub?.tier === "DIAMOND"
       ? "diamond"
@@ -72,6 +89,14 @@ export async function getAccessContext() {
     needsAuthWalletLink,
     needsPayoutWalletLink,
     needsSolWalletLink, // legacy compat
+
+    // Trial status
+    isOnTrial,
+    trialUsed,
+    trialEndsAt,
+    trialDaysLeft,
+    canStartTrial,
+    trialDurationDays: TRIAL_DURATION_DAYS,
 
     // Permissions - Diamond tier gets full access (wallet link optional for features)
     canViewAllVideos: isAdminOrMod || tier === "member" || tier === "diamond",

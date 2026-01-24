@@ -27,6 +27,10 @@ model User {
   referredById             String?
   recoveryEmail            String?                  @unique
   recoveryEmailVerifiedAt  DateTime?
+  // Free trial tracking
+  trialUsed                Boolean                  @default(false)
+  trialStartedAt           DateTime?
+  trialEndsAt              DateTime?
   allTimeStat          AllTimeUserStat?
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
@@ -539,6 +543,7 @@ enum SubscriptionTier {
 
 enum SubscriptionStatus {
   ACTIVE
+  TRIAL
   EXPIRED
   CANCELED
   PENDING

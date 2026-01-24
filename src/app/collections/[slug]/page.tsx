@@ -48,6 +48,7 @@ const CATEGORY_INFO: Record<string, { name: string; icon: string }> = {
   "threesome": { name: "Threesome", icon: "" },
   "for-women": { name: "For Women", icon: "♀️" },
   "anal": { name: "Anal", icon: "" },
+  "asian": { name: "Asian", icon: "" },
   "2d": { name: "2D Animated", icon: "" },
   "highest-rated": { name: "Highest Rated", icon: "⭐" },
 };

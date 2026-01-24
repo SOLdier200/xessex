@@ -38,28 +38,63 @@ export function isSubscriptionActive(
 ) {
   if (!sub) return false;
 
-  // ACTIVE = fully paid membership
-  // PENDING = payment initiated (NOWPayments) or grace window
-  // PARTIAL = manual/provisional access (must expire)
+  // Only ACTIVE and TRIAL count as "active" subscriptions
+  // PENDING/PARTIAL are transitional states (payment in progress, awaiting verification)
+  // and should NOT block new trials or be treated as fully subscribed
   if (sub.status === "ACTIVE") {
     // lifetime allowed only for ACTIVE
     if (!sub.expiresAt) return true;
     return sub.expiresAt.getTime() > Date.now();
   }
 
+  if (sub.status === "TRIAL") {
+    // TRIAL must have expiresAt (14-day limit)
+    if (!sub.expiresAt) return false;
+    return sub.expiresAt.getTime() > Date.now();
+  }
+
+  // PENDING, PARTIAL, EXPIRED, CANCELED all return false
+  return false;
+}
+
+/**
+ * Check if user has any form of access (including provisional states).
+ * Use this for content gating, not for blocking trial starts.
+ */
+export function hasSubscriptionAccess(
+  sub?: { status: SubscriptionStatus; expiresAt: Date | null } | null
+) {
+  if (!sub) return false;
+
+  // ACTIVE, TRIAL = fully active
+  if (sub.status === "ACTIVE" || sub.status === "TRIAL") {
+    if (!sub.expiresAt) return sub.status === "ACTIVE"; // lifetime only for ACTIVE
+    return sub.expiresAt.getTime() > Date.now();
+  }
+
+  // PENDING = payment in progress, grant provisional access
   if (sub.status === "PENDING") {
-    // allow PENDING to be treated as active even if expiresAt is null
     if (!sub.expiresAt) return true;
     return sub.expiresAt.getTime() > Date.now();
   }
 
+  // PARTIAL = manual/provisional access (must have expiresAt)
   if (sub.status === "PARTIAL") {
-    // PARTIAL must have expiresAt
     if (!sub.expiresAt) return false;
     return sub.expiresAt.getTime() > Date.now();
   }
 
   return false;
+}
+
+/**
+ * Check if user's trial is currently active (convenience helper)
+ */
+export function isTrialActive(
+  user?: { trialEndsAt: Date | null } | null
+): boolean {
+  if (!user?.trialEndsAt) return false;
+  return user.trialEndsAt.getTime() > Date.now();
 }
 
 export async function requireUser() {

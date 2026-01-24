@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import TopNav from "../components/TopNav";
 
 type DrawingStatusResp = {
   ok: boolean;
@@ -203,11 +204,10 @@ export default function RewardsDrawingPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
-      <div className="mb-6">
-        <Link href="/" className="inline-block mb-4">
-          <Image src="/logos/mainsitelogo.png" alt="Xessex" width={285} height={95} className="h-[180px] w-auto" />
-        </Link>
+    <main className="min-h-screen">
+      <TopNav />
+      <div className="max-w-4xl mx-auto px-4 py-10">
+        <div className="mb-6">
         <Image src="/logos/textlogo/siteset3/weeklyrew100.png" alt="Weekly Rewards Drawing" width={938} height={276} className="h-[133px] w-auto" />
         <div className="mt-2 text-white/60">
           Drawings close every <span className="text-white">Sunday 11:59pm PT</span>. Unclaimed
@@ -382,6 +382,7 @@ export default function RewardsDrawingPage() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </main>
   );
 }

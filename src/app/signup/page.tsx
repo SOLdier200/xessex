@@ -74,6 +74,13 @@ function SignupInner() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
   const [isMember, setIsMember] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
+  const [canStartTrial, setCanStartTrial] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [membership, setMembership] = useState<"FREE" | "MEMBER" | "DIAMOND">("FREE");
+  const [trialUsed, setTrialUsed] = useState(false);
+  const [isOnTrial, setIsOnTrial] = useState(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
 
   const memberPlan = memberCycle === "90days" ? "M90" : "MY";
   const diamondPlan = diamondCycle === "30days" ? "D1" : diamondCycle === "60days" ? "D2" : "DY";
@@ -106,6 +113,43 @@ function SignupInner() {
       return data;
     } catch {
       return null;
+    }
+  }
+
+  async function handleStartTrial() {
+    setTrialLoading(true);
+    try {
+      const res = await fetch("/api/trial/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        if (data?.error === "UNAUTHENTICATED") {
+          toast.error("Please sign up or log in first to start your free trial");
+          setSignupSelectOpen(true);
+        } else if (data?.error === "TRIAL_ALREADY_USED") {
+          toast.error("You've already used your free trial");
+          setTrialUsed(true);
+        } else if (data?.error === "ALREADY_SUBSCRIBED") {
+          toast.error("You already have an active membership");
+        } else {
+          toast.error("Could not start trial. Please try again.");
+        }
+        return;
+      }
+      toast.success("Your 14-day free trial has started!");
+      setIsOnTrial(true);
+      setTrialUsed(true);
+      setTrialDaysLeft(14);
+      setMembership("MEMBER");
+      setCanStartTrial(false);
+      window.dispatchEvent(new Event("auth-changed"));
+      router.push("/videos");
+    } catch {
+      toast.error("Could not start trial. Please try again.");
+    } finally {
+      setTrialLoading(false);
     }
   }
 
@@ -403,13 +447,27 @@ function SignupInner() {
     fetchAccountStatus()
       .then((account) => {
         const authed = account?.ok && account.authed;
-        const membership = account?.membership ?? "FREE";
+        const membershipVal = account?.membership ?? "FREE";
         const hasEmail = account?.hasEmail ?? false;
 
+        // Set auth and membership state
+        setIsAuthed(authed);
+        setMembership(membershipVal as "FREE" | "MEMBER" | "DIAMOND");
+
         // Check if user is already a member
-        if (membership === "MEMBER" || membership === "DIAMOND") {
+        if (membershipVal === "MEMBER" || membershipVal === "DIAMOND") {
           setIsMember(true);
         }
+
+        // Check if user can start a trial
+        if (account?.canStartTrial) {
+          setCanStartTrial(true);
+        }
+
+        // Set trial state
+        setTrialUsed(account?.trialUsed ?? false);
+        setIsOnTrial(account?.isOnTrial ?? false);
+        setTrialDaysLeft(account?.trialDaysLeft ?? null);
 
         // Only show signup modal if user is not authenticated
         // Wallet-only users who are authed should proceed directly to payment options
@@ -482,6 +540,32 @@ function SignupInner() {
 
       <div className="text-center mb-8 -mt-5">
         <Image src="/logos/textlogo/siteset3/memberselect100.png" alt="Select Membership" width={938} height={276} className="h-[109px] w-auto mx-auto" />
+
+        {/* Free Trial Banner */}
+        {!isMember && (
+          <div className="max-w-2xl mx-auto mt-6 mb-4">
+            <div className="rounded-2xl border-2 border-emerald-400/50 bg-gradient-to-r from-emerald-500/10 via-black/30 to-emerald-500/10 p-5">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-center sm:text-left">
+                  <h3 className="text-lg font-bold text-emerald-400">Try Free for 14 Days</h3>
+                  <p className="text-white/70 text-sm mt-1">
+                    Full access to all videos. No credit card required.
+                  </p>
+                </div>
+                <button
+                  onClick={handleStartTrial}
+                  disabled={trialLoading}
+                  className="px-6 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-400 font-semibold hover:bg-emerald-500/30 transition disabled:opacity-50 whitespace-nowrap"
+                >
+                  {trialLoading ? "Starting..." : "Start Free Trial"}
+                </button>
+              </div>
+              <p className="text-center text-white/50 text-xs mt-3">
+                After your trial ends, choose a plan to continue. No automatic charges.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Payment Method Tabs */}
         <div className="flex justify-center mt-6">
@@ -612,6 +696,7 @@ function SignupInner() {
 
         {/* Diamond Member Tier */}
         <div
+          id="diamond-card-crypto"
           className={`neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden ${
             diamondDisabled ? "opacity-60 grayscale" : ""
           }`}
@@ -829,7 +914,10 @@ function SignupInner() {
         </div>
 
         {/* Diamond Member Tier - Cash App */}
-        <div className="neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden">
+        <div
+          id="diamond-card-cashapp"
+          className="neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden"
+        >
           {/* Diamond image positioned to right middle */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30">
             <img
@@ -1002,16 +1090,44 @@ function SignupInner() {
             </li>
           </ul>
 
+          {/* 14-day Free Trial (Member) */}
+          {isAuthed && membership === "FREE" && !trialUsed && (
+            <button
+              onClick={handleStartTrial}
+              disabled={trialLoading || waiting}
+              className="mt-6 w-full py-3 rounded-xl bg-white text-black font-semibold hover:opacity-90 transition text-center block disabled:opacity-50"
+            >
+              {trialLoading ? "Starting..." : "Start 14-Day Free Trial"}
+            </button>
+          )}
+
+          {isAuthed && membership === "FREE" && trialUsed && (
+            <div className="mt-6 w-full py-3 rounded-xl border border-white/10 bg-white/5 text-white/70 text-sm text-center">
+              Free trial already used on this account.
+            </div>
+          )}
+
+          {isOnTrial && (
+            <div className="mt-4 p-3 border border-white/10 bg-white/5 rounded-lg text-xs text-white/70">
+              <strong className="text-white/90">Trial active:</strong>{" "}
+              {trialDaysLeft ?? 14} days left.{" "}
+              <span className="text-white/55">Go Diamond to keep everything unlocked.</span>
+            </div>
+          )}
+
           <button
             disabled
-            className="mt-6 w-full py-3 rounded-xl bg-blue-500/10 border border-blue-400/30 text-blue-300/70 font-semibold cursor-not-allowed text-center block"
+            className="mt-4 w-full py-3 rounded-xl bg-blue-500/10 border border-blue-400/30 text-blue-300/70 font-semibold cursor-not-allowed text-center block"
           >
-            Coming soon...
+            Credit Card — Coming soon
           </button>
         </div>
 
         {/* Diamond Member Tier - Credit Card */}
-        <div className="neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden opacity-70">
+        <div
+          id="diamond-card-cc"
+          className="neon-border rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 flex flex-col relative overflow-hidden opacity-90"
+        >
           {/* Diamond image positioned to right middle */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-30">
             <img
@@ -1094,13 +1210,55 @@ function SignupInner() {
               <span className="text-yellow-400">&#10003;</span>
               <span className="text-yellow-400 font-semibold">Diamond Ladder rankings</span>
             </li>
+            <li className="flex items-center gap-2 text-white">
+              <span className="text-yellow-400">&#10003;</span>
+              <span className="text-yellow-400 font-semibold">Exclusive Diamond badge</span>
+            </li>
           </ul>
+
+          {/* Diamond positioning copy */}
+          <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-white">Diamond is where it opens up.</div>
+              <div className="text-sm text-white/65 mt-1">
+                Trial is a preview. Diamond is the full collection — uninterrupted.
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <span className="text-yellow-300 font-semibold">Everything unlocked</span>
+                <span className="text-white/55"> — the complete experience.</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <span className="text-yellow-300 font-semibold">Earn to Watch</span>
+                <span className="text-white/55"> — get rewarded for engagement.</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <span className="text-yellow-300 font-semibold">Diamond Ladder</span>
+                <span className="text-white/55"> — rise above the crowd.</span>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/80">
+                <span className="text-yellow-300 font-semibold">Premium priority</span>
+                <span className="text-white/55"> — the tier that gets the best.</span>
+              </div>
+            </div>
+
+            <div className="mt-4 text-center text-xs text-white/55">
+              Don&apos;t just browse… <span className="text-white/80 font-semibold">indulge</span>.
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-yellow-400/25 bg-yellow-400/5 p-4 text-xs text-yellow-100/80">
+            <strong className="text-yellow-200">Credit Card:</strong>{" "}
+            Coming soon. For now, Diamond is available via Crypto or Cash App.
+          </div>
 
           <button
             disabled
-            className="mt-6 w-full py-3 rounded-xl bg-yellow-500/10 border border-yellow-400/30 text-yellow-300/70 font-bold cursor-not-allowed shadow-none text-center block"
+            className="mt-6 w-full py-3 rounded-xl bg-yellow-500/10 border border-yellow-400/30 text-yellow-200/80 font-bold cursor-not-allowed text-center block"
           >
-            Coming soon...
+            Credit Card Diamond — Coming soon
           </button>
         </div>
 

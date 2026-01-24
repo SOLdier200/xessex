@@ -184,6 +184,22 @@ export default function ProfilePage() {
     txSigs: string[];
   } | null>(null);
 
+  // Logout state
+  const [logoutBusy, setLogoutBusy] = useState(false);
+
+  async function handleLogout() {
+    if (logoutBusy) return;
+    setLogoutBusy(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.dispatchEvent(new Event("auth-changed"));
+      router.push("/login");
+    } catch {
+      toast.error("Logout failed");
+      setLogoutBusy(false);
+    }
+  }
+
   useEffect(() => {
     fetch("/api/profile")
       .then((res) => res.json())
@@ -714,15 +730,37 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center py-2 border-b border-white/10">
                     <span className="text-white/60">Email</span>
-                    <span className="text-white">{data.email || "Not set"}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-white">{data.email || "Not set"}</span>
+                      {data.membership === "MEMBER" && data.email && (
+                        <button
+                          onClick={handleLogout}
+                          disabled={logoutBusy}
+                          className="px-3 py-1 text-xs rounded-lg bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition disabled:opacity-50"
+                        >
+                          {logoutBusy ? "..." : "Logout"}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {data.walletAddress && (
                     <div className="flex justify-between items-center py-2 border-b border-white/10">
                       <span className="text-white/60">Signed-in Wallet</span>
-                      <span className="text-white font-mono text-sm">
-                        {truncateWallet(data.walletAddress)}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-white font-mono text-sm">
+                          {truncateWallet(data.walletAddress)}
+                        </span>
+                        {data.membership === "DIAMOND" && (
+                          <button
+                            onClick={handleLogout}
+                            disabled={logoutBusy}
+                            className="px-3 py-1 text-xs rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-300 hover:bg-blue-500/30 transition disabled:opacity-50"
+                          >
+                            {logoutBusy ? "..." : "Logout"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 

@@ -23,7 +23,7 @@ type AuthData = {
 export default function WalletStatus() {
   const pathname = usePathname();
   const router = useRouter();
-  const { wallet, connected, disconnect } = useWallet();
+  const { wallet, publicKey, connected, disconnect } = useWallet();
   const [auth, setAuth] = useState<AuthData | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showFreeUserModal, setShowFreeUserModal] = useState(false);
@@ -94,8 +94,10 @@ export default function WalletStatus() {
     router.refresh();
   };
 
-  const shortAddress = auth?.authWallet
-    ? `${auth.authWallet.slice(0, 4)}...${auth.authWallet.slice(-4)}`
+  // Use authWallet from session, or connected wallet's publicKey as fallback
+  const walletAddress = auth?.authWallet || publicKey?.toBase58();
+  const shortAddress = walletAddress
+    ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
     : null;
 
   // Don't show anything while loading
@@ -182,7 +184,7 @@ export default function WalletStatus() {
     textColor = "text-sky-400";
     showImage = "diamond";
     title = "";
-    subtitle = shortAddress ?? "Diamond Member";
+    subtitle = shortAddress ?? "";
   }
 
   return (
@@ -202,10 +204,12 @@ export default function WalletStatus() {
               height={20}
               className="h-4 md:h-5 w-auto shrink-0"
             />
-            {/* Only show subtitle text on desktop */}
-            <div className={`hidden md:block text-xs font-mono truncate ${textColor}`}>
-              {subtitle}
-            </div>
+            {/* Only show subtitle text on desktop if there's content */}
+            {subtitle && (
+              <div className={`hidden md:block text-xs font-mono truncate ${textColor}`}>
+                {subtitle}
+              </div>
+            )}
           </>
         ) : (
           <>

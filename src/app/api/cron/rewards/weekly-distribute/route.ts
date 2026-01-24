@@ -545,23 +545,39 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] Scaling referrals to ${(Number(scale) / 10000).toFixed(2)}%`);
     }
 
-    let refCreated = 0;
+    // Aggregate referral rewards by referrer+type to avoid duplicate refId constraint violations
+    // When a referrer has multiple referred users who earn, we sum their referral rewards
+    const aggregatedRefRewards = new Map<string, { userId: string; walletAddress: string; amount: bigint; type: "REF_L1" | "REF_L2" | "REF_L3" }>();
+
     for (const r of referralOwed) {
       const scaled = (r.amount * scale) / 1_000_000n;
       if (scaled <= 0n) continue;
 
-      rewards.push({
-        userId: r.userId,
-        walletAddress: r.walletAddress,
-        amount: scaled,
-        type: r.type,
-      });
-      refCreated++;
+      const key = `${r.userId}:${r.type}`;
+      const existing = aggregatedRefRewards.get(key);
+
+      if (existing) {
+        existing.amount += scaled;
+      } else {
+        aggregatedRefRewards.set(key, {
+          userId: r.userId,
+          walletAddress: r.walletAddress,
+          amount: scaled,
+          type: r.type,
+        });
+      }
 
       const tierLabel = r.type;
       console.log(`  ${tierLabel}: ${r.userId.slice(0, 8)}... (from ${r.earnerId.slice(0, 8)}...) - ${formatXess(scaled)} XESS`);
     }
-    console.log(`[weekly-distribute] Created ${refCreated} referral rewards`);
+
+    // Add aggregated referral rewards to the rewards array
+    let refCreated = 0;
+    for (const [, reward] of aggregatedRefRewards) {
+      rewards.push(reward);
+      refCreated++;
+    }
+    console.log(`[weekly-distribute] Created ${refCreated} referral rewards (aggregated by referrer)`);
 
     // Aggregate rewards by user for summary
     const userRewards = new Map<string, { amount: bigint; wallet: string; types: Set<string> }>();
