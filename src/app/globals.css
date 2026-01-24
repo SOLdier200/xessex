@@ -30,28 +30,49 @@ a {
     0 0 10px var(--baby-pink),
     0 0 20px rgba(255, 182, 217, 0.4),
     0 0 30px rgba(255, 182, 217, 0.2);
-  animation: shimmer 1.5s ease-in-out infinite;
   position: relative;
   overflow: hidden;
 }
 
-.neon-border::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent 30%,
-    rgba(255, 182, 217, 0.1) 40%,
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 182, 217, 0.1) 60%,
-    transparent 70%
-  );
-  animation: glitter-sweep 8s linear infinite;
-  pointer-events: none;
+/* Desktop only: enable animations */
+@media (min-width: 769px) {
+  .neon-border {
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  .neon-border::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255, 182, 217, 0.1) 40%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 182, 217, 0.1) 60%,
+      transparent 70%
+    );
+    animation: glitter-sweep 8s linear infinite;
+    pointer-events: none;
+  }
+
+  .neon-border::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.8) 1px, transparent 1px),
+      radial-gradient(circle at 80% 20%, rgba(255, 182, 217, 0.9) 1px, transparent 1px),
+      radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.7) 1px, transparent 1px),
+      radial-gradient(circle at 90% 80%, rgba(255, 182, 217, 0.8) 1px, transparent 1px),
+      radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.6) 1px, transparent 1px),
+      radial-gradient(circle at 60% 10%, rgba(255, 182, 217, 0.7) 1px, transparent 1px);
+    animation: sparkle 2s ease-in-out infinite;
+    pointer-events: none;
+  }
 }
 
 @keyframes glitter-sweep {
@@ -82,23 +103,6 @@ a {
       0 0 30px rgba(255, 182, 217, 0.6),
       0 0 45px rgba(255, 182, 217, 0.3);
   }
-}
-
-
-/* Glitter particles effect */
-.neon-border::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.8) 1px, transparent 1px),
-    radial-gradient(circle at 80% 20%, rgba(255, 182, 217, 0.9) 1px, transparent 1px),
-    radial-gradient(circle at 40% 70%, rgba(255, 255, 255, 0.7) 1px, transparent 1px),
-    radial-gradient(circle at 90% 80%, rgba(255, 182, 217, 0.8) 1px, transparent 1px),
-    radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.6) 1px, transparent 1px),
-    radial-gradient(circle at 60% 10%, rgba(255, 182, 217, 0.7) 1px, transparent 1px);
-  animation: sparkle 2s ease-in-out infinite;
-  pointer-events: none;
 }
 
 @keyframes sparkle {

@@ -23,7 +23,7 @@ type AuthData = {
 export default function WalletStatus() {
   const pathname = usePathname();
   const router = useRouter();
-  const { wallet } = useWallet();
+  const { wallet, connected, disconnect } = useWallet();
   const [auth, setAuth] = useState<AuthData | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showFreeUserModal, setShowFreeUserModal] = useState(false);
@@ -32,6 +32,13 @@ export default function WalletStatus() {
 
   // Detect wallet adapter name for styling
   const walletName = wallet?.adapter?.name?.toLowerCase() ?? "";
+
+  // Auto-disconnect wallet if user is logged in as a Member (not Diamond)
+  useEffect(() => {
+    if (auth?.membership === "MEMBER" && connected) {
+      disconnect().catch(() => {});
+    }
+  }, [auth?.membership, connected, disconnect]);
 
   const fetchAuth = useCallback((delay = 0) => {
     const doFetch = () => {
@@ -195,7 +202,8 @@ export default function WalletStatus() {
               height={20}
               className="h-4 md:h-5 w-auto shrink-0"
             />
-            <div className={`text-[10px] md:text-xs font-mono truncate ${textColor}`}>
+            {/* Only show subtitle text on desktop */}
+            <div className={`hidden md:block text-xs font-mono truncate ${textColor}`}>
               {subtitle}
             </div>
           </>

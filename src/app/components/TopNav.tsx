@@ -27,8 +27,12 @@ export default function TopNav() {
 
   return (
     <header className="px-4 md:px-6 py-4 md:py-5 safe-top">
-      {/* Preload profile image so it's ready when user is logged in */}
-      <link rel="preload" href="/logos/textlogo/siteset3/profile100.png" as="image" />
+      {/* Preload images so they're ready when needed - hidden but forces browser to load */}
+      <div className="hidden">
+        <Image src="/logos/textlogo/siteset3/profile100.png" alt="" width={1} height={1} priority />
+        <Image src="/logos/textlogo/siteset3/diamond100.png" alt="" width={1} height={1} priority />
+        <Image src="/logos/textlogo/siteset3/member100.png" alt="" width={1} height={1} priority />
+      </div>
 
       {/* Desktop Layout */}
       <div className="hidden md:flex md:items-start md:justify-between gap-4">
@@ -48,7 +52,7 @@ export default function TopNav() {
             <WalletStatus />
           </div>
           {/* Signup and Login next to logo */}
-          <div className="flex flex-col gap-2 mt-[10px]">
+          <div className="flex items-center gap-3 mt-[10px]">
             <Link href="/signup" className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/signup5.png" alt="Sign Up" width={1230} height={238} priority className="h-[36px] w-auto" />
             </Link>
@@ -93,26 +97,23 @@ export default function TopNav() {
 
       {/* Mobile Layout */}
       <div className="md:hidden">
+        {/* Top row: Logo on left, hamburger on right */}
         <div className="flex items-start justify-between gap-3">
-          {/* Logo and WalletStatus stacked */}
-          <div className="flex flex-col items-start gap-2">
-            <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
-              <Image
-                src="/logos/mainsitelogo.png"
-                alt="Xessex"
-                width={285}
-                height={95}
-                className="h-[81px] w-auto"
-                priority
-              />
-            </Link>
-            <WalletStatus />
-          </div>
+          <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
+            <Image
+              src="/logos/mainsitelogo.png"
+              alt="Xessex"
+              width={285}
+              height={95}
+              className="h-[81px] w-auto"
+              priority
+            />
+          </Link>
 
           {/* Hamburger menu button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`flex flex-col justify-center items-center w-10 h-10 rounded-lg border-2 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-300 ${
+            className={`mt-3 flex flex-col justify-center items-center w-10 h-10 rounded-lg border-2 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-300 ${
               menuOpen ? "animate-none bg-pink-500/40" : "animate-pulse"
             }`}
             aria-label="Toggle menu"
@@ -135,10 +136,15 @@ export default function TopNav() {
           </button>
         </div>
 
-        {/* Mobile Dropdown Menu */}
+        {/* WalletStatus centered */}
+        <div className="flex justify-center mt-3">
+          <WalletStatus />
+        </div>
+
+        {/* Mobile Dropdown Menu - centered under WalletStatus */}
         <nav
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            menuOpen ? "max-h-[500px] opacity-100 mt-4" : "max-h-0 opacity-0"
+            menuOpen ? "max-h-[500px] opacity-100 mt-3" : "max-h-0 opacity-0"
           }`}
         >
           <div className="flex flex-col items-center gap-3 pb-2">

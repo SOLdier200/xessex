@@ -69,6 +69,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 alt="Diamond Login"
                 width={1536}
                 height={282}
+                priority
                 className="h-[40px] w-auto"
               />
             </button>
@@ -89,6 +90,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 alt="Member Login"
                 width={974}
                 height={286}
+                priority
                 className="h-[40px] w-auto"
               />
             </button>
