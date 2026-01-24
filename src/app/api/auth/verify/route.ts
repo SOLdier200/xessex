@@ -117,12 +117,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // Ensure 1:1 subscription row exists (helps NOWPayments upsert & access checks)
-    await db.subscription
-      .create({
-        data: { userId: user.id, tier: "MEMBER", status: "PENDING", expiresAt: null },
-      })
-      .catch(() => {});
+    // NOTE: Do NOT create a placeholder subscription here.
+    // Subscription is created ONLY when payment is confirmed or trial is started.
+    // Creating PENDING with null expiry was granting free access.
 
     // Create session using shared helper (TTL from env)
     const { token, expiresAt } = await createSession(user.id);

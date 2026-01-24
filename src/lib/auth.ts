@@ -72,9 +72,10 @@ export function hasSubscriptionAccess(
     return sub.expiresAt.getTime() > Date.now();
   }
 
-  // PENDING = payment in progress, grant provisional access
+  // PENDING = payment in progress, grant provisional access ONLY if expiry is set
+  // PENDING with null expiry is just a placeholder (no access yet)
   if (sub.status === "PENDING") {
-    if (!sub.expiresAt) return true;
+    if (!sub.expiresAt) return false; // placeholder subscription, no access
     return sub.expiresAt.getTime() > Date.now();
   }
 

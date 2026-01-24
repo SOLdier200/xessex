@@ -177,7 +177,7 @@ export default function WalletStatus() {
     textColor = "text-emerald-400";
     showImage = "member";
     title = "";
-    subtitle = auth?.email ?? "Member";
+    subtitle = "";
   } else if (isDiamond) {
     bgClass = "bg-gradient-to-r from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30";
     borderClass = "border-sky-400/50";

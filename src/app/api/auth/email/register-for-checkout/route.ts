@@ -81,23 +81,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "USER_CREATE_FAILED" }, { status: 500 });
   }
 
-  // Ensure subscription row exists (1:1) - tier will be set by billing start route
-  // Use findUnique + create to avoid race conditions and never swallow errors
-  const existingSub = await db.subscription.findUnique({
-    where: { userId: user.id },
-  });
-
-  if (!existingSub) {
-    await db.subscription.create({
-      data: {
-        userId: user.id,
-        tier: "MEMBER", // placeholder; start route will set proper tier
-        status: "PENDING",
-        expiresAt: null,
-        paymentMethod: "CRYPTO",
-      },
-    });
-  }
+  // NOTE: Do NOT create a placeholder subscription here.
+  // Subscription is created ONLY when:
+  // 1. Payment is confirmed (ACTIVE via billing/IPN routes)
+  // 2. Trial is started (TRIAL via /api/trial/start)
+  // Creating a PENDING subscription with no expiry was granting free access.
 
   // Create session + set cookie
   const { token, expiresAt } = await createSession(user.id);

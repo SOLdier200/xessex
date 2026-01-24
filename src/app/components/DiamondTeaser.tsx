@@ -60,7 +60,7 @@ export default function DiamondTeaser() {
           </p>
         </div>
         <Link
-          href="/signup"
+          href="/diamond"
           className="px-5 py-2 rounded-lg bg-gradient-to-r from-yellow-500/20 to-purple-500/20 border border-yellow-400/50 text-yellow-300 font-semibold hover:from-yellow-500/30 hover:to-purple-500/30 transition whitespace-nowrap"
         >
           Learn More
