@@ -59,3 +59,4 @@ devnet-id.json
 backups/
 deploy.sh
 ecosystem.config.cjs
+scripts/
