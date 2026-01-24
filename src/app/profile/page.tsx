@@ -7,6 +7,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import RewardsTab from "../components/RewardsTab";
+import RecoveryEmailSection from "@/components/RecoveryEmailSection";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync,
@@ -31,6 +32,9 @@ type ProfileData = {
   email: string | null;
   walletAddress: string | null;
   solWallet: string | null;
+  recoveryEmail: string | null;
+  recoveryEmailVerified: boolean;
+  memberId: string | null;
   membership: "FREE" | "MEMBER" | "DIAMOND";
   sub: {
     tier: string;
@@ -767,7 +771,35 @@ export default function ProfilePage() {
                       </button>
                     </div>
                   )}
+
+                  {/* Member ID */}
+                  {data.memberId && (
+                    <div className="flex justify-between items-center py-2 border-t border-white/10">
+                      <span className="text-white/60">Member ID</span>
+                      <span className="text-white font-mono text-sm">
+                        {data.memberId.slice(0, 8)}...
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Recovery Email Section - Diamond only */}
+                {isDiamond && (
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <RecoveryEmailSection
+                      currentEmail={data.recoveryEmail}
+                      isVerified={data.recoveryEmailVerified}
+                      onUpdated={() => {
+                        // Refresh profile data
+                        fetch("/api/profile")
+                          .then((res) => res.json())
+                          .then((json) => {
+                            if (json.ok) setData(json);
+                          });
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Membership Card */}

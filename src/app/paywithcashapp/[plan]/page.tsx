@@ -27,6 +27,7 @@ export default function CashAppPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [hasWallet, setHasWallet] = useState(false);
 
   // Signup modal state
   const [signupOpen, setSignupOpen] = useState(false);
@@ -51,8 +52,10 @@ export default function CashAppPaymentPage() {
       const res = await fetch("/api/auth/me", { cache: "no-store" });
       const data = await res.json();
       setIsAuthed(data?.ok && data?.authed);
+      setHasWallet(!!data?.user?.walletAddress);
     } catch {
       setIsAuthed(false);
+      setHasWallet(false);
     } finally {
       setCheckingAuth(false);
     }
@@ -277,6 +280,34 @@ export default function CashAppPaymentPage() {
 
           {checkingAuth ? (
             <div className="text-center py-10 text-white/50">Checking account...</div>
+          ) : plan.tier === "Diamond" && isAuthed && !hasWallet ? (
+            <div className="neon-border rounded-2xl p-6 bg-black/30 border-blue-400/50">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-400/50 flex items-center justify-center mx-auto mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Wallet Required for Diamond</h2>
+                <p className="text-white/70 mb-6">
+                  Diamond membership requires a connected wallet to receive XESS rewards and access exclusive features.
+                </p>
+                <Link
+                  href="/login/diamond"
+                  className="inline-block w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:from-blue-500 hover:to-cyan-400 transition text-center"
+                >
+                  Connect Wallet
+                </Link>
+                <p className="mt-4 text-xs text-white/50">
+                  Already have a wallet connected?{" "}
+                  <button onClick={checkAuth} className="text-blue-400 hover:underline">
+                    Refresh status
+                  </button>
+                </p>
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Payer Handle */}

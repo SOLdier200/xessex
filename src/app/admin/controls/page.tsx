@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import SystemActionsPanel from "./SystemActionsPanel";
 import ManualPaymentsPanel from "./ManualPaymentsPanel";
+import HonestModeratorsPanel from "./HonestModeratorsPanel";
 import PendingManualBadge from "../../components/PendingManualBadge";
 
 export default function AdminControlsPage() {
@@ -171,6 +172,25 @@ export default function AdminControlsPage() {
             Jump to Payments
           </a>
         </div>
+
+        {/* Honest Moderators Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-rose-500/20 border border-rose-400/50 flex items-center justify-center">
+              <span className="text-2xl">🔍</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Honest Moderators</h2>
+              <p className="text-sm text-white/60">Flag biased mod voting patterns</p>
+            </div>
+          </div>
+          <a
+            href="#honest-moderators"
+            className="block w-full px-4 py-3 rounded-xl border border-rose-400/50 bg-rose-500/20 text-rose-300 font-semibold hover:bg-rose-500/30 transition text-center"
+          >
+            Review Flags
+          </a>
+        </div>
       </div>
 
       {/* Site Stats Panel */}
@@ -194,6 +214,10 @@ export default function AdminControlsPage() {
 
       <div className="mt-8">
         <ManualPaymentsPanel />
+      </div>
+
+      <div className="mt-8">
+        <HonestModeratorsPanel />
       </div>
 
       <SystemActionsPanel />

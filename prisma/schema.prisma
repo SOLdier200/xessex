@@ -10,20 +10,23 @@ datasource db {
 }
 
 model User {
-  id                   String                   @id @default(cuid())
-  walletAddress        String?                  @unique
-  role                 UserRole                 @default(USER)
-  createdAt            DateTime                 @default(now())
-  email                String?                  @unique
-  passHash             String?
-  solWallet            String?                  @unique
-  solWalletLinkedAt    DateTime?
-  welcomeEmailSentAt   DateTime?
-  supabaseId           String?                  @unique
-  mvmPoints            Int                      @default(0)
-  referralCode         String?                  @unique
-  referredAt           DateTime?
-  referredById         String?
+  id                       String                   @id @default(cuid())
+  memberId                 String                   @unique @default(cuid())
+  walletAddress            String?                  @unique
+  role                     UserRole                 @default(USER)
+  createdAt                DateTime                 @default(now())
+  email                    String?                  @unique
+  passHash                 String?
+  solWallet                String?                  @unique
+  solWalletLinkedAt        DateTime?
+  welcomeEmailSentAt       DateTime?
+  supabaseId               String?                  @unique
+  mvmPoints                Int                      @default(0)
+  referralCode             String?                  @unique
+  referredAt               DateTime?
+  referredById             String?
+  recoveryEmail            String?                  @unique
+  recoveryEmailVerifiedAt  DateTime?
   allTimeStat          AllTimeUserStat?
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
@@ -49,6 +52,7 @@ model User {
   walletLinkChallenges WalletLinkChallenge[]
   weeklyStats          WeeklyUserStat[]
   weeklyVoterStats     WeeklyVoterStat[]
+  diamondTokens        DiamondToken[]
 
   // Rewards Drawing & Special Credits relations
   walletSnapshots      WalletBalanceSnapshot[]
@@ -582,6 +586,29 @@ enum ClaimStatus {
 
 enum ManualPayMethod {
   CASHAPP
+}
+
+enum DiamondTokenKind {
+  VERIFY_EMAIL
+  RESTORE
+}
+
+model DiamondToken {
+  id        String           @id @default(cuid())
+  userId    String
+  kind      DiamondTokenKind
+  tokenHash String           @unique
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  requestIp String?
+  requestUa String?
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@index([expiresAt])
 }
 
 enum ManualPayStatus {

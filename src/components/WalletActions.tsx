@@ -38,6 +38,7 @@ function short(addr?: string | null) {
 
 type WalletActionsProps = {
   showWalletSignIn?: boolean;
+  showLinkWallet?: boolean;
   // Allow different linking endpoints (payout vs auth-wallet)
   linkChallengeUrl?: string;
   linkVerifyUrl?: string;
@@ -49,6 +50,7 @@ type WalletActionsProps = {
 
 export default function WalletActions({
   showWalletSignIn = true,
+  showLinkWallet = true,
   linkChallengeUrl = "/api/auth/wallet-link/challenge",
   linkVerifyUrl = "/api/auth/wallet-link/verify",
   linkHref = "/link-wallet",
@@ -99,6 +101,26 @@ export default function WalletActions({
     window.addEventListener("auth-changed", onAuth);
     return () => window.removeEventListener("auth-changed", onAuth);
   }, []);
+
+  // Detect wallet mismatch: if logged in with a wallet and connected wallet is different
+  useEffect(() => {
+    if (!meLoaded || !meData?.user || !pk) return;
+
+    const authWallet = meData.authWallet;
+    const payoutWallet = meData.payoutWallet;
+
+    // If user has an auth wallet and connected wallet doesn't match, show warning
+    if (authWallet && authWallet !== pk && payoutWallet !== pk) {
+      setNeedLinkWallet(pk);
+      setStatus("Connected wallet doesn't match your signed-in account.");
+    } else {
+      // Clear the warning if wallets now match
+      if (needLinkWallet && (authWallet === pk || payoutWallet === pk)) {
+        setNeedLinkWallet(null);
+        setStatus("");
+      }
+    }
+  }, [meLoaded, meData, pk, needLinkWallet]);
 
   const openInPhantom = () => {
     if (typeof window === "undefined") return;
@@ -270,16 +292,21 @@ export default function WalletActions({
       ) : (
         <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-white/70">Connected wallet</div>
+            <div className="text-sm text-white/70">Connected Wallet/Account</div>
             <div className="font-mono text-sm text-white">{short(pk)}</div>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button
-              onClick={() => wallet.disconnect()}
+              onClick={async () => {
+                await wallet.disconnect();
+                await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+                window.dispatchEvent(new Event("auth-changed"));
+                await refreshMe();
+              }}
               className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/70 hover:bg-white/20 hover:text-white transition"
             >
-              Disconnect
+              Disconnect/Sign-Out
             </button>
 
             {/* If NOT signed in, allow wallet sign-in */}
@@ -297,7 +324,7 @@ export default function WalletActions({
               <div className="px-3 py-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 text-sm font-semibold">
                 Linked to your account
               </div>
-            ) : (
+            ) : showLinkWallet ? (
               <button
                 onClick={linkWalletToAccount}
                 disabled={busy === "signin" || busy === "link"}
@@ -305,30 +332,35 @@ export default function WalletActions({
               >
                 {busy === "link" ? "Linking…" : "Link wallet to this account"}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       )}
 
-      {/* Guided 409 case */}
+      {/* Wallet mismatch warning */}
       {needLinkWallet && (
-        <div className="rounded-2xl border border-yellow-400/40 bg-yellow-400/10 p-4">
-          <div className="font-semibold text-yellow-200">Wallet not linked to this account</div>
+        <div className="rounded-2xl border border-red-400/50 bg-red-500/10 p-4">
+          <div className="font-semibold text-red-300">Wrong wallet connected</div>
           <div className="mt-1 text-sm text-white/70">
-            Wallet <span className="font-mono text-white">{needLinkWallet}</span> is connected, but your current session is a different account.
+            You&apos;re signed in with a different wallet. Connected: <span className="font-mono text-white">{needLinkWallet?.slice(0, 4)}...{needLinkWallet?.slice(-4)}</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <a
-              href={linkHref}
-              className="rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black hover:bg-yellow-300"
-            >
-              Link this wallet
-            </a>
             <button
-              onClick={switchAccount}
+              onClick={async () => {
+                await switchAccount();
+                // After logout, sign in with the connected wallet
+                setTimeout(() => signInWithWallet(), 500);
+              }}
+              disabled={busy === "signin"}
+              className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400 disabled:opacity-50"
+            >
+              {busy === "signin" ? "Signing in..." : "Sign in with connected wallet"}
+            </button>
+            <button
+              onClick={() => wallet.disconnect()}
               className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/80 hover:bg-white/20"
             >
-              Switch account (log out)
+              Disconnect wallet
             </button>
           </div>
         </div>

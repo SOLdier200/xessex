@@ -163,6 +163,12 @@ function SignupInner() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.ok || !data?.redirectUrl) {
+        // Handle Diamond wallet requirement
+        if (data?.error === "DIAMOND_REQUIRES_WALLET") {
+          toast.error("Diamond membership requires a connected wallet");
+          setWalletDownloadOpen(true);
+          return false;
+        }
         toast.error("Payment start failed. Please try again.");
         return false;
       }
@@ -1475,7 +1481,7 @@ function SignupInner() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-white font-semibold text-lg">Sign up with Email</h3>
+                    <h3 className="text-white font-semibold text-lg">Member sign up with Email</h3>
                     <p className="text-white/60 text-sm mt-1">
                       Great choice for users who just want a basic membership to view all content, comments, and more.
                     </p>
@@ -1500,9 +1506,9 @@ function SignupInner() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-yellow-300 font-semibold text-lg">Create account with Wallet</h3>
+                    <h3 className="text-yellow-300 font-semibold text-lg">Diamond Member create your account with Wallet</h3>
                     <p className="text-white/60 text-sm mt-1">
-                      The best choice if you plan on being a Diamond Member and interacting with crypto on the site, earning Xess Coin for viewing and rating videos.
+                      Interact with crypto on the site and earn Xess Coin for viewing and rating videos.
                     </p>
                     <p className="text-yellow-400/70 text-xs mt-2">
                       Wallet sign-in creates your account automatically.
@@ -1553,10 +1559,27 @@ function SignupInner() {
               </svg>
             </button>
 
-            <h2 className="text-xl font-semibold text-white mb-2 text-center">Download a Solana Wallet</h2>
-            <p className="text-sm text-white/60 mb-6 text-center">
-              Choose your preferred wallet to get started
+            <h2 className="text-xl font-semibold text-white mb-2 text-center">Wallet Required for Diamond</h2>
+            <p className="text-sm text-white/60 mb-4 text-center">
+              Diamond membership requires a connected wallet to receive XESS rewards and access exclusive features.
             </p>
+
+            {/* Connect Wallet Button */}
+            <Link
+              href="/login/diamond"
+              className="flex items-center justify-center gap-2 w-full py-3 mb-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:from-blue-500 hover:to-cyan-400 transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Connect Wallet
+            </Link>
+
+            <div className="text-center text-xs text-white/40 mb-4">
+              Don&apos;t have a wallet? Download one below:
+            </div>
 
             <div className="space-y-3">
               {/* Phantom */}

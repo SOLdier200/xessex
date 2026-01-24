@@ -66,6 +66,9 @@ export async function GET() {
     email: user.email ?? null,
     walletAddress: user.walletAddress ?? null,
     solWallet: user.solWallet ?? null,
+    recoveryEmail: user.recoveryEmail ?? null,
+    recoveryEmailVerified: !!user.recoveryEmailVerifiedAt,
+    memberId: user.memberId ?? null,
     membership,
     sub: sub
       ? {

@@ -6,57 +6,36 @@ import {
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import {
-  createMint,
-  getOrCreateAssociatedTokenAccount,
-  mintTo,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import pkg from "@metaplex-foundation/mpl-token-metadata";
-const { createCreateMetadataAccountV3Instruction } = pkg;
+  createCreateMetadataAccountV3Instruction,
+} from "@metaplex-foundation/mpl-token-metadata";
 import fs from "fs";
 
-// Payer: Solana CLI keypair
+// Load your MAINNET Solana CLI keypair
 const payer = Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
-      fs.readFileSync(`${process.env.HOME}/.config/solana/mainnet-id.json`, "utf8")
+      fs.readFileSync(
+        `${process.env.HOME}/.config/solana/mainnet-id.json`,
+        "utf8"
+      )
     )
   )
 );
 
+// Mainnet RPC
 const connection = new Connection("https://api.mainnet-beta.solana.com");
 
+// Token Metadata Program
 const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
+// Your existing mainnet mint
+const MINT_ADDRESS = "HvfmE1stqxvBfUXtKX4L4w3BeMMjcDM48Qh6ZfGtgrpE";
+const mint = new PublicKey(MINT_ADDRESS);
+
 (async () => {
-  const mint = await createMint(
-    connection,
-    payer,
-    payer.publicKey,
-    payer.publicKey,
-    9,
-    undefined,
-    undefined,
-    TOKEN_PROGRAM_ID
-  );
-
-  console.log("Mint:", mint.toBase58());
-
-  const ata = await getOrCreateAssociatedTokenAccount(
-    connection,
-    payer,
-    mint,
-    payer.publicKey
-  );
-
-  const totalSupply = 1_000_000_000n * 10n ** 9n;
-
-  await mintTo(connection, payer, mint, ata.address, payer, totalSupply);
-
-  console.log("Minted supply:", totalSupply.toString());
-
+  // Derive metadata PDA
   const [metadataPda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("metadata"),
@@ -66,7 +45,7 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
     TOKEN_METADATA_PROGRAM_ID
   );
 
-  const metadataIx = createCreateMetadataAccountV3Instruction(
+  const ix = createCreateMetadataAccountV3Instruction(
     {
       metadata: metadataPda,
       mint,
@@ -91,9 +70,8 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
     }
   );
 
-  const tx = new Transaction().add(metadataIx);
+  const tx = new Transaction().add(ix);
   const sig = await sendAndConfirmTransaction(connection, tx, [payer]);
 
-  console.log("Metadata tx:", sig);
-  console.log("Authorities NOT revoked. Review everything before locking.");
+  console.log("Metadata created. Tx:", sig);
 })();

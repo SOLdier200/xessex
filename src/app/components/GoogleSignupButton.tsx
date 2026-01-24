@@ -25,8 +25,8 @@ export default function GoogleSignupButton({
       const authed = !!data?.authed && !!data?.user;
       const provider =
         typeof data?.authProvider === "string" ? data.authProvider : null;
-      const hasEmail = !!(data?.user?.email || data?.email);
-      setAuthDisabled(authed && hasEmail);
+      // Disable for all authenticated users, not just those with email
+      setAuthDisabled(authed);
       setAuthProvider(provider);
     } catch {
       setAuthDisabled(false);
@@ -113,7 +113,7 @@ export default function GoogleSignupButton({
         hover:bg-gray-100 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <img src="/google.svg" alt="Google" className="w-5 h-5" />
-      {busy ? "Redirecting..." : authProvider === "google" && authDisabled ? "Signed in" : label}
+      {busy ? "Redirecting..." : authDisabled ? "Already signed in" : label}
     </button>
   );
 }

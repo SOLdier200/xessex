@@ -144,7 +144,7 @@ export default function EmailLoginBox() {
     }
   }
 
-  const displayName = me?.email || "Member";
+  const displayName = me?.email || prettyMembership(me?.role || "FREE");
   const showLoggedIn = !!me && meLoaded;
 
   return (
@@ -187,8 +187,14 @@ export default function EmailLoginBox() {
 
           <div className="rounded-xl border border-white/10 bg-black/40 px-4 py-3">
             <div className="text-sm text-white/60">Logged in as</div>
-            <div className="text-lg font-semibold text-white">{displayName}</div>
-            <div className="mt-1 text-xs text-white/60">{prettyMembership(me.role)}</div>
+            {me?.email ? (
+              <>
+                <div className="text-lg font-semibold text-white">{me.email}</div>
+                <div className="mt-1 text-xs text-white/60">{prettyMembership(me.role)}</div>
+              </>
+            ) : (
+              <div className="text-lg font-semibold text-white">{prettyMembership(me.role)}</div>
+            )}
           </div>
 
           <button

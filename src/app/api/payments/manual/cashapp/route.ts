@@ -32,6 +32,11 @@ export async function POST(req: Request) {
 
   const plan = MANUAL_PLANS[planCode];
 
+  // Diamond requires wallet to be linked before payment
+  if (plan.requestedTier === "DIAMOND" && !ctx.user.walletAddress) {
+    return NextResponse.json({ ok: false, error: "DIAMOND_REQUIRES_WALLET" }, { status: 400 });
+  }
+
   // Unique verify code (try a few times)
   let verifyCode = makeVerifyCode();
   for (let i = 0; i < 5; i++) {
