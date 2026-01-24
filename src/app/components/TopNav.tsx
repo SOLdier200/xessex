@@ -36,36 +36,30 @@ export default function TopNav() {
 
       {/* Desktop Layout */}
       <div className="hidden md:flex md:items-start md:justify-between gap-4">
-        {/* Left side: Logo, WalletStatus, and Signup/Login close together */}
-        <div className="flex items-start gap-4">
-          <div className="flex flex-col items-start gap-2 shrink-0">
-            <Link href="/" title="Click for homepage">
-              <Image
-                src="/logos/mainsitelogo.png"
-                alt="Xessex"
-                width={285}
-                height={95}
-                className="h-[155px] w-auto"
-                priority
-              />
-            </Link>
-            <WalletStatus />
-          </div>
-          {/* Signup and Login next to logo */}
-          <div className="flex items-center gap-3 mt-[10px]">
+        {/* Left side: Logo */}
+        <div className="shrink-0">
+          <Link href="/" title="Click for homepage">
+            <Image
+              src="/logos/mainsitelogo.png"
+              alt="Xessex"
+              width={285}
+              height={95}
+              className="h-[155px] w-auto"
+              priority
+            />
+          </Link>
+        </div>
+
+        {/* Right side: All nav links in one row with WalletStatus between Login and Collections */}
+        <div className="flex flex-col items-end gap-2 mt-[10px]">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Link href="/signup" className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/signup5.png" alt="Sign Up" width={1230} height={238} priority className="h-[36px] w-auto" />
             </Link>
             <Link href="/login" className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/login100.png" alt="Login" width={982} height={247} priority className="h-[36px] w-auto" />
             </Link>
-          </div>
-        </div>
-
-        {/* Right side: Other nav links and Admin */}
-        <div className="flex flex-col items-end gap-2 mt-[10px]">
-          {/* Other nav image links in one row */}
-          <div className="flex flex-wrap items-center justify-end gap-3">
+            <WalletStatus />
             <Link href="/collections" className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority className="h-[36px] w-auto" />
             </Link>

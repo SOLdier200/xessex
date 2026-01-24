@@ -88,7 +88,7 @@ export default async function HomePage() {
             <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[32px] w-auto" />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
             {videos.slice(0, 20).map((v) => {
               const isShowcase = showcaseSlugs.includes(v.viewkey);
               const isLocked = !canViewPremium && !isShowcase;

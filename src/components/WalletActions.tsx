@@ -16,6 +16,7 @@ type MeData = {
   authWallet: string | null;
   payoutWallet: string | null;
   needsAuthWalletLink: boolean;
+  membership: "DIAMOND" | "MEMBER" | "FREE" | null;
 };
 
 function detectPlatform() {
@@ -86,6 +87,7 @@ export default function WalletActions({
           authWallet: d.authWallet ?? null,
           payoutWallet: d.payoutWallet ?? null,
           needsAuthWalletLink: d.needsAuthWalletLink ?? false,
+          membership: d.membership ?? null,
         });
       } else {
         setMeData(null);
@@ -265,30 +267,49 @@ export default function WalletActions({
         </div>
       )}
 
-      {/* Always show connect */}
+      {/* Show logout button if Member is signed in, otherwise show wallet connect */}
       {!wallet.connected ? (
-        <>
+        meData?.membership === "MEMBER" ? (
+          // Member is signed in - need to log out first before connecting wallet
           <button
-            onClick={() => setVisible(true)}
-            className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
+            onClick={async () => {
+              setStatus("Logging out...");
+              await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+              window.dispatchEvent(new Event("auth-changed"));
+              await refreshMe();
+              setStatus("");
+            }}
+            className="w-full py-3 px-6 rounded-full font-semibold text-white transition bg-gradient-to-r from-red-500 to-pink-500 border-2 border-red-400"
             style={{
-              background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
-              border: "2px solid #FF1493",
               boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
             }}
           >
-            Select Wallet
+            Log out of Email Account
           </button>
-
-          {(p.isIos || p.isAndroid) && (
+        ) : (
+          <>
             <button
-              onClick={openInPhantom}
-              className="w-full py-3 px-6 rounded-xl font-semibold text-white/90 transition border border-white/20 bg-white/10 hover:bg-white/15"
+              onClick={() => setVisible(true)}
+              className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
+              style={{
+                background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
+                border: "2px solid #FF1493",
+                boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
+              }}
             >
-              Open in Phantom
+              Select Wallet
             </button>
-          )}
-        </>
+
+            {(p.isIos || p.isAndroid) && (
+              <button
+                onClick={openInPhantom}
+                className="w-full py-3 px-6 rounded-xl font-semibold text-white/90 transition border border-white/20 bg-white/10 hover:bg-white/15"
+              >
+                Open in Phantom
+              </button>
+            )}
+          </>
+        )
       ) : (
         <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
           <div className="flex items-center justify-between">
