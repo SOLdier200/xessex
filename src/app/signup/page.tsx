@@ -480,8 +480,8 @@ function SignupInner() {
         </div>
       )}
 
-      <div className="text-center mb-8">
-        <Image src="/logos/textlogo/siteset3/memberselect100.png" alt="Select Membership" width={938} height={276} className="h-[128px] w-auto mx-auto" />
+      <div className="text-center mb-8 -mt-5">
+        <Image src="/logos/textlogo/siteset3/memberselect100.png" alt="Select Membership" width={938} height={276} className="h-[109px] w-auto mx-auto" />
 
         {/* Payment Method Tabs */}
         <div className="flex justify-center mt-6">

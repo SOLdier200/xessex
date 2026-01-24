@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -10,6 +12,16 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch("/api/me/is-admin")
+        .then((res) => res.json())
+        .then((data) => setIsAdmin(data.isAdmin))
+        .catch(() => setIsAdmin(false));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -95,6 +107,23 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               />
             </button>
           </div>
+
+          {/* Admin - Only visible for admin wallets */}
+          {isAdmin && (
+            <div className="pt-4 border-t border-white/10">
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="w-full py-3 px-6 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                Admin Panel
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 

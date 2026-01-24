@@ -5,20 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import WalletStatus from "./WalletStatus";
 import XessTokenModal from "./XessTokenModal";
-import PendingManualBadge from "./PendingManualBadge";
 
 export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showXessTokenModal, setShowXessTokenModal] = useState(false);
 
   useEffect(() => {
-    fetch("/api/me/is-admin")
-      .then((res) => res.json())
-      .then((data) => setIsAdmin(data.isAdmin))
-      .catch(() => setIsAdmin(false));
-
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => setIsLoggedIn(data.ok && data.authed))
@@ -77,15 +70,6 @@ export default function TopNav() {
           </div>
 
           {/* Admin button (if applicable) */}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="inline-flex items-center rounded-full border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-purple-300/70 hover:bg-purple-500/20"
-            >
-              Admin
-              <PendingManualBadge />
-            </Link>
-          )}
         </div>
       </div>
 
@@ -166,16 +150,6 @@ export default function TopNav() {
             {isLoggedIn && (
               <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
                 <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[32px] w-auto" />
-              </Link>
-            )}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={() => setMenuOpen(false)}
-                className="inline-flex items-center rounded-full border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-white transition"
-              >
-                Admin
-                <PendingManualBadge />
               </Link>
             )}
           </div>

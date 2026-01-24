@@ -236,7 +236,7 @@ export default async function HomePage() {
         </section>
 
         {/* Featured & Top Ranked Videos */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-[80%] mx-auto">
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (() => {
             const featured = videos[0];

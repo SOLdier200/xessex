@@ -206,7 +206,7 @@ export default function RewardsDrawingPage() {
     <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="mb-6">
         <Link href="/" className="inline-block mb-4">
-          <Image src="/logos/mainsitelogo.png" alt="Xessex" width={285} height={95} className="h-[60px] w-auto" />
+          <Image src="/logos/mainsitelogo.png" alt="Xessex" width={285} height={95} className="h-[180px] w-auto" />
         </Link>
         <Image src="/logos/textlogo/siteset3/weeklyrew100.png" alt="Weekly Rewards Drawing" width={938} height={276} className="h-[133px] w-auto" />
         <div className="mt-2 text-white/60">
