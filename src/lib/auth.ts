@@ -39,19 +39,27 @@ export function isSubscriptionActive(
   if (!sub) return false;
 
   // ACTIVE = fully paid membership
-  // PENDING = payment initiated (NOWPayments) but we may allow instant access window
-  // PARTIAL = manual/provisional access (e.g., Cash App) that MUST have an expiresAt
-  const statusOk =
-    sub.status === "ACTIVE" ||
-    sub.status === "PENDING" ||
-    sub.status === "PARTIAL";
+  // PENDING = payment initiated (NOWPayments) or grace window
+  // PARTIAL = manual/provisional access (must expire)
+  if (sub.status === "ACTIVE") {
+    // lifetime allowed only for ACTIVE
+    if (!sub.expiresAt) return true;
+    return sub.expiresAt.getTime() > Date.now();
+  }
 
-  if (!statusOk) return false;
+  if (sub.status === "PENDING") {
+    // allow PENDING to be treated as active even if expiresAt is null
+    if (!sub.expiresAt) return true;
+    return sub.expiresAt.getTime() > Date.now();
+  }
 
-  // Keep lifetime semantics ONLY for ACTIVE (prevents "lifetime provisional")
-  if (!sub.expiresAt) return sub.status === "ACTIVE";
+  if (sub.status === "PARTIAL") {
+    // PARTIAL must have expiresAt
+    if (!sub.expiresAt) return false;
+    return sub.expiresAt.getTime() > Date.now();
+  }
 
-  return sub.expiresAt.getTime() > Date.now();
+  return false;
 }
 
 export async function requireUser() {

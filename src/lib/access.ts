@@ -41,8 +41,8 @@ export async function getAccessContext() {
   const hasPayoutWallet = !!user?.solWallet;
   const hasAnyWallet = hasAuthWallet || hasPayoutWallet;
 
-  // Diamond policy: must have an auth wallet to use Diamond-only features
-  // This allows email users to buy Diamond, but they must link wallet to use features
+  // Diamond policy: Diamond accounts are wallet-based, not email-based
+  // Email is optional (for recovery only). Wallet is required for Diamond features.
   const diamondReady = tier === "diamond" && hasAuthWallet;
 
   // Prompt flags for UI

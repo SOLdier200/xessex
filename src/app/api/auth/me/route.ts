@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const access = await getAccessContext();
@@ -46,14 +48,13 @@ export async function GET() {
   const effectivePayoutWallet = payoutWallet ?? authWallet; // actual destination
 
   // ─────────────────────────────────────────────────────────────
-  // FLAGS (correct logic, no "always false" confusion)
+  // FLAGS (only Diamond users need wallet linking)
   // ─────────────────────────────────────────────────────────────
-  // Auth wallet needed if: user is authed AND has no auth wallet set
-  const needsAuthWalletLink = !authWallet;
+  // Auth wallet needed only for Diamond tier (wallet is Diamond-only requirement)
+  const needsAuthWalletLink = access.tier === "diamond" && !authWallet;
 
-  // Payout wallet is optional - defaults to auth wallet if not set
-  // Show prompt only if user has no effective payout destination
-  const needsPayoutWalletLink = !effectivePayoutWallet;
+  // Payout wallet prompt only for Diamond without any payout destination
+  const needsPayoutWalletLink = access.tier === "diamond" && !effectivePayoutWallet;
 
   // Legacy compat
   const needsSolWalletLink = needsAuthWalletLink;
