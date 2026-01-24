@@ -27,47 +27,92 @@ export default function TopNav() {
 
   return (
     <header className="px-4 md:px-6 py-4 md:py-5 safe-top">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
-          <Image
-            src="/logos/mainsitelogo.png"
-            alt="Xessex"
-            width={285}
-            height={95}
-            className="h-[81px] md:h-[155px] w-auto"
-            priority
-          />
-        </Link>
+      {/* Preload profile image so it's ready when user is logged in */}
+      <link rel="preload" href="/logos/textlogo/siteset3/profile100.png" as="image" />
 
-        {/* Right side - Wallet Status, Xess Token, Profile and Admin */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <WalletStatus />
-          <button
-            onClick={() => setShowXessTokenModal(true)}
-            className="hidden md:inline-flex items-center rounded-full border border-amber-400/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:border-amber-300/70 hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
-          >
-            Xess Token
-          </button>
-          {isLoggedIn && (
-            <Link
-              href="/profile"
-              className="hidden md:inline-flex items-center rounded-full border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-sky-300/70 hover:bg-sky-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
-            >
-              Profile
+      {/* Desktop Layout */}
+      <div className="hidden md:flex md:items-start md:justify-between gap-4">
+        {/* Left side: Logo, WalletStatus, and Signup/Login close together */}
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col items-start gap-2 shrink-0">
+            <Link href="/" title="Click for homepage">
+              <Image
+                src="/logos/mainsitelogo.png"
+                alt="Xessex"
+                width={285}
+                height={95}
+                className="h-[155px] w-auto"
+                priority
+              />
             </Link>
-          )}
+            <WalletStatus />
+          </div>
+          {/* Signup and Login next to logo */}
+          <div className="flex flex-col gap-2 mt-[10px]">
+            <Link href="/signup" className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/signup5.png" alt="Sign Up" width={1230} height={238} priority className="h-[36px] w-auto" />
+            </Link>
+            <Link href="/login" className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/login100.png" alt="Login" width={982} height={247} priority className="h-[36px] w-auto" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Right side: Other nav links and Admin */}
+        <div className="flex flex-col items-end gap-2 mt-[10px]">
+          {/* Other nav image links in one row */}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Link href="/collections" className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority className="h-[36px] w-auto" />
+            </Link>
+            <Link href="/leaderboard" className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority className="h-[40px] w-auto" />
+            </Link>
+            <button onClick={() => setShowXessTokenModal(true)} className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[36px] w-auto" />
+            </button>
+            {isLoggedIn && (
+              <Link href="/profile" className="hover:opacity-80 transition">
+                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[36px] w-auto" />
+              </Link>
+            )}
+          </div>
+
+          {/* Admin button (if applicable) */}
           {isAdmin && (
             <Link
               href="/admin"
-              className="hidden md:inline-flex items-center rounded-full border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-purple-300/70 hover:bg-purple-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300/70"
+              className="inline-flex items-center rounded-full border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-purple-300/70 hover:bg-purple-500/20"
             >
               Admin
               <PendingManualBadge />
             </Link>
           )}
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="md:hidden">
+        <div className="flex items-start justify-between gap-3">
+          {/* Logo and WalletStatus stacked */}
+          <div className="flex flex-col items-start gap-2">
+            <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
+              <Image
+                src="/logos/mainsitelogo.png"
+                alt="Xessex"
+                width={285}
+                height={95}
+                className="h-[81px] w-auto"
+                priority
+              />
+            </Link>
+            <WalletStatus />
+          </div>
+
+          {/* Hamburger menu button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg border-2 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-300 ${
+            className={`flex flex-col justify-center items-center w-10 h-10 rounded-lg border-2 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-300 ${
               menuOpen ? "animate-none bg-pink-500/40" : "animate-pulse"
             }`}
             aria-label="Toggle menu"
@@ -89,78 +134,53 @@ export default function TopNav() {
             />
           </button>
         </div>
-      </div>
 
-      {/* Mobile Navigation Menu */}
-      <nav
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          menuOpen ? "max-h-[400px] opacity-100 mt-4" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="flex flex-col gap-3 pb-2">
-          {/* Xess Token - hot pink with glow animation */}
-          <button
-            onClick={() => {
-              setShowXessTokenModal(true);
-              setMenuOpen(false);
-            }}
-            className={`flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500/20 px-4 py-3 text-sm font-semibold text-pink-200 shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all duration-300 active:bg-pink-500/40 ${
-              menuOpen ? "animate-pulse" : ""
-            }`}
-          >
-            Xess Token
-          </button>
-          {/* Profile - hot pink with glow animation */}
-          {isLoggedIn && (
-            <Link
-              href="/profile"
-              onClick={() => setMenuOpen(false)}
-              className={`flex items-center justify-center rounded-xl border-2 border-pink-500 bg-pink-500/20 px-4 py-3 text-sm font-semibold text-pink-200 shadow-[0_0_20px_rgba(236,72,153,0.5)] transition-all duration-300 active:bg-pink-500/40 ${
-                menuOpen ? "animate-pulse" : ""
-              }`}
-            >
-              Profile
+        {/* Mobile Dropdown Menu */}
+        <nav
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            menuOpen ? "max-h-[500px] opacity-100 mt-4" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="flex flex-col items-center gap-3 pb-2">
+            <Link href="/collections" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} className="h-[32px] w-auto" />
             </Link>
-          )}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center justify-center rounded-xl border border-purple-400/40 bg-purple-500/10 px-4 py-3 text-sm font-semibold text-white transition active:bg-purple-500/30"
-            >
-              Admin
-              <PendingManualBadge />
+            <Link href="/signup" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/signup5.png" alt="Sign Up" width={1230} height={238} className="h-[32px] w-auto" />
             </Link>
-          )}
-          {/* Leaderboard */}
-          <Link
-            href="/leaderboard"
-            onClick={() => setMenuOpen(false)}
-            className="flex items-center justify-center rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-300 transition active:bg-amber-500/30"
-          >
-            Leaderboard
-          </Link>
-          {/* Signup & Login - only show when not logged in */}
-          {!isLoggedIn && (
-            <>
-              <Link
-                href="/signup"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition active:bg-emerald-500/30"
-              >
-                Sign Up
+            <Link href="/login" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/login100.png" alt="Login" width={982} height={247} className="h-[32px] w-auto" />
+            </Link>
+            <Link href="/leaderboard" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} className="h-[36px] w-auto" />
+            </Link>
+            <button
+              onClick={() => {
+                setShowXessTokenModal(true);
+                setMenuOpen(false);
+              }}
+              className="hover:opacity-80 transition"
+            >
+              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[32px] w-auto" />
+            </button>
+            {isLoggedIn && (
+              <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[32px] w-auto" />
               </Link>
+            )}
+            {isAdmin && (
               <Link
-                href="/login"
+                href="/admin"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-3 text-sm font-semibold text-sky-300 transition active:bg-sky-500/30"
+                className="inline-flex items-center rounded-full border border-purple-400/40 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-white transition"
               >
-                Login
+                Admin
+                <PendingManualBadge />
               </Link>
-            </>
-          )}
-        </div>
-      </nav>
+            )}
+          </div>
+        </nav>
+      </div>
 
       <XessTokenModal
         open={showXessTokenModal}

@@ -3,7 +3,6 @@ import Image from "next/image";
 import fs from "fs";
 import path from "path";
 import TopNav from "./components/TopNav";
-import WalletStatus from "./components/WalletStatus";
 import AdminManualPaymentNotice from "./components/AdminManualPaymentNotice";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
@@ -82,21 +81,6 @@ export default async function HomePage() {
 
       <div className="px-4 md:px-6 pb-10">
         <AdminManualPaymentNotice />
-        {/* Quick actions */}
-        <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-6">
-          <Link href="/collections" className="hover:opacity-80 transition">
-            <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority fetchPriority="high" className="h-[40px] md:h-[50px] w-auto" />
-          </Link>
-          <Link href="/signup" className="hover:opacity-80 transition">
-            <Image src="/logos/textlogo/siteset3/signup5.png" alt="Member Signup" width={1230} height={238} priority fetchPriority="high" className="h-[40px] md:h-[50px] w-auto" />
-          </Link>
-          <Link href="/login" className="hover:opacity-80 transition">
-            <Image src="/logos/textlogo/siteset3/login100.png" alt="Member Login" width={982} height={247} priority fetchPriority="high" className="h-[40px] md:h-[50px] w-auto" />
-          </Link>
-          <Link href="/leaderboard" className="hover:opacity-80 transition">
-            <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="h-[44px] md:h-[55px] w-auto" />
-          </Link>
-        </div>
 
         {/* Top 20 Videos */}
         <section className="neon-border rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import TopNav from "../components/TopNav";
-import AccountWalletStatus from "@/components/AccountWalletStatus";
 import WalletActions from "@/components/WalletActions";
 
 function detectIos() {
@@ -26,6 +25,7 @@ function LinkAuthWalletContent() {
 
   const ios = useMemo(detectIos, []);
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [membership, setMembership] = useState<string | null>(null);
 
   // allow ?next=...
   const next = useMemo(() => sp.get("next") || "/account", [sp]);
@@ -36,6 +36,7 @@ function LinkAuthWalletContent() {
       .then((d) => {
         const ok = !!d?.user;
         setAuthed(ok);
+        setMembership(d?.membership ?? null);
         if (!ok) router.push(`/login?next=${encodeURIComponent(`/link-auth-wallet?next=${encodeURIComponent(next)}`)}`);
       })
       .catch(() => {
@@ -48,10 +49,37 @@ function LinkAuthWalletContent() {
     return <main className="max-w-lg mx-auto px-4 py-12 text-white/60">Loading...</main>;
   }
 
+  // Members cannot link wallets - must upgrade to Diamond first
+  if (membership === "MEMBER") {
+    return (
+      <main className="max-w-lg mx-auto px-4 py-12 space-y-6">
+        <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8 border-sky-400/50">
+          <h1 className="text-2xl font-bold text-sky-400 mb-4">Upgrade to Diamond Required</h1>
+          <p className="text-white/70 mb-6">
+            Wallet linking is a <span className="text-sky-300 font-medium">Diamond member</span> feature.
+            Upgrade to Diamond to connect your wallet and earn XESS rewards.
+          </p>
+          <button
+            onClick={() => router.push("/signup")}
+            className="w-full py-3 px-6 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-semibold hover:bg-sky-500/30 transition"
+          >
+            Upgrade to Diamond
+          </button>
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <button
+              onClick={() => router.push("/")}
+              className="w-full py-3 px-6 rounded-xl bg-white/10 border border-white/20 text-white/80 hover:bg-white/20 transition"
+            >
+              Back to Home
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="max-w-lg mx-auto px-4 py-12 space-y-6">
-      <AccountWalletStatus />
-
       <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8">
         <h1 className="text-2xl font-bold text-white mb-2">Link Auth Wallet</h1>
         <p className="text-white/60 mb-6">

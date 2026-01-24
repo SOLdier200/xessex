@@ -41,7 +41,21 @@ export async function POST(req: Request) {
         currentUser.walletAddress === w || currentUser.solWallet === w;
 
       if (!alreadyKnown) {
-        // Don't silently create a new wallet-native account
+        // Check if this wallet belongs to an existing user (e.g., Diamond member)
+        const existingWalletUser = await db.user.findUnique({
+          where: { walletAddress: w },
+          select: { id: true },
+        });
+
+        if (existingWalletUser) {
+          // Wallet belongs to an existing account - switch to that account
+          // This allows a member to sign in with their Diamond wallet and take over the session
+          const { token, expiresAt } = await createSession(existingWalletUser.id);
+          await setSessionCookie(token, expiresAt);
+          return NextResponse.json({ ok: true, switched: true }, { headers: noCache });
+        }
+
+        // Wallet doesn't exist in system - don't silently create a new wallet-native account
         // Let UI offer "Link wallet" or "Switch account"
         return NextResponse.json(
           { ok: false, error: "WALLET_NOT_LINKED", wallet: w },
