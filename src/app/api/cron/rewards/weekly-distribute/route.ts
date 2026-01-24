@@ -109,11 +109,13 @@ function formatXess(amount: bigint): string {
  * - Subscription.tier = DIAMOND
  * - Subscription.status = ACTIVE
  * - Subscription.expiresAt is null OR in the future
- * - User.solWallet is not null
+ *
+ * Note: Users still need a linked wallet (solWallet) to actually receive payouts,
+ * but wallet linking is NOT required for eligibility. Diamond membership is the
+ * only requirement for being eligible for XESS rewards.
  */
 function eligibleDiamondUserWhere(now: Date): Prisma.UserWhereInput {
   return {
-    solWallet: { not: null },
     subscription: {
       is: {
         tier: SubscriptionTier.DIAMOND,

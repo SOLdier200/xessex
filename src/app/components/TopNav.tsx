@@ -83,7 +83,7 @@ export default function TopNav() {
               alt="Xessex"
               width={285}
               height={95}
-              className="h-[81px] w-auto"
+              className="h-[90px] w-auto"
               priority
             />
           </Link>
