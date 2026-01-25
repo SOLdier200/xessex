@@ -5,6 +5,11 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import Image from "next/image";
 import bs58 from "bs58";
+import {
+  diamondSignupChallenge,
+  completeDiamondSignup,
+  isIOS,
+} from "@/lib/walletFlows";
 
 type Props = {
   open: boolean;
@@ -12,17 +17,15 @@ type Props = {
   onCreated?: () => void;
 };
 
-function isIOS() {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent.toLowerCase();
-  return (
-    ua.includes("iphone") ||
-    ua.includes("ipad") ||
-    (ua.includes("mac") && (navigator as any).maxTouchPoints > 1)
-  );
-}
-
-export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: Props) {
+/**
+ * DiamondSignupModal - For NEW wallet-native Diamond account creation
+ *
+ * Use this when a user does NOT have an existing account and wants to
+ * create a new Diamond account using their wallet as the auth identity.
+ *
+ * For existing Members who want to upgrade to Diamond, use DiamondUpgradeModal instead.
+ */
+export default function DiamondSignupModal({ open, onClose, onCreated }: Props) {
   const wallet = useWallet();
   const { setVisible } = useWalletModal();
   const [status, setStatus] = useState<string>("");
@@ -75,17 +78,11 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
     try {
       const walletAddr = wallet.publicKey.toBase58();
 
-      // 1) Get challenge message (server sets httpOnly challenge cookie)
-      const ch = await fetch("/api/auth/challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        cache: "no-store",
-        body: JSON.stringify({ wallet: walletAddr, purpose: "DIAMOND_SIGNUP" }),
-      }).then(r => r.json());
+      // 1) Get challenge message
+      const ch = await diamondSignupChallenge(walletAddr);
 
-      if (!ch?.ok) {
-        throw new Error(ch?.error || "Challenge failed");
+      if (!ch?.ok || !("message" in ch)) {
+        throw new Error((ch as any)?.error || "Challenge failed");
       }
 
       setStatus("Please sign the message in your wallet...");
@@ -93,38 +90,20 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
       // 2) Sign message
       const msgBytes = new TextEncoder().encode(ch.message);
       const sigBytes = await wallet.signMessage(msgBytes);
-
-      setStatus("Verifying signature...");
-
-      // 3) Verify signature (creates session cookie)
-      const verify = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        cache: "no-store",
-        body: JSON.stringify({
-          wallet: walletAddr,
-          message: ch.message,
-          signature: bs58.encode(sigBytes),
-          refCode: refCode.trim() || undefined,
-        }),
-      }).then(r => r.json());
-
-      if (!verify?.ok) {
-        throw new Error(verify?.error || "Verification failed");
-      }
+      const signature = bs58.encode(sigBytes);
 
       setStatus("Creating Diamond account...");
 
-      // 4) Mark subscription as pending diamond
-      const start = await fetch("/api/auth/diamond/start", {
-        method: "POST",
-        credentials: "include",
-        cache: "no-store",
-      }).then(r => r.json());
+      // 3) Complete signup (uses iOS-safe combined endpoint automatically)
+      const result = await completeDiamondSignup(
+        walletAddr,
+        ch.message,
+        signature,
+        refCode.trim() || undefined
+      );
 
-      if (!start?.ok) {
-        throw new Error(start?.error || "Could not create Diamond account");
+      if (!result.ok) {
+        throw new Error((result as any).error || "Could not create Diamond account");
       }
 
       setSuccess(true);

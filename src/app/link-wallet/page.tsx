@@ -47,21 +47,22 @@ function LinkWalletContent() {
     );
   }
 
-  // Members cannot link wallets - must upgrade to Diamond first
-  if (membership === "MEMBER") {
+  // FREE users cannot link payout wallets - must have a subscription
+  if (!membership || membership === "FREE") {
     return (
       <main className="max-w-lg mx-auto px-4 py-12 space-y-6">
-        <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8 border-sky-400/50">
-          <h1 className="text-2xl font-bold text-sky-400 mb-4">Upgrade to Diamond Required</h1>
+        <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8 border-pink-400/40">
+          <h1 className="text-2xl font-bold text-pink-400 mb-4">Membership Required</h1>
           <p className="text-white/70 mb-6">
-            Wallet linking is a <span className="text-sky-300 font-medium">Diamond member</span> feature.
-            Upgrade to Diamond to connect your wallet and earn XESS rewards.
+            Linking a payout wallet requires an active{" "}
+            <span className="text-pink-300 font-medium">Member</span> or{" "}
+            <span className="text-cyan-300 font-medium">Diamond</span> subscription.
           </p>
           <button
             onClick={() => router.push("/signup")}
-            className="w-full py-3 px-6 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-semibold hover:bg-sky-500/30 transition"
+            className="w-full py-3 px-6 rounded-xl bg-pink-500/20 border border-pink-400/50 text-pink-300 font-semibold hover:bg-pink-500/30 transition"
           >
-            Upgrade to Diamond
+            Get Membership
           </button>
           <div className="mt-4 pt-4 border-t border-white/10">
             <button
@@ -100,8 +101,8 @@ function LinkWalletContent() {
         )}
 
         <div className="mt-6">
-          {/* On this page we only care about linking (not wallet-native sign-in). */}
-          <WalletActions showWalletSignIn={false} />
+          {/* Payout wallet linking for MEMBER and DIAMOND users */}
+          <WalletActions mode="PAYOUT_LINK" />
         </div>
 
         <div className="mt-6 pt-4 border-t border-white/10">

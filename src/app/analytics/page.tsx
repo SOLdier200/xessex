@@ -23,7 +23,22 @@ type AnalyticsData = {
     totalModDislikes: number;
     utilizedComments: number;
     totalXessPaid: number;
-    pendingXess: number;
+    claimableXess: number;
+    estimatedPendingXess: number;
+  };
+  currentWeek: {
+    weekKey: string;
+    activity: {
+      scoreReceived: number;
+      diamondComments: number;
+      mvmPoints: number;
+    };
+    ranks: {
+      likes: number | null;
+      mvm: number | null;
+      comments: number | null;
+    };
+    nextPayout: string;
   };
   comments: {
     sourceId: string;
@@ -138,7 +153,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { totals, comments } = data;
+  const { totals, comments, currentWeek } = data;
 
   return (
     <main className="min-h-screen">
@@ -192,12 +207,12 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Rewards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="neon-border rounded-xl p-4 bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/5 border-yellow-400/30">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs text-yellow-400/80 uppercase tracking-wide">
-                  Total XESS Paid
+                  Total XESS Claimed
                 </div>
                 <div className="text-2xl font-bold text-yellow-400 mt-1">
                   {totals.totalXessPaid.toLocaleString()} XESS
@@ -207,20 +222,90 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="neon-border rounded-xl p-4 bg-gradient-to-r from-green-500/10 via-black/0 to-green-500/5 border-green-400/30">
+          <div className="neon-border rounded-xl p-4 bg-gradient-to-r from-emerald-500/10 via-black/0 to-emerald-500/5 border-emerald-400/30">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs text-green-400/80 uppercase tracking-wide">
-                  Pending XESS
+                <div className="text-xs text-emerald-400/80 uppercase tracking-wide">
+                  Ready to Claim
                 </div>
-                <div className="text-2xl font-bold text-green-400 mt-1">
-                  {totals.pendingXess.toLocaleString()} XESS
+                <div className="text-2xl font-bold text-emerald-400 mt-1">
+                  {totals.claimableXess.toLocaleString()} XESS
                 </div>
               </div>
-              <div className="text-green-400/50 text-4xl">⏳</div>
+              <div className="text-emerald-400/50 text-4xl">✓</div>
+            </div>
+          </div>
+
+          <div className="neon-border rounded-xl p-4 bg-gradient-to-r from-purple-500/10 via-black/0 to-purple-500/5 border-purple-400/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-purple-400/80 uppercase tracking-wide">
+                  Est. Pending (Live)
+                </div>
+                <div className="text-2xl font-bold text-purple-400 mt-1">
+                  ~{totals.estimatedPendingXess.toLocaleString()} XESS
+                </div>
+              </div>
+              <div className="text-purple-400/50 text-4xl">⏳</div>
             </div>
           </div>
         </div>
+
+        {/* Current Week Activity */}
+        {currentWeek && (
+          <div className="neon-border rounded-xl p-4 md:p-6 bg-black/30 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold neon-text">
+                This Week&apos;s Activity
+              </h2>
+              <div className="text-sm text-white/50">
+                Next payout: {currentWeek.nextPayout}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">
+                  {currentWeek.activity.scoreReceived}
+                </div>
+                <div className="text-xs text-white/60 mt-1">Score Received</div>
+                {currentWeek.ranks.likes && (
+                  <div className="text-xs text-pink-400 mt-1">
+                    Rank #{currentWeek.ranks.likes}
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">
+                  {currentWeek.activity.diamondComments}
+                </div>
+                <div className="text-xs text-white/60 mt-1">Comments Posted</div>
+                {currentWeek.ranks.comments && (
+                  <div className="text-xs text-pink-400 mt-1">
+                    Rank #{currentWeek.ranks.comments}
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">
+                  {currentWeek.activity.mvmPoints}
+                </div>
+                <div className="text-xs text-white/60 mt-1">MVM Points</div>
+                {currentWeek.ranks.mvm && (
+                  <div className="text-xs text-pink-400 mt-1">
+                    Rank #{currentWeek.ranks.mvm}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 text-xs text-white/40 text-center">
+              Estimated pending updates live as you earn likes and post comments
+            </div>
+          </div>
+        )}
 
         {/* Comments Table */}
         <div className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">

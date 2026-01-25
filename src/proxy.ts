@@ -1,68 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
+// src/proxy.ts
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-const AGE_COOKIE = "age_verified";
-const AGE_PATH = "/age";
+/**
+ * Next.js 16 Proxy Middleware (proxy.ts)
+ * - If proxy.ts exists, DO NOT use middleware.ts (Next will error)
+ */
 
-// Routes that should NOT be blocked
-const PUBLIC_PATH_PREFIXES = [
-  // Auth paths - NEVER gate these
-  "/api/auth",
-  "/auth/callback",
-  // Static/system paths
-  "/_next",
-  "/logos",
-  "/favicon.ico",
-  "/robots.txt",
-  "/sitemap.xml",
-  "/icons",
-  "/manifest",
-  "/site.webmanifest",
-  // Public pages
-  "/age",
-  "/leave",
-  "/parental-controls",
-  "/privacy",
-  "/terms",
-  // Other API routes
-  "/api",
-];
+const BOT_RE =
+  /\b(googlebot|yandex(bot|images|video|news)?|bingbot|duckduckbot|baiduspider|slurp|facebookexternalhit|twitterbot|linkedinbot|applebot)\b/i;
 
-// Also allow common static assets
-const PUBLIC_FILE = /\.(.*)$/;
+function isIndexerBot(req: NextRequest) {
+  const ua = req.headers.get("user-agent") || "";
+  return BOT_RE.test(ua);
+}
 
 export default function proxy(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const url = req.nextUrl;
+  const pathname = url.pathname;
 
-  // Allow public routes and files
+  // Never gate these
   if (
-    PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
-    PUBLIC_FILE.test(pathname)
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname.startsWith("/sitemap")
   ) {
     return NextResponse.next();
   }
 
-  const ageVerifiedValue = req.cookies.get(AGE_COOKIE)?.value;
-  const ageOkValue = req.cookies.get("age_ok")?.value;
-  const ageVerified =
-    ageVerifiedValue === "true" || ageVerifiedValue === "1" || ageOkValue === "1";
-
-  if (!ageVerified) {
-    const url = req.nextUrl.clone();
-    url.pathname = AGE_PATH;
-    url.searchParams.set("next", pathname + (search ? search : ""));
-    return NextResponse.redirect(url);
+  // Let search engines through (200) so they can index
+  if (isIndexerBot(req)) {
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "bot-bypass");
+    res.headers.set("Vary", "User-Agent");
+    return res;
   }
 
-  return NextResponse.next();
+  // Allow the age page itself (avoid loops)
+  if (pathname === "/age") return NextResponse.next();
+
+  // If user passed age gate, allow
+  const ageOk = req.cookies.get("age_ok")?.value === "1";
+  if (ageOk) return NextResponse.next();
+
+  // Gate humans
+  const redir = url.clone();
+  redir.pathname = "/age";
+  redir.searchParams.set("next", pathname + (url.search || ""));
+  const res = NextResponse.redirect(redir, 307);
+  res.headers.set("x-xessex-mw", "redirect-age");
+  return res;
 }
 
 export const config = {
-  matcher: [
-    /*
-      Run middleware on all routes except:
-      - next internals (_next)
-      - static files
-    */
-    "/((?!_next/static|_next/image).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

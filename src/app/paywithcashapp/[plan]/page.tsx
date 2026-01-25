@@ -6,7 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import TopNav from "../../components/TopNav";
 import GoogleSignupButton from "../../components/GoogleSignupButton";
-import DiamondMemberSignUpModal from "@/components/DiamondMemberSignUpModal";
+import DiamondSignupModal from "@/components/DiamondSignupModal";
 
 const PLAN_INFO: Record<string, { label: string; price: string; tier: string }> = {
   member_monthly: { label: "Member Monthly", price: "$4", tier: "Member" },
@@ -496,8 +496,8 @@ export default function CashAppPaymentPage() {
         </div>
       )}
 
-      {/* Diamond Member Signup Modal */}
-      <DiamondMemberSignUpModal
+      {/* Diamond Signup Modal (for new wallet-native accounts) */}
+      <DiamondSignupModal
         open={diamondSignupOpen}
         onClose={() => setDiamondSignupOpen(false)}
         onCreated={() => {

@@ -27,7 +27,7 @@ export default function DiamondLoginPage() {
               Note: All mobile users will need to download Phantom and select Open in Phantom to connect.
             </p>
             <div className="mt-6">
-              <WalletActions showLinkWallet={false} />
+              <WalletActions mode="WALLET_LOGIN" />
             </div>
           </div>
 

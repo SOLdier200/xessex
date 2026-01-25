@@ -47,19 +47,8 @@ function Spinner() {
 
 function Checkmark() {
   return (
-    <span
-      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/20"
-      aria-hidden="true"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
+    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/20" aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 6L9 17l-5-5" className="xess-check-draw" />
       </svg>
     </span>
@@ -67,7 +56,7 @@ function Checkmark() {
 }
 
 async function settleAuthMe() {
-  // Aggressive short poll for cookie/session to reflect on /me after Phantom bounce.
+  // Poll /me until authed flips true. Do not impose tier logic here.
   for (let i = 0; i < 10; i++) {
     try {
       const r = await fetch("/api/auth/me", {
@@ -77,13 +66,11 @@ async function settleAuthMe() {
         headers: { accept: "application/json" },
       });
       const data = await r.json().catch(() => null);
-
-      if (r.ok && data?.ok && data?.authed && data?.tier !== "free") {
+      if (r.ok && data?.ok && data?.authed) {
         window.dispatchEvent(new Event("auth-changed"));
         return true;
       }
     } catch {}
-
     await sleep(i < 4 ? 250 : 500);
   }
   return false;
@@ -99,13 +86,11 @@ type MeData = {
   } | null;
   authWallet: string | null;
   payoutWallet: string | null;
-  needsAuthWalletLink: boolean;
   membership: "DIAMOND" | "MEMBER" | "FREE" | null;
 };
 
 function detectPlatform() {
-  if (typeof navigator === "undefined")
-    return { isAndroid: false, isIos: false, isChromeAndroid: false };
+  if (typeof navigator === "undefined") return { isAndroid: false, isIos: false, isChromeAndroid: false };
   const ua = navigator.userAgent.toLowerCase();
   const isAndroid = ua.includes("android");
   const isIos =
@@ -121,25 +106,36 @@ function short(addr?: string | null) {
   return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
 }
 
+type Mode = "WALLET_LOGIN" | "PAYOUT_LINK" | "DIAMOND_UPGRADE";
+
 type WalletActionsProps = {
-  showWalletSignIn?: boolean;
-  showLinkWallet?: boolean;
-  // Allow different linking endpoints (payout vs auth-wallet)
-  linkChallengeUrl?: string;
-  linkVerifyUrl?: string;
-  // Where the "Link this wallet" CTA should point in the guided 409 box
-  linkHref?: string;
-  // Optional callback after successful link
-  onLinked?: () => void;
+  mode: Mode;
+
+  // UI toggles (kept simple)
+  showDisconnect?: boolean;
+
+  // After success
+  onDone?: () => void;
+
+  // Optional navigation target after wallet login success
+  successHref?: string;
 };
 
+/**
+ * WalletActions - Explicit mode-based wallet operations
+ *
+ * Modes:
+ * - WALLET_LOGIN: Sign in with wallet (uses walletAddress for auth)
+ * - PAYOUT_LINK: Link payout wallet for rewards (sets solWallet, MEMBER/DIAMOND only)
+ * - DIAMOND_UPGRADE: Upgrade Member to Diamond (sets walletAddress, MEMBER only)
+ *
+ * This design prevents wrong-endpoint bugs by choosing endpoints internally based on mode.
+ */
 export default function WalletActions({
-  showWalletSignIn = true,
-  showLinkWallet = true,
-  linkChallengeUrl = "/api/auth/wallet-link/challenge",
-  linkVerifyUrl = "/api/auth/wallet-link/verify",
-  linkHref = "/link-wallet",
-  onLinked,
+  mode,
+  showDisconnect = true,
+  onDone,
+  successHref = "/",
 }: WalletActionsProps) {
   const { setVisible } = useWalletModal();
   const wallet = useWallet();
@@ -152,32 +148,28 @@ export default function WalletActions({
   const [busy, setBusy] = useState<null | "signin" | "link">(null);
   const [successPulse, setSuccessPulse] = useState(false);
   const [successNavTo, setSuccessNavTo] = useState<string | null>(null);
-  const [needLinkWallet, setNeedLinkWallet] = useState<null | string>(null);
+
   const [showNotRegisteredModal, setShowNotRegisteredModal] = useState(false);
 
   const pk = wallet.publicKey?.toBase58() ?? null;
 
   const isAuthed = !!meData?.user;
-  // Connected wallet matches auth wallet OR payout wallet
-  const isLinked =
-    !!meData?.user &&
-    !!pk &&
-    (meData.authWallet === pk || meData.payoutWallet === pk);
+  const authWallet = meData?.authWallet ?? null;
+  const payoutWallet = meData?.payoutWallet ?? null;
+
+  // Separate linked states for auth vs payout
+  const isAuthLinked = !!pk && !!authWallet && authWallet === pk;
+  const isPayoutLinked = !!pk && !!payoutWallet && payoutWallet === pk;
 
   async function refreshMe() {
     setMeLoaded(false);
     try {
-      const d = await fetch("/api/auth/me", {
-        credentials: "include",
-        cache: "no-store",
-      }).then((r) => r.json());
+      const d = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" }).then((r) => r.json());
       if (d?.authed && d?.user) {
         setMeData({
           user: d.user,
-          // Use correct field mapping from /api/auth/me response
           authWallet: d.user?.walletAddress ?? null,
           payoutWallet: d.user?.solWallet ?? null,
-          needsAuthWalletLink: d.needsAuthWalletLink ?? false,
           membership: d.membership ?? null,
         });
       } else {
@@ -195,34 +187,29 @@ export default function WalletActions({
     return () => window.removeEventListener("auth-changed", onAuth);
   }, []);
 
-  const triggerSuccess = (to: string) => {
-    setStatus("Signed in!");
+  const triggerSuccess = (to: string, label = "Done!") => {
+    setStatus(label);
     setSuccessNavTo(to);
     setSuccessPulse(true);
     window.dispatchEvent(new Event("auth-changed"));
     endInflight();
     setBusy(null);
 
-    // Reset so the animation can play again if the user stays on-page.
     setTimeout(() => {
       setSuccessPulse(false);
       setSuccessNavTo(null);
     }, 1200);
   };
 
-  // iOS "Phantom-return settle" - when user comes back from Phantom, finish auth instantly
+  // iOS "Phantom-return settle"
   useEffect(() => {
     const handler = async () => {
       if (document.visibilityState !== "visible") return;
       if (!inflight()) return;
 
-      // On iOS, returning from Phantom often remounts; finish auth silently.
       const settled = await settleAuthMe();
-      if (settled) {
-        triggerSuccess("/");
-      }
+      if (settled) triggerSuccess(successHref, "Success!");
 
-      // If it didn't settle after ~15s since sign started, allow user to retry.
       const startedAt = Number(sessionStorage.getItem(INF_TS) || "0");
       if (startedAt && Date.now() - startedAt > 15_000) {
         endInflight();
@@ -236,27 +223,7 @@ export default function WalletActions({
       document.removeEventListener("visibilitychange", handler);
       window.removeEventListener("focus", handler);
     };
-  }, []);
-
-  // Detect wallet mismatch: if logged in with a wallet and connected wallet is different
-  useEffect(() => {
-    if (!meLoaded || !meData?.user || !pk) return;
-
-    const authWallet = meData.authWallet;
-    const payoutWallet = meData.payoutWallet;
-
-    // If user has an auth wallet and connected wallet doesn't match, show warning
-    if (authWallet && authWallet !== pk && payoutWallet !== pk) {
-      setNeedLinkWallet(pk);
-      setStatus("Connected wallet doesn't match your signed-in account.");
-    } else {
-      // Clear the warning if wallets now match
-      if (needLinkWallet && (authWallet === pk || payoutWallet === pk)) {
-        setNeedLinkWallet(null);
-        setStatus("");
-      }
-    }
-  }, [meLoaded, meData, pk, needLinkWallet]);
+  }, [successHref]);
 
   const openInPhantom = () => {
     if (typeof window === "undefined") return;
@@ -265,16 +232,12 @@ export default function WalletActions({
     window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
   };
 
-  async function signInWithWallet(purpose: "LOGIN" | "DIAMOND_SIGNUP" = "LOGIN") {
+  async function walletLogin() {
     setStatus("");
-    setNeedLinkWallet(null);
-
     if (!wallet.publicKey || !wallet.signMessage) {
       setStatus("Connect a wallet that supports message signing.");
       return;
     }
-
-    // Prevent double-run across iOS bounces / rapid taps
     if (inflight()) return;
 
     beginInflight();
@@ -289,12 +252,13 @@ export default function WalletActions({
         headers: { "content-type": "application/json" },
         credentials: "include",
         cache: "no-store",
-        body: JSON.stringify({ wallet: addr, purpose }),
+        body: JSON.stringify({ wallet: addr, purpose: "LOGIN" }),
       }).then((r) => r.json());
 
       if (!c?.ok || !c?.message) {
         setStatus(c?.error || "Challenge failed. Try again.");
         endInflight();
+        setBusy(null);
         return;
       }
 
@@ -303,118 +267,61 @@ export default function WalletActions({
       const signed = await wallet.signMessage(msgBytes);
       const signature = bs58.encode(signed);
 
-      // For Diamond signup: use combined verify-and-start endpoint (iOS-safe, no cookie dependency)
-      if (purpose === "DIAMOND_SIGNUP") {
-        setStatus("Setting up Diamond membership…");
-
-        const resp = await fetch("/api/auth/diamond/verify-and-start", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          cache: "no-store",
-          body: JSON.stringify({
-            wallet: addr,
-            message: c.message,
-            signature,
-          }),
-        });
-
-        const v = await resp.json().catch(() => ({}));
-
-        if (!resp.ok || !v.ok) {
-          if (resp.status === 409 && v.error === "WALLET_NOT_LINKED") {
-            setNeedLinkWallet(addr);
-            try {
-              localStorage.setItem("pending_wallet_to_link", addr);
-            } catch {}
-            setStatus("");
-            endInflight();
-            return;
-          }
-          setStatus(v.error || "Diamond signup failed.");
-          endInflight();
-          return;
-        }
-
-        // Settle /me so UI immediately reflects tier/status
-        await settleAuthMe();
-
-        // Route to pending payment screen
-        triggerSuccess("/signup/diamond?state=pending");
-        return;
-      }
-
-      // Regular login flow
       setStatus("Verifying…");
       const resp = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
         cache: "no-store",
-        body: JSON.stringify({
-          wallet: addr,
-          message: c.message,
-          signature,
-        }),
+        body: JSON.stringify({ wallet: addr, message: c.message, signature }),
       });
 
       const v = await resp.json().catch(() => ({}));
 
       if (!resp.ok || !v.ok) {
-        if (resp.status === 409 && v.error === "WALLET_NOT_LINKED") {
-          setNeedLinkWallet(addr);
-          try {
-            localStorage.setItem("pending_wallet_to_link", addr);
-          } catch {}
-          setStatus("");
-          endInflight();
-          return;
-        }
         if (resp.status === 403 && v.error === "WALLET_NOT_REGISTERED") {
           setShowNotRegisteredModal(true);
           setStatus("");
           endInflight();
+          setBusy(null);
+          return;
+        }
+        if (v.error === "WALLET_NOT_LINKED_FOR_AUTH") {
+          setStatus("This wallet is linked for payouts only. Upgrade to Diamond to use it for login.");
+          endInflight();
+          setBusy(null);
           return;
         }
         setStatus(v.error || "Wallet sign-in failed.");
         endInflight();
+        setBusy(null);
         return;
       }
 
-      // Handle account switch (Diamond wallet taking over lower-tier session)
-      if (v.switched) {
-        setStatus(v.switchedToDiamond ? "Switched to Diamond account!" : "Switched accounts!");
-      }
-
-      // IMPORTANT: DO NOT call signing-capable sync here.
-      // Just settle /me. (This avoids a second signMessage prompt on iOS.)
       setStatus("Syncing session…");
       let ok = await settleAuthMe();
-
-      // As a backup, do a passive sync that never signs
       if (!ok) {
         await syncWalletSession(wallet as any, { mode: "auto" });
         ok = await settleAuthMe();
       }
-
       if (!ok) {
         setStatus("Signed, but session didn't stick. Tap again.");
         endInflight();
+        setBusy(null);
         return;
       }
 
-      triggerSuccess("/");
+      triggerSuccess(successHref, "Logged in!");
+      onDone?.();
     } catch (e: any) {
       setStatus(e?.message || "Wallet sign-in failed.");
       endInflight();
-    } finally {
       setBusy(null);
     }
   }
 
-  async function linkWalletToAccount() {
+  async function dbLinkFlow(kind: "PAYOUT_LINK" | "DIAMOND_UPGRADE") {
     setStatus("");
-    setNeedLinkWallet(null);
 
     if (!isAuthed) {
       setStatus("Sign in first, then link your wallet.");
@@ -425,30 +332,45 @@ export default function WalletActions({
       return;
     }
 
+    // Membership gates on the client (server must enforce too)
+    if (meData?.membership === "FREE" || !meData?.membership) {
+      setStatus("Membership required.");
+      return;
+    }
+    if (kind === "DIAMOND_UPGRADE" && meData?.membership !== "MEMBER") {
+      setStatus("Diamond upgrade is only for Member accounts.");
+      return;
+    }
+
+    const challengeUrl =
+      kind === "PAYOUT_LINK" ? "/api/auth/wallet-link/challenge" : "/api/auth/diamond/upgrade-challenge";
+    const verifyUrl =
+      kind === "PAYOUT_LINK" ? "/api/auth/wallet-link/verify" : "/api/auth/diamond/upgrade";
+
     setBusy("link");
     try {
-      setStatus("Requesting link challenge...");
-      const challengeRes = await fetch(linkChallengeUrl, {
+      setStatus("Requesting challenge…");
+      const challengeRes = await fetch(challengeUrl, {
         method: "POST",
         credentials: "include",
         cache: "no-store",
       });
-      const challengeData = await challengeRes.json();
-
-      if (!challengeData.ok) {
+      const challengeData = await challengeRes.json().catch(() => ({}));
+      if (!challengeRes.ok || !challengeData.ok) {
         setStatus(challengeData.error || "Failed to get challenge.");
+        setBusy(null);
         return;
       }
 
       const { message, nonce } = challengeData;
 
-      setStatus("Signing link message…");
+      setStatus("Signing…");
       const msgBytes = new TextEncoder().encode(message);
       const signatureBytes = await wallet.signMessage(msgBytes);
       const signature = bs58.encode(signatureBytes);
 
-      setStatus("Verifying link...");
-      const verifyRes = await fetch(linkVerifyUrl, {
+      setStatus("Verifying…");
+      const verifyRes = await fetch(verifyUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
@@ -462,293 +384,162 @@ export default function WalletActions({
 
       const verifyData = await verifyRes.json().catch(() => ({}));
       if (!verifyRes.ok || !verifyData.ok) {
-        setStatus(verifyData.error || "Failed to link wallet.");
+        if (verifyData.error === "WALLET_ALREADY_LINKED") {
+          setStatus("This wallet is already linked to another account.");
+        } else {
+          setStatus(verifyData.error || "Verification failed.");
+        }
+        setBusy(null);
         return;
       }
 
-      setStatus("Wallet linked!");
-      try {
-        localStorage.removeItem("pending_wallet_to_link");
-      } catch {}
-      window.dispatchEvent(new Event("auth-changed"));
       await refreshMe();
-      onLinked?.();
+      window.dispatchEvent(new Event("auth-changed"));
+      setStatus(kind === "PAYOUT_LINK" ? "Payout wallet linked!" : "Upgrade started!");
+      onDone?.();
     } catch (e: any) {
-      setStatus(e?.message || "Failed to link wallet.");
+      setStatus(e?.message || "Failed.");
     } finally {
       setBusy(null);
     }
   }
 
-  async function switchAccount() {
-    setStatus("Logging out…");
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-      cache: "no-store",
-    }).catch(() => {});
-    window.dispatchEvent(new Event("auth-changed"));
-    await refreshMe();
-    setStatus("");
-  }
+  // Mode-derived UI state
+  const canAct =
+    !!wallet.connected &&
+    !!wallet.publicKey &&
+    !!wallet.signMessage &&
+    meLoaded &&
+    (mode === "WALLET_LOGIN" ? true : isAuthed);
+
+  const linkedLabel =
+    mode === "WALLET_LOGIN"
+      ? (isAuthLinked ? "Auth wallet matches account" : "")
+      : (mode === "PAYOUT_LINK"
+          ? (isPayoutLinked ? "Payout wallet linked" : "Not linked as payout")
+          : (isAuthLinked ? "Auth wallet set" : "Not upgraded"));
 
   return (
     <div className="space-y-3">
-      {/* Platform hints */}
       {p.isAndroid && !p.isChromeAndroid && (
-        <div className="text-xs text-white/50">
-          Android tip: wallet connect works best in Chrome. If it fails here, open in Chrome.
-        </div>
+        <div className="text-xs text-white/50">Android tip: wallet connect works best in Chrome.</div>
       )}
 
-      {/* Show logout button if user is signed in with email, otherwise show wallet connect */}
       {!wallet.connected ? (
-        // If user is authed with email (not wallet), show logout option before wallet connect
-        isAuthed && meData?.user?.email ? (
-          <div className="space-y-3">
-            <div className="text-sm text-white/70 text-center">
-              Signed in as <span className="text-white font-medium">{meData.user.email}</span>
-              {meData.membership && <span className="text-white/50"> ({meData.membership})</span>}
-            </div>
+        <>
+          {(p.isIos || p.isAndroid) && (
             <button
-              onClick={async () => {
-                setStatus("Logging out...");
-                await fetch("/api/auth/logout", {
-                  method: "POST",
-                  credentials: "include",
-                  cache: "no-store",
-                }).catch(() => {});
-                window.dispatchEvent(new Event("auth-changed"));
-                await refreshMe();
-                setStatus("");
-              }}
-              className="w-full py-3 px-6 rounded-full font-semibold text-white transition bg-gradient-to-r from-red-500 to-pink-500 border-2 border-red-400"
+              onClick={openInPhantom}
+              className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
               style={{
-                boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
-              }}
-            >
-              Log out to connect wallet
-            </button>
-            <div className="text-xs text-white/50 text-center">
-              Log out first to sign in with a different wallet account
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* On mobile, show Open in Phantom as primary option */}
-            {(p.isIos || p.isAndroid) && (
-              <button
-                onClick={openInPhantom}
-                className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
-                style={{
-                  background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
-                  border: "2px solid #FF1493",
-                  boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
-                }}
-              >
-                Open in Phantom
-              </button>
-            )}
-
-            <button
-              onClick={() => setVisible(true)}
-              className={[
-                "w-full py-3 px-6 rounded-full font-semibold transition",
-                (p.isIos || p.isAndroid)
-                  ? "text-white/50 bg-white/10 border border-white/20"
-                  : "text-white",
-              ].join(" ")}
-              style={(p.isIos || p.isAndroid) ? {} : {
                 background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
                 border: "2px solid #FF1493",
                 boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
               }}
             >
-              Select Wallet
+              Open in Phantom
             </button>
+          )}
 
-            {(p.isIos || p.isAndroid) && (
-              <div className="text-xs text-white/40 text-center">
-                Wallet connect may not work in mobile browsers. Use Phantom app for best experience.
-              </div>
-            )}
-          </>
-        )
+          <button
+            onClick={() => setVisible(true)}
+            className={[
+              "w-full py-3 px-6 rounded-full font-semibold transition",
+              (p.isIos || p.isAndroid) ? "text-white/50 bg-white/10 border border-white/20" : "text-white",
+            ].join(" ")}
+            style={(p.isIos || p.isAndroid) ? {} : {
+              background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
+              border: "2px solid #FF1493",
+              boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
+            }}
+          >
+            Select Wallet
+          </button>
+
+          {(p.isIos || p.isAndroid) && (
+            <div className="text-xs text-white/40 text-center">
+              Wallet connect may not work in mobile browsers. Use Phantom app for best experience.
+            </div>
+          )}
+        </>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-white/70">Connected Wallet/Account</div>
+            <div className="text-sm text-white/70">Connected Wallet</div>
             <div className="font-mono text-sm text-white">{short(pk)}</div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              onClick={async () => {
-                await wallet.disconnect();
-                await fetch("/api/auth/logout", {
-                  method: "POST",
-                  credentials: "include",
-                  cache: "no-store",
-                }).catch(() => {});
-                window.dispatchEvent(new Event("auth-changed"));
-                await refreshMe();
-              }}
-              className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/70 hover:bg-white/20 hover:text-white transition"
-            >
-              Disconnect/Sign-Out
-            </button>
+          {linkedLabel && <div className="mt-2 text-xs text-white/50">{linkedLabel}</div>}
 
-            {/* If NOT signed in, allow wallet sign-in */}
-            {!meLoaded ? null : !isAuthed ? (
-              showWalletSignIn ? (
-                <button
-                  onClick={() => signInWithWallet()}
-                  disabled={busy === "signin" || busy === "link" || successPulse}
-                  onAnimationEnd={(e) => {
-                    if (e.animationName === "xessPop" && successNavTo) {
-                      window.location.href = successNavTo;
-                    }
-                  }}
-                  className={[
-                    "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
-                    successPulse
-                      ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
-                      : busy === "signin"
-                        ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
-                        : "bg-pink-500 text-black hover:bg-pink-400",
-                  ].join(" ")}
-                >
-                  {successPulse ? (
-                    <>
-                      <Checkmark />
-                      <span>Success</span>
-                    </>
-                  ) : busy === "signin" ? (
-                    <>
-                      <Spinner />
-                      <span>{status || "Signing in…"}</span>
-                    </>
-                  ) : (
-                    <span>Sign in with Wallet</span>
-                  )}
-                </button>
-              ) : null
-            ) : isLinked ? (
-              <div className="px-3 py-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 text-sm font-semibold">
-                Linked to your account
-              </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {showDisconnect && (
+              <button
+                onClick={async () => {
+                  await wallet.disconnect();
+                  await fetch("/api/auth/logout", { method: "POST", credentials: "include", cache: "no-store" }).catch(() => {});
+                  window.dispatchEvent(new Event("auth-changed"));
+                  await refreshMe();
+                }}
+                className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/70 hover:bg-white/20 hover:text-white transition"
+              >
+                Disconnect/Sign-Out
+              </button>
+            )}
+
+            {mode === "WALLET_LOGIN" ? (
+              <button
+                onClick={walletLogin}
+                disabled={!canAct || busy !== null || successPulse}
+                onAnimationEnd={(e) => {
+                  if (e.animationName === "xessPop" && successNavTo) window.location.href = successNavTo;
+                }}
+                className={[
+                  "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
+                  successPulse
+                    ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
+                    : busy === "signin"
+                      ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
+                      : "bg-pink-500 text-black hover:bg-pink-400",
+                ].join(" ")}
+              >
+                {successPulse ? (
+                  <>
+                    <Checkmark />
+                    <span>Success</span>
+                  </>
+                ) : busy === "signin" ? (
+                  <>
+                    <Spinner />
+                    <span>{status || "Signing in…"}</span>
+                  </>
+                ) : (
+                  <span>Sign in with Wallet</span>
+                )}
+              </button>
+            ) : mode === "PAYOUT_LINK" ? (
+              <button
+                onClick={() => dbLinkFlow("PAYOUT_LINK")}
+                disabled={!canAct || busy !== null}
+                className="rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black hover:bg-yellow-300 disabled:opacity-50"
+              >
+                {busy === "link" ? "Linking…" : "Link payout wallet"}
+              </button>
             ) : (
-              // Wallet connected but not linked - offer to sign in with it (may switch accounts)
-              <div className="flex flex-col gap-2">
-                <div className="text-xs text-yellow-300/80 px-1">
-                  This wallet is not linked to your current account
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {showWalletSignIn && (
-                    <button
-                      onClick={() => signInWithWallet()}
-                      disabled={busy === "signin" || busy === "link" || successPulse}
-                      onAnimationEnd={(e) => {
-                        if (e.animationName === "xessPop" && successNavTo) {
-                          window.location.href = successNavTo;
-                        }
-                      }}
-                      className={[
-                        "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
-                        successPulse
-                          ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
-                          : busy === "signin"
-                            ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
-                            : "bg-pink-500 text-black hover:bg-pink-400",
-                      ].join(" ")}
-                    >
-                      {successPulse ? (
-                        <>
-                          <Checkmark />
-                          <span>Success</span>
-                        </>
-                      ) : busy === "signin" ? (
-                        <>
-                          <Spinner />
-                          <span>{status || "Signing in…"}</span>
-                        </>
-                      ) : (
-                        <span>Sign in with Wallet</span>
-                      )}
-                    </button>
-                  )}
-                  {showLinkWallet && (
-                    <button
-                      onClick={linkWalletToAccount}
-                      disabled={busy === "signin" || busy === "link"}
-                      className="rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black hover:bg-yellow-300 disabled:opacity-50"
-                    >
-                      {busy === "link" ? "Linking…" : "Link to current"}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <button
+                onClick={() => dbLinkFlow("DIAMOND_UPGRADE")}
+                disabled={!canAct || busy !== null}
+                className="rounded-xl bg-sky-400 px-4 py-2 font-semibold text-black hover:bg-sky-300 disabled:opacity-50"
+              >
+                {busy === "link" ? "Upgrading…" : "Upgrade to Diamond"}
+              </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Wallet mismatch warning */}
-      {needLinkWallet && (
-        <div className="rounded-2xl border border-red-400/50 bg-red-500/10 p-4">
-          <div className="font-semibold text-red-300">Wrong wallet connected</div>
-          <div className="mt-1 text-sm text-white/70">
-            You&apos;re signed in with a different wallet. Connected: <span className="font-mono text-white">{needLinkWallet?.slice(0, 4)}...{needLinkWallet?.slice(-4)}</span>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              onClick={async () => {
-                await switchAccount();
-                // After logout, sign in with the connected wallet
-                setTimeout(() => signInWithWallet(), 500);
-              }}
-              disabled={busy === "signin" || successPulse}
-              onAnimationEnd={(e) => {
-                if (e.animationName === "xessPop" && successNavTo) {
-                  window.location.href = successNavTo;
-                }
-              }}
-              className={[
-                "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
-                successPulse
-                  ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
-                  : busy === "signin"
-                    ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
-                    : "bg-pink-500 text-black hover:bg-pink-400",
-              ].join(" ")}
-            >
-              {successPulse ? (
-                <>
-                  <Checkmark />
-                  <span>Success</span>
-                </>
-              ) : busy === "signin" ? (
-                <>
-                  <Spinner />
-                  <span>{status || "Signing in…"}</span>
-                </>
-              ) : (
-                <span>Sign in with connected wallet</span>
-              )}
-            </button>
-            <button
-              onClick={() => wallet.disconnect()}
-              className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/80 hover:bg-white/20"
-            >
-              Disconnect wallet
-            </button>
-          </div>
-        </div>
-      )}
+      {status && !busy && <div className="text-sm text-white/70">{status}</div>}
 
-      {status && <div className="text-sm text-white/70">{status}</div>}
-
-      {/* Not Registered Modal */}
+      {/* Not Registered Modal (only relevant for wallet login) */}
       {showNotRegisteredModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-black/95 border border-pink-500/40 rounded-2xl p-6 max-w-md mx-4 shadow-[0_0_30px_rgba(236,72,153,0.3)]">

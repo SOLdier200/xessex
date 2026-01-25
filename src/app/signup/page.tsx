@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import GoogleSignupButton from "../components/GoogleSignupButton";
 import ReferralCapture from "../components/ReferralCapture";
-import DiamondMemberSignUpModal from "@/components/DiamondMemberSignUpModal";
+import DiamondSignupModal from "@/components/DiamondSignupModal";
 
 // NOWPayments hosted invoice ids (must match IPN route IID_TO_PLAN)
 const NOWPAYMENTS_IIDS = {
@@ -1722,8 +1722,8 @@ function SignupInner() {
         </div>
       )}
 
-      {/* Diamond Member Signup Modal */}
-      <DiamondMemberSignUpModal
+      {/* Diamond Signup Modal (for new wallet-native accounts) */}
+      <DiamondSignupModal
         open={diamondSignupOpen}
         onClose={() => setDiamondSignupOpen(false)}
         onCreated={() => {

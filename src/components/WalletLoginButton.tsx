@@ -4,24 +4,18 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import bs58 from "bs58";
 import { syncWalletSession } from "@/lib/walletAuthFlow";
+import {
+  walletLoginChallenge,
+  walletLoginVerify,
+  settleAuthMe,
+  isIOS,
+  isWalletNotRegistered,
+} from "@/lib/walletFlows";
 
 const INF_KEY = "xessex_wallet_login_inflight";
 const INF_TS = "xessex_wallet_login_started_at";
-
-function isIOS() {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent.toLowerCase();
-  return (
-    ua.includes("iphone") ||
-    ua.includes("ipad") ||
-    (ua.includes("mac") && (navigator as any).maxTouchPoints > 1)
-  );
-}
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 function beginInflight() {
   try {
@@ -43,29 +37,6 @@ function getInflight() {
   } catch {
     return false;
   }
-}
-
-async function settleAuthMe(setStatus?: (s: string) => void) {
-  // Aggressive short poll for cookie/session to reflect on /me after Phantom bounce.
-  for (let i = 0; i < 10; i++) {
-    try {
-      const r = await fetch("/api/auth/me", {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-        headers: { accept: "application/json" },
-      });
-      const data = await r.json().catch(() => null);
-
-      if (r.ok && data?.ok && data?.authed && data?.tier !== "free") {
-        return true;
-      }
-    } catch {}
-
-    if (setStatus) setStatus(i < 2 ? "Finishing up..." : "Syncing session...");
-    await sleep(i < 4 ? 250 : 500);
-  }
-  return false;
 }
 
 function Spinner() {
@@ -138,14 +109,13 @@ export default function WalletLoginButton() {
     endInflight();
     setInFlight(false);
 
-    // Reset so the animation can play again if the user stays on-page.
     setTimeout(() => {
       setSuccessPulse(false);
       setSuccessNavTo(null);
     }, 1200);
   };
 
-  // One-time "Phantom-return settle" for iOS: when user comes back, finish instantly.
+  // One-time "Phantom-return settle" for iOS
   useEffect(() => {
     const handler = async () => {
       if (document.visibilityState !== "visible") return;
@@ -154,15 +124,13 @@ export default function WalletLoginButton() {
       setInFlight(true);
       setStatus("Finishing up...");
 
-      // On iOS, returning from Phantom often remounts; finish auth silently.
-      const settled = await settleAuthMe(setStatus);
+      const settled = await settleAuthMe({ requireTier: true });
 
       if (settled) {
         triggerSuccess("/");
         return;
       }
 
-      // If it didn't settle after ~15s since sign started, allow user to retry.
       const startedAt = Number(sessionStorage.getItem(INF_TS) || "0");
       if (startedAt && Date.now() - startedAt > 15_000) {
         endInflight();
@@ -186,13 +154,12 @@ export default function WalletLoginButton() {
     window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
   };
 
-  async function signIn(purpose: "LOGIN" | "DIAMOND_SIGNUP" = "LOGIN") {
+  async function signIn() {
     if (!wallet.publicKey || !wallet.signMessage) {
       setStatus("Wallet does not support message signing.");
       return;
     }
 
-    // Prevent double-run across iOS bounces / rapid taps
     if (getInflight()) return;
 
     beginInflight();
@@ -202,16 +169,10 @@ export default function WalletLoginButton() {
       const addr = wallet.publicKey.toBase58();
 
       setStatus("Requesting challenge...");
-      const c = await fetch("/api/auth/challenge", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        cache: "no-store",
-        body: JSON.stringify({ wallet: addr, purpose }),
-      }).then((r) => r.json());
+      const c = await walletLoginChallenge(addr);
 
-      if (!c?.ok || !c?.message) {
-        setStatus(c?.error || "Challenge failed. Try again.");
+      if (!c?.ok || !("message" in c)) {
+        setStatus((c as any)?.error || "Challenge failed. Try again.");
         endInflight();
         setInFlight(false);
         return;
@@ -219,81 +180,37 @@ export default function WalletLoginButton() {
 
       setStatus("Signing...");
       const msgBytes = new TextEncoder().encode(c.message);
-
-      // This triggers Phantom on iOS (expected)
       const signed = await wallet.signMessage(msgBytes);
-
-      const bs58 = (await import("bs58")).default;
       const signature = bs58.encode(signed);
 
       setStatus("Verifying...");
-      const resp = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        cache: "no-store",
-        body: JSON.stringify({
-          wallet: addr,
-          message: c.message,
-          signature,
-        }),
-      });
+      const v = await walletLoginVerify(addr, c.message, signature);
 
-      const v = await resp.json().catch(() => ({}));
-
-      if (!resp.ok || !v.ok) {
-        if (v.error === "WALLET_NOT_REGISTERED") {
+      if (!v.ok) {
+        const err = (v as any).error;
+        if (isWalletNotRegistered(err)) {
           setShowNotRegisteredModal(true);
           setStatus("");
         } else {
-          setStatus(v.error || "Login failed");
+          setStatus(err || "Login failed");
         }
         endInflight();
         setInFlight(false);
         return;
       }
 
-      // IMPORTANT: DO NOT call signing-capable sync here.
-      // Just settle /me. (This avoids a second signMessage prompt on iOS.)
       setStatus("Syncing session...");
-      let ok = await settleAuthMe(setStatus);
+      let ok = await settleAuthMe({ requireTier: true });
 
-      // As a backup, do a passive sync that never signs (requires mode patch)
       if (!ok) {
         await syncWalletSession(wallet as any, { mode: "auto" });
-        ok = await settleAuthMe(setStatus);
+        ok = await settleAuthMe({ requireTier: true });
       }
 
       if (!ok) {
         setStatus("Signed, but session didn't stick. Tap again.");
         endInflight();
         setInFlight(false);
-        return;
-      }
-
-      // For Diamond signup: create pending Diamond subscription before routing
-      if (purpose === "DIAMOND_SIGNUP") {
-        setStatus("Setting up Diamond membership...");
-
-        const sresp = await fetch("/api/auth/diamond/start", {
-          method: "POST",
-          credentials: "include",
-          cache: "no-store",
-        });
-        const sj = await sresp.json().catch(() => ({}));
-
-        if (!sresp.ok || !sj.ok) {
-          setStatus(sj.error || "Failed to start Diamond signup.");
-          endInflight();
-          setInFlight(false);
-          return;
-        }
-
-        // Re-settle /me so UI immediately reflects tier/status
-        await settleAuthMe(setStatus);
-
-        // Route to signup page with Diamond payment options
-        triggerSuccess("/signup#diamond-card-crypto");
         return;
       }
 
