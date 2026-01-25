@@ -64,6 +64,7 @@ model User {
   specialCreditLedger  SpecialCreditLedger[]
   raffleTickets        RaffleTicket[]
   raffleWins           RaffleWinner[]
+  claimSalts           ClaimSalt[]
 
   @@index([referredById])
 }
@@ -655,6 +656,8 @@ model ClaimEpoch {
   setOnChain   Boolean     @default(false)
   onChainTxSig String?
   setOnChainAt DateTime?
+  version      Int         @default(1) // 1 = wallet-based, 2 = userKey-based
+  buildHash    String?     // SHA256 of inputs for idempotency
 
   leaves       ClaimLeaf[]
 }
@@ -664,10 +667,12 @@ model ClaimLeaf {
   epoch        Int
   weekKey      String
   userId       String
-  wallet       String     @db.VarChar(64) // base58
+  wallet       String?    @db.VarChar(64) // base58 - nullable for v2 epochs
   index        Int
   amountAtomic BigInt
   proofHex     Json       // array of 32-byte hex strings
+  userKeyHex   String?    @db.VarChar(64) // 32 bytes hex - v2 only
+  claimSaltHex String?    @db.VarChar(64) // 32 bytes hex - v2 only
 
   createdAt    DateTime   @default(now())
 
@@ -676,6 +681,7 @@ model ClaimLeaf {
 
   @@unique([epoch, wallet])
   @@unique([weekKey, wallet])
+  @@unique([epoch, userKeyHex])
   @@index([weekKey, userId])
   @@index([wallet])
 }
@@ -828,4 +834,20 @@ model RaffleMatchBudget {
   creditsMatchedMicro  BigInt   @default(0) // Credits already matched
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+// ========== V2 Claim System - Per-epoch salts for userKey-based claims ==========
+
+model ClaimSalt {
+  id           String   @id @default(cuid())
+  epoch        Int
+  userId       String
+  userKeyHex   String   @db.VarChar(64) // 32 bytes hex - keccak256(userId)
+  claimSaltHex String   @db.VarChar(64) // 32 bytes hex - random per (epoch, user)
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([epoch, userId])
+  @@index([userId])
 }

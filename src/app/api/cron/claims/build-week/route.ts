@@ -1,9 +1,10 @@
 /**
- * Weekly Cron Endpoint: Build claim epoch from latest PAID rewards
+ * Weekly Cron Endpoint: Build claim epoch from latest PAID rewards (V2)
  *
  * DATA-DRIVEN APPROACH:
  * - Finds the latest weekKey that has PAID, unclaimed RewardEvents
- * - Builds merkle epoch for that exact weekKey
+ * - Builds merkle epoch for that exact weekKey using V2 format
+ * - V2: userKey-based leaves (no wallet required, claim to any wallet)
  * - Guarantees alignment with weekly-distribute's weekKey format
  *
  * Schedule: Sunday 00:02 AM (and optionally 00:10 as retry)
@@ -14,11 +15,16 @@
  *   1. Get the rootHex from the response
  *   2. Run set_epoch_root(epoch, rootHex) on-chain
  *   3. Mark epoch as setOnChain=true in DB
+ *
+ * V2 Features:
+ * - Rebuild-until-published: Can rebuild freely until setOnChain=true
+ * - Salt stability: ClaimSalt table ensures same salt per (epoch, user)
+ * - buildHash: Detects if inputs changed since last build
  */
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { buildAndStoreClaimEpoch, getLatestEpoch } from "@/lib/claimEpochBuilder";
+import { buildClaimEpochV2Safe, getLatestEpoch } from "@/lib/claimEpochBuilder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,33 +81,58 @@ export async function POST(req: Request) {
 
       // Check if epoch already exists for this weekKey
       const existingEpoch = await db.claimEpoch.findUnique({ where: { weekKey } });
+
+      // Determine epoch number
+      let epoch: number;
       if (existingEpoch) {
+        // V2 allows rebuild if not yet on-chain
+        if (existingEpoch.setOnChain) {
+          return NextResponse.json({
+            ok: true,
+            skipped: true,
+            reason: "epoch_immutable",
+            weekKey,
+            epoch: existingEpoch.epoch,
+            rootHex: existingEpoch.rootHex,
+            setOnChain: true,
+          });
+        }
+        epoch = existingEpoch.epoch;
+      } else {
+        const lastEpoch = await getLatestEpoch();
+        epoch = (lastEpoch?.epoch ?? 0) + 1;
+      }
+
+      // Build and store the epoch (V2 with userKey-based leaves)
+      const built = await buildClaimEpochV2Safe({ epoch, weekKey });
+
+      // Return result with next step reminder
+      if (built.alreadyExists && !built.immutable) {
         return NextResponse.json({
           ok: true,
-          skipped: true,
-          reason: "epoch_exists",
+          skipped: false,
+          reason: "rebuilt_same_inputs",
           weekKey,
-          epoch: existingEpoch.epoch,
-          rootHex: existingEpoch.rootHex,
-          setOnChain: existingEpoch.setOnChain,
+          epoch: built.epoch,
+          version: built.version,
+          rootHex: built.rootHex,
+          buildHash: built.buildHash,
+          nextStep: "call_set_epoch_root_onchain",
+          instructions: `Run: node set-epoch-root.mjs ${built.epoch} ${built.rootHex}`,
         });
       }
 
-      // Determine next epoch number
-      const lastEpoch = await getLatestEpoch();
-      const epoch = (lastEpoch?.epoch ?? 0) + 1;
-
-      // Build and store the epoch
-      const built = await buildAndStoreClaimEpoch({ epoch, weekKey });
-
-      // Return result with next step reminder
       return NextResponse.json({
         ok: true,
         weekKey,
-        epoch,
-        built,
+        epoch: built.epoch,
+        version: built.version,
+        rootHex: built.rootHex,
+        buildHash: built.buildHash,
+        leafCount: built.leafCount,
+        totalAtomic: built.totalAtomic,
         nextStep: "call_set_epoch_root_onchain",
-        instructions: `Run: node set-epoch-root.mjs ${epoch} ${built.rootHex}`,
+        instructions: `Run: node set-epoch-root.mjs ${built.epoch} ${built.rootHex}`,
       });
     } finally {
       // Release advisory lock
@@ -161,7 +192,9 @@ export async function GET(req: Request) {
         ? {
             epoch: latestEpoch.epoch,
             weekKey: latestEpoch.weekKey,
+            version: latestEpoch.version ?? 1,
             rootHex: latestEpoch.rootHex,
+            buildHash: latestEpoch.buildHash,
             totalAtomic: latestEpoch.totalAtomic.toString(),
             leafCount: latestEpoch.leafCount,
             setOnChain: latestEpoch.setOnChain,

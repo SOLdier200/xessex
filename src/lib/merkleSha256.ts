@@ -1,16 +1,31 @@
 /**
  * Merkle tree library for XESS claim system.
  * Uses keccak256 to match on-chain: solana_program::keccak::hashv
+ *
+ * V1: Leaf = hash(wallet || epoch || amount || index)
+ * V2: Leaf = hash(userKey || epoch || amount || index || salt)
  */
 
 import { keccak_256 } from "js-sha3";
 import { PublicKey } from "@solana/web3.js";
+
+// ==================== V1 Types (wallet-based) ====================
 
 export type LeafInput = {
   wallet: string;        // base58 pubkey
   epoch: bigint;         // u64
   amountAtomic: bigint;  // u64
   index: number;         // u32
+};
+
+// ==================== V2 Types (userKey-based) ====================
+
+export type LeafInputV2 = {
+  userKey32: Buffer;     // 32 bytes - keccak256(userId)
+  epoch: bigint;         // u64
+  amountAtomic: bigint;  // u64
+  index: number;         // u32
+  salt32: Buffer;        // 32 bytes - per-(epoch, user) secret
 };
 
 export function u64le(n: bigint): Buffer {
@@ -32,7 +47,7 @@ export function keccak256(buf: Buffer): Buffer {
 }
 
 /**
- * Compute leaf hash matching on-chain:
+ * V1: Compute leaf hash matching on-chain:
  * hashv([wallet_bytes, epoch_le_u64, amount_le_u64, index_le_u32])
  */
 export function leafHash(input: LeafInput): Buffer {
@@ -44,6 +59,42 @@ export function leafHash(input: LeafInput): Buffer {
     u32le(input.index),
   ]);
   return keccak256(data);
+}
+
+/**
+ * V2: Compute userKey from userId.
+ * userKey = keccak256(utf8(userId)) → 32 bytes
+ */
+export function userKey32FromUserId(userId: string): Buffer {
+  const hash = keccak_256.create();
+  hash.update(userId);
+  return Buffer.from(hash.arrayBuffer());
+}
+
+/**
+ * V2: Compute leaf hash matching on-chain claim_v2:
+ * hashv([userKey, epoch_le_u64, amount_le_u64, index_le_u32, salt])
+ */
+export function leafHashV2(input: LeafInputV2): Buffer {
+  if (input.userKey32.length !== 32) throw new Error("userKey32 must be 32 bytes");
+  if (input.salt32.length !== 32) throw new Error("salt32 must be 32 bytes");
+
+  const data = Buffer.concat([
+    input.userKey32,           // 32 bytes
+    u64le(input.epoch),        // 8 bytes
+    u64le(input.amountAtomic), // 8 bytes
+    u32le(input.index),        // 4 bytes
+    input.salt32,              // 32 bytes
+  ]);
+  return keccak256(data);
+}
+
+/**
+ * Generate a cryptographically secure 32-byte salt.
+ */
+export function generateSalt32(): Buffer {
+  const crypto = require("crypto");
+  return crypto.randomBytes(32);
 }
 
 /**

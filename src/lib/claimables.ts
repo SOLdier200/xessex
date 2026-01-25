@@ -96,3 +96,46 @@ export async function getUnclaimedRewardsForUserWeek(userId: string, weekKey: st
     select: { id: true, amount: true },
   });
 }
+
+// ==================== V2 Claimables (no wallet required) ====================
+
+export type ClaimableRowV2 = {
+  userId: string;
+  amountAtomic: bigint;  // 9-decimal atomic units (matches token mint)
+};
+
+/**
+ * V2: Compute claimable amounts for a specific week WITHOUT wallet requirement.
+ * Sums RewardEvent.amount where:
+ *   - weekKey matches
+ *   - status = PAID (earned/owed)
+ *   - claimedAt is null (not yet claimed)
+ *
+ * Returns amounts in 9-decimal atomic units (converted from 6-decimal storage).
+ * Users do NOT need a linked wallet to be included.
+ */
+export async function computeClaimablesForWeekV2(weekKey: string): Promise<ClaimableRowV2[]> {
+  // Group by userId and sum amounts (stored in 6-decimal units)
+  const grouped = await db.rewardEvent.groupBy({
+    by: ["userId"],
+    where: {
+      weekKey,
+      status: "PAID",
+      claimedAt: null,
+    },
+    _sum: { amount: true },
+  });
+
+  if (grouped.length === 0) return [];
+
+  // Convert to rows with 6->9 decimal conversion (no wallet filter)
+  const rows: ClaimableRowV2[] = grouped
+    .map(g => {
+      const amount6 = BigInt((g._sum.amount as bigint) ?? 0n);
+      const amountAtomic = amount6 * DECIMALS_MULT; // convert 6 -> 9 decimals
+      return { userId: g.userId, amountAtomic };
+    })
+    .filter(r => r.amountAtomic > 0n);
+
+  return rows;
+}

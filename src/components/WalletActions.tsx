@@ -177,7 +177,13 @@ export default function WalletActions({
         return;
       }
 
-      setStatus("Signed in!");
+      // Handle account switch (Diamond wallet taking over lower-tier session)
+      if (v.switched) {
+        setStatus(v.switchedToDiamond ? "Switched to Diamond account!" : "Switched accounts!");
+      } else {
+        setStatus("Signed in!");
+      }
+
       window.dispatchEvent(new Event("auth-changed"));
       await refreshMe();
       window.location.href = "/";
@@ -267,25 +273,34 @@ export default function WalletActions({
         </div>
       )}
 
-      {/* Show logout button if Member is signed in, otherwise show wallet connect */}
+      {/* Show logout button if user is signed in with email, otherwise show wallet connect */}
       {!wallet.connected ? (
-        meData?.membership === "MEMBER" ? (
-          // Member is signed in - need to log out first before connecting wallet
-          <button
-            onClick={async () => {
-              setStatus("Logging out...");
-              await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-              window.dispatchEvent(new Event("auth-changed"));
-              await refreshMe();
-              setStatus("");
-            }}
-            className="w-full py-3 px-6 rounded-full font-semibold text-white transition bg-gradient-to-r from-red-500 to-pink-500 border-2 border-red-400"
-            style={{
-              boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
-            }}
-          >
-            Log out of Email Account
-          </button>
+        // If user is authed with email (not wallet), show logout option before wallet connect
+        isAuthed && meData?.user?.email ? (
+          <div className="space-y-3">
+            <div className="text-sm text-white/70 text-center">
+              Signed in as <span className="text-white font-medium">{meData.user.email}</span>
+              {meData.membership && <span className="text-white/50"> ({meData.membership})</span>}
+            </div>
+            <button
+              onClick={async () => {
+                setStatus("Logging out...");
+                await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+                window.dispatchEvent(new Event("auth-changed"));
+                await refreshMe();
+                setStatus("");
+              }}
+              className="w-full py-3 px-6 rounded-full font-semibold text-white transition bg-gradient-to-r from-red-500 to-pink-500 border-2 border-red-400"
+              style={{
+                boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
+              }}
+            >
+              Log out to connect wallet
+            </button>
+            <div className="text-xs text-white/50 text-center">
+              Log out first to sign in with a different wallet account
+            </div>
+          </div>
         ) : (
           <>
             <button
@@ -345,15 +360,34 @@ export default function WalletActions({
               <div className="px-3 py-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 text-sm font-semibold">
                 Linked to your account
               </div>
-            ) : showLinkWallet ? (
-              <button
-                onClick={linkWalletToAccount}
-                disabled={busy === "signin" || busy === "link"}
-                className="rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black hover:bg-yellow-300 disabled:opacity-50"
-              >
-                {busy === "link" ? "Linking…" : "Link wallet to this account"}
-              </button>
-            ) : null}
+            ) : (
+              // Wallet connected but not linked - offer to sign in with it (may switch accounts)
+              <div className="flex flex-col gap-2">
+                <div className="text-xs text-yellow-300/80 px-1">
+                  This wallet is not linked to your current account
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {showWalletSignIn && (
+                    <button
+                      onClick={signInWithWallet}
+                      disabled={busy === "signin" || busy === "link"}
+                      className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400 disabled:opacity-50"
+                    >
+                      {busy === "signin" ? "Signing in…" : "Sign in with Wallet"}
+                    </button>
+                  )}
+                  {showLinkWallet && (
+                    <button
+                      onClick={linkWalletToAccount}
+                      disabled={busy === "signin" || busy === "link"}
+                      className="rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black hover:bg-yellow-300 disabled:opacity-50"
+                    >
+                      {busy === "link" ? "Linking…" : "Link to current"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

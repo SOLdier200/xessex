@@ -226,6 +226,8 @@ export default function WalletStatus() {
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onLogoutComplete={handleLogoutComplete}
+        email={auth?.email}
+        walletAddress={auth?.authWallet}
       />
 
       <FreeUserModal

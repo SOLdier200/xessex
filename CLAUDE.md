@@ -214,3 +214,69 @@ member_monthly: 400, member_yearly: 4000, diamond_monthly: 900, diamond_yearly: 
 - Footer with two rows:
   1. Page totals (current loaded rows)
   2. Grand totals (all matching subscriptions for current filter)
+
+### 14-Day Free Trial System (Jan 2026)
+Implemented a complete free trial system with Diamond upsell teasers.
+
+**Schema Changes (`prisma/schema.prisma`):**
+- Added `trialUsed`, `trialStartedAt`, `trialEndsAt` fields to User model
+- Added `TRIAL` to SubscriptionStatus enum
+
+**Key Files:**
+- `src/lib/auth.ts` - Two subscription helpers:
+  - `isSubscriptionActive()` - Returns true only for ACTIVE/TRIAL (used for trial eligibility)
+  - `hasSubscriptionAccess()` - Returns true for ACTIVE/TRIAL/PENDING/PARTIAL (used for content gating)
+- `src/lib/access.ts` - Trial flags: `isOnTrial`, `trialUsed`, `trialDaysLeft`, `canStartTrial`, `trialDurationDays`
+- `src/app/api/trial/start/route.ts` - POST endpoint to start trial
+- `src/app/api/auth/me/route.ts` - Returns all trial fields from access context
+
+**UI Components:**
+- `src/app/components/TrialBanner.tsx` - Shows trial countdown with urgency styling when < 3 days left
+- `src/app/components/DiamondTeaser.tsx` - Diamond upsell banner for trial/member users
+- `src/app/signup/page.tsx` - "Start 14-Day Free Trial" button in trial banner and CC Member card
+
+**Trial Flow:**
+1. User signs up (no subscription created at registration)
+2. User clicks "Start Free Trial" → `/api/trial/start`
+3. Sets `user.trialUsed=true`, creates subscription with `status=TRIAL`, `tier=MEMBER`
+4. User gets Member access for 14 days
+5. TrialBanner shows countdown, DiamondTeaser prompts upgrade
+
+**Error Codes (`/api/trial/start`):**
+- `UNAUTHENTICATED` (401) - Not logged in
+- `TRIAL_ALREADY_USED` (409) - Already used trial
+- `ALREADY_SUBSCRIBED` (409) - Has ACTIVE/TRIAL subscription
+- `INTERNAL_ERROR` (500) - Server error
+
+**Critical Bug Fix - Placeholder Subscriptions:**
+Registration routes were creating PENDING subscriptions with `expiresAt: null`, which granted free access.
+
+Fixed by:
+1. `hasSubscriptionAccess()` now returns `false` for PENDING with null expiry
+2. Removed placeholder subscription creation from:
+   - `/api/auth/email/register-for-checkout/route.ts`
+   - `/api/auth/verify/route.ts`
+
+**Rule:** Subscriptions are only created when:
+- Payment is confirmed (ACTIVE)
+- Trial is started (TRIAL)
+- NOWPayments checkout starts (PENDING with real expiry)
+
+### Credit Card Tab Enhancements (Jan 2026)
+Updated Credit Card tab on signup page to match premium styling of other tabs.
+
+**Changes to CC Diamond Card:**
+- Added `id="diamond-card-cc"` for scroll targeting
+- Changed opacity from 0.70 to 0.90 (less dead, still signals not live)
+- Added "Exclusive Diamond badge" list item
+- Added luxury copy block with 4 benefit tiles
+- Added "Credit Card: Coming soon" notice
+
+**Changes to CC Member Card:**
+- Added 14-day trial button (works even though CC checkout is disabled)
+- Shows trial status if active
+
+**Diamond Card IDs for Scroll:**
+- `diamond-card-crypto` - Crypto tab
+- `diamond-card-cashapp` - Cash App tab
+- `diamond-card-cc` - Credit Card tab

@@ -32,65 +32,70 @@ export default function DiamondPage() {
           </p>
         </div>
 
-        {/* Perks Grid */}
-        <div className="grid gap-6 md:grid-cols-2 mb-12">
-          {/* Perk 1: Earn XESS Tokens */}
-          <div className="rounded-xl p-6 bg-gradient-to-br from-sky-500/10 to-blue-500/10 border border-sky-400/30">
-            <div className="text-3xl mb-3">💎</div>
-            <h3 className="text-xl font-semibold text-sky-300 mb-2">Earn XESS Tokens</h3>
-            <p className="text-white/70">
-              Get rewarded with XESS tokens every week for watching and rating videos.
-              The more you engage, the more you earn.
-            </p>
-          </div>
-
-          {/* Perk 2: Star Ratings */}
+        {/* Diamond Exclusive Perks */}
+        <h2 className="text-xl font-bold text-sky-300 mb-4">Diamond Exclusive Features</h2>
+        <div className="grid gap-6 md:grid-cols-2 mb-10">
+          {/* Perk 1: Star Ratings */}
           <div className="rounded-xl p-6 bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-400/30">
             <div className="text-3xl mb-3">⭐</div>
-            <h3 className="text-xl font-semibold text-yellow-300 mb-2">Exclusive Star Ratings</h3>
+            <h3 className="text-xl font-semibold text-yellow-300 mb-2">Star Ratings</h3>
             <p className="text-white/70">
-              Rate videos with stars and earn from the weekly Likes Pool.
+              Rate videos with stars and earn from the weekly Likes Pool (75% of rewards).
               Your ratings help curate the best content.
             </p>
           </div>
 
-          {/* Perk 3: Comments */}
+          {/* Perk 2: Comments */}
           <div className="rounded-xl p-6 bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-400/30">
             <div className="text-3xl mb-3">💬</div>
-            <h3 className="text-xl font-semibold text-purple-300 mb-2">Comment & Discuss</h3>
+            <h3 className="text-xl font-semibold text-purple-300 mb-2">Leave Comments</h3>
             <p className="text-white/70">
               Join the conversation. Leave comments on videos and earn from the
-              weekly Comments Pool based on engagement.
+              weekly Comments Pool (5% of rewards).
             </p>
           </div>
 
-          {/* Perk 4: MVM Voting */}
+          {/* Perk 3: MVM Voting */}
           <div className="rounded-xl p-6 bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-400/30">
             <div className="text-3xl mb-3">🏆</div>
             <h3 className="text-xl font-semibold text-emerald-300 mb-2">Most Valued Member</h3>
             <p className="text-white/70">
               Vote for the most valuable community members each week.
-              Get recognized and earn from the MVM Pool.
+              Get recognized and earn from the MVM Pool (20% of rewards).
             </p>
           </div>
 
-          {/* Perk 5: Full Library Access */}
-          <div className="rounded-xl p-6 bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-400/30">
-            <div className="text-3xl mb-3">🎬</div>
-            <h3 className="text-xl font-semibold text-pink-300 mb-2">Full Video Library</h3>
-            <p className="text-white/70">
-              Access our complete curated video collection.
-              No restrictions, no limits on what you can watch.
-            </p>
-          </div>
-
-          {/* Perk 6: Wallet Identity */}
+          {/* Perk 4: Wallet Identity */}
           <div className="rounded-xl p-6 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-400/30">
             <div className="text-3xl mb-3">👛</div>
             <h3 className="text-xl font-semibold text-indigo-300 mb-2">Wallet-Based Identity</h3>
             <p className="text-white/70">
               Your Solana wallet is your identity. No email required.
               Secure, anonymous, and fully in your control.
+            </p>
+          </div>
+        </div>
+
+        {/* Shared with Members */}
+        <h2 className="text-xl font-bold text-emerald-300 mb-4">Also Included (Shared with Members)</h2>
+        <div className="grid gap-6 md:grid-cols-2 mb-12">
+          {/* Shared 1: Like Comments */}
+          <div className="rounded-xl p-6 bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-400/30">
+            <div className="text-3xl mb-3">👍</div>
+            <h3 className="text-xl font-semibold text-pink-300 mb-2">Like Comments & Earn</h3>
+            <p className="text-white/70">
+              Vote on comments and earn XESS tokens. Both Members and Diamond
+              users can earn from liking comments.
+            </p>
+          </div>
+
+          {/* Shared 2: Full Library Access */}
+          <div className="rounded-xl p-6 bg-gradient-to-br from-sky-500/10 to-cyan-500/10 border border-sky-400/30">
+            <div className="text-3xl mb-3">🎬</div>
+            <h3 className="text-xl font-semibold text-sky-300 mb-2">Full Video Library</h3>
+            <p className="text-white/70">
+              Access our complete curated video collection.
+              No restrictions, no limits on what you can watch.
             </p>
           </div>
         </div>

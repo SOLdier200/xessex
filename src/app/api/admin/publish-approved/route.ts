@@ -53,7 +53,7 @@ export async function POST() {
     const title = (row.title || "").trim() || viewkey;
     const embedUrl = `https://www.pornhub.com/embed/${viewkey}`;
     const tags = toTagsArray(row.tags);
-    const viewsCount = Number(row.views || 0) || 0;
+    const sourceViews = Number(row.views || 0) || 0; // PH views from source
 
     await db.video.upsert({
       where: { slug: viewkey },
@@ -62,14 +62,14 @@ export async function POST() {
         title,
         embedUrl,
         tags,
-        viewsCount,
+        sourceViews, // PH views - not viewsCount (which tracks Xessex local views)
         isShowcase: false,
       },
       update: {
         title,
         embedUrl,
         tags,
-        viewsCount,
+        sourceViews,
         // do NOT overwrite isShowcase on update
       },
     });

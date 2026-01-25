@@ -45,7 +45,7 @@ export async function POST() {
     const title = String(v.title || "(untitled)");
     const embedUrl = `https://www.pornhub.com/embed/${slug}`;
     const thumbnailUrl = v.primary_thumb ? String(v.primary_thumb) : null;
-    const viewsCount = asNumber(v.views, 0);
+    const sourceViews = asNumber(v.views, 0); // PH views from source
     const tags = tagsToArray(v.tags);
 
     await db.video.upsert({
@@ -56,7 +56,7 @@ export async function POST() {
         embedUrl,
         thumbnailUrl,
         tags,
-        viewsCount,
+        sourceViews, // PH views - not viewsCount (which tracks Xessex local views)
         isShowcase: false, // publish defaults to premium; ShowcaseModal sets showcase
       },
       update: {
@@ -64,7 +64,7 @@ export async function POST() {
         embedUrl,
         thumbnailUrl,
         tags,
-        viewsCount,
+        sourceViews,
       },
     });
 

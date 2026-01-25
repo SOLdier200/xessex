@@ -61,6 +61,7 @@ export const metadata: Metadata = {
     "rating": "adult",
     "content-rating": "adult",
     "bingbot": "index,follow",
+    "yandex-verification": "7f9ed63e6f0a5587",
   },
 };
 
@@ -73,6 +74,7 @@ export default function RootLayout({
     <html lang="en" translate="no">
       <head>
         <meta name="google" content="notranslate" />
+        <meta name="yandex-verification" content="7f9ed63e6f0a5587" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/logos/apple-touch-icon.png" />

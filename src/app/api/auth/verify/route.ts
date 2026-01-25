@@ -42,17 +42,35 @@ export async function POST(req: Request) {
 
       if (!alreadyKnown) {
         // Check if this wallet belongs to an existing user (e.g., Diamond member)
-        const existingWalletUser = await db.user.findUnique({
+        // Check both walletAddress AND solWallet since Diamond members may have wallet in either field
+        let existingWalletUser = await db.user.findUnique({
           where: { walletAddress: w },
-          select: { id: true },
+          select: { id: true, subscription: { select: { tier: true, status: true } } },
         });
+
+        // Also check solWallet if not found by walletAddress
+        if (!existingWalletUser) {
+          existingWalletUser = await db.user.findFirst({
+            where: { solWallet: w },
+            select: { id: true, subscription: { select: { tier: true, status: true } } },
+          });
+        }
 
         if (existingWalletUser) {
           // Wallet belongs to an existing account - switch to that account
           // This allows a member to sign in with their Diamond wallet and take over the session
           const { token, expiresAt } = await createSession(existingWalletUser.id);
           await setSessionCookie(token, expiresAt);
-          return NextResponse.json({ ok: true, switched: true }, { headers: noCache });
+
+          // Return info about the switched account
+          const switchedToDiamond = existingWalletUser.subscription?.tier === "DIAMOND" &&
+            existingWalletUser.subscription?.status === "ACTIVE";
+
+          return NextResponse.json({
+            ok: true,
+            switched: true,
+            switchedToDiamond,
+          }, { headers: noCache });
         }
 
         // Wallet doesn't exist in system - don't silently create a new wallet-native account

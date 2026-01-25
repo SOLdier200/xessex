@@ -6,10 +6,14 @@ export default function LogoutModal({
   open,
   onClose,
   onLogoutComplete,
+  email,
+  walletAddress,
 }: {
   open: boolean;
   onClose: () => void;
   onLogoutComplete: () => void;
+  email?: string | null;
+  walletAddress?: string | null;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +43,16 @@ export default function LogoutModal({
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/90 p-6">
+        {/* Show logged in user info */}
+        {(email || walletAddress) && (
+          <div className="mb-4 pb-4 border-b border-white/10">
+            <div className="text-xs text-white/50 uppercase tracking-wide">Logged in as</div>
+            <div className="text-sm text-white font-medium mt-1 truncate">
+              {email || (walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "")}
+            </div>
+          </div>
+        )}
+
         <h2 className="text-lg font-semibold text-white mb-2">Log Out</h2>
         <p className="text-sm text-white/60 mb-6">
           Are you sure you want to log out? You will be treated as a free user

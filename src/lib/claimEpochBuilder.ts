@@ -7,11 +7,23 @@
  *
  * IMPORTANT: amountAtomic in ClaimLeaf uses 9 decimals (matches token mint).
  * The computeClaimablesForWeek function handles 6→9 decimal conversion.
+ *
+ * V1: Wallet-based leaves (requires linked wallet)
+ * V2: UserKey-based leaves (no wallet required, claim to any wallet at claim time)
  */
 
 import { db } from "@/lib/prisma";
-import { computeClaimablesForWeek } from "@/lib/claimables";
-import { buildMerkle, getProof, leafHash, toHex32 } from "@/lib/merkleSha256";
+import { computeClaimablesForWeek, computeClaimablesForWeekV2 } from "@/lib/claimables";
+import {
+  buildMerkle,
+  getProof,
+  leafHash,
+  leafHashV2,
+  toHex32,
+  userKey32FromUserId,
+  generateSalt32,
+} from "@/lib/merkleSha256";
+import crypto from "crypto";
 
 export type BuildEpochResult = {
   ok: boolean;
@@ -143,5 +155,225 @@ export async function getLeafByWallet(epoch: number, wallet: string) {
 export async function getLeafByWeekAndWallet(weekKey: string, wallet: string) {
   return db.claimLeaf.findUnique({
     where: { weekKey_wallet: { weekKey, wallet } },
+  });
+}
+
+// ==================== V2 Epoch Builder (UserKey-based) ====================
+
+export type BuildEpochResultV2 = {
+  ok: boolean;
+  alreadyExists: boolean;
+  immutable: boolean; // true if setOnChain=true and cannot rebuild
+  epoch: number;
+  weekKey: string;
+  version: 2;
+  rootHex: string;
+  buildHash?: string;
+  leafCount?: number;
+  totalAtomic?: string;
+};
+
+/**
+ * Compute a stable buildHash from the inputs.
+ * This allows detecting if inputs have changed since last build.
+ * Format: SHA256(epoch|weekKey|sorted(userId:amountAtomic)...)
+ */
+function computeBuildHash(
+  epoch: number,
+  weekKey: string,
+  rows: Array<{ userId: string; amountAtomic: bigint }>
+): string {
+  const sorted = [...rows].sort((a, b) => a.userId.localeCompare(b.userId));
+  const parts = sorted.map(r => `${r.userId}:${r.amountAtomic.toString()}`);
+  const input = `${epoch}|${weekKey}|${parts.join(",")}`;
+  return crypto.createHash("sha256").update(input).digest("hex");
+}
+
+/**
+ * V2: Build and store a claim epoch using userKey-based leaves.
+ *
+ * Features:
+ * - No wallet requirement (users earn rewards without linking wallet)
+ * - Per-(epoch, user) salt stored in ClaimSalt table
+ * - buildHash for idempotency (detect if inputs changed)
+ * - Immutability guard when setOnChain=true
+ * - Supports rebuild-until-published pattern
+ *
+ * @param epoch - Sequential epoch number
+ * @param weekKey - Week identifier (e.g., "2026-01-18" for Sunday Jan 18)
+ */
+export async function buildClaimEpochV2Safe(args: {
+  epoch: number;
+  weekKey: string;
+}): Promise<BuildEpochResultV2> {
+  const { epoch, weekKey } = args;
+
+  // Check existing epoch
+  const existing = await db.claimEpoch.findFirst({
+    where: { OR: [{ epoch }, { weekKey }] },
+  });
+
+  // Immutability guard: if on-chain, cannot rebuild
+  if (existing?.setOnChain) {
+    return {
+      ok: true,
+      alreadyExists: true,
+      immutable: true,
+      epoch: existing.epoch,
+      weekKey: existing.weekKey,
+      version: 2,
+      rootHex: existing.rootHex,
+      buildHash: existing.buildHash ?? undefined,
+    };
+  }
+
+  // Compute claimables (V2 - no wallet required)
+  const rows = await computeClaimablesForWeekV2(weekKey);
+
+  if (rows.length === 0) {
+    throw new Error(`No claimables for weekKey=${weekKey}`);
+  }
+
+  // Compute buildHash to detect input changes
+  const buildHash = computeBuildHash(epoch, weekKey, rows);
+
+  // If epoch exists with same buildHash, return existing (true idempotency)
+  if (existing && existing.buildHash === buildHash && existing.version === 2) {
+    return {
+      ok: true,
+      alreadyExists: true,
+      immutable: false,
+      epoch: existing.epoch,
+      weekKey: existing.weekKey,
+      version: 2,
+      rootHex: existing.rootHex,
+      buildHash,
+    };
+  }
+
+  // Deterministic ordering (CRITICAL for reproducible merkle tree)
+  // Sort by userId for consistency
+  rows.sort((a, b) => a.userId.localeCompare(b.userId));
+
+  // Get or create salts for each user
+  const saltMap = new Map<string, Buffer>();
+  const userKeyMap = new Map<string, Buffer>();
+
+  for (const row of rows) {
+    const userKey32 = userKey32FromUserId(row.userId);
+    userKeyMap.set(row.userId, userKey32);
+
+    // Check if salt already exists for this (epoch, user)
+    const existingSalt = await db.claimSalt.findUnique({
+      where: { epoch_userId: { epoch, userId: row.userId } },
+    });
+
+    if (existingSalt) {
+      saltMap.set(row.userId, Buffer.from(existingSalt.claimSaltHex, "hex"));
+    } else {
+      // Generate new salt
+      const salt32 = generateSalt32();
+      saltMap.set(row.userId, salt32);
+
+      // Store the salt
+      await db.claimSalt.create({
+        data: {
+          epoch,
+          userId: row.userId,
+          userKeyHex: toHex32(userKey32),
+          claimSaltHex: toHex32(salt32),
+        },
+      });
+    }
+  }
+
+  // Build leaf hashes (V2 format)
+  const leafBuffers = rows.map((r, index) => {
+    const userKey32 = userKeyMap.get(r.userId)!;
+    const salt32 = saltMap.get(r.userId)!;
+    return leafHashV2({
+      userKey32,
+      epoch: BigInt(epoch),
+      amountAtomic: r.amountAtomic,
+      index,
+      salt32,
+    });
+  });
+
+  const { root, layers } = buildMerkle(leafBuffers);
+  const rootHex = toHex32(root);
+
+  const totalAtomic = rows.reduce((acc, r) => acc + r.amountAtomic, 0n);
+
+  // Write epoch + leaves in transaction
+  await db.$transaction(async (tx) => {
+    // Delete existing epoch and leaves if rebuilding
+    if (existing) {
+      await tx.claimLeaf.deleteMany({ where: { epoch } });
+      await tx.claimEpoch.delete({ where: { epoch } });
+    }
+
+    await tx.claimEpoch.create({
+      data: {
+        epoch,
+        weekKey,
+        rootHex,
+        totalAtomic,
+        leafCount: rows.length,
+        version: 2,
+        buildHash,
+      },
+    });
+
+    for (let i = 0; i < rows.length; i++) {
+      const proofHex = getProof(layers, i).map(toHex32);
+      const userKey32 = userKeyMap.get(rows[i].userId)!;
+      const salt32 = saltMap.get(rows[i].userId)!;
+
+      await tx.claimLeaf.create({
+        data: {
+          epoch,
+          weekKey,
+          userId: rows[i].userId,
+          wallet: null, // V2 doesn't use wallet
+          index: i,
+          amountAtomic: rows[i].amountAtomic,
+          proofHex,
+          userKeyHex: toHex32(userKey32),
+          claimSaltHex: toHex32(salt32),
+        },
+      });
+    }
+  });
+
+  return {
+    ok: true,
+    alreadyExists: false,
+    immutable: false,
+    epoch,
+    weekKey,
+    version: 2,
+    rootHex,
+    buildHash,
+    leafCount: rows.length,
+    totalAtomic: totalAtomic.toString(),
+  };
+}
+
+/**
+ * Get a user's V2 leaf for a specific epoch by userKeyHex.
+ */
+export async function getLeafByUserKey(epoch: number, userKeyHex: string) {
+  return db.claimLeaf.findUnique({
+    where: { epoch_userKeyHex: { epoch, userKeyHex } },
+  });
+}
+
+/**
+ * Get a user's leaf for a specific epoch by userId.
+ */
+export async function getLeafByUserId(epoch: number, userId: string) {
+  return db.claimLeaf.findFirst({
+    where: { epoch, userId },
   });
 }
