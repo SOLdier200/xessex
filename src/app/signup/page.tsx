@@ -40,7 +40,6 @@ function SignupInner() {
   const [loading, setLoading] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const diamondDisabled = false;
-  const [diamondBetaModalOpen, setDiamondBetaModalOpen] = useState(false);
 
   // Payment method tabs
   const [paymentMethod, setPaymentMethod] = useState<"crypto" | "cashapp" | "creditcard">("crypto");
@@ -806,33 +805,17 @@ function SignupInner() {
             </li>
           </ul>
 
-          <div className="mt-4 rounded-xl border-2 border-yellow-400/70 bg-yellow-400/20 p-3 text-xs text-yellow-100 shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse">
-            <strong className="text-yellow-300">NOTE:</strong> Diamond Membership is in beta testing. If you want to help beta test it, please email{" "}
-            <a href="mailto:admin@xessex.me" className="text-yellow-50 underline hover:text-white font-semibold">
-              admin@xessex.me
-            </a>
-            . Beta testers will be rewarded with free Diamond Memberships for a set amount of time after mainnet launch.
-          </div>
-
-          <button
-            onClick={() => setDiamondBetaModalOpen(true)}
-            className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block"
-          >
-            {isMember ? "Upgrade to Diamond" : "Become a Diamond Member"}
-          </button>
-          {/* Original Diamond checkout button - restore when ready:
           <button
             onClick={() => handleNowPayments(diamondPlan)}
-            disabled={loading || waiting || diamondDisabled}
+            disabled={loading || waiting}
             className={`mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block disabled:opacity-50 disabled:cursor-not-allowed ${loading ? "opacity-50" : ""}`}
           >
-            {diamondDisabled
-              ? "Coming Very Soon...."
-              : loadingPlan === diamondPlan
-                ? "Redirecting to payment..."
+            {loadingPlan === diamondPlan
+              ? "Redirecting to payment..."
+              : isMember
+                ? "Upgrade to Diamond"
                 : "Become a Diamond Member"}
           </button>
-          */}
         </div>
       </div>
       )}
@@ -1004,20 +987,12 @@ function SignupInner() {
             </li>
           </ul>
 
-          <div className="mt-4 rounded-xl border-2 border-yellow-400/70 bg-yellow-400/20 p-3 text-xs text-yellow-100 shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse">
-            <strong className="text-yellow-300">NOTE:</strong> Diamond Membership is in beta testing. If you want to help beta test it, please email{" "}
-            <a href="mailto:admin@xessex.me" className="text-yellow-50 underline hover:text-white font-semibold">
-              admin@xessex.me
-            </a>
-            . Beta testers will be rewarded with free Diamond Memberships for a set amount of time after Mainnet launch.
-          </div>
-
-          <button
-            onClick={() => setDiamondBetaModalOpen(true)}
+          <Link
+            href={`/paywithcashapp/${cashAppDiamondCycle === "monthly" ? "diamond_monthly" : "diamond_yearly"}`}
             className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block"
           >
             {isMember ? "Upgrade to Diamond" : "Become a Diamond Member"}
-          </button>
+          </Link>
         </div>
       </div>
       )}
@@ -1857,71 +1832,6 @@ function SignupInner() {
         </div>
       )}
 
-      {/* Diamond Beta Testing Modal */}
-      {diamondBetaModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
-          <div className="absolute inset-0 bg-black/80" onClick={() => setDiamondBetaModalOpen(false)} />
-          <div className="relative w-full max-w-lg rounded-2xl neon-border bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 p-6">
-            <button
-              type="button"
-              onClick={() => setDiamondBetaModalOpen(false)}
-              className="absolute top-4 right-4 text-white/50 hover:text-white transition"
-              aria-label="Close"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-
-            <div className="text-center mb-4">
-              <div className="w-20 h-20 flex items-center justify-center mx-auto mb-3">
-                <Image
-                  src="/logos/diamond3.png"
-                  alt="Diamond"
-                  width={80}
-                  height={80}
-                  className="object-contain"
-                />
-              </div>
-              <h2 className="text-xl font-bold text-yellow-300">Diamond Membership Beta</h2>
-            </div>
-
-            <div className="text-white/80 text-sm space-y-3">
-              <p>
-                Although Diamond Membership is not fully ready, we are beta testing it now!
-              </p>
-              <p>
-                If you email{" "}
-                <a href="mailto:admin@xessex.me" className="text-yellow-300 underline hover:text-yellow-200 font-semibold">
-                  admin@xessex.me
-                </a>
-                {" "}we can likely extend you a temporary Diamond Membership for testing, along with a free Diamond Membership for a certain amount of time after launching on Mainnet!
-              </p>
-              <p className="text-yellow-200 font-semibold">
-                Because we are going to be paying out 1 Million Xess Tokens per week to our Diamond Members, the first to sign up after Mainnet launch are going to be receiving very large sums of tokens! Especially if you rank well on the Diamond Ladder!
-              </p>
-              <p>
-                Your email response will have all the details on what we need for testing — it&apos;s actually extremely simple.
-              </p>
-            </div>
-
-            <a
-              href="mailto:admin@xessex.me?subject=Diamond%20Membership%20Beta%20Testing"
-              className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-purple-500 text-black font-bold hover:from-yellow-400 hover:to-purple-400 transition shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center block"
-            >
-              Email Us to Join Beta
-            </a>
-
-            <button
-              onClick={() => setDiamondBetaModalOpen(false)}
-              className="mt-3 w-full py-2 text-white/60 hover:text-white text-sm transition"
-            >
-              Maybe Later
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }
