@@ -34,53 +34,58 @@ export async function POST(req: Request) {
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
 
+    // Check if this wallet already exists on any user (auth or payout wallet)
+    const existingWalletUser = await db.user.findFirst({
+      where: { OR: [{ walletAddress: w }, { solWallet: w }] },
+      select: { id: true, subscription: { select: { tier: true, status: true } } },
+    });
+
     // Check if user is already logged in with a different account
     const currentUser = await getCurrentUser();
     if (currentUser) {
       const alreadyKnown =
         currentUser.walletAddress === w || currentUser.solWallet === w;
 
-      if (!alreadyKnown) {
-        // Check if this wallet belongs to an existing user (e.g., Diamond member)
-        // Check both walletAddress AND solWallet since Diamond members may have wallet in either field
-        let existingWalletUser = await db.user.findUnique({
-          where: { walletAddress: w },
-          select: { id: true, subscription: { select: { tier: true, status: true } } },
-        });
-
-        // Also check solWallet if not found by walletAddress
-        if (!existingWalletUser) {
-          existingWalletUser = await db.user.findFirst({
-            where: { solWallet: w },
-            select: { id: true, subscription: { select: { tier: true, status: true } } },
-          });
-        }
-
-        if (existingWalletUser) {
-          // Wallet belongs to an existing account - switch to that account
-          // This allows a member to sign in with their Diamond wallet and take over the session
-          const { token, expiresAt } = await createSession(existingWalletUser.id);
-
-          // Return info about the switched account
-          const switchedToDiamond = existingWalletUser.subscription?.tier === "DIAMOND" &&
-            existingWalletUser.subscription?.status === "ACTIVE";
-
-          const res = NextResponse.json({
-            ok: true,
-            switched: true,
-            switchedToDiamond,
-          }, { headers: noCache });
-          setSessionCookieOnResponse(res, token, expiresAt);
-          return res;
-        }
-
-        // Wallet doesn't exist in system - don't silently create a new wallet-native account
-        // Let UI offer "Link wallet" or "Switch account"
-        return NextResponse.json(
-          { ok: false, error: "WALLET_NOT_LINKED", wallet: w },
-          { status: 409, headers: noCache }
-        );
+      if (alreadyKnown) {
+        // Refresh session for the current user instead of creating a new wallet-native account
+        const { token, expiresAt } = await createSession(currentUser.id);
+        const res = NextResponse.json({ ok: true }, { headers: noCache });
+        setSessionCookieOnResponse(res, token, expiresAt);
+        return res;
       }
+
+      if (existingWalletUser) {
+        // Wallet belongs to an existing account - switch to that account
+        // This allows a member to sign in with their Diamond wallet and take over the session
+        const { token, expiresAt } = await createSession(existingWalletUser.id);
+
+        // Return info about the switched account
+        const switchedToDiamond = existingWalletUser.subscription?.tier === "DIAMOND" &&
+          existingWalletUser.subscription?.status === "ACTIVE";
+
+        const res = NextResponse.json({
+          ok: true,
+          switched: true,
+          switchedToDiamond,
+        }, { headers: noCache });
+        setSessionCookieOnResponse(res, token, expiresAt);
+        return res;
+      }
+
+      // Wallet doesn't exist in system - don't silently create a new wallet-native account
+      // Let UI offer "Link wallet" or "Switch account"
+      return NextResponse.json(
+        { ok: false, error: "WALLET_NOT_LINKED", wallet: w },
+        { status: 409, headers: noCache }
+      );
+    }
+
+    // Not logged in: if wallet already exists, create session for that user
+    if (existingWalletUser) {
+      const { token, expiresAt } = await createSession(existingWalletUser.id);
+      const res = NextResponse.json({ ok: true }, { headers: noCache });
+      setSessionCookieOnResponse(res, token, expiresAt);
+      return res;
     }
 
     // Create or fetch wallet user (email fields stay null)
