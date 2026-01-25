@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import { syncWalletSession } from "@/lib/walletAuthFlow";
 
 export default function WalletLoginButton() {
   const wallet = useWallet();
@@ -35,36 +36,61 @@ export default function WalletLoginButton() {
       return;
     }
 
-    setStatus("Requesting challenge...");
-    const c = await fetch("/api/auth/challenge", { method: "POST" }).then((r) => r.json());
+    try {
+      setStatus("Requesting challenge...");
+      const c = await fetch("/api/auth/challenge", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      }).then((r) => r.json());
 
-    setStatus("Signing...");
-    const msgBytes = new TextEncoder().encode(c.message);
-    const signed = await wallet.signMessage(msgBytes);
+      setStatus("Signing...");
+      const msgBytes = new TextEncoder().encode(c.message);
+      const signed = await wallet.signMessage(msgBytes);
 
-    const bs58 = (await import("bs58")).default;
-    const signature = bs58.encode(signed);
+      const bs58 = (await import("bs58")).default;
+      const signature = bs58.encode(signed);
 
-    setStatus("Verifying...");
-    const v = await fetch("/api/auth/verify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        wallet: wallet.publicKey.toBase58(),
-        message: c.message,
-        signature,
-      }),
-    }).then((r) => r.json());
+      setStatus("Verifying...");
+      const resp = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
+        body: JSON.stringify({
+          wallet: wallet.publicKey.toBase58(),
+          message: c.message,
+          signature,
+        }),
+      });
 
-    if (!v.ok) {
-      setStatus(v.error || "Login failed");
-      return;
+      const v = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !v.ok) {
+        setStatus(v.error || "Login failed");
+        return;
+      }
+
+      // 🔥 iOS-proof: ensure cookie/session actually sticks + /me flips
+      setStatus("Syncing session...");
+      const synced = await syncWalletSession(wallet as any);
+      if (!synced.ok) {
+        // Still dispatch so UI refreshes; user can hit sign-in again if needed
+        window.dispatchEvent(new Event("auth-changed"));
+        setStatus("Signed in, but session didn't fully sync. Tap sign-in again if needed.");
+        return;
+      }
+
+      setStatus("Logged in!");
+      window.dispatchEvent(new Event("auth-changed"));
+
+      // Give Safari a moment to commit cookies before navigation
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 150);
+    } catch (e: any) {
+      setStatus(e?.message || "Login failed");
     }
-
-    setStatus("Logged in!");
-    // Notify other components (like WalletStatus) that auth changed
-    window.dispatchEvent(new Event("auth-changed"));
-    window.location.href = "/";
   }
 
   return (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
+import { syncWalletSession } from "@/lib/walletAuthFlow";
 
 type MeData = {
   user: {
@@ -80,12 +81,16 @@ export default function WalletActions({
   async function refreshMe() {
     setMeLoaded(false);
     try {
-      const d = await fetch("/api/auth/me", { cache: "no-store" }).then((r) => r.json());
+      const d = await fetch("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      }).then((r) => r.json());
       if (d?.authed && d?.user) {
         setMeData({
           user: d.user,
-          authWallet: d.authWallet ?? null,
-          payoutWallet: d.payoutWallet ?? null,
+          // Use correct field mapping from /api/auth/me response
+          authWallet: d.user?.walletAddress ?? null,
+          payoutWallet: d.user?.solWallet ?? null,
           needsAuthWalletLink: d.needsAuthWalletLink ?? false,
           membership: d.membership ?? null,
         });
@@ -143,7 +148,11 @@ export default function WalletActions({
     setBusy("signin");
     try {
       setStatus("Requesting challenge…");
-      const c = await fetch("/api/auth/challenge", { method: "POST" }).then((r) => r.json());
+      const c = await fetch("/api/auth/challenge", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      }).then((r) => r.json());
 
       setStatus("Signing…");
       const msgBytes = new TextEncoder().encode(c.message);
@@ -154,6 +163,8 @@ export default function WalletActions({
       const resp = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify({
           wallet: wallet.publicKey.toBase58(),
           message: c.message,
@@ -180,13 +191,27 @@ export default function WalletActions({
       // Handle account switch (Diamond wallet taking over lower-tier session)
       if (v.switched) {
         setStatus(v.switchedToDiamond ? "Switched to Diamond account!" : "Switched accounts!");
-      } else {
-        setStatus("Signed in!");
       }
 
+      // 🔥 iOS-proof: ensure cookie/session actually sticks + /me flips
+      setStatus("Syncing session…");
+      const synced = await syncWalletSession(wallet as any);
+
+      // Always notify listeners
       window.dispatchEvent(new Event("auth-changed"));
       await refreshMe();
-      window.location.href = "/";
+
+      if (!synced.ok) {
+        // Don't immediately redirect if session still looks free; keep user here so they can retry
+        setStatus("Signed in, but session didn't fully sync. Try again if it still shows FREE.");
+        return;
+      }
+
+      // Small delay helps iOS commit cookie before navigation
+      setStatus("Signed in!");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 150);
     } catch (e: any) {
       setStatus(e?.message || "Wallet sign-in failed.");
     } finally {
@@ -210,7 +235,11 @@ export default function WalletActions({
     setBusy("link");
     try {
       setStatus("Requesting link challenge...");
-      const challengeRes = await fetch(linkChallengeUrl, { method: "POST" });
+      const challengeRes = await fetch(linkChallengeUrl, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
       const challengeData = await challengeRes.json();
 
       if (!challengeData.ok) {
@@ -229,6 +258,8 @@ export default function WalletActions({
       const verifyRes = await fetch(linkVerifyUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify({
           wallet: wallet.publicKey.toBase58(),
           signature,
@@ -258,7 +289,11 @@ export default function WalletActions({
 
   async function switchAccount() {
     setStatus("Logging out…");
-    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+    }).catch(() => {});
     window.dispatchEvent(new Event("auth-changed"));
     await refreshMe();
     setStatus("");
@@ -285,7 +320,11 @@ export default function WalletActions({
             <button
               onClick={async () => {
                 setStatus("Logging out...");
-                await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+                await fetch("/api/auth/logout", {
+                  method: "POST",
+                  credentials: "include",
+                  cache: "no-store",
+                }).catch(() => {});
                 window.dispatchEvent(new Event("auth-changed"));
                 await refreshMe();
                 setStatus("");
@@ -336,7 +375,11 @@ export default function WalletActions({
             <button
               onClick={async () => {
                 await wallet.disconnect();
-                await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+                await fetch("/api/auth/logout", {
+                  method: "POST",
+                  credentials: "include",
+                  cache: "no-store",
+                }).catch(() => {});
                 window.dispatchEvent(new Event("auth-changed"));
                 await refreshMe();
               }}

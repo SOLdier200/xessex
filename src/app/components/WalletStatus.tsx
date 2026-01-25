@@ -7,7 +7,7 @@ import Image from "next/image";
 import LogoutModal from "./LogoutModal";
 import FreeUserModal from "./FreeUserModal";
 import LoginModal from "@/components/LoginModal";
-import { useEnsureWalletSession } from "@/hooks/useEnsureWalletSession";
+import { useWalletSessionAutoFix } from "@/hooks/useWalletSessionAutoFix";
 
 type AuthData = {
   authed: boolean;
@@ -88,16 +88,11 @@ export default function WalletStatus() {
 
   // iOS Session Auto-Fix: If wallet connected but session lost, re-establish it
   // Uses the robust syncWalletSession flow with polling and retries
-  const refreshMeCallback = useCallback(async () => {
-    await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
-    fetchAuth(0);
-  }, [fetchAuth]);
-
-  useEnsureWalletSession({
-    authed: !!auth?.authed,
-    tier: (auth?.membership?.toLowerCase() || "free") as "free" | "member" | "diamond",
-    refreshMe: refreshMeCallback,
-  });
+  // Dispatches 'auth-changed' event which triggers fetchAuth above
+  const authLite = auth
+    ? { authed: true, tier: auth.membership.toLowerCase() as "free" | "member" | "diamond" }
+    : null;
+  useWalletSessionAutoFix(authLite);
 
   const handleLogoutComplete = () => {
     setAuth(null);

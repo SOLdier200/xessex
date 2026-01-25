@@ -98,7 +98,7 @@ async function pollMe(maxMs: number) {
  * Call this after wallet connects AND after the user clicks "Sign In".
  * It will rehydrate first (best for iOS), then fallback verify, then poll /me.
  */
-export async function ensureWalletSession(wallet: any) {
+export async function syncWalletSession(wallet: any) {
   if (!wallet?.connected || !wallet?.publicKey || !wallet?.signMessage) {
     return { ok: false, reason: "wallet_not_ready" as const };
   }
