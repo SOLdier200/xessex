@@ -302,6 +302,48 @@ export default function WalletActions({
       const signed = await wallet.signMessage(msgBytes);
       const signature = bs58.encode(signed);
 
+      // For Diamond signup: use combined verify-and-start endpoint (iOS-safe, no cookie dependency)
+      if (purpose === "DIAMOND_SIGNUP") {
+        setStatus("Setting up Diamond membership…");
+
+        const resp = await fetch("/api/auth/diamond/verify-and-start", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          cache: "no-store",
+          body: JSON.stringify({
+            wallet: addr,
+            message: c.message,
+            signature,
+          }),
+        });
+
+        const v = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !v.ok) {
+          if (resp.status === 409 && v.error === "WALLET_NOT_LINKED") {
+            setNeedLinkWallet(addr);
+            try {
+              localStorage.setItem("pending_wallet_to_link", addr);
+            } catch {}
+            setStatus("");
+            endInflight();
+            return;
+          }
+          setStatus(v.error || "Diamond signup failed.");
+          endInflight();
+          return;
+        }
+
+        // Settle /me so UI immediately reflects tier/status
+        await settleAuthMe();
+
+        // Route to pending payment screen
+        triggerSuccess("/signup/diamond?state=pending");
+        return;
+      }
+
+      // Regular login flow
       setStatus("Verifying…");
       const resp = await fetch("/api/auth/verify", {
         method: "POST",
@@ -351,31 +393,6 @@ export default function WalletActions({
       if (!ok) {
         setStatus("Signed, but session didn't stick. Tap again.");
         endInflight();
-        return;
-      }
-
-      // For Diamond signup: create pending Diamond subscription before routing
-      if (purpose === "DIAMOND_SIGNUP") {
-        setStatus("Setting up Diamond membership…");
-
-        const sresp = await fetch("/api/auth/diamond/start", {
-          method: "POST",
-          credentials: "include",
-          cache: "no-store",
-        });
-        const sj = await sresp.json().catch(() => ({}));
-
-        if (!sresp.ok || !sj.ok) {
-          setStatus(sj.error || "Failed to start Diamond signup.");
-          endInflight();
-          return;
-        }
-
-        // Re-settle /me so UI immediately reflects tier/status
-        await settleAuthMe();
-
-        // Route to pending payment screen
-        triggerSuccess("/signup/diamond?state=pending");
         return;
       }
 

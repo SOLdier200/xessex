@@ -173,6 +173,11 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
         <p className="text-sm text-white/60 mb-6 text-center">
           Connect your Solana wallet to create your Diamond account
         </p>
+        {isMobile && (
+          <p className="text-xs text-purple-400 animate-pulse text-center -mt-4 mb-4">
+            Note: All mobile users will need to download Phantom and select Open in Phantom to connect.
+          </p>
+        )}
 
         <div className="space-y-4">
           {/* Wallet Connection Status */}

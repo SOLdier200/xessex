@@ -15,15 +15,14 @@ const IS_PROD = SITE_URL.includes("xessex.me");
 // Share cookies across apex + www (only on real production domain)
 const COOKIE_DOMAIN = IS_PROD ? ".xessex.me" : undefined;
 
-// IMPORTANT: Safari iOS REQUIRES SameSite=None + Secure for wallet flows
-// - Wallet app → browser return is treated as cross-site navigation
-// - SameSite=Lax causes cookie to be dropped silently on iOS
+// iOS in-app browsers (Phantom) drop SameSite=None cookies as "third-party-ish"
+// Host-only + Lax is most reliable for iOS WebViews
 const BASE = {
   httpOnly: true,
-  secure: true,               // ALWAYS true - required for SameSite=None
-  sameSite: "none" as const,  // Critical for iOS wallet flows
+  secure: true,
+  sameSite: "lax" as const,   // Lax works better in iOS in-app browsers
   path: "/",
-  domain: COOKIE_DOMAIN,
+  // domain: COOKIE_DOMAIN,   // REMOVED: host-only cookies are most reliable on iOS
 };
 
 // For Server Actions / Server Components
