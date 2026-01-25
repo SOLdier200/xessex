@@ -570,37 +570,62 @@ function SignupInner() {
 
         {/* Payment Method Tabs */}
         <div className="flex justify-center mt-6">
-          <div className="bg-black/60 rounded-full p-1.5 flex gap-2 border border-white/20 shadow-lg shadow-black/50">
-            <button
-              onClick={() => setPaymentMethod("crypto")}
-              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                paymentMethod === "crypto"
-                  ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/40"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              Crypto
-            </button>
-            <button
-              onClick={() => setPaymentMethod("cashapp")}
-              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                paymentMethod === "cashapp"
-                  ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/40"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              Cash App
-            </button>
-            <button
-              onClick={() => setPaymentMethod("creditcard")}
-              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                paymentMethod === "creditcard"
-                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/40"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              Credit Card
-            </button>
+          <div className="relative p-[2px] rounded-full animated-border-glow">
+            <div className="bg-black/80 rounded-full p-1.5 flex gap-2 relative z-10">
+              <button
+                onClick={() => setPaymentMethod("crypto")}
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                  paymentMethod === "crypto"
+                    ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/40"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                Crypto
+              </button>
+              <button
+                onClick={() => setPaymentMethod("cashapp")}
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                  paymentMethod === "cashapp"
+                    ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/40"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                Cash App
+              </button>
+              <button
+                onClick={() => setPaymentMethod("creditcard")}
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                  paymentMethod === "creditcard"
+                    ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/40"
+                    : "text-white/80 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                Credit Card
+              </button>
+            </div>
+            <style jsx>{`
+              .animated-border-glow {
+                background: linear-gradient(90deg, #9333ea, #22c55e, #0ea5e9, #9333ea);
+                background-size: 300% 100%;
+                animation: border-flow 4s linear infinite;
+              }
+              .animated-border-glow::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: 9999px;
+                background: inherit;
+                background-size: inherit;
+                animation: inherit;
+                filter: blur(8px);
+                opacity: 0.5;
+                z-index: -1;
+              }
+              @keyframes border-flow {
+                0% { background-position: 0% 50%; }
+                100% { background-position: 300% 50%; }
+              }
+            `}</style>
           </div>
         </div>
       </div>
