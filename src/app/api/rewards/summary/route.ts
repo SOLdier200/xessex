@@ -55,7 +55,7 @@ export async function GET() {
   // Debug: show what wallets ARE in this epoch
   if (!leaf) {
     const allLeaves = await db.claimLeaf.findMany({ where: { epoch: epoch.epoch }, take: 5 });
-    console.log("[rewards/summary] Sample leaves in epoch:", allLeaves.map(l => l.wallet.slice(0, 12) + "..."));
+    console.log("[rewards/summary] Sample leaves in epoch:", allLeaves.map(l => l.wallet?.slice(0, 12) ?? l.userKeyHex?.slice(0, 12) ?? "no-id"));
   }
 
   // Check if user has already claimed this epoch's rewards

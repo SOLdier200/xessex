@@ -137,7 +137,8 @@ export async function claimXessV2(opts: {
     commitment,
     preflightCommitment: commitment,
   });
-  const program = new anchor.Program(idl as anchor.Idl, PROGRAM_ID, provider);
+  // Anchor v0.30+ API: Program(idl, provider) - program ID is in the IDL
+  const program = new anchor.Program(idl as anchor.Idl, provider);
 
   // 3) Derive PDAs and token accounts
   const configPda = findConfigPda();

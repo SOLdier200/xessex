@@ -19,6 +19,7 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import {
   leafHash,
+  leafHashV2,
   fromHex32,
   verifyProof,
   toHex32,
@@ -147,13 +148,35 @@ export async function GET(req: NextRequest) {
           : "Wallet not found in any epoch",
       };
     } else {
-      // Verify the proof locally
-      const leafBuf = leafHash({
-        wallet: leaf.wallet,
-        epoch: BigInt(leaf.epoch),
-        amountAtomic: leaf.amountAtomic,
-        index: leaf.index,
-      });
+      // Verify the proof locally - handle v1 (wallet) and v2 (userKey) leaves
+      let leafBuf: Buffer;
+      const isV2 = leaf.userKeyHex && leaf.claimSaltHex;
+
+      if (isV2) {
+        // V2 leaf: uses userKey + salt
+        leafBuf = leafHashV2({
+          userKey32: fromHex32(leaf.userKeyHex!),
+          epoch: BigInt(leaf.epoch),
+          amountAtomic: leaf.amountAtomic,
+          index: leaf.index,
+          salt32: fromHex32(leaf.claimSaltHex!),
+        });
+      } else if (leaf.wallet) {
+        // V1 leaf: uses wallet
+        leafBuf = leafHash({
+          wallet: leaf.wallet,
+          epoch: BigInt(leaf.epoch),
+          amountAtomic: leaf.amountAtomic,
+          index: leaf.index,
+        });
+      } else {
+        result.walletLookup = {
+          found: true,
+          error: "Leaf has neither wallet (v1) nor userKeyHex (v2)",
+          epoch: leaf.epoch,
+        };
+        return NextResponse.json(result);
+      }
 
       const proofHex = leaf.proofHex as string[];
       const proofBufs = proofHex.map(fromHex32);
@@ -163,7 +186,9 @@ export async function GET(req: NextRequest) {
 
       result.walletLookup = {
         found: true,
+        version: isV2 ? 2 : 1,
         wallet: leaf.wallet,
+        userKeyHex: leaf.userKeyHex,
         epoch: leaf.epoch,
         weekKey: leaf.weekKey,
         index: leaf.index,
@@ -188,7 +213,9 @@ export async function GET(req: NextRequest) {
 
     result.sampleLeaves = sampleLeaves.map(l => ({
       index: l.index,
-      wallet: l.wallet.slice(0, 8) + "..." + l.wallet.slice(-4),
+      wallet: l.wallet ? l.wallet.slice(0, 8) + "..." + l.wallet.slice(-4) : null,
+      userKeyHex: l.userKeyHex ? l.userKeyHex.slice(0, 8) + "..." : null,
+      version: l.userKeyHex ? 2 : 1,
       amountAtomic: l.amountAtomic.toString(),
       amountDisplay: (Number(l.amountAtomic) / 1e9).toFixed(4),
     }));

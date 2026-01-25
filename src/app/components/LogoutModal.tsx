@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 export default function LogoutModal({
   open,
@@ -8,14 +9,19 @@ export default function LogoutModal({
   onLogoutComplete,
   email,
   walletAddress,
+  tier,
 }: {
   open: boolean;
   onClose: () => void;
   onLogoutComplete: () => void;
   email?: string | null;
   walletAddress?: string | null;
+  tier?: "member" | "diamond" | "free" | null;
 }) {
   const [loading, setLoading] = useState(false);
+  const { disconnect, connected } = useWallet();
+
+  const isDiamond = tier === "diamond";
 
   const handleLogout = async () => {
     if (loading) return;
@@ -24,6 +30,15 @@ export default function LogoutModal({
     try {
       // Clear server session
       await fetch("/api/auth/logout", { method: "POST" });
+
+      // Disconnect wallet if connected
+      if (connected) {
+        try {
+          await disconnect();
+        } catch (err) {
+          console.error("Wallet disconnect failed:", err);
+        }
+      }
 
       // Dispatch auth-changed event so all components can react
       window.dispatchEvent(new CustomEvent("auth-changed"));
@@ -39,17 +54,41 @@ export default function LogoutModal({
 
   if (!open) return null;
 
+  // Determine what to display based on tier
+  const displayValue = isDiamond && walletAddress
+    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+    : email || (walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : null);
+
+  const tierLabel = isDiamond ? "Diamond Member" : tier === "member" ? "Member" : null;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/90 p-6">
         {/* Show logged in user info */}
-        {(email || walletAddress) && (
+        {displayValue && (
           <div className="mb-4 pb-4 border-b border-white/10">
-            <div className="text-xs text-white/50 uppercase tracking-wide">Logged in as</div>
-            <div className="text-sm text-white font-medium mt-1 truncate">
-              {email || (walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : "")}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/50 uppercase tracking-wide">Logged in as</span>
+              {tierLabel && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  isDiamond
+                    ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-400/30"
+                    : "bg-pink-500/20 text-pink-300 border border-pink-400/30"
+                }`}>
+                  {tierLabel}
+                </span>
+              )}
             </div>
+            <div className="text-sm text-white font-medium mt-1 truncate font-mono">
+              {displayValue}
+            </div>
+            {/* Show email for diamond members who also have email */}
+            {isDiamond && email && walletAddress && (
+              <div className="text-xs text-white/50 mt-1 truncate">
+                {email}
+              </div>
+            )}
           </div>
         )}
 

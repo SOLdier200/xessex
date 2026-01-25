@@ -228,6 +228,7 @@ export default function WalletStatus() {
         onLogoutComplete={handleLogoutComplete}
         email={auth?.email}
         walletAddress={auth?.authWallet}
+        tier={auth?.membership?.toLowerCase() as "diamond" | "member" | "free" | undefined}
       />
 
       <FreeUserModal
