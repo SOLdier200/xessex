@@ -141,7 +141,7 @@ export default function VotingParticipationStat() {
 
       {/* Vote count detail */}
       <div className="text-xs text-white/40 mt-1">
-        {data.votesCast.toLocaleString()} / {data.totalComments.toLocaleString()} comments
+        {(data.votesCast ?? 0).toLocaleString()} / {(data.totalComments ?? 0).toLocaleString()} comments
       </div>
 
       {/* Progress bar */}
