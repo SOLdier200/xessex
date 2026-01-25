@@ -64,11 +64,12 @@ export async function POST(req: Request) {
   const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
   try {
-    const { wallet, message, signature } = await req.json();
+    const { wallet, message, signature, refCode } = await req.json();
 
     const w = String(wallet ?? "").trim();
     const m = String(message ?? "");
     const s = String(signature ?? "");
+    const referralCode = typeof refCode === "string" ? refCode.trim() : null;
 
     if (!w || !m || !s) {
       return NextResponse.json({ ok: false, error: "Missing fields" }, { status: 400, headers: noCache });
@@ -161,6 +162,18 @@ export async function POST(req: Request) {
       return res;
     }
 
+    // Look up referrer if refCode provided
+    let referredById: string | null = null;
+    if (referralCode) {
+      const referrer = await db.user.findUnique({
+        where: { referralCode },
+        select: { id: true },
+      });
+      if (referrer) {
+        referredById = referrer.id;
+      }
+    }
+
     // Create or fetch wallet user (email fields stay null)
     let user: { id: string; email: string | null; solWallet: string | null; referralCode: string | null } | null = null;
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -168,7 +181,12 @@ export async function POST(req: Request) {
         user = await db.user.upsert({
           where: { walletAddress: w },
           update: {},
-          create: { walletAddress: w, referralCode: generateReferralCode() },
+          create: {
+            walletAddress: w,
+            referralCode: generateReferralCode(),
+            referredById,
+            referredAt: referredById ? new Date() : null,
+          },
           select: { id: true, email: true, solWallet: true, referralCode: true },
         });
         break;

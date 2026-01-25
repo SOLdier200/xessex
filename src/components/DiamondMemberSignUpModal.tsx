@@ -29,6 +29,7 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [refCode, setRefCode] = useState("");
 
   // Detect mobile platform
   useEffect(() => {
@@ -104,6 +105,7 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
           wallet: walletAddr,
           message: ch.message,
           signature: bs58.encode(sigBytes),
+          refCode: refCode.trim() || undefined,
         }),
       }).then(r => r.json());
 
@@ -229,6 +231,25 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
                 </button>
               )}
             </>
+          )}
+
+          {/* Referral Code Input */}
+          {wallet.connected && !success && (
+            <div className="space-y-2">
+              <label htmlFor="refCode" className="block text-sm text-white/70">
+                Referral Code <span className="text-white/40">(optional)</span>
+              </label>
+              <input
+                id="refCode"
+                type="text"
+                value={refCode}
+                onChange={(e) => setRefCode(e.target.value.toUpperCase())}
+                placeholder="Enter referral code"
+                disabled={busy}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-50 uppercase tracking-wider"
+                maxLength={12}
+              />
+            </div>
           )}
 
           {/* Create Account Button */}
