@@ -36,6 +36,36 @@ function inflight() {
   }
 }
 
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+      aria-hidden="true"
+    />
+  );
+}
+
+function Checkmark() {
+  return (
+    <span
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/20"
+      aria-hidden="true"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M20 6L9 17l-5-5" className="xess-check-draw" />
+      </svg>
+    </span>
+  );
+}
+
 async function settleAuthMe() {
   // Aggressive short poll for cookie/session to reflect on /me after Phantom bounce.
   for (let i = 0; i < 10; i++) {
@@ -120,6 +150,8 @@ export default function WalletActions({
 
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState<null | "signin" | "link">(null);
+  const [successPulse, setSuccessPulse] = useState(false);
+  const [successNavTo, setSuccessNavTo] = useState<string | null>(null);
   const [needLinkWallet, setNeedLinkWallet] = useState<null | string>(null);
 
   const pk = wallet.publicKey?.toBase58() ?? null;
@@ -162,6 +194,21 @@ export default function WalletActions({
     return () => window.removeEventListener("auth-changed", onAuth);
   }, []);
 
+  const triggerSuccess = (to: string) => {
+    setStatus("Signed in!");
+    setSuccessNavTo(to);
+    setSuccessPulse(true);
+    window.dispatchEvent(new Event("auth-changed"));
+    endInflight();
+    setBusy(null);
+
+    // Reset so the animation can play again if the user stays on-page.
+    setTimeout(() => {
+      setSuccessPulse(false);
+      setSuccessNavTo(null);
+    }, 1200);
+  };
+
   // iOS "Phantom-return settle" - when user comes back from Phantom, finish auth instantly
   useEffect(() => {
     const handler = async () => {
@@ -171,10 +218,7 @@ export default function WalletActions({
       // On iOS, returning from Phantom often remounts; finish auth silently.
       const settled = await settleAuthMe();
       if (settled) {
-        await refreshMe();
-        endInflight();
-        setBusy(null);
-        setStatus("Signed in!");
+        triggerSuccess("/");
       }
 
       // If it didn't settle after ~15s since sign started, allow user to retry.
@@ -293,26 +337,21 @@ export default function WalletActions({
       // IMPORTANT: DO NOT call signing-capable sync here.
       // Just settle /me. (This avoids a second signMessage prompt on iOS.)
       setStatus("Syncing session…");
-      const settled = await settleAuthMe();
+      let ok = await settleAuthMe();
 
       // As a backup, do a passive sync that never signs
-      if (!settled) {
+      if (!ok) {
         await syncWalletSession(wallet as any, { mode: "auto" });
-        await settleAuthMe();
+        ok = await settleAuthMe();
       }
 
-      // Always notify listeners
-      window.dispatchEvent(new Event("auth-changed"));
-      await refreshMe();
+      if (!ok) {
+        setStatus("Signed, but session didn't stick. Tap again.");
+        endInflight();
+        return;
+      }
 
-      setStatus("Signed in!");
-      endInflight();
-
-      // Small delay helps iOS commit cookie before navigation
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      setTimeout(() => {
-        window.location.href = "/";
-      }, isIOS ? 350 : 150);
+      triggerSuccess("/");
     } catch (e: any) {
       setStatus(e?.message || "Wallet sign-in failed.");
       endInflight();
@@ -495,10 +534,34 @@ export default function WalletActions({
               showWalletSignIn ? (
                 <button
                   onClick={signInWithWallet}
-                  disabled={busy === "signin" || busy === "link"}
-                  className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400 disabled:opacity-50"
+                  disabled={busy === "signin" || busy === "link" || successPulse}
+                  onAnimationEnd={(e) => {
+                    if (e.animationName === "xessPop" && successNavTo) {
+                      window.location.href = successNavTo;
+                    }
+                  }}
+                  className={[
+                    "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
+                    successPulse
+                      ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
+                      : busy === "signin"
+                        ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
+                        : "bg-pink-500 text-black hover:bg-pink-400",
+                  ].join(" ")}
                 >
-                  {busy === "signin" ? "Signing in…" : "Sign in with Wallet"}
+                  {successPulse ? (
+                    <>
+                      <Checkmark />
+                      <span>Success</span>
+                    </>
+                  ) : busy === "signin" ? (
+                    <>
+                      <Spinner />
+                      <span>{status || "Signing in…"}</span>
+                    </>
+                  ) : (
+                    <span>Sign in with Wallet</span>
+                  )}
                 </button>
               ) : null
             ) : isLinked ? (
@@ -515,10 +578,34 @@ export default function WalletActions({
                   {showWalletSignIn && (
                     <button
                       onClick={signInWithWallet}
-                      disabled={busy === "signin" || busy === "link"}
-                      className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400 disabled:opacity-50"
+                      disabled={busy === "signin" || busy === "link" || successPulse}
+                      onAnimationEnd={(e) => {
+                        if (e.animationName === "xessPop" && successNavTo) {
+                          window.location.href = successNavTo;
+                        }
+                      }}
+                      className={[
+                        "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
+                        successPulse
+                          ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
+                          : busy === "signin"
+                            ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
+                            : "bg-pink-500 text-black hover:bg-pink-400",
+                      ].join(" ")}
                     >
-                      {busy === "signin" ? "Signing in…" : "Sign in with Wallet"}
+                      {successPulse ? (
+                        <>
+                          <Checkmark />
+                          <span>Success</span>
+                        </>
+                      ) : busy === "signin" ? (
+                        <>
+                          <Spinner />
+                          <span>{status || "Signing in…"}</span>
+                        </>
+                      ) : (
+                        <span>Sign in with Wallet</span>
+                      )}
                     </button>
                   )}
                   {showLinkWallet && (
@@ -551,10 +638,34 @@ export default function WalletActions({
                 // After logout, sign in with the connected wallet
                 setTimeout(() => signInWithWallet(), 500);
               }}
-              disabled={busy === "signin"}
-              className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400 disabled:opacity-50"
+              disabled={busy === "signin" || successPulse}
+              onAnimationEnd={(e) => {
+                if (e.animationName === "xessPop" && successNavTo) {
+                  window.location.href = successNavTo;
+                }
+              }}
+              className={[
+                "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
+                successPulse
+                  ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
+                  : busy === "signin"
+                    ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
+                    : "bg-pink-500 text-black hover:bg-pink-400",
+              ].join(" ")}
             >
-              {busy === "signin" ? "Signing in..." : "Sign in with connected wallet"}
+              {successPulse ? (
+                <>
+                  <Checkmark />
+                  <span>Success</span>
+                </>
+              ) : busy === "signin" ? (
+                <>
+                  <Spinner />
+                  <span>{status || "Signing in…"}</span>
+                </>
+              ) : (
+                <span>Sign in with connected wallet</span>
+              )}
             </button>
             <button
               onClick={() => wallet.disconnect()}
@@ -567,6 +678,24 @@ export default function WalletActions({
       )}
 
       {status && <div className="text-sm text-white/70">{status}</div>}
+
+      <style jsx global>{`
+        .xess-check-draw {
+          stroke-dasharray: 40;
+          stroke-dashoffset: 40;
+          animation: xessCheck 420ms ease-out forwards;
+        }
+        @keyframes xessCheck {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        @keyframes xessPop {
+          0% { transform: scale(0.98); }
+          60% { transform: scale(1.03); }
+          100% { transform: scale(1.0); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -58,7 +58,6 @@ async function settleAuthMe(setStatus?: (s: string) => void) {
       const data = await r.json().catch(() => null);
 
       if (r.ok && data?.ok && data?.authed && data?.tier !== "free") {
-        window.dispatchEvent(new Event("auth-changed"));
         return true;
       }
     } catch {}
@@ -93,11 +92,7 @@ function Checkmark() {
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path
-          d="M20 6L9 17l-5-5"
-          className="animate-[xessCheck_420ms_ease-out_forwards]"
-          style={{ strokeDasharray: 40, strokeDashoffset: 40 }}
-        />
+        <path d="M20 6L9 17l-5-5" className="xess-check-draw" />
       </svg>
     </span>
   );
@@ -110,6 +105,7 @@ export default function WalletLoginButton() {
   const [isMobile, setIsMobile] = useState(false);
   const [inFlight, setInFlight] = useState(false);
   const [successPulse, setSuccessPulse] = useState(false);
+  const [successNavTo, setSuccessNavTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof navigator === "undefined") return;
@@ -133,6 +129,21 @@ export default function WalletLoginButton() {
     };
   }, []);
 
+  const triggerSuccess = (to: string) => {
+    setStatus("Logged in!");
+    setSuccessNavTo(to);
+    setSuccessPulse(true);
+    window.dispatchEvent(new Event("auth-changed"));
+    endInflight();
+    setInFlight(false);
+
+    // Reset so the animation can play again if the user stays on-page.
+    setTimeout(() => {
+      setSuccessPulse(false);
+      setSuccessNavTo(null);
+    }, 1200);
+  };
+
   // One-time "Phantom-return settle" for iOS: when user comes back, finish instantly.
   useEffect(() => {
     const handler = async () => {
@@ -146,14 +157,7 @@ export default function WalletLoginButton() {
       const settled = await settleAuthMe(setStatus);
 
       if (settled) {
-        setSuccessPulse(true);
-        setStatus("Logged in!");
-        endInflight();
-        setInFlight(false);
-        setTimeout(() => setSuccessPulse(false), 1200);
-        setTimeout(() => {
-          window.location.href = "/";
-        }, isIOS() ? 350 : 150);
+        triggerSuccess("/");
         return;
       }
 
@@ -242,27 +246,22 @@ export default function WalletLoginButton() {
       // IMPORTANT: DO NOT call signing-capable sync here.
       // Just settle /me. (This avoids a second signMessage prompt on iOS.)
       setStatus("Syncing session...");
-      const settled = await settleAuthMe(setStatus);
+      let ok = await settleAuthMe(setStatus);
 
       // As a backup, do a passive sync that never signs (requires mode patch)
-      if (!settled) {
+      if (!ok) {
         await syncWalletSession(wallet as any, { mode: "auto" });
-        await settleAuthMe(setStatus);
+        ok = await settleAuthMe(setStatus);
       }
 
-      setSuccessPulse(true);
-      setStatus("Logged in!");
-      window.dispatchEvent(new Event("auth-changed"));
-      endInflight();
-      setInFlight(false);
+      if (!ok) {
+        setStatus("Signed, but session didn't stick. Tap again.");
+        endInflight();
+        setInFlight(false);
+        return;
+      }
 
-      setTimeout(() => setSuccessPulse(false), 1200);
-
-      // Optional: don't hard navigate on iOS; it can fight the cookie settle.
-      // If you want navigation, do it after settle.
-      setTimeout(() => {
-        window.location.href = "/";
-      }, isIOS() ? 350 : 150);
+      triggerSuccess("/");
     } catch (e: any) {
       setStatus(e?.message || "Login failed");
       endInflight();
@@ -299,7 +298,12 @@ export default function WalletLoginButton() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={signIn}
-            disabled={inFlight}
+            disabled={inFlight || successPulse}
+            onAnimationEnd={(e) => {
+              if (e.animationName === "xessPop" && successNavTo) {
+                window.location.href = successNavTo;
+              }
+            }}
             className={[
               "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
               successPulse
@@ -342,6 +346,11 @@ export default function WalletLoginButton() {
 
       {/* Keyframe animations for checkmark and pop */}
       <style jsx global>{`
+        .xess-check-draw {
+          stroke-dasharray: 40;
+          stroke-dashoffset: 40;
+          animation: xessCheck 420ms ease-out forwards;
+        }
         @keyframes xessCheck {
           to {
             stroke-dashoffset: 0;
