@@ -95,11 +95,29 @@ async function pollMe(maxMs: number) {
 }
 
 /**
- * Call this after wallet connects AND after the user clicks "Sign In".
- * It will rehydrate first (best for iOS), then fallback verify, then poll /me.
+ * iOS-safe session sync for wallet users.
+ *
+ * IMPORTANT: Use mode: "auto" for background/hook calls (NEVER signs)
+ *            Use mode: "manual" for user-initiated sign-in (can sign)
+ *
+ * Auto mode (default):
+ * - Checks /api/auth/me
+ * - Waits for cookie settle
+ * - Re-checks /api/auth/me
+ * - NEVER triggers signMessage() - prevents iOS infinite loop
+ *
+ * Manual mode:
+ * - Checks /api/auth/me
+ * - Attempts rehydrate (nonce-based) or verify (fallback)
+ * - Polls /api/auth/me until tier flips
  */
-export async function syncWalletSession(wallet: any) {
-  if (!wallet?.connected || !wallet?.publicKey || !wallet?.signMessage) {
+export async function syncWalletSession(
+  wallet: any,
+  opts?: { mode?: "auto" | "manual" }
+) {
+  const mode = opts?.mode ?? "auto";
+
+  if (!wallet?.connected || !wallet?.publicKey) {
     return { ok: false, reason: "wallet_not_ready" as const };
   }
 
@@ -111,6 +129,25 @@ export async function syncWalletSession(wallet: any) {
     if (ok && me && me.authed && me.tier !== "free") {
       return { ok: true, didAuth: false as const };
     }
+  }
+
+  // 🚨 AUTO MODE: NEVER SIGN - only passive cookie check
+  // This prevents infinite loops on iOS where Phantom returns and page remounts
+  if (mode === "auto") {
+    // Give iOS cookies a moment to settle after Phantom deep-link return
+    await sleep(isIOS() ? 1500 : 500);
+
+    const { ok, me } = await fetchMe();
+    if (ok && me && me.authed && me.tier !== "free") {
+      return { ok: true, didAuth: true as const };
+    }
+    // Can't fix passively - user must click sign-in button
+    return { ok: false, reason: "needs_user_click" as const };
+  }
+
+  // MANUAL MODE: allowed to sign (user clicked a button)
+  if (!wallet?.signMessage) {
+    return { ok: false, reason: "wallet_cant_sign" as const };
   }
 
   // iOS can need 2 attempts due to WebView/cookie weirdness

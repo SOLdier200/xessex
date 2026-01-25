@@ -6,6 +6,59 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import bs58 from "bs58";
 import { syncWalletSession } from "@/lib/walletAuthFlow";
 
+// iOS-safe inflight guard keys
+const INF_KEY = "xessex_wallet_actions_inflight";
+const INF_TS = "xessex_wallet_actions_started_at";
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function beginInflight() {
+  try {
+    sessionStorage.setItem(INF_KEY, "1");
+    sessionStorage.setItem(INF_TS, String(Date.now()));
+  } catch {}
+}
+
+function endInflight() {
+  try {
+    sessionStorage.removeItem(INF_KEY);
+    sessionStorage.removeItem(INF_TS);
+  } catch {}
+}
+
+function inflight() {
+  try {
+    return sessionStorage.getItem(INF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+async function settleAuthMe() {
+  // Aggressive short poll for cookie/session to reflect on /me after Phantom bounce.
+  for (let i = 0; i < 10; i++) {
+    try {
+      const r = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      });
+      const data = await r.json().catch(() => null);
+
+      if (r.ok && data?.ok && data?.authed && data?.tier !== "free") {
+        window.dispatchEvent(new Event("auth-changed"));
+        return true;
+      }
+    } catch {}
+
+    await sleep(i < 4 ? 250 : 500);
+  }
+  return false;
+}
+
 type MeData = {
   user: {
     id: string;
@@ -109,6 +162,37 @@ export default function WalletActions({
     return () => window.removeEventListener("auth-changed", onAuth);
   }, []);
 
+  // iOS "Phantom-return settle" - when user comes back from Phantom, finish auth instantly
+  useEffect(() => {
+    const handler = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (!inflight()) return;
+
+      // On iOS, returning from Phantom often remounts; finish auth silently.
+      const settled = await settleAuthMe();
+      if (settled) {
+        await refreshMe();
+        endInflight();
+        setBusy(null);
+        setStatus("Signed in!");
+      }
+
+      // If it didn't settle after ~15s since sign started, allow user to retry.
+      const startedAt = Number(sessionStorage.getItem(INF_TS) || "0");
+      if (startedAt && Date.now() - startedAt > 15_000) {
+        endInflight();
+        setBusy(null);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handler);
+    window.addEventListener("focus", handler);
+    return () => {
+      document.removeEventListener("visibilitychange", handler);
+      window.removeEventListener("focus", handler);
+    };
+  }, []);
+
   // Detect wallet mismatch: if logged in with a wallet and connected wallet is different
   useEffect(() => {
     if (!meLoaded || !meData?.user || !pk) return;
@@ -145,7 +229,12 @@ export default function WalletActions({
       return;
     }
 
+    // Prevent double-run across iOS bounces / rapid taps
+    if (inflight()) return;
+
+    beginInflight();
     setBusy("signin");
+
     try {
       setStatus("Requesting challenge…");
       const c = await fetch("/api/auth/challenge", {
@@ -153,6 +242,12 @@ export default function WalletActions({
         credentials: "include",
         cache: "no-store",
       }).then((r) => r.json());
+
+      if (!c?.message) {
+        setStatus("Challenge failed. Try again.");
+        endInflight();
+        return;
+      }
 
       setStatus("Signing…");
       const msgBytes = new TextEncoder().encode(c.message);
@@ -182,9 +277,11 @@ export default function WalletActions({
             localStorage.setItem("pending_wallet_to_link", addr);
           } catch {}
           setStatus("");
+          endInflight();
           return;
         }
         setStatus(v.error || "Wallet sign-in failed.");
+        endInflight();
         return;
       }
 
@@ -193,27 +290,32 @@ export default function WalletActions({
         setStatus(v.switchedToDiamond ? "Switched to Diamond account!" : "Switched accounts!");
       }
 
-      // 🔥 iOS-proof: ensure cookie/session actually sticks + /me flips
+      // IMPORTANT: DO NOT call signing-capable sync here.
+      // Just settle /me. (This avoids a second signMessage prompt on iOS.)
       setStatus("Syncing session…");
-      const synced = await syncWalletSession(wallet as any);
+      const settled = await settleAuthMe();
+
+      // As a backup, do a passive sync that never signs
+      if (!settled) {
+        await syncWalletSession(wallet as any, { mode: "auto" });
+        await settleAuthMe();
+      }
 
       // Always notify listeners
       window.dispatchEvent(new Event("auth-changed"));
       await refreshMe();
 
-      if (!synced.ok) {
-        // Don't immediately redirect if session still looks free; keep user here so they can retry
-        setStatus("Signed in, but session didn't fully sync. Try again if it still shows FREE.");
-        return;
-      }
+      setStatus("Signed in!");
+      endInflight();
 
       // Small delay helps iOS commit cookie before navigation
-      setStatus("Signed in!");
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       setTimeout(() => {
         window.location.href = "/";
-      }, 150);
+      }, isIOS ? 350 : 150);
     } catch (e: any) {
       setStatus(e?.message || "Wallet sign-in failed.");
+      endInflight();
     } finally {
       setBusy(null);
     }

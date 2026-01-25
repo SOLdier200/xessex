@@ -1087,7 +1087,7 @@ export default function ProfilePage() {
               </div>
 
               {/* XESS Rewards Card (Diamond) */}
-              {isDiamond && analyticsData && (
+              {isDiamond && analyticsData?.totals && (
                 <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
                   <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1098,7 +1098,7 @@ export default function ProfilePage() {
                             Total XESS Paid
                           </div>
                           <div className="text-2xl font-bold text-yellow-400 mt-1">
-                            {analyticsData.totals.totalXessPaid.toLocaleString()} XESS
+                            {(analyticsData.totals?.totalXessPaid ?? 0).toLocaleString()} XESS
                           </div>
                         </div>
                         <Image
@@ -1117,7 +1117,7 @@ export default function ProfilePage() {
                             Pending XESS
                           </div>
                           <div className="text-2xl font-bold text-green-400 mt-1">
-                            {analyticsData.totals.pendingXess.toLocaleString()} XESS
+                            {(analyticsData.totals?.pendingXess ?? 0).toLocaleString()} XESS
                           </div>
                         </div>
                         <Image
@@ -2226,34 +2226,34 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {analyticsData && (
+              {analyticsData?.totals && (
                 <>
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     <div className="neon-border rounded-xl p-4 bg-black/30">
                       <div className="text-2xl font-bold text-white">
-                        {analyticsData.totals.totalComments}
+                        {analyticsData.totals?.totalComments ?? 0}
                       </div>
                       <div className="text-xs text-white/60 mt-1">Total Comments</div>
                     </div>
 
                     <div className="neon-border rounded-xl p-4 bg-black/30 border-green-400/30">
                       <div className="text-2xl font-bold text-green-400">
-                        {analyticsData.totals.utilizedComments}
+                        {analyticsData.totals?.utilizedComments ?? 0}
                       </div>
                       <div className="text-xs text-white/60 mt-1">Sourced</div>
                     </div>
 
                     <div className="neon-border rounded-xl p-4 bg-black/30">
                       <div className="text-2xl font-bold text-white">
-                        {analyticsData.totals.totalMemberLikes}
+                        {analyticsData.totals?.totalMemberLikes ?? 0}
                       </div>
                       <div className="text-xs text-white/60 mt-1">Member Likes</div>
                     </div>
 
                     <div className="neon-border rounded-xl p-4 bg-black/30">
                       <div className="text-2xl font-bold text-white">
-                        {analyticsData.totals.totalModLikes}
+                        {analyticsData.totals?.totalModLikes ?? 0}
                       </div>
                       <div className="text-xs text-white/60 mt-1">Mod Likes</div>
                     </div>
@@ -2262,10 +2262,10 @@ export default function ProfilePage() {
                   {/* Comments Table */}
                   <div className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
                     <h2 className="text-lg font-semibold neon-text mb-4">
-                      Your Comments ({analyticsData.comments.length})
+                      Your Comments ({analyticsData.comments?.length ?? 0})
                     </h2>
 
-                    {analyticsData.comments.length === 0 ? (
+                    {(analyticsData.comments?.length ?? 0) === 0 ? (
                       <p className="text-white/50 text-center py-8">
                         You haven&apos;t posted any comments yet.
                       </p>
@@ -2283,7 +2283,7 @@ export default function ProfilePage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {analyticsData.comments.map((c) => (
+                            {(analyticsData.comments ?? []).map((c) => (
                               <tr
                                 key={c.sourceId}
                                 className="border-b border-white/5 hover:bg-white/5"

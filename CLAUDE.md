@@ -364,3 +364,32 @@ Members can now earn Special Credits by linking a wallet with XESS tokens.
 **Other Fixes:**
 - Member ID now shows full ID (was truncated with `slice(0,8)...`)
 - Fixed vote tracking to work without wallet (removed `if (voterHasWallet)` condition)
+
+### iOS Wallet Sign-In Loop Fix (Jan 2026)
+Fixed infinite "sign again" loop on iOS where Phantom kept reopening after signing.
+
+**Root Cause:**
+- iOS Phantom deep-link returns cause page remount/reload
+- `useWalletSessionAutoFix` hook would fire on remount
+- Hook called `syncWalletSession()` which triggered `signMessage()`
+- Phantom reopened → repeat forever
+- React refs (`lastPub.current`) reset on remount, so guards didn't survive
+
+**Fix - Two Key Changes:**
+
+1. **`syncWalletSession()` now has `mode` parameter:**
+   - `mode: "auto"` (default) - NEVER signs, only passive cookie check
+   - `mode: "manual"` - allowed to sign (user clicked button)
+   - File: `src/lib/walletAuthFlow.ts`
+
+2. **`useWalletSessionAutoFix` uses sessionStorage guard:**
+   - Replaced ref-based guard with `sessionStorage` (survives iOS remounts)
+   - 60-second cooldown per wallet pubkey
+   - Always calls `syncWalletSession(wallet, { mode: "auto" })`
+   - File: `src/hooks/useWalletSessionAutoFix.ts`
+
+**Rule:** Never call `wallet.signMessage()` inside a `useEffect`. Signing must always be behind a user click.
+
+**Files Modified:**
+- `src/lib/walletAuthFlow.ts` - Added `mode` parameter
+- `src/hooks/useWalletSessionAutoFix.ts` - sessionStorage guard + auto mode only

@@ -6,21 +6,172 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { syncWalletSession } from "@/lib/walletAuthFlow";
 
+const INF_KEY = "xessex_wallet_login_inflight";
+const INF_TS = "xessex_wallet_login_started_at";
+
+function isIOS() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes("iphone") ||
+    ua.includes("ipad") ||
+    (ua.includes("mac") && (navigator as any).maxTouchPoints > 1)
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function beginInflight() {
+  try {
+    sessionStorage.setItem(INF_KEY, "1");
+    sessionStorage.setItem(INF_TS, String(Date.now()));
+  } catch {}
+}
+
+function endInflight() {
+  try {
+    sessionStorage.removeItem(INF_KEY);
+    sessionStorage.removeItem(INF_TS);
+  } catch {}
+}
+
+function getInflight() {
+  try {
+    return sessionStorage.getItem(INF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+async function settleAuthMe(setStatus?: (s: string) => void) {
+  // Aggressive short poll for cookie/session to reflect on /me after Phantom bounce.
+  for (let i = 0; i < 10; i++) {
+    try {
+      const r = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      });
+      const data = await r.json().catch(() => null);
+
+      if (r.ok && data?.ok && data?.authed && data?.tier !== "free") {
+        window.dispatchEvent(new Event("auth-changed"));
+        return true;
+      }
+    } catch {}
+
+    if (setStatus) setStatus(i < 2 ? "Finishing up..." : "Syncing session...");
+    await sleep(i < 4 ? 250 : 500);
+  }
+  return false;
+}
+
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+      aria-hidden="true"
+    />
+  );
+}
+
+function Checkmark() {
+  return (
+    <span
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/20"
+      aria-hidden="true"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path
+          d="M20 6L9 17l-5-5"
+          className="animate-[xessCheck_420ms_ease-out_forwards]"
+          style={{ strokeDasharray: 40, strokeDashoffset: 40 }}
+        />
+      </svg>
+    </span>
+  );
+}
+
 export default function WalletLoginButton() {
   const wallet = useWallet();
   const { setVisible } = useWalletModal();
   const [status, setStatus] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [inFlight, setInFlight] = useState(false);
+  const [successPulse, setSuccessPulse] = useState(false);
 
   useEffect(() => {
     if (typeof navigator === "undefined") return;
     const ua = navigator.userAgent.toLowerCase();
     const isAndroid = ua.includes("android");
-    const isIos =
-      ua.includes("iphone") ||
-      ua.includes("ipad") ||
-      (ua.includes("mac") && navigator.maxTouchPoints > 1);
-    setIsMobile(isAndroid || isIos);
+    const ios = isIOS();
+    setIsMobile(isAndroid || ios);
+  }, []);
+
+  // Keep inFlight state synced with sessionStorage (survives iOS bounce)
+  useEffect(() => {
+    const sync = () => setInFlight(getInflight());
+    sync();
+
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("focus", sync);
+
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
+  // One-time "Phantom-return settle" for iOS: when user comes back, finish instantly.
+  useEffect(() => {
+    const handler = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (!getInflight()) return;
+
+      setInFlight(true);
+      setStatus("Finishing up...");
+
+      // On iOS, returning from Phantom often remounts; finish auth silently.
+      const settled = await settleAuthMe(setStatus);
+
+      if (settled) {
+        setSuccessPulse(true);
+        setStatus("Logged in!");
+        endInflight();
+        setInFlight(false);
+        setTimeout(() => setSuccessPulse(false), 1200);
+        setTimeout(() => {
+          window.location.href = "/";
+        }, isIOS() ? 350 : 150);
+        return;
+      }
+
+      // If it didn't settle after ~15s since sign started, allow user to retry.
+      const startedAt = Number(sessionStorage.getItem(INF_TS) || "0");
+      if (startedAt && Date.now() - startedAt > 15_000) {
+        endInflight();
+        setInFlight(false);
+        setStatus("Session timed out. Tap again.");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handler);
+    window.addEventListener("focus", handler);
+    return () => {
+      document.removeEventListener("visibilitychange", handler);
+      window.removeEventListener("focus", handler);
+    };
   }, []);
 
   const openInPhantom = () => {
@@ -36,6 +187,12 @@ export default function WalletLoginButton() {
       return;
     }
 
+    // Prevent double-run across iOS bounces / rapid taps
+    if (getInflight()) return;
+
+    beginInflight();
+    setInFlight(true);
+
     try {
       setStatus("Requesting challenge...");
       const c = await fetch("/api/auth/challenge", {
@@ -44,8 +201,17 @@ export default function WalletLoginButton() {
         cache: "no-store",
       }).then((r) => r.json());
 
+      if (!c?.message) {
+        setStatus("Challenge failed. Try again.");
+        endInflight();
+        setInFlight(false);
+        return;
+      }
+
       setStatus("Signing...");
       const msgBytes = new TextEncoder().encode(c.message);
+
+      // This triggers Phantom on iOS (expected)
       const signed = await wallet.signMessage(msgBytes);
 
       const bs58 = (await import("bs58")).default;
@@ -68,28 +234,39 @@ export default function WalletLoginButton() {
 
       if (!resp.ok || !v.ok) {
         setStatus(v.error || "Login failed");
+        endInflight();
+        setInFlight(false);
         return;
       }
 
-      // 🔥 iOS-proof: ensure cookie/session actually sticks + /me flips
+      // IMPORTANT: DO NOT call signing-capable sync here.
+      // Just settle /me. (This avoids a second signMessage prompt on iOS.)
       setStatus("Syncing session...");
-      const synced = await syncWalletSession(wallet as any);
-      if (!synced.ok) {
-        // Still dispatch so UI refreshes; user can hit sign-in again if needed
-        window.dispatchEvent(new Event("auth-changed"));
-        setStatus("Signed in, but session didn't fully sync. Tap sign-in again if needed.");
-        return;
+      const settled = await settleAuthMe(setStatus);
+
+      // As a backup, do a passive sync that never signs (requires mode patch)
+      if (!settled) {
+        await syncWalletSession(wallet as any, { mode: "auto" });
+        await settleAuthMe(setStatus);
       }
 
+      setSuccessPulse(true);
       setStatus("Logged in!");
       window.dispatchEvent(new Event("auth-changed"));
+      endInflight();
+      setInFlight(false);
 
-      // Give Safari a moment to commit cookies before navigation
+      setTimeout(() => setSuccessPulse(false), 1200);
+
+      // Optional: don't hard navigate on iOS; it can fight the cookie settle.
+      // If you want navigation, do it after settle.
       setTimeout(() => {
         window.location.href = "/";
-      }, 150);
+      }, isIOS() ? 350 : 150);
     } catch (e: any) {
       setStatus(e?.message || "Login failed");
+      endInflight();
+      setInFlight(false);
     }
   }
 
@@ -108,6 +285,7 @@ export default function WalletLoginButton() {
           >
             Select Wallet
           </button>
+
           {isMobile && (
             <button
               onClick={openInPhantom}
@@ -121,19 +299,60 @@ export default function WalletLoginButton() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={signIn}
-            className="rounded-xl bg-pink-500 px-4 py-2 font-semibold text-black hover:bg-pink-400"
+            disabled={inFlight}
+            className={[
+              "rounded-xl px-4 py-2 font-semibold transition flex items-center justify-center gap-2",
+              successPulse
+                ? "bg-pink-400 text-black animate-[xessPop_220ms_ease-out]"
+                : inFlight
+                  ? "bg-pink-500/60 text-black/70 cursor-not-allowed"
+                  : "bg-pink-500 text-black hover:bg-pink-400",
+            ].join(" ")}
           >
-            Sign in with wallet
+            {successPulse ? (
+              <>
+                <Checkmark />
+                <span>Success</span>
+              </>
+            ) : inFlight ? (
+              <>
+                <Spinner />
+                <span>{status || "Working..."}</span>
+              </>
+            ) : (
+              <span>Sign in with wallet</span>
+            )}
           </button>
           <button
             onClick={() => wallet.disconnect()}
-            className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold text-white/70 hover:bg-white/20 hover:text-white transition"
+            disabled={inFlight}
+            className={[
+              "rounded-xl bg-white/10 border border-white/20 px-4 py-2 font-semibold transition",
+              inFlight
+                ? "text-white/40 cursor-not-allowed"
+                : "text-white/70 hover:bg-white/20 hover:text-white",
+            ].join(" ")}
           >
             Disconnect Wallet
           </button>
         </div>
       )}
-      {status && <div className="text-sm text-white/70">{status}</div>}
+
+      {status && !inFlight && <div className="text-sm text-white/70">{status}</div>}
+
+      {/* Keyframe animations for checkmark and pop */}
+      <style jsx global>{`
+        @keyframes xessCheck {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        @keyframes xessPop {
+          0% { transform: scale(0.98); }
+          60% { transform: scale(1.03); }
+          100% { transform: scale(1.0); }
+        }
+      `}</style>
     </div>
   );
 }
