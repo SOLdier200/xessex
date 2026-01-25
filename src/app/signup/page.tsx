@@ -570,33 +570,33 @@ function SignupInner() {
 
         {/* Payment Method Tabs */}
         <div className="flex justify-center mt-6">
-          <div className="bg-black/40 rounded-full p-1 flex gap-1">
+          <div className="bg-black/60 rounded-full p-1.5 flex gap-2 border border-white/20 shadow-lg shadow-black/50">
             <button
               onClick={() => setPaymentMethod("crypto")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition ${
+              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
                 paymentMethod === "crypto"
-                  ? "bg-purple-500/30 text-purple-300"
-                  : "text-white/60 hover:text-white"
+                  ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/40"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               }`}
             >
               Crypto
             </button>
             <button
               onClick={() => setPaymentMethod("cashapp")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition ${
+              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
                 paymentMethod === "cashapp"
-                  ? "bg-green-500/30 text-green-300"
-                  : "text-white/60 hover:text-white"
+                  ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/40"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               }`}
             >
               Cash App
             </button>
             <button
               onClick={() => setPaymentMethod("creditcard")}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition ${
+              className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${
                 paymentMethod === "creditcard"
-                  ? "bg-blue-500/30 text-blue-300"
-                  : "text-white/60 hover:text-white"
+                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/40"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               }`}
             >
               Credit Card

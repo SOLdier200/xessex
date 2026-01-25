@@ -294,7 +294,7 @@ export default function PayWithCashAppPage() {
                 {" "}we can likely extend you a temporary Diamond Membership for testing, along with a free Diamond Membership for a certain amount of time after launching on Mainnet!
               </p>
               <p className="text-yellow-200 font-semibold">
-                Because we are going to be paying out 1 Million Xess Tokens per week to our Diamond Members, the first to sign up after Mainnet launch are going to be receiving very large sums of tokens! Especially if you rank well on the Diamond Ladder!
+                Because we are going to be paying out nearly a million Xess Tokens per week to our Diamond Members, the first to sign up after Mainnet launch are going to be receiving very large sums of tokens! Especially if you rank well on the Diamond Ladder!
               </p>
               <p>
                 Your email response will have all the details on what we need for testing — it&apos;s actually extremely simple.
