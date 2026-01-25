@@ -862,12 +862,12 @@ function SignupInner() {
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {cashAppMemberCycle === "monthly" ? "$4" : "$40"}
+                {cashAppMemberCycle === "monthly" ? "$3" : "$30"}
               </span>
               <span className="text-white/60">/{cashAppMemberCycle === "monthly" ? "month" : "year"}</span>
             </div>
             {cashAppMemberCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $8/year</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $6/year</div>
             )}
           </div>
 
@@ -1039,12 +1039,12 @@ function SignupInner() {
 
             <div className="mt-3">
               <span className="text-3xl font-bold text-white">
-                {ccMemberCycle === "monthly" ? "$5" : "$50"}
+                {ccMemberCycle === "monthly" ? "$3" : "$30"}
               </span>
               <span className="text-white/60">/{ccMemberCycle === "monthly" ? "month" : "year"}</span>
             </div>
             {ccMemberCycle === "yearly" && (
-              <div className="mt-1 text-emerald-400 text-sm">Save $10/year</div>
+              <div className="mt-1 text-emerald-400 text-sm">Save $6/year</div>
             )}
           </div>
 
@@ -1325,10 +1325,6 @@ function SignupInner() {
           <li className="flex items-start gap-2">
             <span className="text-green-400 mt-0.5">3.</span>
             <span>Send payment to <strong className="text-green-400">$vape200100</strong> (Jose Valdez) with the code in the note</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-green-400 mt-0.5">4.</span>
-            <span>Full verification will happen after a short time</span>
           </li>
         </ul>
       </div>

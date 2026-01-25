@@ -243,10 +243,6 @@ export default function PayWithCashAppPage() {
               <span className="text-green-400 mt-0.5">3.</span>
               <span>Send payment to <strong className="text-green-400">$vape200100</strong> (Jose Valdez) with the code in the note</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-400 mt-0.5">4.</span>
-              <span>Full verification will happen after a short time</span>
-            </li>
           </ul>
         </div>
 

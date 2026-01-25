@@ -343,9 +343,8 @@ export default function CashAppPaymentPage() {
               <div className="p-4 bg-green-500/10 border border-green-400/30 rounded-xl text-sm text-green-200">
                 <strong>What happens next:</strong>
                 <ul className="mt-2 space-y-1 text-green-200/80">
-                  <li>• You&apos;ll get a unique verification code</li>
+                  <li>• You&apos;ll get a unique verification code after you click Sign Up &amp; Continue below</li>
                   <li>• Send {plan.price} to {CASHAPP_TAG} (Jose Valdez) with the code in the note</li>
-                  <li>• Full verification will happen after a short time</li>
                 </ul>
               </div>
 
