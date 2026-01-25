@@ -33,7 +33,7 @@ export default function proxy(req: NextRequest) {
   if (isIndexerBot(req)) {
     const res = NextResponse.next();
     res.headers.set("x-xessex-mw", "bot-bypass");
-    res.headers.set("Vary", "User-Agent");
+    res.headers.append("Vary", "User-Agent");
     return res;
   }
 
