@@ -1,3 +1,18 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ *
+ * POST /api/auth/auth-wallet-link/verify
+ *
+ * Member wallet linking - sets solWallet (payout wallet) ONLY.
+ * This is NOT for auth identity; it's for reward payouts.
+ *
+ * Requirements:
+ * - User must be logged in
+ * - User must have an active Member subscription
+ * - Wallet must not be linked to another account
+ */
+
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
@@ -12,6 +27,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 
+  // Gate behind active Member subscription
+  const sub = await db.subscription.findUnique({
+    where: { userId: access.user.id },
+    select: { tier: true, status: true, expiresAt: true },
+  });
+
+  const isActiveMember =
+    sub &&
+    sub.tier === "MEMBER" &&
+    sub.status === "ACTIVE" &&
+    (!sub.expiresAt || sub.expiresAt.getTime() > Date.now());
+
+  if (!isActiveMember) {
+    return NextResponse.json(
+      { ok: false, error: "Member subscription required to link payout wallet" },
+      { status: 403 }
+    );
+  }
+
   const { wallet, signature, nonce } = await req.json();
   const w = String(wallet ?? "").trim();
   const s = String(signature ?? "").trim();
@@ -24,6 +58,9 @@ export async function POST(req: Request) {
   const ch = await db.walletLinkChallenge.findUnique({ where: { nonce: n } });
   if (!ch || ch.userId !== access.user.id) {
     return NextResponse.json({ ok: false, error: "Invalid challenge" }, { status: 400 });
+  }
+  if (ch.purpose !== "AUTH_LINK") {
+    return NextResponse.json({ ok: false, error: "Wrong challenge purpose" }, { status: 400 });
   }
   if (ch.usedAt) {
     return NextResponse.json({ ok: false, error: "Challenge already used" }, { status: 400 });
@@ -48,11 +85,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 400 });
   }
 
-  // Prevent one wallet from being linked to multiple accounts
-  // Check both walletAddress (auth wallet) and solWallet (payout wallet)
+  // Prevent one wallet from being linked to multiple accounts as solWallet
   const existing = await db.user.findFirst({
     where: {
-      OR: [{ walletAddress: w }, { solWallet: w }],
+      solWallet: w,
       NOT: { id: access.user.id },
     },
   });
@@ -60,19 +96,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Wallet already linked to another account" }, { status: 409 });
   }
 
-  // Update auth wallet; optionally backfill solWallet for convenience if it's empty
-  const userUpdateData: { walletAddress: string; solWallet?: string; solWalletLinkedAt?: Date } = {
-    walletAddress: w,
-  };
-  if (!access.user.solWallet) {
-    userUpdateData.solWallet = w;
-    userUpdateData.solWalletLinkedAt = new Date();
-  }
-
+  // ONLY set solWallet (payout wallet), NOT walletAddress (auth identity)
   await db.$transaction([
     db.user.update({
       where: { id: access.user.id },
-      data: userUpdateData,
+      data: {
+        solWallet: w,
+        solWalletLinkedAt: new Date(),
+      },
     }),
     db.walletLinkChallenge.update({
       where: { nonce: n },

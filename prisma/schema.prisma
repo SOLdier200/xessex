@@ -81,17 +81,25 @@ model Session {
   @@index([expiresAt])
 }
 
+enum WalletLinkPurpose {
+  PAYOUT_LINK
+  AUTH_LINK
+  DIAMOND_UPGRADE
+}
+
 model WalletLinkChallenge {
-  id        String    @id @default(cuid())
+  id        String            @id @default(cuid())
   userId    String
-  nonce     String    @unique
+  nonce     String            @unique
   message   String
-  createdAt DateTime  @default(now())
+  createdAt DateTime          @default(now())
   expiresAt DateTime
   usedAt    DateTime?
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   WalletLinkPurpose @default(PAYOUT_LINK)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([purpose])
 }
 
 model PasswordResetToken {

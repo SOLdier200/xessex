@@ -111,6 +111,7 @@ export async function POST(req: Request) {
         nonce,
         message,
         expiresAt,
+        purpose: "AUTH_LINK",
       },
     });
 

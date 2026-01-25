@@ -72,17 +72,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Find user by wallet (check both walletAddress and solWallet)
-    let user = await db.user.findUnique({
+    // Find user by walletAddress ONLY (auth identity)
+    // solWallet is for payouts only, NOT for authentication/rehydration
+    const user = await db.user.findUnique({
       where: { walletAddress: w },
       select: { id: true },
     });
-    if (!user) {
-      user = await db.user.findFirst({
-        where: { solWallet: w },
-        select: { id: true },
-      });
-    }
 
     if (!user) {
       return NextResponse.json(

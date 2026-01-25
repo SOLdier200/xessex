@@ -80,6 +80,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (ch.purpose !== "AUTH_LINK") {
+      return NextResponse.json(
+        { ok: false, error: "WRONG_CHALLENGE_PURPOSE" },
+        { status: 400, headers: noCache }
+      );
+    }
+
     if (ch.usedAt) {
       return NextResponse.json(
         { ok: false, error: "CHALLENGE_USED" },

@@ -118,9 +118,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
     }
 
-    // Find or create user by wallet
-    let user = await db.user.findFirst({
-      where: { OR: [{ walletAddress: w }, { solWallet: w }] },
+    // Find or create user by walletAddress ONLY (auth identity)
+    // solWallet is for payouts only, NOT for authentication
+    let user = await db.user.findUnique({
+      where: { walletAddress: w },
       select: {
         id: true,
         walletAddress: true,

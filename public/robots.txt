@@ -1,4 +1,6 @@
 User-agent: *
+Disallow: /api/
+Disallow: /admin/
 Allow: /
 
 Sitemap: https://xessex.me/sitemap.xml

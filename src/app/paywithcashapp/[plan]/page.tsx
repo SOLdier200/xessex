@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import TopNav from "../../components/TopNav";
 import GoogleSignupButton from "../../components/GoogleSignupButton";
@@ -20,8 +20,11 @@ const CASHAPP_TAG = "$vape200100"; // Cash App: Jose Valdez
 export default function CashAppPaymentPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const planCode = params.plan as string;
   const plan = PLAN_INFO[planCode];
+
+  const autoDiamondRef = useRef(false);
 
   const [payerHandle, setPayerHandle] = useState("");
   const [note, setNote] = useState("");
@@ -48,6 +51,22 @@ export default function CashAppPaymentPage() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Auto-open Diamond signup modal when deep-linked from Phantom
+  useEffect(() => {
+    if (autoDiamondRef.current) return;
+    const wantsDiamondSignup = searchParams.get("diamondSignup") === "1";
+    if (!wantsDiamondSignup) return;
+
+    autoDiamondRef.current = true;
+    setDiamondSignupOpen(true);
+
+    // Remove the param so closing the modal doesn't reopen it
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete("diamondSignup");
+    const qs = sp.toString();
+    router.replace(qs ? `/paywithcashapp/${planCode}?${qs}` : `/paywithcashapp/${planCode}`);
+  }, [searchParams, router, planCode]);
 
   async function checkAuth() {
     try {

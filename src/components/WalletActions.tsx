@@ -369,6 +369,11 @@ export default function WalletActions({
           endInflight();
           return;
         }
+        if (resp.status === 403 && v.error === "WALLET_NOT_REGISTERED") {
+          setStatus("Wallet not registered. Please sign up as Diamond Member first.");
+          endInflight();
+          return;
+        }
         setStatus(v.error || "Wallet sign-in failed.");
         endInflight();
         return;
@@ -528,10 +533,30 @@ export default function WalletActions({
           </div>
         ) : (
           <>
+            {/* On mobile, show Open in Phantom as primary option */}
+            {(p.isIos || p.isAndroid) && (
+              <button
+                onClick={openInPhantom}
+                className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
+                style={{
+                  background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
+                  border: "2px solid #FF1493",
+                  boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
+                }}
+              >
+                Open in Phantom
+              </button>
+            )}
+
             <button
               onClick={() => setVisible(true)}
-              className="w-full py-3 px-6 rounded-full font-semibold text-white transition"
-              style={{
+              className={[
+                "w-full py-3 px-6 rounded-full font-semibold transition",
+                (p.isIos || p.isAndroid)
+                  ? "text-white/50 bg-white/10 border border-white/20"
+                  : "text-white",
+              ].join(" ")}
+              style={(p.isIos || p.isAndroid) ? {} : {
                 background: "linear-gradient(135deg, #9945FF 0%, #7B3FE4 100%)",
                 border: "2px solid #FF1493",
                 boxShadow: "0 0 12px rgba(255, 20, 147, 0.4)",
@@ -541,12 +566,9 @@ export default function WalletActions({
             </button>
 
             {(p.isIos || p.isAndroid) && (
-              <button
-                onClick={openInPhantom}
-                className="w-full py-3 px-6 rounded-xl font-semibold text-white/90 transition border border-white/20 bg-white/10 hover:bg-white/15"
-              >
-                Open in Phantom
-              </button>
+              <div className="text-xs text-white/40 text-center">
+                Wallet connect may not work in mobile browsers. Use Phantom app for best experience.
+              </div>
             )}
           </>
         )

@@ -1,25 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WalletStatus from "./WalletStatus";
-import XessTokenModal from "./XessTokenModal";
+
+const tokenLinks = [
+  { label: "Tokenomics", href: "/tokenomics" },
+  { label: "Whitepaper", href: "/whitepaper" },
+  { label: "Jupiter Swap", href: "/jupiter-swap" },
+  { label: "Xess News", href: "/xess-news" },
+];
 
 export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showXessTokenModal, setShowXessTokenModal] = useState(false);
+  const [tokenDropdownOpen, setTokenDropdownOpen] = useState(false);
+  const tokenDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (tokenDropdownRef.current && !tokenDropdownRef.current.contains(e.target as Node)) {
+        setTokenDropdownOpen(false);
+      }
+    }
+    if (tokenDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [tokenDropdownOpen]);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => setIsLoggedIn(data.ok && data.authed))
-      .catch(() => setIsLoggedIn(false));
+    function checkAuth() {
+      fetch("/api/auth/me", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => setIsLoggedIn(data.ok && data.authed))
+        .catch(() => setIsLoggedIn(false));
+    }
+
+    checkAuth();
+
+    // Listen for auth changes (login/logout events)
+    window.addEventListener("auth-changed", checkAuth);
+    return () => window.removeEventListener("auth-changed", checkAuth);
   }, []);
 
   return (
-    <header className="px-4 md:px-6 py-4 md:py-5 safe-top">
+    <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
       {/* Preload images so they're ready when needed - hidden but forces browser to load */}
       <div className="hidden">
         <Image src="/logos/textlogo/siteset3/profile100.png" alt="" width={1} height={1} priority />
@@ -28,7 +56,7 @@ export default function TopNav() {
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden md:flex md:items-start md:justify-between gap-4">
+      <div className="hidden lg:flex lg:items-start lg:justify-between gap-4">
         {/* Left side: Logo */}
         <div className="shrink-0">
           <Link href="/" title="Click for homepage">
@@ -59,9 +87,36 @@ export default function TopNav() {
             <Link href="/leaderboard" className="hover:opacity-80 transition shrink-0">
               <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority className="h-[40px] w-auto" />
             </Link>
-            <button onClick={() => setShowXessTokenModal(true)} className="hover:opacity-80 transition shrink-0">
-              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[35px] w-auto" />
-            </button>
+            <div className="relative shrink-0" ref={tokenDropdownRef}>
+              <button
+                onClick={() => setTokenDropdownOpen(!tokenDropdownOpen)}
+                className="hover:opacity-80 transition flex items-center gap-1"
+              >
+                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[35px] w-auto" />
+                <svg
+                  className={`w-4 h-4 text-white/70 transition-transform ${tokenDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {tokenDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-black/95 border border-pink-500/30 shadow-[0_0_20px_rgba(236,72,153,0.3)] backdrop-blur-sm z-50 overflow-hidden">
+                  {tokenLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setTokenDropdownOpen(false)}
+                      className="block px-4 py-3 text-white/90 hover:bg-pink-500/20 hover:text-white transition border-b border-white/5 last:border-b-0"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             {isLoggedIn && (
               <Link href="/profile" className="hover:opacity-80 transition shrink-0">
                 <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[33px] w-auto" />
@@ -74,7 +129,7 @@ export default function TopNav() {
       </div>
 
       {/* Mobile Layout */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         {/* Top row: Logo on left, hamburger on right */}
         <div className="flex items-start justify-between gap-3">
           <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
@@ -138,15 +193,39 @@ export default function TopNav() {
             <Link href="/leaderboard" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} className="h-[36px] w-auto" />
             </Link>
-            <button
-              onClick={() => {
-                setShowXessTokenModal(true);
-                setMenuOpen(false);
-              }}
-              className="hover:opacity-80 transition"
-            >
-              <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[31px] w-auto" />
-            </button>
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => setTokenDropdownOpen(!tokenDropdownOpen)}
+                className="hover:opacity-80 transition flex items-center gap-1"
+              >
+                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[31px] w-auto" />
+                <svg
+                  className={`w-4 h-4 text-white/70 transition-transform ${tokenDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {tokenDropdownOpen && (
+                <div className="mt-2 w-48 rounded-xl bg-black/95 border border-pink-500/30 shadow-[0_0_20px_rgba(236,72,153,0.3)] overflow-hidden">
+                  {tokenLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => {
+                        setTokenDropdownOpen(false);
+                        setMenuOpen(false);
+                      }}
+                      className="block px-4 py-3 text-white/90 hover:bg-pink-500/20 hover:text-white transition border-b border-white/5 last:border-b-0 text-center"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
             {isLoggedIn && (
               <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
                 <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[30px] w-auto" />
@@ -156,10 +235,6 @@ export default function TopNav() {
         </nav>
       </div>
 
-      <XessTokenModal
-        open={showXessTokenModal}
-        onClose={() => setShowXessTokenModal(false)}
-      />
     </header>
   );
 }

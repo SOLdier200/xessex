@@ -941,7 +941,7 @@ export default function ProfilePage() {
                     </>
                   )}
 
-                  {data.membership === "FREE" && data.pendingManualPayment && (
+                  {data.membership === "FREE" && data.pendingManualPayment && !data.sub && (
                     <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl">
                       <p className="text-sm text-yellow-300">
                         <strong>Note:</strong> Your Cash App payment is pending confirmation. Once your payment is verified, your full subscription time will be activated.

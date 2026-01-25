@@ -25,6 +25,9 @@ export async function POST(req: Request) {
   if (!ch || ch.userId !== access.user.id) {
     return NextResponse.json({ ok: false, error: "Invalid challenge" }, { status: 400 });
   }
+  if (ch.purpose !== "PAYOUT_LINK") {
+    return NextResponse.json({ ok: false, error: "Wrong challenge purpose" }, { status: 400 });
+  }
   if (ch.usedAt) {
     return NextResponse.json({ ok: false, error: "Challenge already used" }, { status: 400 });
   }

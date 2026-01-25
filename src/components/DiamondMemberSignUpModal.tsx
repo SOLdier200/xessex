@@ -50,9 +50,10 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
 
   const openInPhantom = () => {
     if (typeof window === "undefined") return;
-    const url = encodeURIComponent(window.location.href);
+    const url = new URL(window.location.href);
+    url.searchParams.set("diamondSignup", "1");
     const ref = encodeURIComponent(window.location.origin);
-    window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+    window.location.href = `https://phantom.app/ul/browse/${encodeURIComponent(url.toString())}?ref=${ref}`;
   };
 
   if (!open) return null;

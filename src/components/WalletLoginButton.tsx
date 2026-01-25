@@ -241,7 +241,11 @@ export default function WalletLoginButton() {
       const v = await resp.json().catch(() => ({}));
 
       if (!resp.ok || !v.ok) {
-        setStatus(v.error || "Login failed");
+        if (v.error === "WALLET_NOT_REGISTERED") {
+          setStatus("Wallet not registered. Please sign up as Diamond Member first.");
+        } else {
+          setStatus(v.error || "Login failed");
+        }
         endInflight();
         setInFlight(false);
         return;

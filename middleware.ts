@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-function isCrawler(uaRaw: string) {
-  const ua = (uaRaw || "").toLowerCase();
+// Bots we want to allow through for indexing (regex for efficiency)
+const BOT_UA_RE =
+  /\b(yandex(bot|images|video|news)?|googlebot|bingbot|duckduckbot|baiduspider|slurp|facebot|facebookexternalhit|twitterbot|linkedinbot|applebot|pinterest|discordbot|slackbot)\b/i;
 
-  // Major search engines + common preview bots
-  return (
-    ua.includes("googlebot") ||
-    ua.includes("bingbot") ||
-    ua.includes("duckduckbot") ||
-    ua.includes("slurp") || // Yahoo
-    ua.includes("yandex") ||
-    ua.includes("baiduspider") ||
-    ua.includes("facebookexternalhit") ||
-    ua.includes("twitterbot") ||
-    ua.includes("linkedinbot") ||
-    ua.includes("pinterest") ||
-    ua.includes("discordbot") ||
-    ua.includes("slackbot")
-  );
+/**
+ * Safe-ish bot detection:
+ * 1) User-Agent matches known crawlers
+ * 2) AND "sec-fetch-mode" is usually "navigate" or missing (helps ignore some extension noise)
+ *
+ * NOTE: UA can be spoofed. For most sites this is still the standard approach.
+ */
+function isCrawler(req: NextRequest) {
+  const ua = req.headers.get("user-agent") || "";
+  if (!BOT_UA_RE.test(ua)) return false;
+
+  const sfm = req.headers.get("sec-fetch-mode") || "";
+  // Many bots don't send sec-fetch-* headers; browsers do. We accept both.
+  // This just avoids some weird injected/extension requests in certain browsers.
+  if (sfm && sfm !== "navigate" && sfm !== "no-cors" && sfm !== "cors") return false;
+
+  return true;
 }
 
 function allowWithoutAge(pathname: string) {
@@ -70,13 +73,12 @@ function isProtectedMembersArea(pathname: string) {
 }
 
 export function middleware(req: NextRequest) {
-  const ua = req.headers.get("user-agent") || "";
   const pathname = req.nextUrl.pathname;
 
   // Never interfere with APIs or static/verification
   if (isStaticOrVerification(pathname)) return NextResponse.next();
 
-  const crawler = isCrawler(ua);
+  const crawler = isCrawler(req);
 
   // Cookies - support both age cookie names
   const hasAgeCookie =
@@ -87,7 +89,14 @@ export function middleware(req: NextRequest) {
   // 1) AGE GATE:
   // - Crawlers: NEVER redirect to /age (serve the page normally -> 200)
   // - Humans without cookie: REWRITE to /age (still 200), so no redirect chain
-  if (!crawler && !hasAgeCookie && !allowWithoutAge(pathname)) {
+  if (crawler) {
+    // Let crawlers through with Vary header so CDNs don't cache bot vs human responses together
+    const res = NextResponse.next();
+    res.headers.set("Vary", "User-Agent");
+    return res;
+  }
+
+  if (!hasAgeCookie && !allowWithoutAge(pathname)) {
     const url = req.nextUrl.clone();
     url.pathname = "/age";
     // Keep full path + query

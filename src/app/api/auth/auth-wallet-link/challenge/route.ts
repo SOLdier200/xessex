@@ -32,6 +32,7 @@ export async function POST() {
       nonce,
       message,
       expiresAt,
+      purpose: "AUTH_LINK",
     },
   });
 

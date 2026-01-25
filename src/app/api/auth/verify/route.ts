@@ -110,9 +110,10 @@ export async function POST(req: Request) {
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
 
-    // Check if this wallet already exists on any user (auth or payout wallet)
-    const existingWalletUser = await db.user.findFirst({
-      where: { OR: [{ walletAddress: w }, { solWallet: w }] },
+    // Check if this wallet is an auth wallet (walletAddress) for any user
+    // IMPORTANT: solWallet is payout-only, NOT for authentication
+    const existingWalletUser = await db.user.findUnique({
+      where: { walletAddress: w },
       select: { id: true, subscription: { select: { tier: true, status: true } } },
     });
 
@@ -160,6 +161,25 @@ export async function POST(req: Request) {
       setSessionCookieOnResponse(res, token, expiresAt);
       if (clearChallengeCookie) res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", expires: new Date(0) });
       return res;
+    }
+
+    // NEW WALLET: Only allow account creation through Diamond signup flow
+    // Check the challenge cookie for purpose - must be DIAMOND_SIGNUP to create new account
+    let purpose: string | undefined;
+    if (cookieMatch?.[1]) {
+      const token = decodeURIComponent(cookieMatch[1]);
+      const chk = verifyChallengeCookie(token);
+      if (chk.ok) {
+        purpose = chk.payload.p;
+      }
+    }
+
+    if (purpose !== "DIAMOND_SIGNUP") {
+      // New wallet trying to sign in without going through Diamond signup
+      return NextResponse.json(
+        { ok: false, error: "WALLET_NOT_REGISTERED", message: "Please sign up as a Diamond Member first" },
+        { status: 403, headers: noCache }
+      );
     }
 
     // Look up referrer if refCode provided

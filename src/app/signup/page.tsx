@@ -87,6 +87,7 @@ function SignupInner() {
   const diamondPlan = diamondCycle === "30days" ? "D1" : diamondCycle === "60days" ? "D2" : "DY";
 
   const autoPromptedRef = useRef(false);
+  const autoDiamondRef = useRef(false);
   const pollTimerRef = useRef<number | null>(null);
   const pollStartRef = useRef<number>(0);
 
@@ -482,6 +483,28 @@ function SignupInner() {
         setSignupSelectOpen(true);
       });
   }, [searchParams, waiting]);
+
+  // Auto-open Diamond signup modal when deep-linked from Phantom
+  useEffect(() => {
+    if (autoDiamondRef.current) return;
+    if (searchParams.get("waiting") === "1") return;
+    if (waiting) return;
+
+    const wantsDiamondSignup = searchParams.get("diamondSignup") === "1";
+    if (!wantsDiamondSignup) return;
+
+    autoDiamondRef.current = true;
+    setSignupSelectOpen(false);
+    setSignupOpen(false);
+    setLoginOpen(false);
+    setDiamondSignupOpen(true);
+
+    // Remove the param so closing the modal doesn't reopen it
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete("diamondSignup");
+    const qs = sp.toString();
+    router.replace(qs ? `/signup?${qs}` : "/signup");
+  }, [searchParams, waiting, router]);
 
   // Autolaunch NOWPayments if /signup?plan=MM|MY|DM|DY
   useEffect(() => {

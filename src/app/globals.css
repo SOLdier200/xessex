@@ -34,10 +34,17 @@ a {
   overflow: hidden;
 }
 
-/* Desktop only: enable animations */
-@media (min-width: 769px) {
+/* Tablet: reduced motion (subtle glow only) */
+@media (min-width: 768px) and (max-width: 1023px) {
   .neon-border {
-    animation: shimmer 1.5s ease-in-out infinite;
+    animation: soft-glow 6s ease-in-out infinite;
+  }
+}
+
+/* Desktop only: enable animations */
+@media (hover: hover) and (min-width: 1024px) {
+  .neon-border {
+    animation: shimmer 3s ease-in-out infinite;
   }
 
   .neon-border::before {
@@ -55,7 +62,7 @@ a {
       rgba(255, 182, 217, 0.1) 60%,
       transparent 70%
     );
-    animation: glitter-sweep 8s linear infinite;
+    animation: glitter-sweep 16s linear infinite;
     pointer-events: none;
   }
 
@@ -70,8 +77,23 @@ a {
       radial-gradient(circle at 90% 80%, rgba(255, 182, 217, 0.8) 1px, transparent 1px),
       radial-gradient(circle at 10% 90%, rgba(255, 255, 255, 0.6) 1px, transparent 1px),
       radial-gradient(circle at 60% 10%, rgba(255, 182, 217, 0.7) 1px, transparent 1px);
-    animation: sparkle 2s ease-in-out infinite;
+    animation: sparkle 4s ease-in-out infinite;
     pointer-events: none;
+  }
+}
+
+@keyframes soft-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 4px var(--neon-pink),
+      0 0 8px var(--baby-pink),
+      0 0 14px rgba(255, 182, 217, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 6px var(--neon-pink),
+      0 0 12px var(--baby-pink),
+      0 0 18px rgba(255, 182, 217, 0.35);
   }
 }
 
