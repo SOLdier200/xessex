@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import Image from "next/image";
 import LogoutModal from "./LogoutModal";
 import FreeUserModal from "./FreeUserModal";
 import LoginModal from "@/components/LoginModal";
-import { rehydrateAndRefresh, isIOS } from "@/lib/walletRehydrate";
+import { useEnsureWalletSession } from "@/hooks/useEnsureWalletSession";
 
 type AuthData = {
   authed: boolean;
@@ -43,7 +43,7 @@ export default function WalletStatus() {
 
   const fetchAuth = useCallback((delay = 0) => {
     const doFetch = () => {
-      fetch(`/api/auth/me?_=${Date.now()}`, { cache: "no-store" })
+      fetch(`/api/auth/me?_=${Date.now()}`, { credentials: "include", cache: "no-store" })
         .then((r) => r.json())
         .then((d) => {
           if (d.ok && d.authed) {
@@ -86,45 +86,18 @@ export default function WalletStatus() {
     return () => window.removeEventListener("auth-changed", handleAuthChange);
   }, [fetchAuth]);
 
-  // iOS Session Rehydration: If wallet connected but session lost, re-establish it
-  const rehydrationAttempted = useRef(false);
-  const walletRef = useWallet();
+  // iOS Session Auto-Fix: If wallet connected but session lost, re-establish it
+  // Uses the robust syncWalletSession flow with polling and retries
+  const refreshMeCallback = useCallback(async () => {
+    await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+    fetchAuth(0);
+  }, [fetchAuth]);
 
-  useEffect(() => {
-    // Only attempt once per page load, and only on iOS
-    if (rehydrationAttempted.current) return;
-    if (!isIOS()) return;
-    if (loading) return; // Wait for auth to load first
-
-    // Check: wallet connected but showing as FREE or not authed
-    const needsRehydration =
-      walletRef.connected &&
-      walletRef.publicKey &&
-      walletRef.signMessage &&
-      (!auth?.authed || auth?.membership === "FREE");
-
-    // Also check if connected wallet matches an existing auth wallet (Diamond user)
-    const connectedPubkey = walletRef.publicKey?.toBase58();
-    const walletMatchesAuth =
-      connectedPubkey &&
-      (auth?.authWallet === connectedPubkey || auth?.payoutWallet === connectedPubkey);
-
-    // Only rehydrate if wallet is connected but not recognized in current session
-    if (needsRehydration && connectedPubkey && !walletMatchesAuth) {
-      rehydrationAttempted.current = true;
-      console.log("[WalletStatus] iOS rehydration triggered for wallet:", connectedPubkey?.slice(0, 8));
-
-      rehydrateAndRefresh(
-        walletRef,
-        { authed: !!auth?.authed, tier: auth?.membership },
-        async () => {
-          fetchAuth(0);
-        }
-      ).catch((err) => {
-        console.warn("[WalletStatus] Rehydration failed:", err);
-      });
-    }
-  }, [loading, auth, walletRef.connected, walletRef.publicKey, fetchAuth]);
+  useEnsureWalletSession({
+    authed: !!auth?.authed,
+    tier: (auth?.membership?.toLowerCase() || "free") as "free" | "member" | "diamond",
+    refreshMe: refreshMeCallback,
+  });
 
   const handleLogoutComplete = () => {
     setAuth(null);
