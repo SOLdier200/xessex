@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import TopNav from "../../components/TopNav";
 import GoogleSignupButton from "../../components/GoogleSignupButton";
+import DiamondMemberSignUpModal from "@/components/DiamondMemberSignUpModal";
 
 const PLAN_INFO: Record<string, { label: string; price: string; tier: string }> = {
   member_monthly: { label: "Member Monthly", price: "$4", tier: "Member" },
@@ -31,6 +32,7 @@ export default function CashAppPaymentPage() {
 
   // Signup modal state
   const [signupOpen, setSignupOpen] = useState(false);
+  const [diamondSignupOpen, setDiamondSignupOpen] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupRefCode, setSignupRefCode] = useState("");
@@ -116,7 +118,12 @@ export default function CashAppPaymentPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isAuthed) {
-      setSignupOpen(true);
+      // Open appropriate signup modal based on tier
+      if (plan?.tier === "Diamond") {
+        setDiamondSignupOpen(true);
+      } else {
+        setSignupOpen(true);
+      }
       return;
     }
 
@@ -366,7 +373,7 @@ export default function CashAppPaymentPage() {
         </div>
       </div>
 
-      {/* Signup Modal */}
+      {/* Member Signup Modal */}
       {signupOpen && (
         <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="absolute inset-0 bg-black/80" onClick={() => !signupBusy && setSignupOpen(false)} />
@@ -383,9 +390,9 @@ export default function CashAppPaymentPage() {
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
-            <h2 className="text-lg font-semibold text-white mb-2">Create Your Account</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">Member Sign Up</h2>
             <p className="text-sm text-white/60 mb-5">
-              Sign up to complete your Cash App purchase.
+              Create your account to complete your Member purchase.
             </p>
 
             <form onSubmit={handleEmailSignup} className="space-y-3">
@@ -469,6 +476,18 @@ export default function CashAppPaymentPage() {
           </div>
         </div>
       )}
+
+      {/* Diamond Member Signup Modal */}
+      <DiamondMemberSignUpModal
+        open={diamondSignupOpen}
+        onClose={() => setDiamondSignupOpen(false)}
+        onCreated={() => {
+          setDiamondSignupOpen(false);
+          setIsAuthed(true);
+          setHasWallet(true);
+          checkAuth();
+        }}
+      />
     </main>
   );
 }
