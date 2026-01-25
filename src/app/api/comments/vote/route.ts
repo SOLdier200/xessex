@@ -7,10 +7,14 @@ const FLIP_WINDOW_MS = 60_000;
 
 // Score weights for member voting
 const MEMBER_LIKE_SCORE = 5;
+const ADMIN_MOD_LIKE_SCORE = 15;
 const MEMBER_DISLIKE_SCORE = -1;
 
-function getScoreDelta(value: number): number {
-  return value === 1 ? MEMBER_LIKE_SCORE : MEMBER_DISLIKE_SCORE;
+function getScoreDelta(value: number, isAdminOrMod: boolean): number {
+  if (value === 1) {
+    return isAdminOrMod ? ADMIN_MOD_LIKE_SCORE : MEMBER_LIKE_SCORE;
+  }
+  return MEMBER_DISLIKE_SCORE;
 }
 
 function secondsLeft(createdAt: Date, nowMs: number) {
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
   // First vote
   if (!existing) {
     const wk = weekKeyUTC(new Date());
-    const scoreDelta = getScoreDelta(value);
+    const scoreDelta = getScoreDelta(value, access.isAdminOrMod);
 
     const updated = await db.$transaction(async (tx) => {
       await tx.commentMemberVote.create({
@@ -180,8 +184,8 @@ export async function POST(req: NextRequest) {
 
   // Allowed ONE flip within 60 seconds
   const wk = weekKeyUTC(new Date());
-  const oldScoreDelta = getScoreDelta(existing.value);
-  const newScoreDelta = getScoreDelta(value);
+  const oldScoreDelta = getScoreDelta(existing.value, access.isAdminOrMod);
+  const newScoreDelta = getScoreDelta(value, access.isAdminOrMod);
   // Net score change = subtract old + add new
   const netScoreDelta = newScoreDelta - oldScoreDelta;
 

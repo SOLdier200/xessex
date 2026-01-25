@@ -106,6 +106,7 @@ export default function WalletLoginButton() {
   const [inFlight, setInFlight] = useState(false);
   const [successPulse, setSuccessPulse] = useState(false);
   const [successNavTo, setSuccessNavTo] = useState<string | null>(null);
+  const [showNotRegisteredModal, setShowNotRegisteredModal] = useState(false);
 
   useEffect(() => {
     if (typeof navigator === "undefined") return;
@@ -242,7 +243,8 @@ export default function WalletLoginButton() {
 
       if (!resp.ok || !v.ok) {
         if (v.error === "WALLET_NOT_REGISTERED") {
-          setStatus("Wallet not registered. Please sign up as Diamond Member first.");
+          setShowNotRegisteredModal(true);
+          setStatus("");
         } else {
           setStatus(v.error || "Login failed");
         }
@@ -377,6 +379,44 @@ export default function WalletLoginButton() {
       )}
 
       {status && !inFlight && <div className="text-sm text-white/70">{status}</div>}
+
+      {/* Not Registered Modal */}
+      {showNotRegisteredModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-black/95 border border-pink-500/40 rounded-2xl p-6 max-w-md mx-4 shadow-[0_0_30px_rgba(236,72,153,0.3)]">
+            <h3 className="text-xl font-bold text-white mb-2">Wallet Not Registered</h3>
+            <p className="text-white/70 text-sm mb-6">
+              This wallet is not linked to an account. Would you like to create one?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowNotRegisteredModal(false);
+                  window.location.href = "/signup#diamond-card-crypto";
+                }}
+                className="w-full py-3 px-6 rounded-xl font-semibold text-white transition bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400"
+              >
+                Create Diamond Account now?
+              </button>
+              <button
+                onClick={() => {
+                  setShowNotRegisteredModal(false);
+                  window.location.href = "/signup";
+                }}
+                className="w-full py-3 px-6 rounded-xl font-semibold text-white/90 transition bg-white/10 border border-white/20 hover:bg-white/20"
+              >
+                Create Member Account now?
+              </button>
+              <button
+                onClick={() => setShowNotRegisteredModal(false)}
+                className="w-full py-2 px-6 rounded-xl font-semibold text-white/60 transition hover:text-white/80"
+              >
+                Exit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Keyframe animations for checkmark and pop */}
       <style jsx global>{`
