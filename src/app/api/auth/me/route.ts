@@ -127,6 +127,11 @@ export async function GET() {
       needsPayoutWalletLink: access.needsPayoutWalletLink,
       needsSolWalletLink: access.needsSolWalletLink,
 
+      // Wallet addresses (for iOS rehydration detection)
+      authWallet: u.walletAddress || null,
+      payoutWallet: u.solWallet || null,
+      effectivePayoutWallet: u.solWallet || u.walletAddress || null,
+
       // Trial status (computed in access.ts)
       isTrial: access.isOnTrial,
       trialUsed: access.trialUsed,

@@ -10,15 +10,18 @@ const COOKIE_NAME = process.env.XESSEX_SESSION_COOKIE || "xessex_session";
 
 // Determine if we're on a real production domain (not localhost)
 const SITE_URL = process.env.SITE_URL || "";
-const isRealProduction = SITE_URL.includes("xessex.me");
+const IS_PROD = SITE_URL.includes("xessex.me");
 
 // Share cookies across apex + www (only on real production domain)
-const COOKIE_DOMAIN = isRealProduction ? ".xessex.me" : undefined;
+const COOKIE_DOMAIN = IS_PROD ? ".xessex.me" : undefined;
 
+// IMPORTANT: Safari iOS REQUIRES SameSite=None + Secure for wallet flows
+// - Wallet app → browser return is treated as cross-site navigation
+// - SameSite=Lax causes cookie to be dropped silently on iOS
 const BASE = {
   httpOnly: true,
-  secure: SITE_URL.startsWith("https://"),
-  sameSite: "lax" as const,
+  secure: true,               // ALWAYS true - required for SameSite=None
+  sameSite: "none" as const,  // Critical for iOS wallet flows
   path: "/",
   domain: COOKIE_DOMAIN,
 };

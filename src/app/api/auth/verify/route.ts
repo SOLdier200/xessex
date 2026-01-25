@@ -8,7 +8,7 @@ import bs58 from "bs58";
 import nacl from "tweetnacl";
 import { db } from "@/lib/prisma";
 import { createSession, getCurrentUser } from "@/lib/auth";
-import { setSessionCookie } from "@/lib/authCookies";
+import { setSessionCookieOnResponse } from "@/lib/authCookies";
 import { generateReferralCode } from "@/lib/referral";
 
 export const runtime = "nodejs";
@@ -60,17 +60,18 @@ export async function POST(req: Request) {
           // Wallet belongs to an existing account - switch to that account
           // This allows a member to sign in with their Diamond wallet and take over the session
           const { token, expiresAt } = await createSession(existingWalletUser.id);
-          await setSessionCookie(token, expiresAt);
 
           // Return info about the switched account
           const switchedToDiamond = existingWalletUser.subscription?.tier === "DIAMOND" &&
             existingWalletUser.subscription?.status === "ACTIVE";
 
-          return NextResponse.json({
+          const res = NextResponse.json({
             ok: true,
             switched: true,
             switchedToDiamond,
           }, { headers: noCache });
+          setSessionCookieOnResponse(res, token, expiresAt);
+          return res;
         }
 
         // Wallet doesn't exist in system - don't silently create a new wallet-native account
@@ -141,9 +142,10 @@ export async function POST(req: Request) {
 
     // Create session using shared helper (TTL from env)
     const { token, expiresAt } = await createSession(user.id);
-    await setSessionCookie(token, expiresAt);
 
-    return NextResponse.json({ ok: true }, { headers: noCache });
+    const res = NextResponse.json({ ok: true }, { headers: noCache });
+    setSessionCookieOnResponse(res, token, expiresAt);
+    return res;
   } catch (err) {
     console.error("Verify error:", err);
     return NextResponse.json({ ok: false, error: "Verify failed" }, { status: 500, headers: noCache });

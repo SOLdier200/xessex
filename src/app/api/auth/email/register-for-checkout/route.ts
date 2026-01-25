@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
-import { setSessionCookie } from "@/lib/authCookies";
+import { setSessionCookieOnResponse } from "@/lib/authCookies";
 import { generateReferralCode } from "@/lib/referral";
 
 export const runtime = "nodejs";
@@ -89,7 +89,8 @@ export async function POST(req: NextRequest) {
 
   // Create session + set cookie
   const { token, expiresAt } = await createSession(user.id);
-  await setSessionCookie(token, expiresAt);
 
-  return NextResponse.json({ ok: true, user });
+  const res = NextResponse.json({ ok: true, user });
+  setSessionCookieOnResponse(res, token, expiresAt);
+  return res;
 }

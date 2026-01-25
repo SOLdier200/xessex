@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
-import { setSessionCookie } from "@/lib/authCookies";
+import { setSessionCookieOnResponse } from "@/lib/authCookies";
 
 export const runtime = "nodejs";
 
@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, expiresAt } = await createSession(user.id);
-  await setSessionCookie(token, expiresAt);
 
   // Determine membership for UI feedback
   const sub = user.subscription;
@@ -101,5 +100,7 @@ export async function POST(req: NextRequest) {
     active && sub?.tier === "DIAMOND" ? "DIAMOND" :
     active ? "MEMBER" : "FREE";
 
-  return NextResponse.json({ ok: true, membership }, { headers: noCache });
+  const res = NextResponse.json({ ok: true, membership }, { headers: noCache });
+  setSessionCookieOnResponse(res, token, expiresAt);
+  return res;
 }

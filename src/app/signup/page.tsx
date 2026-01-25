@@ -1705,7 +1705,7 @@ function SignupInner() {
       {walletDownloadOpen && (
         <div className="fixed inset-0 z-[85] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="absolute inset-0 bg-black/80" onClick={() => setWalletDownloadOpen(false)} />
-          <div className="relative w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl neon-border bg-black/90 p-6">
+          <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-6">
             <button
               type="button"
               onClick={() => setWalletDownloadOpen(false)}
