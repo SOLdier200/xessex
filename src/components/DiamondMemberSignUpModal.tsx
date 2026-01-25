@@ -12,12 +12,32 @@ type Props = {
   onCreated?: () => void;
 };
 
+function isIOS() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes("iphone") ||
+    ua.includes("ipad") ||
+    (ua.includes("mac") && (navigator as any).maxTouchPoints > 1)
+  );
+}
+
 export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: Props) {
   const wallet = useWallet();
   const { setVisible } = useWalletModal();
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile platform
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = ua.includes("android");
+    const ios = isIOS();
+    setIsMobile(isAndroid || ios);
+  }, []);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -26,6 +46,13 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
       setSuccess(false);
     }
   }, [open]);
+
+  const openInPhantom = () => {
+    if (typeof window === "undefined") return;
+    const url = encodeURIComponent(window.location.href);
+    const ref = encodeURIComponent(window.location.origin);
+    window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+  };
 
   if (!open) return null;
 
@@ -174,17 +201,34 @@ export default function DiamondMemberSignUpModal({ open, onClose, onCreated }: P
 
           {/* Connect Wallet Button */}
           {!wallet.connected && (
-            <button
-              onClick={() => setVisible(true)}
-              disabled={busy}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold hover:from-purple-500 hover:to-violet-500 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2"/>
-                <path d="M2 10h20"/>
-              </svg>
-              Connect Wallet
-            </button>
+            <>
+              <button
+                onClick={() => setVisible(true)}
+                disabled={busy}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-violet-600 text-white font-semibold hover:from-purple-500 hover:to-violet-500 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/>
+                  <path d="M2 10h20"/>
+                </svg>
+                Connect Wallet
+              </button>
+
+              {isMobile && (
+                <button
+                  onClick={openInPhantom}
+                  disabled={busy}
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-white/90 transition border border-white/20 bg-white/10 hover:bg-white/15 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                  Open in Phantom
+                </button>
+              )}
+            </>
           )}
 
           {/* Create Account Button */}
