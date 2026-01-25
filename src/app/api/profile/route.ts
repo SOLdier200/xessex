@@ -53,6 +53,21 @@ export async function GET() {
   });
   const specialCreditsMicro = specialCreditAccount?.balanceMicro ?? 0n;
 
+  // Get latest wallet snapshot to determine XESS tier
+  let xessTier = 0;
+  let xessBalance = "0";
+  if (user.solWallet) {
+    const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
+      where: { wallet: user.solWallet },
+      orderBy: { createdAt: "desc" },
+      select: { tier: true, balanceAtomic: true },
+    });
+    if (latestSnapshot) {
+      xessTier = latestSnapshot.tier;
+      xessBalance = latestSnapshot.balanceAtomic.toString();
+    }
+  }
+
   // Check for pending manual payments (Cash App)
   const pendingManualPayment = await db.manualPayment.findFirst({
     where: { userId: user.id, status: "PENDING" },
@@ -89,6 +104,8 @@ export async function GET() {
       referredByEmail,
     },
     specialCreditsMicro: specialCreditsMicro.toString(),
+    xessTier,
+    xessBalance,
     pendingManualPayment: pendingManualPayment
       ? {
           id: pendingManualPayment.id,

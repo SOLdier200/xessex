@@ -54,6 +54,8 @@ type ProfileData = {
     referredByEmail: string | null;
   };
   specialCreditsMicro: string;
+  xessTier: number;
+  xessBalance: string;
   pendingManualPayment: {
     id: string;
     planCode: string;
@@ -1800,89 +1802,101 @@ export default function ProfilePage() {
 
           {/* Special Credits Earning Formula Modal */}
           {showCreditsModal && (
-            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-2 sm:px-4 py-4 sm:py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
               <div
                 className="absolute inset-0 bg-black/80"
                 onClick={() => setShowCreditsModal(false)}
               />
-              <div className="relative w-full max-w-lg rounded-2xl neon-border bg-black/95 p-6">
+              <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/95 p-4 sm:p-5 my-auto">
                 <button
                   onClick={() => setShowCreditsModal(false)}
-                  className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+                  className="absolute top-3 right-3 text-white/50 hover:text-white transition p-1"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
 
-                <h3 className="text-xl font-bold text-cyan-400 mb-4">Special Credit Earning Formula</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-cyan-400 mb-3 pr-8">Special Credit Earning Formula</h3>
 
-                <p className="text-white/70 text-sm mb-4">
-                  Hold XESS tokens in your wallet to earn Special Credits. A snapshot of your wallet balance is taken at random times each day to prevent gaming the system.
+                <p className="text-white/70 text-xs sm:text-sm mb-3">
+                  Hold XESS tokens to earn Special Credits. Snapshots are taken at random times daily.
                 </p>
 
-                <div className="space-y-2 mb-4">
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">50,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">30/month</span>
+                {/* User's current tier indicator */}
+                {data?.xessTier && data.xessTier > 0 ? (
+                  <div className="mb-3 p-2 sm:p-3 bg-green-500/20 border border-green-400/50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-green-400 text-xs sm:text-sm font-semibold">
+                        You are Tier {data.xessTier}
+                      </span>
                     </div>
                   </div>
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">100,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">100/month</span>
-                    </div>
+                ) : (
+                  <div className="mb-3 p-2 sm:p-3 bg-white/5 border border-white/20 rounded-xl">
+                    <span className="text-white/50 text-xs sm:text-sm">
+                      Hold 50k+ XESS to start earning
+                    </span>
                   </div>
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">250,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">250/month</span>
-                    </div>
-                  </div>
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">500,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">500/month</span>
-                    </div>
-                  </div>
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">1,000,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">1,000/month</span>
-                    </div>
-                  </div>
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">2,500,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">1,500/month</span>
-                    </div>
-                  </div>
-                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">5,000,000+ XESS</span>
-                      <span className="text-cyan-400 font-bold">2,000/month</span>
-                    </div>
-                  </div>
+                )}
+
+                {/* Tier table - compact for mobile */}
+                <div className="space-y-1.5 mb-3 max-h-[40vh] sm:max-h-none overflow-y-auto">
+                  {[
+                    { tier: 1, min: "50,000", credits: "30" },
+                    { tier: 2, min: "100,000", credits: "100" },
+                    { tier: 3, min: "250,000", credits: "250" },
+                    { tier: 4, min: "500,000", credits: "500" },
+                    { tier: 5, min: "1,000,000", credits: "1,000" },
+                    { tier: 6, min: "2,500,000", credits: "1,500" },
+                    { tier: 7, min: "5,000,000", credits: "2,000" },
+                  ].map((t) => {
+                    const isCurrentTier = data?.xessTier === t.tier;
+                    return (
+                      <div
+                        key={t.tier}
+                        className={`rounded-lg p-2 sm:p-2.5 flex justify-between items-center transition-all ${
+                          isCurrentTier
+                            ? "bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20"
+                            : "bg-cyan-500/10 border border-cyan-400/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {isCurrentTier && (
+                            <svg className="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          <span className={`text-xs sm:text-sm font-semibold ${isCurrentTier ? "text-white" : "text-white/90"}`}>
+                            {t.min}+ XESS
+                          </span>
+                        </div>
+                        <span className={`text-xs sm:text-sm font-bold ${isCurrentTier ? "text-cyan-300" : "text-cyan-400"}`}>
+                          {t.credits}/mo
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div className="p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl mb-4">
-                  <p className="text-yellow-300 text-sm">
-                    The daily snapshot is taken at random times to ensure fair distribution. Make sure to maintain your token balance consistently!
+                <div className="p-2.5 sm:p-3 bg-yellow-500/10 border border-yellow-400/30 rounded-xl mb-3">
+                  <p className="text-yellow-300 text-xs">
+                    Snapshots are taken at random times daily. Keep your balance consistent!
                   </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Link
                     href="/rewards-drawing"
                     onClick={() => setShowCreditsModal(false)}
-                    className="flex-1 py-3 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-center"
+                    className="flex-1 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-center text-sm"
                   >
-                    Go to Rewards Drawing
+                    Rewards Drawing
                   </Link>
                   <button
                     onClick={() => setShowCreditsModal(false)}
-                    className="px-6 py-3 rounded-xl bg-white/5 border border-white/20 text-white/70 font-semibold hover:bg-white/10 transition"
+                    className="py-2.5 px-4 rounded-xl bg-white/5 border border-white/20 text-white/70 font-semibold hover:bg-white/10 transition text-sm"
                   >
                     Close
                   </button>

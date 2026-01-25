@@ -139,11 +139,6 @@ export default function VotingParticipationStat() {
         Voting Participation
       </div>
 
-      {/* Vote count detail */}
-      <div className="text-xs text-white/40 mt-1">
-        {(data.votesCast ?? 0).toLocaleString()} / {(data.totalComments ?? 0).toLocaleString()} comments
-      </div>
-
       {/* Progress bar */}
       <div className="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden">
         <div
