@@ -1,4 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Parental Controls & Safety – Xessex",
+  description: "Learn about parental controls and content filtering for the Xessex platform.",
+  alternates: {
+    canonical: "/parental-controls",
+  },
+};
 
 export default function ParentalControlsPage() {
   return (

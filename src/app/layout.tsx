@@ -16,27 +16,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Xessex – HD Porn Videos, Premium Sex Content & Crypto Rewards",
+  title: "Earn Crypto Watching Videos – Xessex Adult Rewards Platform",
   description:
-    "Watch premium HD porn videos on Xessex. Earn crypto rewards for watching adult content. Solana-powered platform. 18+ only.",
+    "Watch premium adult videos and earn crypto rewards. Xessex is a private platform with weekly payouts, collections, and verified creators.",
   keywords: [
-    "HD porn",
-    "best porn online",
-    "top ranked porn",
-    "top ranked xxx videos",
-    "premium sex videos",
-    "high quality sex videos",
     "adult video platform",
     "watch porn earn crypto",
-    "get paid to watch videos",
     "crypto porn platform",
-    "solana adult token",
-    "xess token",
-    "porn rewards",
-    "xxx rewards",
-    "adult crypto payments",
+    "adult crypto rewards",
+    "premium adult videos",
   ],
   metadataBase: new URL("https://xessex.me"),
+  alternates: {
+    canonical: "/",
+  },
   robots: {
     index: true,
     follow: true,
@@ -51,10 +44,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://xessex.me",
-    title: "Xessex – HD Porn Videos, Premium Sex Content & Crypto Rewards",
-    description:
-      "Watch premium HD porn videos on Xessex. Earn crypto rewards for watching adult content. Solana-powered platform. 18+ only.",
     siteName: "Xessex",
+    title: "Earn Crypto Watching Videos – Xessex Adult Rewards Platform",
+    description:
+      "Watch premium adult videos and earn crypto rewards. Xessex is a private platform with weekly payouts, collections, and verified creators.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Earn Crypto Watching Videos – Xessex Adult Rewards Platform",
+    description:
+      "Watch premium adult videos and earn crypto rewards. Xessex is a private platform with weekly payouts, collections, and verified creators.",
   },
   other: {
     "RATING": "RTA-5042-1996-1400-1577-RTA",

@@ -28,20 +28,28 @@ export async function generateMetadata(
   const { slug } = await params;
 
   const video = await db.video.findFirst({ where: { slug } });
-  if (!video) return {};
+  if (!video) {
+    return {
+      title: "Video not found – Xessex",
+      alternates: { canonical: "/videos" },
+      robots: { index: false, follow: true },
+    };
+  }
 
-  const url = absUrl(`/videos/${video.slug}`);
-  const title = video.title || "Video";
-  const description = `Watch ${video.title} on Xessex - Premium Adult Video Platform`;
+  const canonical = absUrl(`/videos/${video.slug}`);
+  // Yandex-optimized: keyword-focused, 50-60 chars
+  const title = `${video.title} – Adult Video with Crypto Rewards`;
+  // Yandex-optimized: 140-160 chars, literal phrase
+  const description = `Watch ${video.title}. Earn crypto rewards for watching verified adult content on Xessex. Updated weekly with new videos.`;
   const image = video.thumbnailUrl ? absUrl(video.thumbnailUrl) : absUrl("/og.jpg");
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: { canonical },
     openGraph: {
-      type: "video.other",
-      url,
+      type: "article",
+      url: canonical,
       title,
       description,
       images: [{ url: image }],

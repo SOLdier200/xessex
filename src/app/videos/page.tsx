@@ -1,6 +1,7 @@
 import Link from "next/link";
 import fs from "fs";
 import path from "path";
+import type { Metadata } from "next";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import TopNav from "../components/TopNav";
@@ -9,6 +10,22 @@ import TrialBanner from "../components/TrialBanner";
 import DiamondTeaser from "../components/DiamondTeaser";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Adult Videos That Pay Crypto – Watch & Earn on Xessex",
+  description:
+    "Browse verified adult videos and earn crypto for watching. New videos added daily with weekly reward payouts.",
+  alternates: {
+    canonical: "/videos",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://xessex.me/videos",
+    title: "Adult Videos That Pay Crypto – Watch & Earn on Xessex",
+    description:
+      "Browse verified adult videos and earn crypto for watching. New videos added daily with weekly reward payouts.",
+  },
+};
 
 type ApprovedVideo = {
   id: number;

@@ -3,6 +3,21 @@ import Script from "next/script";
 import Link from "next/link";
 import TopNav from "../components/TopNav";
 
+export const metadata: Metadata = {
+  title: "Earn Crypto Watching Porn – Adult Rewards Platform",
+  description:
+    "Earn crypto by watching adult videos. Xessex rewards real users weekly for viewing verified content.",
+  alternates: {
+    canonical: "/earn-crypto-watching-porn",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://xessex.me/earn-crypto-watching-porn",
+    title: "Earn Crypto Watching Porn – Adult Rewards Platform",
+    description:
+      "Earn crypto by watching adult videos. Xessex rewards real users weekly for viewing verified content.",
+  },
+};
 
 export default function EarnCryptoWatchingPornPage() {
   const jsonLd = {

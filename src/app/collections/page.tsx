@@ -2,7 +2,24 @@ import Link from "next/link";
 import Image from "next/image";
 import fs from "fs";
 import path from "path";
+import type { Metadata } from "next";
 import TopNav from "../components/TopNav";
+
+export const metadata: Metadata = {
+  title: "Adult Video Collections – Curated Categories on Xessex",
+  description:
+    "Explore curated adult video collections. Discover verified videos and earn crypto rewards while watching.",
+  alternates: {
+    canonical: "/collections",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://xessex.me/collections",
+    title: "Adult Video Collections – Curated Categories on Xessex",
+    description:
+      "Explore curated adult video collections. Discover verified videos and earn crypto rewards while watching.",
+  },
+};
 
 type ApprovedVideo = {
   id: number;

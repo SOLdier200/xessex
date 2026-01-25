@@ -1,8 +1,72 @@
 import Link from "next/link";
 import fs from "fs";
 import path from "path";
+import type { Metadata } from "next";
 import TopNav from "../../components/TopNav";
 import { db } from "@/lib/prisma";
+
+const CATEGORY_META: Record<string, { title: string; description: string }> = {
+  "blonde": {
+    title: "Blonde Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified blonde adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "brunette": {
+    title: "Brunette Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified brunette adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "blowjob": {
+    title: "Blowjob Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified blowjob adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "threesome": {
+    title: "Threesome Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified threesome adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "for-women": {
+    title: "Adult Videos For Women – Watch & Earn Crypto on Xessex",
+    description: "Browse verified adult videos for women. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "anal": {
+    title: "Anal Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified anal adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "asian": {
+    title: "Asian Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified Asian adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "2d": {
+    title: "2D Animated Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified animated adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "highest-rated": {
+    title: "Highest Rated Adult Videos – Top Content on Xessex",
+    description: "Browse the highest rated adult videos on Xessex. Top-ranked content with crypto rewards.",
+  },
+};
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const meta = CATEGORY_META[slug] || {
+    title: `${slug.replace(/-/g, " ")} Adult Videos – Xessex`,
+    description: `Browse ${slug.replace(/-/g, " ")} adult videos on Xessex. Earn crypto rewards for watching.`,
+  };
+
+  return {
+    title: meta.title,
+    description: meta.description,
+    alternates: {
+      canonical: `/collections/${slug}`,
+    },
+    openGraph: {
+      type: "website",
+      url: `https://xessex.me/collections/${slug}`,
+      title: meta.title,
+      description: meta.description,
+    },
+  };
+}
 
 type ApprovedVideo = {
   id: number;
