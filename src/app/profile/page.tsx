@@ -74,7 +74,8 @@ type AnalyticsData = {
     totalModDislikes: number;
     utilizedComments: number;
     totalXessPaid: number;
-    pendingXess: number;
+    claimableXess: number;
+    estimatedPendingXess: number;
   };
   comments: {
     sourceId: string;
@@ -1119,7 +1120,7 @@ export default function ProfilePage() {
                             Pending XESS
                           </div>
                           <div className="text-2xl font-bold text-green-400 mt-1">
-                            {(analyticsData.totals?.pendingXess ?? 0).toLocaleString()} XESS
+                            {(analyticsData.totals?.estimatedPendingXess ?? 0).toLocaleString()} XESS
                           </div>
                         </div>
                         <Image

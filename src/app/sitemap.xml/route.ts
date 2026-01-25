@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 const base = "https://xessex.me";
 
 export async function GET() {
-  const lastmod = new Date().toISOString();
+  // Use BUILD_TIME env for stable lastmod (set at deploy time)
+  const lastmod = process.env.BUILD_TIME ?? new Date().toISOString();
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

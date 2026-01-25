@@ -57,6 +57,12 @@ type GradeState = {
   error?: string;
 };
 
+type DeleteState = {
+  open: boolean;
+  commentId: string | null;
+  busy: boolean;
+};
+
 export default function Comments({
   videoId,
   canPost,
@@ -71,6 +77,12 @@ export default function Comments({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [grade, setGrade] = useState<GradeState>({
+    open: false,
+    commentId: null,
+    busy: false,
+  });
+
+  const [deleteModal, setDeleteModal] = useState<DeleteState>({
     open: false,
     commentId: null,
     busy: false,
@@ -258,6 +270,49 @@ export default function Comments({
     }
   };
 
+  const openDeleteModal = (commentId: string) => {
+    if (!isAdminOrMod) return;
+    setDeleteModal({ open: true, commentId, busy: false });
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteModal.busy) return;
+    setDeleteModal({ open: false, commentId: null, busy: false });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.open || !deleteModal.commentId || deleteModal.busy) return;
+
+    setDeleteModal({ ...deleteModal, busy: true });
+
+    try {
+      const res = await fetch("/api/mod/comments/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commentId: deleteModal.commentId,
+          reason: "Removed by moderator",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error || "Failed to remove comment");
+        setDeleteModal({ ...deleteModal, busy: false });
+        return;
+      }
+
+      // Remove the comment from the local state
+      setComments(comments.filter((c) => c.id !== deleteModal.commentId));
+      toast.success("Comment removed");
+      setDeleteModal({ open: false, commentId: null, busy: false });
+    } catch {
+      toast.error("Failed to remove comment");
+      setDeleteModal({ ...deleteModal, busy: false });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Commented badge for Diamond members who have commented */}
@@ -321,9 +376,23 @@ export default function Comments({
             return (
               <div
                 key={comment.id}
-                className="bg-black/20 rounded-xl p-3 md:p-4 border border-white/10"
+                className="bg-black/20 rounded-xl p-3 md:p-4 border border-white/10 relative"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
+                {/* Admin/Mod delete button */}
+                {isAdminOrMod && (
+                  <button
+                    type="button"
+                    onClick={() => openDeleteModal(comment.id)}
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 transition"
+                    title="Remove comment"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2 pr-8">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-pink-300 text-sm">{comment.authorWallet}</span>
                     <span className="text-[10px] text-white/30 font-mono">#{comment.id.slice(-6)}</span>
@@ -502,6 +571,49 @@ export default function Comments({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+          <div className="w-full max-w-sm rounded-2xl border border-red-500/30 bg-black/90 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-white font-semibold">Remove Comment</div>
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleteModal.busy}
+                className="text-white/60 hover:text-white disabled:opacity-40"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="mt-3 text-sm text-white/70">
+              Are you sure you want to remove this comment? This action cannot be undone.
+            </p>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleteModal.busy}
+                className="flex-1 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleteModal.busy}
+                className="flex-1 px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
+              >
+                {deleteModal.busy ? "Removing..." : "Remove"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -110,7 +110,7 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
         setAverage(data.avgStars);
         setCount(data.starsCount);
         toast.success(
-          "Thanks for your contribution to Xessex, you will be paid for your work after the Next Epoch"
+          "Star rating received, helping rate videos accurately helps Xessex succeed, raises the value of our token, and benefits us all, thank you for your contribution."
         );
         return;
       }
