@@ -16,18 +16,23 @@ function isIndexerBot(req: NextRequest) {
 }
 
 export default function proxy(req: NextRequest) {
-  const url = req.nextUrl;
-  const pathname = url.pathname;
+  const pathname = req.nextUrl.pathname;
 
-  // Never gate these
+  // 🚨 ABSOLUTE BYPASS - robots/sitemaps MUST return 200, no redirect ever
   if (
-    pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
-    pathname.startsWith("/sitemap")
+    pathname === "/sitemap.xml" ||
+    pathname.startsWith("/sitemap-")
   ) {
     return NextResponse.next();
   }
+
+  // Never gate static assets
+  if (pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+    return NextResponse.next();
+  }
+
+  const url = req.nextUrl;
 
   // Let search engines through (200) so they can index
   if (isIndexerBot(req)) {
