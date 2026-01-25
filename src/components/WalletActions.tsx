@@ -264,7 +264,7 @@ export default function WalletActions({
     window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
   };
 
-  async function signInWithWallet() {
+  async function signInWithWallet(purpose: "LOGIN" | "DIAMOND_SIGNUP" = "LOGIN") {
     setStatus("");
     setNeedLinkWallet(null);
 
@@ -280,15 +280,19 @@ export default function WalletActions({
     setBusy("signin");
 
     try {
+      const addr = wallet.publicKey.toBase58();
+
       setStatus("Requesting challenge…");
       const c = await fetch("/api/auth/challenge", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         credentials: "include",
         cache: "no-store",
+        body: JSON.stringify({ wallet: addr, purpose }),
       }).then((r) => r.json());
 
-      if (!c?.message) {
-        setStatus("Challenge failed. Try again.");
+      if (!c?.ok || !c?.message) {
+        setStatus(c?.error || "Challenge failed. Try again.");
         endInflight();
         return;
       }
@@ -305,7 +309,7 @@ export default function WalletActions({
         credentials: "include",
         cache: "no-store",
         body: JSON.stringify({
-          wallet: wallet.publicKey.toBase58(),
+          wallet: addr,
           message: c.message,
           signature,
         }),
@@ -315,7 +319,6 @@ export default function WalletActions({
 
       if (!resp.ok || !v.ok) {
         if (resp.status === 409 && v.error === "WALLET_NOT_LINKED") {
-          const addr = v.wallet || wallet.publicKey.toBase58();
           setNeedLinkWallet(addr);
           try {
             localStorage.setItem("pending_wallet_to_link", addr);
@@ -348,6 +351,31 @@ export default function WalletActions({
       if (!ok) {
         setStatus("Signed, but session didn't stick. Tap again.");
         endInflight();
+        return;
+      }
+
+      // For Diamond signup: create pending Diamond subscription before routing
+      if (purpose === "DIAMOND_SIGNUP") {
+        setStatus("Setting up Diamond membership…");
+
+        const sresp = await fetch("/api/auth/diamond/start", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        });
+        const sj = await sresp.json().catch(() => ({}));
+
+        if (!sresp.ok || !sj.ok) {
+          setStatus(sj.error || "Failed to start Diamond signup.");
+          endInflight();
+          return;
+        }
+
+        // Re-settle /me so UI immediately reflects tier/status
+        await settleAuthMe();
+
+        // Route to pending payment screen
+        triggerSuccess("/signup/diamond?state=pending");
         return;
       }
 
@@ -533,7 +561,7 @@ export default function WalletActions({
             {!meLoaded ? null : !isAuthed ? (
               showWalletSignIn ? (
                 <button
-                  onClick={signInWithWallet}
+                  onClick={() => signInWithWallet()}
                   disabled={busy === "signin" || busy === "link" || successPulse}
                   onAnimationEnd={(e) => {
                     if (e.animationName === "xessPop" && successNavTo) {
@@ -577,7 +605,7 @@ export default function WalletActions({
                 <div className="flex flex-wrap gap-2">
                   {showWalletSignIn && (
                     <button
-                      onClick={signInWithWallet}
+                      onClick={() => signInWithWallet()}
                       disabled={busy === "signin" || busy === "link" || successPulse}
                       onAnimationEnd={(e) => {
                         if (e.animationName === "xessPop" && successNavTo) {

@@ -48,9 +48,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 400 });
   }
 
-  // Prevent one wallet from being linked to multiple accounts (auth wallet uniqueness)
-  const existing = await db.user.findFirst({ where: { walletAddress: w } });
-  if (existing && existing.id !== access.user.id) {
+  // Prevent one wallet from being linked to multiple accounts
+  // Check both walletAddress (auth wallet) and solWallet (payout wallet)
+  const existing = await db.user.findFirst({
+    where: {
+      OR: [{ walletAddress: w }, { solWallet: w }],
+      NOT: { id: access.user.id },
+    },
+  });
+  if (existing) {
     return NextResponse.json({ ok: false, error: "Wallet already linked to another account" }, { status: 409 });
   }
 

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import GoogleSignupButton from "../components/GoogleSignupButton";
 import ReferralCapture from "../components/ReferralCapture";
+import DiamondMemberSignUpModal from "@/components/DiamondMemberSignUpModal";
 
 // NOWPayments hosted invoice ids (must match IPN route IID_TO_PLAN)
 const NOWPAYMENTS_IIDS = {
@@ -56,6 +57,7 @@ function SignupInner() {
 
   const [signupSelectOpen, setSignupSelectOpen] = useState(false);
   const [walletDownloadOpen, setWalletDownloadOpen] = useState(false);
+  const [diamondSignupOpen, setDiamondSignupOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
   const [signupPlan, setSignupPlan] = useState<keyof typeof NOWPAYMENTS_IIDS | null>(null);
   const [signupEmail, setSignupEmail] = useState("");
@@ -1652,7 +1654,7 @@ function SignupInner() {
               <button
                 onClick={() => {
                   setSignupSelectOpen(false);
-                  window.location.href = "/login?next=/signup";
+                  setDiamondSignupOpen(true);
                 }}
                 className="w-full p-4 rounded-xl border border-yellow-400/40 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 hover:from-yellow-500/20 hover:to-purple-500/20 transition text-left group"
               >
@@ -1700,6 +1702,25 @@ function SignupInner() {
           </div>
         </div>
       )}
+
+      {/* Diamond Member Signup Modal */}
+      <DiamondMemberSignUpModal
+        open={diamondSignupOpen}
+        onClose={() => setDiamondSignupOpen(false)}
+        onCreated={() => {
+          setDiamondSignupOpen(false);
+          // Refresh auth state and show payment options
+          window.dispatchEvent(new Event("auth-changed"));
+          toast.success("Diamond account created! Choose your payment method below.");
+          // Scroll to Diamond payment options
+          setTimeout(() => {
+            const diamondCard = document.getElementById("diamond-card-crypto");
+            if (diamondCard) {
+              diamondCard.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+          }, 300);
+        }}
+      />
 
       {/* Wallet Download Modal */}
       {walletDownloadOpen && (

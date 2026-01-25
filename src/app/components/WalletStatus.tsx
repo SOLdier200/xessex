@@ -47,6 +47,7 @@ export default function WalletStatus() {
         .then((r) => r.json())
         .then((d) => {
           if (d.ok && d.authed) {
+            const email = d.user?.email ?? null;
             setAuth({
               authed: true,
               membership: d.membership,
@@ -55,8 +56,8 @@ export default function WalletStatus() {
               effectivePayoutWallet: d.effectivePayoutWallet ?? null,
               needsAuthWalletLink: d.needsAuthWalletLink ?? false,
               needsPayoutWalletLink: d.needsPayoutWalletLink ?? false,
-              hasEmail: d.hasEmail ?? false,
-              email: d.email ?? null,
+              hasEmail: !!email,
+              email,
             });
           } else {
             setAuth(null);
@@ -236,7 +237,7 @@ export default function WalletStatus() {
         onClose={() => setShowLogoutModal(false)}
         onLogoutComplete={handleLogoutComplete}
         email={auth?.email}
-        walletAddress={auth?.authWallet}
+        walletAddress={auth?.authWallet ?? auth?.payoutWallet ?? auth?.effectivePayoutWallet ?? null}
         tier={auth?.membership?.toLowerCase() as "diamond" | "member" | "free" | undefined}
       />
 

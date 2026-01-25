@@ -185,7 +185,7 @@ export default function WalletLoginButton() {
     window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
   };
 
-  async function signIn() {
+  async function signIn(purpose: "LOGIN" | "DIAMOND_SIGNUP" = "LOGIN") {
     if (!wallet.publicKey || !wallet.signMessage) {
       setStatus("Wallet does not support message signing.");
       return;
@@ -198,15 +198,19 @@ export default function WalletLoginButton() {
     setInFlight(true);
 
     try {
+      const addr = wallet.publicKey.toBase58();
+
       setStatus("Requesting challenge...");
       const c = await fetch("/api/auth/challenge", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         credentials: "include",
         cache: "no-store",
+        body: JSON.stringify({ wallet: addr, purpose }),
       }).then((r) => r.json());
 
-      if (!c?.message) {
-        setStatus("Challenge failed. Try again.");
+      if (!c?.ok || !c?.message) {
+        setStatus(c?.error || "Challenge failed. Try again.");
         endInflight();
         setInFlight(false);
         return;
@@ -228,7 +232,7 @@ export default function WalletLoginButton() {
         credentials: "include",
         cache: "no-store",
         body: JSON.stringify({
-          wallet: wallet.publicKey.toBase58(),
+          wallet: addr,
           message: c.message,
           signature,
         }),
@@ -258,6 +262,32 @@ export default function WalletLoginButton() {
         setStatus("Signed, but session didn't stick. Tap again.");
         endInflight();
         setInFlight(false);
+        return;
+      }
+
+      // For Diamond signup: create pending Diamond subscription before routing
+      if (purpose === "DIAMOND_SIGNUP") {
+        setStatus("Setting up Diamond membership...");
+
+        const sresp = await fetch("/api/auth/diamond/start", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        });
+        const sj = await sresp.json().catch(() => ({}));
+
+        if (!sresp.ok || !sj.ok) {
+          setStatus(sj.error || "Failed to start Diamond signup.");
+          endInflight();
+          setInFlight(false);
+          return;
+        }
+
+        // Re-settle /me so UI immediately reflects tier/status
+        await settleAuthMe(setStatus);
+
+        // Route to signup page with Diamond payment options
+        triggerSuccess("/signup#diamond-card-crypto");
         return;
       }
 
@@ -297,7 +327,7 @@ export default function WalletLoginButton() {
       ) : (
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={signIn}
+            onClick={() => signIn()}
             disabled={inFlight || successPulse}
             onAnimationEnd={(e) => {
               if (e.animationName === "xessPop" && successNavTo) {
