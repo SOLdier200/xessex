@@ -15,25 +15,47 @@ export default function DiamondPage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Navigation */}
+        <div className="flex items-center justify-between mb-8">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-white/60 hover:text-white transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-sm">Back</span>
+          </Link>
+          <Link href="/">
+            <Image
+              src="/logos/mainsitelogo.png"
+              alt="Xessex"
+              width={120}
+              height={40}
+              className="h-8 w-auto"
+            />
+          </Link>
+        </div>
+
         {/* Header with Diamond image */}
         <div className="text-center mb-12">
           <Image
             src="/logos/textlogo/siteset3/diamond100.png"
             alt="Diamond Member"
-            width={200}
-            height={60}
+            width={600}
+            height={180}
             className="mx-auto mb-6"
           />
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
+          <h1 className="text-sm md:text-base font-bold bg-gradient-to-r from-sky-400 to-blue-500 bg-clip-text text-transparent">
             Diamond Membership
           </h1>
           <p className="text-white/60 mt-3 text-lg">
-            The ultimate Xessex experience. Get paid to watch.
+            The ultimate Xessex experience. You get paid to watch others get laid.
           </p>
         </div>
 
         {/* Diamond Exclusive Perks */}
-        <h2 className="text-xl font-bold text-sky-300 mb-4">Diamond Exclusive Features</h2>
+        <h2 className="text-xl font-bold text-sky-300 mb-4">Diamond <em>Exclusive</em> Features</h2>
         <div className="grid gap-6 md:grid-cols-2 mb-10">
           {/* Perk 1: Star Ratings */}
           <div className="rounded-xl p-6 bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-400/30">
@@ -67,7 +89,11 @@ export default function DiamondPage() {
 
           {/* Perk 4: Wallet Identity */}
           <div className="rounded-xl p-6 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-400/30">
-            <div className="text-3xl mb-3">👛</div>
+            <div className="text-3xl mb-3">
+              <svg className="w-8 h-8 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
             <h3 className="text-xl font-semibold text-indigo-300 mb-2">Wallet-Based Identity</h3>
             <p className="text-white/70">
               Your Solana wallet is your identity. No email required.
@@ -100,35 +126,20 @@ export default function DiamondPage() {
           </div>
         </div>
 
-        {/* Weekly Rewards Breakdown */}
-        <div className="rounded-xl p-6 bg-gradient-to-r from-sky-500/5 to-blue-500/5 border border-sky-400/20 mb-12">
-          <h2 className="text-2xl font-bold text-center text-sky-300 mb-6">Weekly Reward Pools</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="text-center p-4 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-yellow-400">75%</div>
-              <div className="text-white/60 text-sm mt-1">Likes Pool</div>
-              <div className="text-white/40 text-xs mt-1">Star ratings on videos</div>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-emerald-400">20%</div>
-              <div className="text-white/60 text-sm mt-1">MVM Pool</div>
-              <div className="text-white/40 text-xs mt-1">Most Valued Member votes</div>
-            </div>
-            <div className="text-center p-4 rounded-lg bg-white/5">
-              <div className="text-2xl font-bold text-purple-400">5%</div>
-              <div className="text-white/60 text-sm mt-1">Comments Pool</div>
-              <div className="text-white/40 text-xs mt-1">Engagement on comments</div>
-            </div>
-          </div>
-        </div>
-
         {/* CTA */}
         <div className="text-center">
           <Link
             href="/signup"
-            className="inline-block px-8 py-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-lg hover:from-sky-400 hover:to-blue-500 transition shadow-lg shadow-sky-500/25"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold text-lg hover:from-sky-400 hover:to-blue-500 transition shadow-lg shadow-sky-500/25"
           >
-            Become a Diamond Member
+            Become a{" "}
+            <Image
+              src="/logos/textlogo/siteset3/diamond100.png"
+              alt="Diamond Member"
+              width={100}
+              height={30}
+              className="h-6 w-auto"
+            />
           </Link>
           <p className="text-white/40 text-sm mt-4">
             Starting at $9/month or $70/year

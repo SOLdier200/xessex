@@ -14,11 +14,12 @@ const CRON_SECRET = process.env.CRON_SECRET || "";
 const EMISSION_DECIMALS = 6n;
 const EMISSION_MULTIPLIER = 10n ** EMISSION_DECIMALS;
 
+// Updated for 200M total rewards (20% of 1B supply)
 function getWeeklyEmission(weekIndex: number): bigint {
-  if (weekIndex < 12) return 1_000_000n * EMISSION_MULTIPLIER;
-  if (weekIndex < 39) return 750_000n * EMISSION_MULTIPLIER;
-  if (weekIndex < 78) return 500_000n * EMISSION_MULTIPLIER;
-  return 250_000n * EMISSION_MULTIPLIER;
+  if (weekIndex < 12) return 666_667n * EMISSION_MULTIPLIER;  // Phase 1: ~8M total
+  if (weekIndex < 39) return 500_000n * EMISSION_MULTIPLIER;  // Phase 2: ~13.5M total
+  if (weekIndex < 78) return 333_333n * EMISSION_MULTIPLIER;  // Phase 3: ~13M total
+  return 166_667n * EMISSION_MULTIPLIER;                      // Phase 4: ~165.5M remaining
 }
 
 // Pool split percentages (in basis points, 10000 = 100%)
@@ -45,7 +46,7 @@ type Winner = { userId: string; score: number };
 
 interface UserReward {
   userId: string;
-  walletAddress: string;
+  walletAddress: string | null;  // null for voters without wallet - they can claim when they link one
   amount: bigint;
   type: "WEEKLY_LIKES" | "WEEKLY_MVM" | "WEEKLY_COMMENTS" | "WEEKLY_VOTER" | "ALLTIME_LIKES" | "REF_L1" | "REF_L2" | "REF_L3";
 }
@@ -317,13 +318,13 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No eligible users for all-time rewards or pool is 0`);
     }
 
-    // 3. Member Voter Rewards (proportional to votes cast) - wallet linked only (any tier)
+    // 3. Member Voter Rewards (proportional to votes cast) - ALL voters, wallet not required
+    // Voters without wallets will have rewards created and can claim when they link a wallet
     console.log(`\n[weekly-distribute] === MEMBER VOTER REWARDS ===`);
     const voterStats = await db.weeklyVoterStat.findMany({
       where: {
         weekKey,
         votesCast: { gt: 0 },
-        user: { solWallet: { not: null } },
       },
       include: {
         user: { select: { id: true, solWallet: true } },
@@ -332,22 +333,23 @@ export async function POST(req: NextRequest) {
 
     if (voterStats.length > 0 && memberVoterPool > 0n) {
       const totalVotes = voterStats.reduce((sum, s) => sum + s.votesCast, 0);
-      console.log(`[weekly-distribute] Voter rewards: ${voterStats.length} voters with linked wallets, ${totalVotes} total votes`);
+      const votersWithWallet = voterStats.filter(s => s.user.solWallet).length;
+      const votersWithoutWallet = voterStats.length - votersWithWallet;
+      console.log(`[weekly-distribute] Voter rewards: ${voterStats.length} voters (${votersWithWallet} with wallet, ${votersWithoutWallet} without), ${totalVotes} total votes`);
 
       for (const stat of voterStats) {
-        if (!stat.user.solWallet) continue;
         const reward = (memberVoterPool * BigInt(stat.votesCast)) / BigInt(totalVotes);
         if (reward > 0n) {
           rewards.push({
             userId: stat.userId,
-            walletAddress: stat.user.solWallet,
+            walletAddress: stat.user.solWallet,  // null if no wallet - they can claim later
             amount: reward,
             type: "WEEKLY_VOTER",
           });
         }
       }
     } else {
-      console.log(`[weekly-distribute] No voters with linked wallets or pool is 0`);
+      console.log(`[weekly-distribute] No voters or pool is 0`);
     }
 
     // 4. MVM Pool (monthly stats, weekly payout) - Diamond only
@@ -580,12 +582,16 @@ export async function POST(req: NextRequest) {
     console.log(`[weekly-distribute] Created ${refCreated} referral rewards (aggregated by referrer)`);
 
     // Aggregate rewards by user for summary
-    const userRewards = new Map<string, { amount: bigint; wallet: string; types: Set<string> }>();
+    const userRewards = new Map<string, { amount: bigint; wallet: string | null; types: Set<string> }>();
     for (const r of rewards) {
       const existing = userRewards.get(r.userId);
       if (existing) {
         existing.amount += r.amount;
         existing.types.add(r.type);
+        // Update wallet if we have one and didn't before
+        if (r.walletAddress && !existing.wallet) {
+          existing.wallet = r.walletAddress;
+        }
       } else {
         userRewards.set(r.userId, {
           amount: r.amount,

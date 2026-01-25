@@ -69,7 +69,7 @@ export default function IncognitoButton() {
 
       {/* Full Screen Modal - Fake Google Search */}
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] bg-white overflow-auto">
+        <div className="fixed inset-0 z-[9999] bg-white overflow-auto modal-scroll min-h-[100svh] min-h-[100dvh]">
           {/* Close Button */}
           <button
             onClick={() => setIsOpen(false)}

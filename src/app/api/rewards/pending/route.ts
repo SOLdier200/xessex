@@ -19,11 +19,12 @@ function getWeekIndex(weekKey: string): number {
   return Math.max(0, diffWeeks);
 }
 
+// Updated for 200M total rewards (20% of 1B supply)
 function getWeeklyEmission(weekIndex: number): bigint {
-  if (weekIndex < 12) return 1_000_000n * EMISSION_MULTIPLIER;
-  if (weekIndex < 39) return 750_000n * EMISSION_MULTIPLIER;
-  if (weekIndex < 78) return 500_000n * EMISSION_MULTIPLIER;
-  return 250_000n * EMISSION_MULTIPLIER;
+  if (weekIndex < 12) return 666_667n * EMISSION_MULTIPLIER;  // Phase 1
+  if (weekIndex < 39) return 500_000n * EMISSION_MULTIPLIER;  // Phase 2
+  if (weekIndex < 78) return 333_333n * EMISSION_MULTIPLIER;  // Phase 3
+  return 166_667n * EMISSION_MULTIPLIER;                      // Phase 4
 }
 
 // Pool splits

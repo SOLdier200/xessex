@@ -119,7 +119,7 @@ export default function ShowcaseModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div className="relative w-full max-w-3xl rounded-2xl neon-border bg-black/90 p-4 md:p-6">
         <div className="flex items-start justify-between gap-4 mb-3">

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 import RewardsTab from "../components/RewardsTab";
 import RecoveryEmailSection from "@/components/RecoveryEmailSection";
+import VotingParticipationStat from "../components/VotingParticipationStat";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync,
@@ -131,6 +132,8 @@ export default function ProfilePage() {
 
   // Referral state
   const [showBenefitsModal, setShowBenefitsModal] = useState(false);
+  // Special credits modal state
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [refCodeInput, setRefCodeInput] = useState("");
   const [refCodeLoading, setRefCodeLoading] = useState(false);
   const [refCodeError, setRefCodeError] = useState<string | null>(null);
@@ -225,6 +228,12 @@ export default function ProfilePage() {
     return () => window.removeEventListener("auth-changed", handleAuthChange);
   }, [router]);
 
+  // Member rewards state (for XESS totals display)
+  const [memberRewards, setMemberRewards] = useState<{
+    totalPaid: number;
+    pendingXess: number;
+  } | null>(null);
+
   // Load analytics for Diamond members (needed for Profile tab XESS display and Analytics tab)
   useEffect(() => {
     const needsAnalytics = (activeTab === "analytics" || activeTab === "profile") && data?.membership === "DIAMOND";
@@ -244,11 +253,52 @@ export default function ProfilePage() {
     }
   }, [activeTab, data?.membership, analyticsData, analyticsLoading]);
 
-  // Safety: redirect non-Diamond users to profile tab if they somehow land on a locked tab
+  // Load rewards totals for Members (for XESS display on profile)
+  useEffect(() => {
+    if (data?.membership === "MEMBER" && !memberRewards) {
+      fetch("/api/rewards/weeks")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.ok && json.allTime) {
+            // Amounts are stored with 6 decimals
+            const DECIMALS = 1_000_000;
+            const total = Number(BigInt(json.allTime.total || "0") / BigInt(DECIMALS));
+            const paid = Number(BigInt(json.allTime.paid || "0") / BigInt(DECIMALS));
+            setMemberRewards({
+              totalPaid: paid,
+              pendingXess: total - paid,
+            });
+          }
+        })
+        .catch(() => {
+          // Silent fail
+        });
+    }
+  }, [data?.membership, memberRewards]);
+
+  // Safety: redirect users to profile tab if they land on a tab they shouldn't access
+  // - Diamond: can access all tabs (profile, analytics, referrals, history)
+  // - Member: can access profile and history tabs only
+  // - Free: can only access profile tab
   useEffect(() => {
     const isDiamondUser = data?.membership === "DIAMOND";
-    if (!isDiamondUser && activeTab !== "profile") {
-      setActiveTab("profile");
+    const isMember = data?.membership === "MEMBER";
+
+    if (isDiamondUser) {
+      // Diamond users can access all tabs
+      return;
+    }
+
+    if (isMember) {
+      // Members can access profile and history
+      if (activeTab !== "profile" && activeTab !== "history") {
+        setActiveTab("profile");
+      }
+    } else {
+      // Free users can only access profile
+      if (activeTab !== "profile") {
+        setActiveTab("profile");
+      }
     }
   }, [data?.membership, activeTab]);
 
@@ -308,7 +358,8 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    if (data?.membership === "DIAMOND") {
+    // Load live pending data for both Member and Diamond users
+    if (data?.membership === "DIAMOND" || data?.membership === "MEMBER") {
       refreshLivePending();
 
       // Auto-refresh pending data every 4 minutes
@@ -681,41 +732,46 @@ export default function ProfilePage() {
                 Profile
               </button>
 
+              {/* History tab - available for both Member and Diamond */}
+              {(isDiamond || data?.membership === "MEMBER") && (
+                <button
+                  onClick={() => setActiveTab("history")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "history"
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  History
+                </button>
+              )}
+
+              {/* Referrals tab - available for both Member and Diamond */}
+              {(isDiamond || data?.membership === "MEMBER") && (
+                <button
+                  onClick={() => setActiveTab("referrals")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "referrals"
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  Referrals
+                </button>
+              )}
+
+              {/* Diamond-only tabs */}
               {isDiamond && (
-                <>
-                  <button
-                    onClick={() => setActiveTab("referrals")}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                      activeTab === "referrals"
-                        ? "bg-white/10 text-white"
-                        : "text-white/50 hover:text-white"
-                    }`}
-                  >
-                    Referrals
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab("history")}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                      activeTab === "history"
-                        ? "bg-white/10 text-white"
-                        : "text-white/50 hover:text-white"
-                    }`}
-                  >
-                    History
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab("analytics")}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                      activeTab === "analytics"
-                        ? "bg-white/10 text-white"
-                        : "text-white/50 hover:text-white"
-                    }`}
-                  >
-                    <span className="text-pink-500">Anal</span>ytics
-                  </button>
-                </>
+                <button
+                  onClick={() => setActiveTab("analytics")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    activeTab === "analytics"
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  <span className="text-pink-500">Anal</span>ytics
+                </button>
               )}
             </div>
           </div>
@@ -814,8 +870,8 @@ export default function ProfilePage() {
                   {data.memberId && (
                     <div className="flex justify-between items-center py-2 border-t border-white/10">
                       <span className="text-white/60">Member ID</span>
-                      <span className="text-white font-mono text-sm">
-                        {data.memberId.slice(0, 8)}...
+                      <span className="text-white font-mono text-sm break-all">
+                        {data.memberId}
                       </span>
                     </div>
                   )}
@@ -943,7 +999,7 @@ export default function ProfilePage() {
               <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Activity</h2>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid gap-4 ${data.membership !== "FREE" ? "grid-cols-3" : "grid-cols-2"}`}>
                   <div className="bg-black/40 rounded-xl p-4 text-center">
                     <div className="text-2xl font-bold text-white">{data.stats.videosWatched}</div>
                     <div className="text-xs text-white/60 mt-1">Videos Watched</div>
@@ -954,36 +1010,83 @@ export default function ProfilePage() {
                     </div>
                     <div className="text-xs text-white/60 mt-1">Days Left</div>
                   </div>
+                  {/* Voting Participation - Members and Diamond only */}
+                  {data.membership !== "FREE" && (
+                    <VotingParticipationStat />
+                  )}
                 </div>
               </div>
 
               {/* Special Credits Card */}
               <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Special Credits</h2>
-                <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-cyan-400/80 uppercase tracking-wide">
-                        Balance
+
+                {/* Show balance and drawing link if wallet is linked */}
+                {data.solWallet ? (
+                  <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs text-cyan-400/80 uppercase tracking-wide">
+                          Balance
+                        </div>
+                        <div className="text-2xl font-bold text-cyan-400 mt-1">
+                          {(Number(data.specialCreditsMicro) / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
+                        </div>
                       </div>
-                      <div className="text-2xl font-bold text-cyan-400 mt-1">
-                        {(Number(data.specialCreditsMicro) / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
+                      <Link
+                        href="/rewards-drawing"
+                        className="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm"
+                      >
+                        Enter Drawing
+                      </Link>
+                    </div>
+                    <p className="text-xs mt-3">
+                      <span className="animate-pulse-pink-white-black">Hold over 50k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
+                      <button
+                        onClick={() => setShowCreditsModal(true)}
+                        className="text-cyan-400 hover:text-cyan-300 underline transition"
+                      >
+                        View the Special Credit Earning Formula here
+                      </button>
+                    </p>
+                  </div>
+                ) : (
+                  /* Prompt to link wallet if not linked */
+                  <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-purple-500/10 border border-cyan-400/30 rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-white font-semibold">Start Earning Special Credits</div>
+                        <div className="text-white/60 text-sm">Link a Solana wallet that holds XESS tokens</div>
                       </div>
                     </div>
-                    <Link
-                      href="/rewards-drawing"
-                      className="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm"
-                    >
-                      Enter Drawing
-                    </Link>
+                    <p className="text-white/70 text-sm mb-4">
+                      Members and Diamond members alike can earn Special Credits by holding XESS tokens in their linked wallet.
+                      Credits can be used for weekly drawing entries or redeemed for membership time.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Link
+                        href="/link-wallet"
+                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold hover:from-cyan-400 hover:to-purple-400 transition text-center"
+                      >
+                        Link Wallet to Earn Credits
+                      </Link>
+                      <button
+                        onClick={() => setShowCreditsModal(true)}
+                        className="px-4 py-3 rounded-xl bg-white/5 border border-white/20 text-white/70 font-semibold hover:bg-white/10 transition text-sm"
+                      >
+                        View Earning Tiers
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-white/50 mt-3">
-                    Diamond members earn special credits daily based on eligibility. Use credits to enter the weekly drawing or redeem for membership.
-                  </p>
-                </div>
+                )}
               </div>
 
-              {/* XESS Rewards Card (Diamond only) */}
+              {/* XESS Rewards Card (Diamond) */}
               {isDiamond && analyticsData && (
                 <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
                   <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
@@ -1027,6 +1130,176 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* XESS Rewards Card (Member) */}
+              {data?.membership === "MEMBER" && memberRewards && (
+                <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                  <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/5 border border-yellow-400/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-yellow-400/80 uppercase tracking-wide">
+                            Total XESS Paid
+                          </div>
+                          <div className="text-2xl font-bold text-yellow-400 mt-1">
+                            {memberRewards.totalPaid.toLocaleString()} XESS
+                          </div>
+                        </div>
+                        <Image
+                          src="/logos/favicon-32x32.png"
+                          alt="XESS"
+                          width={32}
+                          height={32}
+                          className="opacity-50"
+                        />
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-r from-green-500/10 via-black/0 to-green-500/5 border border-green-400/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-green-400/80 uppercase tracking-wide">
+                            Pending XESS
+                          </div>
+                          <div className="text-2xl font-bold text-green-400 mt-1">
+                            {memberRewards.pendingXess.toLocaleString()} XESS
+                          </div>
+                        </div>
+                        <Image
+                          src="/logos/favicon-32x32.png"
+                          alt="XESS"
+                          width={32}
+                          height={32}
+                          className="opacity-50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/50 mt-4">
+                    Members earn XESS rewards for voting on comments. View your History tab for detailed reward breakdown.
+                  </p>
+                </div>
+              )}
+
+              {/* Live Pending & Claim Section (Member) */}
+              {data?.membership === "MEMBER" && livePending && (
+                <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                  <h2 className="text-lg font-semibold text-white mb-4">Current Activity</h2>
+
+                  {/* Current Week Activity - simplified for Members */}
+                  {livePending.currentWeek && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-pink-500/10 via-black/0 to-purple-500/10 border border-pink-400/20 rounded-xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-white/60">Current Week ({livePending.currentWeek.weekKey})</span>
+                        <span className="text-xs text-pink-400">
+                          Next payout: {livePending.nextPayout.countdown}
+                        </span>
+                      </div>
+                      <div className="flex justify-center">
+                        <div className="bg-black/30 rounded-lg p-4 text-center">
+                          <div className="text-3xl font-bold text-white">{livePending.currentWeek.activity.votesCast}</div>
+                          <div className="text-white/60 text-sm mt-1">Votes Cast This Week</div>
+                        </div>
+                      </div>
+                      <p className="text-xs mt-3 text-center font-semibold animate-pulse-vote">
+                        Vote on comments to earn XESS rewards from the voter pool.
+                      </p>
+                      <style jsx>{`
+                        @keyframes pulseVote {
+                          0%, 100% { color: #ec4899; text-shadow: 0 0 8px #ec4899; }
+                          33% { color: #ffffff; text-shadow: 0 0 8px #ffffff; }
+                          66% { color: #f472b6; text-shadow: 0 0 12px #ec4899, 0 0 20px #f472b6; }
+                        }
+                        .animate-pulse-vote {
+                          animation: pulseVote 2s ease-in-out infinite;
+                        }
+                      `}</style>
+                    </div>
+                  )}
+
+                  {/* Claim Success Message */}
+                  {claimSuccess && (
+                    <div className="mb-4 p-4 bg-emerald-500/20 border border-emerald-400/50 rounded-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-emerald-400 font-semibold">
+                          Successfully Claimed {claimSuccess.totalXess} XESS
+                        </span>
+                      </div>
+                      <p className="text-sm text-white/70 mb-2">
+                        {claimSuccess.count} week{claimSuccess.count > 1 ? "s" : ""} claimed and transferred to your wallet.
+                      </p>
+                      {claimSuccess.txSigs.length > 0 && (
+                        <div className="space-y-1">
+                          {claimSuccess.txSigs.slice(0, 3).map((sig, i) => (
+                            <a
+                              key={sig}
+                              href={`https://explorer.solana.com/tx/${sig}?cluster=${process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "devnet"}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-xs text-emerald-400 hover:text-emerald-300 underline truncate"
+                            >
+                              Tx {i + 1}: {sig.slice(0, 20)}...{sig.slice(-8)}
+                            </a>
+                          ))}
+                          {claimSuccess.txSigs.length > 3 && (
+                            <span className="text-xs text-white/50">
+                              +{claimSuccess.txSigs.length - 3} more transactions
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Unclaimed Weeks */}
+                  {livePending.unclaimedWeeks.length > 0 && !claimSuccess && (
+                    <div className="mb-4 p-4 bg-green-500/10 border border-green-400/30 rounded-xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <span className="text-green-400 font-semibold">
+                            {livePending.unclaimedWeeks.length} Unclaimed Week{livePending.unclaimedWeeks.length > 1 ? "s" : ""}
+                          </span>
+                          <span className="text-white/60 text-sm ml-2">
+                            Total: {livePending.totalUnclaimed} XESS
+                          </span>
+                        </div>
+                        <button
+                          onClick={onClaimAllUnclaimed}
+                          disabled={claimAllBusy || claimBusy}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                            claimAllBusy || claimBusy
+                              ? "bg-white/10 text-white/50 cursor-not-allowed"
+                              : "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400"
+                          }`}
+                        >
+                          {claimAllBusy ? "Claiming..." : "Claim All"}
+                        </button>
+                      </div>
+                      {claimAllProgress && (
+                        <div className="text-xs text-green-400 mb-2">{claimAllProgress}</div>
+                      )}
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {livePending.unclaimedWeeks.map((week) => (
+                          <div key={week.epoch} className="flex justify-between text-xs text-white/70">
+                            <span>Week {week.weekKey} (Epoch {week.epoch})</span>
+                            <span className="text-green-400">{week.amount} XESS</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error display */}
+                  {claimErr && (
+                    <div className="mt-3 text-sm text-red-400">
+                      {claimErr}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1219,17 +1492,65 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Diamond Features Teaser (non-Diamond only) */}
-              {!isDiamond && (
+              {/* Diamond Features Teaser (Member only - they already have History) */}
+              {data?.membership === "MEMBER" && (
                 <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30">
-                  <h2 className="text-lg font-semibold text-white mb-2">Unlock Diamond</h2>
+                  <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                    Unlock{" "}
+                    <Image
+                      src="/logos/textlogo/siteset3/diamond100.png"
+                      alt="Diamond"
+                      width={80}
+                      height={24}
+                      className="h-5 w-auto"
+                    />
+                  </h2>
                   <p className="text-sm text-white/70 mb-4">
-                    Diamond members get access to Referrals, XESS History, and Analytics.
+                    Diamond members earn from referrals, can leave comments, and get analytics.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-4">
                     <div className="bg-black/50 rounded-xl p-4 border border-white/10">
-                      <div className="text-white font-semibold mb-1">Referrals</div>
-                      <div className="text-white/60 text-xs">Share a link and earn benefits.</div>
+                      <div className="text-white font-semibold mb-1">Paid Referrals</div>
+                      <div className="text-white/60 text-xs">Earn XESS when your referrals are active.</div>
+                    </div>
+                    <div className="bg-black/50 rounded-xl p-4 border border-white/10">
+                      <div className="text-white font-semibold mb-1">Comments</div>
+                      <div className="text-white/60 text-xs">Earn XESS from your comments.</div>
+                    </div>
+                    <div className="bg-black/50 rounded-xl p-4 border border-white/10">
+                      <div className="text-white font-semibold mb-1">Analytics</div>
+                      <div className="text-white/60 text-xs">Performance stats and insights.</div>
+                    </div>
+                  </div>
+                  <Link
+                    href="/signup"
+                    className="inline-block px-6 py-2 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition text-sm"
+                  >
+                    Upgrade to Diamond
+                  </Link>
+                </div>
+              )}
+
+              {/* Diamond Features Teaser (Free users only) */}
+              {data?.membership === "FREE" && (
+                <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30">
+                  <h2 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                    Unlock{" "}
+                    <Image
+                      src="/logos/textlogo/siteset3/diamond100.png"
+                      alt="Diamond"
+                      width={80}
+                      height={24}
+                      className="h-5 w-auto"
+                    />
+                  </h2>
+                  <p className="text-sm text-white/70 mb-4">
+                    Diamond members earn from referrals, get XESS History, and Analytics.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-4">
+                    <div className="bg-black/50 rounded-xl p-4 border border-white/10">
+                      <div className="text-white font-semibold mb-1">Paid Referrals</div>
+                      <div className="text-white/60 text-xs">Earn XESS when your referrals are active.</div>
                     </div>
                     <div className="bg-black/50 rounded-xl p-4 border border-white/10">
                       <div className="text-white font-semibold mb-1">History</div>
@@ -1252,29 +1573,56 @@ export default function ProfilePage() {
           )}
 
           {/* Referrals Tab Content */}
-          {activeTab === "referrals" && isDiamond && (
+          {activeTab === "referrals" && (isDiamond || data?.membership === "MEMBER") && (
             <>
+              {/* Upgrade teaser for Members */}
+              {data?.membership === "MEMBER" && !isDiamond && (
+                <div className="neon-border rounded-2xl p-4 bg-gradient-to-r from-sky-500/10 via-black/30 to-blue-500/10 border-sky-400/30 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">💎</div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-sky-300">
+                        Upgrade to Diamond to get paid for your referrals!
+                      </div>
+                      <div className="text-xs text-white/60 mt-1">
+                        Diamond members earn XESS rewards when their referrals are active.
+                      </div>
+                    </div>
+                    <Link
+                      href="/signup"
+                      className="px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-400/50 text-sky-400 font-semibold hover:bg-sky-500/30 transition text-sm whitespace-nowrap"
+                    >
+                      Upgrade
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               {/* Your Referral Link Card */}
               <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-white">Your Referral Link</h2>
-                  <button
-                    onClick={() => setShowBenefitsModal(true)}
-                    className="text-sm text-purple-400 hover:text-purple-300 underline transition"
-                  >
-                    View Benefits
-                  </button>
+                  {isDiamond && (
+                    <button
+                      onClick={() => setShowBenefitsModal(true)}
+                      className="text-sm text-purple-400 hover:text-purple-300 underline transition"
+                    >
+                      View Benefits
+                    </button>
+                  )}
                 </div>
 
-                {/* Diamond→Diamond only rule note */}
-                <div className="bg-black/50 rounded-xl p-4 mb-4 border border-white/10">
-                  <div className="text-sm text-white/80 font-semibold">Referral program rule</div>
-                  <div className="text-xs text-white/60 mt-1 leading-relaxed">
-                    Referral benefits apply only when a{" "}
-                    <span className="text-white/80 font-semibold">Diamond member</span> refers another{" "}
-                    <span className="text-white/80 font-semibold">Diamond member</span>.
+                {/* Diamond→Diamond only rule note - only show for Diamond */}
+                {isDiamond && (
+                  <div className="bg-black/50 rounded-xl p-4 mb-4 border border-white/10">
+                    <div className="text-sm text-white/80 font-semibold">Referral program rule</div>
+                    <div className="text-xs text-white/60 mt-1 leading-relaxed">
+                      Referral benefits apply only when a{" "}
+                      <span className="text-white/80 font-semibold">Diamond member</span> refers another{" "}
+                      <span className="text-white/80 font-semibold">Diamond member</span>.
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {data.referral.code ? (
                   <>
@@ -1442,17 +1790,110 @@ export default function ProfilePage() {
             </>
           )}
 
-          {/* History Tab Content (Diamond-only) */}
-          {activeTab === "history" && isDiamond && (
+          {/* History Tab Content (Member and Diamond) */}
+          {activeTab === "history" && (isDiamond || data?.membership === "MEMBER") && (
             <div className="neon-border rounded-2xl p-6 bg-black/30">
               <h2 className="text-lg font-semibold text-white mb-4">XESS History</h2>
               <RewardsTab />
             </div>
           )}
 
+          {/* Special Credits Earning Formula Modal */}
+          {showCreditsModal && (
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+              <div
+                className="absolute inset-0 bg-black/80"
+                onClick={() => setShowCreditsModal(false)}
+              />
+              <div className="relative w-full max-w-lg rounded-2xl neon-border bg-black/95 p-6">
+                <button
+                  onClick={() => setShowCreditsModal(false)}
+                  className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                <h3 className="text-xl font-bold text-cyan-400 mb-4">Special Credit Earning Formula</h3>
+
+                <p className="text-white/70 text-sm mb-4">
+                  Hold XESS tokens in your wallet to earn Special Credits. A snapshot of your wallet balance is taken at random times each day to prevent gaming the system.
+                </p>
+
+                <div className="space-y-2 mb-4">
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">50,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">30/month</span>
+                    </div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">100,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">100/month</span>
+                    </div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">250,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">250/month</span>
+                    </div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">500,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">500/month</span>
+                    </div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">1,000,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">1,000/month</span>
+                    </div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">2,500,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">1,500/month</span>
+                    </div>
+                  </div>
+                  <div className="bg-cyan-500/10 border border-cyan-400/30 rounded-xl p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">5,000,000+ XESS</span>
+                      <span className="text-cyan-400 font-bold">2,000/month</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-yellow-500/10 border border-yellow-400/30 rounded-xl mb-4">
+                  <p className="text-yellow-300 text-sm">
+                    The daily snapshot is taken at random times to ensure fair distribution. Make sure to maintain your token balance consistently!
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Link
+                    href="/rewards-drawing"
+                    onClick={() => setShowCreditsModal(false)}
+                    className="flex-1 py-3 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-center"
+                  >
+                    Go to Rewards Drawing
+                  </Link>
+                  <button
+                    onClick={() => setShowCreditsModal(false)}
+                    className="px-6 py-3 rounded-xl bg-white/5 border border-white/20 text-white/70 font-semibold hover:bg-white/10 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Benefits Modal */}
           {showBenefitsModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
               <div
                 className="absolute inset-0 bg-black/80"
                 onClick={() => setShowBenefitsModal(false)}
@@ -1510,7 +1951,7 @@ export default function ProfilePage() {
 
           {/* Cancel Subscription Modal */}
           {showCancelModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
               <div
                 className="absolute inset-0 bg-black/80"
                 onClick={() => !cancelLoading && setShowCancelModal(false)}
@@ -1573,7 +2014,7 @@ export default function ProfilePage() {
 
           {/* Change Password Modal */}
           {showPasswordModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
               <div
                 className="absolute inset-0 bg-black/80"
                 onClick={() => !passwordLoading && setShowPasswordModal(false)}

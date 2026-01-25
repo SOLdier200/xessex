@@ -448,7 +448,7 @@ export default function Comments({
 
       {/* Grade modal */}
       {grade.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/90 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>

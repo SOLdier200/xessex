@@ -109,7 +109,7 @@ export default function SystemActionsPanel() {
 
   const confirmModal =
     confirm.open && confirm.action ? (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
         <div className="absolute inset-0 bg-black/70" onClick={closeConfirm} />
         <div className="relative w-full max-w-lg neon-border rounded-2xl bg-black/90 border-red-500/40 p-6">
           <div className="flex items-center gap-3 mb-3">

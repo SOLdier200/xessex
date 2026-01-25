@@ -674,7 +674,7 @@ export default function AdminPage() {
       {/* Full Modal */}
       {selectedVideo && minimizeState === "full" && (
         <div
-          className={`fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 ${isResizing ? "cursor-se-resize select-none" : ""}`}
+          className={`fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh] z-50 ${isResizing ? "cursor-se-resize select-none" : ""}`}
         >
           <div
             className="bg-[#0a0f1e] neon-border rounded-2xl relative flex flex-col"

@@ -346,7 +346,7 @@ export default function VideoPlayback({
       </div>
 
       {showTroubleshoot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-black/90 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>

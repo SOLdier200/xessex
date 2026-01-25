@@ -261,7 +261,7 @@ export default function EmailLoginBox() {
 
       {/* Success Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-6">
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/70 px-6 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-black/80 p-6 shadow-2xl backdrop-blur">
             <button
               onClick={() => setShowModal(false)}

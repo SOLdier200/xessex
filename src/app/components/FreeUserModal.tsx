@@ -49,7 +49,7 @@ export default function FreeUserModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/90 p-6">
         <h2 className="text-lg font-semibold text-white mb-2">Account Options</h2>

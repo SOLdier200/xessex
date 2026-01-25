@@ -57,6 +57,21 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         manualPaymentId: mp.id,
       },
     });
+
+    // Auto-link wallet for Diamond members who signed in with wallet
+    if (mp.requestedTier === "DIAMOND") {
+      const user = await tx.user.findUnique({
+        where: { id: mp.userId },
+        select: { walletAddress: true, solWallet: true },
+      });
+
+      if (user?.walletAddress && !user.solWallet) {
+        await tx.user.update({
+          where: { id: mp.userId },
+          data: { solWallet: user.walletAddress, solWalletLinkedAt: new Date() },
+        });
+      }
+    }
   });
 
   return NextResponse.json({ ok: true });

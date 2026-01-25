@@ -260,7 +260,7 @@ export default function PayWithCashAppPage() {
 
       {/* Diamond Beta Testing Modal */}
       {diamondBetaModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[80] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="absolute inset-0 bg-black/80" onClick={() => setDiamondBetaModalOpen(false)} />
           <div className="relative w-full max-w-lg rounded-2xl neon-border bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border-yellow-400/50 p-6">
             <button

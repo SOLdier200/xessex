@@ -13,11 +13,11 @@ const TOTAL_SUPPLY = 1_000_000_000;
 
 const ALLOCATIONS: Allocation[] = [
   {
-    name: "Pump.fun public launch",
+    name: "ICO Presale",
     pct: 35,
     amount: 350_000_000,
-    purpose: "Bonding curve sale → price discovery → Raydium liquidity",
-    notes: ["Public launch allocation for open price discovery and initial liquidity formation."],
+    purpose: "Public presale allocation for early supporters",
+    notes: ["35% of total supply available to public during ICO presale phase."],
   },
   {
     name: "User Rewards (emissions)",

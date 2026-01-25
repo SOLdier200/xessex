@@ -75,12 +75,6 @@ export async function POST(req: NextRequest) {
     where: { commentId_voterId: { commentId, voterId } },
   });
 
-  // Check if voter has wallet linked (for voter rewards)
-  const voter = await db.user.findUnique({
-    where: { id: voterId },
-    select: { solWallet: true },
-  });
-  const voterHasWallet = !!voter?.solWallet;
 
   // First vote
   if (!existing) {
@@ -132,14 +126,12 @@ export async function POST(req: NextRequest) {
         update: { scoreReceived: { increment: scoreDelta > 0 ? scoreDelta : 0 } },
       });
 
-      // Track voter stats if wallet linked
-      if (voterHasWallet) {
-        await tx.weeklyVoterStat.upsert({
-          where: { weekKey_userId: { weekKey: wk, userId: voterId } },
-          create: { weekKey: wk, userId: voterId, votesCast: 1 },
-          update: { votesCast: { increment: 1 } },
-        });
-      }
+      // Track voter stats for all members (wallet checked at distribution time)
+      await tx.weeklyVoterStat.upsert({
+        where: { weekKey_userId: { weekKey: wk, userId: voterId } },
+        create: { weekKey: wk, userId: voterId, votesCast: 1 },
+        update: { votesCast: { increment: 1 } },
+      });
 
       return c;
     });

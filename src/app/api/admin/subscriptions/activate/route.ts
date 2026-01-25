@@ -65,6 +65,22 @@ export async function POST(req: NextRequest) {
     data: { tier, status: "ACTIVE", expiresAt: newExpiry },
   });
 
+  // Auto-link wallet for Diamond members who signed in with wallet
+  if (tier === "DIAMOND") {
+    const user = await db.user.findUnique({
+      where: { id: sub.userId },
+      select: { walletAddress: true, solWallet: true },
+    });
+
+    if (user?.walletAddress && !user.solWallet) {
+      await db.user.update({
+        where: { id: sub.userId },
+        data: { solWallet: user.walletAddress, solWalletLinkedAt: new Date() },
+      });
+      console.log(`[Admin] Auto-linked payout wallet for Diamond user ${sub.userId}`);
+    }
+  }
+
   console.log(`[Admin] Activated subscription ${updated.id} by ${access.user?.email || access.user?.solWallet}`);
 
   return NextResponse.json({

@@ -11,14 +11,14 @@ import { XESS_MULTIPLIER, CREDIT_MICRO } from "./rewardsConstants";
 // Tier 0 = no tier (below minimum)
 // Tiers 1-7 = increasing benefits
 export const TIER_TABLE: { minBalance: bigint; monthlyCredits: bigint }[] = [
-  { minBalance: 0n, monthlyCredits: 0n },                            // Tier 0: No holdings
-  { minBalance: 100_000n * XESS_MULTIPLIER, monthlyCredits: 125n },  // Tier 1: 100k XESS → 125 credits/mo
-  { minBalance: 250_000n * XESS_MULTIPLIER, monthlyCredits: 350n },  // Tier 2: 250k XESS → 350 credits/mo
-  { minBalance: 500_000n * XESS_MULTIPLIER, monthlyCredits: 750n },  // Tier 3: 500k XESS → 750 credits/mo
-  { minBalance: 1_000_000n * XESS_MULTIPLIER, monthlyCredits: 1_500n }, // Tier 4: 1M XESS → 1,500 credits/mo
-  { minBalance: 2_500_000n * XESS_MULTIPLIER, monthlyCredits: 4_000n }, // Tier 5: 2.5M XESS → 4,000 credits/mo
-  { minBalance: 5_000_000n * XESS_MULTIPLIER, monthlyCredits: 8_000n }, // Tier 6: 5M XESS → 8,000 credits/mo
-  { minBalance: 10_000_000n * XESS_MULTIPLIER, monthlyCredits: 15_000n }, // Tier 7: 10M XESS → 15,000 credits/mo
+  { minBalance: 0n, monthlyCredits: 0n },                               // Tier 0: Below 50k → 0 credits/mo
+  { minBalance: 50_000n * XESS_MULTIPLIER, monthlyCredits: 30n },       // Tier 1: 50k XESS → 30 credits/mo
+  { minBalance: 100_000n * XESS_MULTIPLIER, monthlyCredits: 100n },     // Tier 2: 100k XESS → 100 credits/mo
+  { minBalance: 250_000n * XESS_MULTIPLIER, monthlyCredits: 250n },     // Tier 3: 250k XESS → 250 credits/mo
+  { minBalance: 500_000n * XESS_MULTIPLIER, monthlyCredits: 500n },     // Tier 4: 500k XESS → 500 credits/mo
+  { minBalance: 1_000_000n * XESS_MULTIPLIER, monthlyCredits: 1_000n }, // Tier 5: 1M XESS → 1,000 credits/mo
+  { minBalance: 2_500_000n * XESS_MULTIPLIER, monthlyCredits: 1_500n }, // Tier 6: 2.5M XESS → 1,500 credits/mo
+  { minBalance: 5_000_000n * XESS_MULTIPLIER, monthlyCredits: 2_000n }, // Tier 7: 5M XESS → 2,000 credits/mo
 ];
 
 /**

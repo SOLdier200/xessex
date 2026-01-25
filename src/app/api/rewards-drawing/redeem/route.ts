@@ -7,9 +7,9 @@
  *
  * Spends Special Credits to add membership time.
  *
- * Pricing (example - adjust as needed):
- * - Member: 100 credits/month
- * - Diamond: 200 credits/month
+ * Pricing:
+ * - Member: 1,000 credits/month
+ * - Diamond: 2,000 credits/month
  *
  * Note: Credits have no cash value - this is the ONLY way to use them
  * besides entering the weekly drawing.
@@ -23,8 +23,8 @@ import { CREDIT_MICRO } from "@/lib/rewardsConstants";
 export const runtime = "nodejs";
 
 // Credits cost per month (in whole credits)
-const MEMBER_CREDITS_PER_MONTH = 100n;
-const DIAMOND_CREDITS_PER_MONTH = 200n;
+const MEMBER_CREDITS_PER_MONTH = 1000n;
+const DIAMOND_CREDITS_PER_MONTH = 2000n;
 
 export async function POST(req: Request) {
   const ctx = await getAccessContext();

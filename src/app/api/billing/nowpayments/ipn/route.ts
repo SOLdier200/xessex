@@ -323,6 +323,23 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Auto-link wallet for Diamond members who signed in with wallet
+    // If they have walletAddress but no solWallet, copy it over for payouts
+    if (plan.tier === "DIAMOND") {
+      const user = await db.user.findUnique({
+        where: { id: sub.userId },
+        select: { walletAddress: true, solWallet: true },
+      });
+
+      if (user?.walletAddress && !user.solWallet) {
+        await db.user.update({
+          where: { id: sub.userId },
+          data: { solWallet: user.walletAddress, solWalletLinkedAt: new Date() },
+        });
+        console.log(`[IPN] Auto-linked payout wallet for Diamond user ${sub.userId}`);
+      }
+    }
+
     console.log(
       `[IPN] Activated subscription ${sub.id}: tier=${plan.tier}, expiresAt=${newExpiry.toISOString()}, status=${paymentStatus}`
     );

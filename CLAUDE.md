@@ -280,3 +280,87 @@ Updated Credit Card tab on signup page to match premium styling of other tabs.
 - `diamond-card-crypto` - Crypto tab
 - `diamond-card-cashapp` - Cash App tab
 - `diamond-card-cc` - Credit Card tab
+
+### Member XESS Rewards & Special Credits Expansion (Jan 2026)
+Extended the rewards system to include Members (not just Diamond) and expanded Special Credits to all tiers.
+
+**Member Voting Rewards:**
+- Members now earn XESS for voting (likes) on comments
+- Added Pending XESS and Paid XESS display to Member profiles
+- Added History tab to Member profiles showing reward history
+- Vote tracking now works for ALL members regardless of wallet status
+- Files: `src/app/profile/page.tsx`, `src/app/api/comments/vote/route.ts`
+
+**V2 Claim System (userId-based):**
+- Rewards allocated by userId, not wallet address
+- Users can claim with ANY wallet at claim time (wallet checked at claim, not earn)
+- Merkle tree uses `userKey = keccak256(userId)` for leaves
+- Member rewards created with null wallet, V2 system handles claim routing
+- Files: `src/app/api/cron/rewards/weekly-distribute/route.ts`
+
+**Emission Schedule Update (200M Total):**
+Tokenomics changed from 300M to 200M for rewards (20% of 1B supply).
+```typescript
+// src/app/api/cron/rewards/weekly-distribute/route.ts
+function getWeeklyEmission(weekIndex: number): bigint {
+  if (weekIndex < 12) return 666_667n * EMISSION_MULTIPLIER;  // Phase 1: ~8M total
+  if (weekIndex < 39) return 500_000n * EMISSION_MULTIPLIER;  // Phase 2: ~13.5M total
+  if (weekIndex < 78) return 333_333n * EMISSION_MULTIPLIER;  // Phase 3: ~13M total
+  return 166_667n * EMISSION_MULTIPLIER;                      // Phase 4: ~165.5M remaining
+}
+```
+
+**Pool Splits:**
+- 70% Likes Pool (was 75%)
+- 20% MVM Pool
+- 5% Comments Pool
+- 5% Referrals Pool
+
+**Likes Sub-Pools:**
+- 85% Weekly Diamond Pool
+- 10% All-Time Pool
+- 5% Member Voter Pool (new)
+
+**Diamond Auto-Link Wallet:**
+When a user becomes Diamond via wallet login, their wallet is auto-linked as `solWallet`.
+Added to:
+- `src/app/api/billing/nowpayments/ipn/route.ts`
+- `src/app/api/admin/manual-payments/[id]/approve/route.ts`
+- `src/app/api/admin/subscriptions/activate/route.ts`
+
+**Special Credits Tier System:**
+Updated tier table with new monthly credit amounts and added 50k tier.
+```typescript
+// src/lib/specialCredits.ts
+TIER_TABLE = [
+  { minBalance: 0n, monthlyCredits: 0n },        // Tier 0: Below 50k
+  { minBalance: 50_000n, monthlyCredits: 30n },  // Tier 1: 50k XESS
+  { minBalance: 100_000n, monthlyCredits: 100n }, // Tier 2: 100k XESS
+  { minBalance: 250_000n, monthlyCredits: 250n }, // Tier 3: 250k XESS
+  { minBalance: 500_000n, monthlyCredits: 500n }, // Tier 4: 500k XESS
+  { minBalance: 1_000_000n, monthlyCredits: 1_000n }, // Tier 5: 1M XESS
+  { minBalance: 2_500_000n, monthlyCredits: 1_500n }, // Tier 6: 2.5M XESS
+  { minBalance: 5_000_000n, monthlyCredits: 2_000n }, // Tier 7: 5M XESS
+]
+```
+
+**Membership Redemption Pricing:**
+Updated credit costs for redeeming membership time.
+```typescript
+// src/app/api/rewards-drawing/redeem/route.ts
+MEMBER_CREDITS_PER_MONTH = 1000n;  // was 100
+DIAMOND_CREDITS_PER_MONTH = 2000n; // was 200
+```
+
+**Special Credits for Members:**
+Members can now earn Special Credits by linking a wallet with XESS tokens.
+- Added conditional UI in profile Special Credits section
+- If `solWallet` is linked: Shows balance and "Enter Drawing" button
+- If no `solWallet`: Shows "Start Earning Special Credits" prompt with:
+  - "Link Wallet to Earn Credits" button → `/link-wallet`
+  - "View Earning Tiers" button to see credit formula
+- File: `src/app/profile/page.tsx`
+
+**Other Fixes:**
+- Member ID now shows full ID (was truncated with `slice(0,8)...`)
+- Fixed vote tracking to work without wallet (removed `if (voterHasWallet)` condition)

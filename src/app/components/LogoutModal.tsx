@@ -55,14 +55,25 @@ export default function LogoutModal({
   if (!open) return null;
 
   // Determine what to display based on tier
-  const displayValue = isDiamond && walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : email || (walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : null);
+  // Diamond: Show wallet address (primary)
+  // Member: Show email (primary)
+  const isMember = tier === "member";
 
-  const tierLabel = isDiamond ? "Diamond Member" : tier === "member" ? "Member" : null;
+  let displayValue: string | null = null;
+  if (isDiamond && walletAddress) {
+    displayValue = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+  } else if (isMember && email) {
+    displayValue = email;
+  } else if (email) {
+    displayValue = email;
+  } else if (walletAddress) {
+    displayValue = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+  }
+
+  const tierLabel = isDiamond ? "Diamond Member" : isMember ? "Member" : null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/90 p-6">
         {/* Show logged in user info */}

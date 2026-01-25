@@ -71,9 +71,9 @@ export default function XessNewsPage() {
                   payment feature as we prepare for the next major milestone.
                 </p>
                 <p>
-                  <span className="text-green-300 font-semibold">Coming Soon:</span> XESS will launch on Mainnet and go live on
-                  <span className="text-green-300 font-semibold"> Pump.Fun</span> with <span className="text-green-300 font-semibold">35% of the total supply</span> available
-                  for sale in our ICO — open to the <span className="underline">public ONLY</span>.
+                  <span className="text-green-300 font-semibold">Coming Soon:</span> XESS will launch on Mainnet via our
+                  <span className="text-green-300 font-semibold"> ICO Presale</span> with <span className="text-green-300 font-semibold">35% of the total supply</span> available
+                  — open to the <span className="underline">public ONLY</span>.
                 </p>
                 <p className="text-lg font-semibold text-green-300 pt-2">
                   We are here for the people, not special interests. This project belongs to the people!
@@ -105,9 +105,9 @@ export default function XessNewsPage() {
               </span>
               <span className="text-sm text-white/50">Coming Soon</span>
             </div>
-            <h2 className="text-xl font-semibold mb-2 text-white">Pump.Fun Launch - 35% Public ICO</h2>
+            <h2 className="text-xl font-semibold mb-2 text-white">ICO Presale - 35% Public Allocation</h2>
             <p className="text-white/70">
-              XESS will launch on Pump.Fun with 35% of the total supply available exclusively to the public.
+              XESS ICO Presale will offer 35% of the total supply exclusively to the public.
               No VCs, no special interest allocations — just a fair launch for the community.
               This is crypto for the people.
             </p>
