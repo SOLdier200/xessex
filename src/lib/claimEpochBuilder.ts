@@ -13,7 +13,13 @@
  */
 
 import { db } from "@/lib/prisma";
-import { computeClaimablesForWeek, computeClaimablesForWeekV2 } from "@/lib/claimables";
+import {
+  computeClaimablesForWeek,
+  computeClaimablesForWeekV2,
+  DIAMOND_REWARD_TYPES,
+  MEMBER_REWARD_TYPES,
+} from "@/lib/claimables";
+import { RewardType } from "@prisma/client";
 import {
   buildMerkle,
   getProof,
@@ -44,12 +50,18 @@ export type BuildEpochResult = {
 export async function buildAndStoreClaimEpoch(args: {
   epoch: number;
   weekKey: string;
+  rewardTypes?: RewardType[];
 }): Promise<BuildEpochResult> {
-  const { epoch, weekKey } = args;
+  const { epoch, weekKey, rewardTypes } = args;
 
   // Check if epoch or weekKey already exists
   const existing = await db.claimEpoch.findFirst({
-    where: { OR: [{ epoch }, { weekKey }] },
+    where: {
+      OR: [
+        { epoch },
+        { weekKey, version: 1 },
+      ],
+    },
   });
 
   if (existing) {
@@ -63,7 +75,7 @@ export async function buildAndStoreClaimEpoch(args: {
   }
 
   // Compute claimables from RewardEvent
-  const rows = await computeClaimablesForWeek(weekKey);
+  const rows = await computeClaimablesForWeek(weekKey, rewardTypes ?? DIAMOND_REWARD_TYPES);
 
   if (rows.length === 0) {
     throw new Error(`No claimables for weekKey=${weekKey}`);
@@ -101,6 +113,7 @@ export async function buildAndStoreClaimEpoch(args: {
         rootHex,
         totalAtomic,
         leafCount: rows.length,
+        version: 1,
       },
     });
 
@@ -153,8 +166,8 @@ export async function getLeafByWallet(epoch: number, wallet: string) {
  * Get a user's leaf for a specific week by wallet.
  */
 export async function getLeafByWeekAndWallet(weekKey: string, wallet: string) {
-  return db.claimLeaf.findUnique({
-    where: { weekKey_wallet: { weekKey, wallet } },
+  return db.claimLeaf.findFirst({
+    where: { weekKey, wallet },
   });
 }
 
@@ -205,12 +218,18 @@ function computeBuildHash(
 export async function buildClaimEpochV2Safe(args: {
   epoch: number;
   weekKey: string;
+  rewardTypes?: RewardType[];
 }): Promise<BuildEpochResultV2> {
-  const { epoch, weekKey } = args;
+  const { epoch, weekKey, rewardTypes } = args;
 
   // Check existing epoch
   const existing = await db.claimEpoch.findFirst({
-    where: { OR: [{ epoch }, { weekKey }] },
+    where: {
+      OR: [
+        { epoch },
+        { weekKey, version: 2 },
+      ],
+    },
   });
 
   // Immutability guard: if on-chain, cannot rebuild
@@ -228,7 +247,7 @@ export async function buildClaimEpochV2Safe(args: {
   }
 
   // Compute claimables (V2 - no wallet required)
-  const rows = await computeClaimablesForWeekV2(weekKey);
+  const rows = await computeClaimablesForWeekV2(weekKey, rewardTypes ?? MEMBER_REWARD_TYPES);
 
   if (rows.length === 0) {
     throw new Error(`No claimables for weekKey=${weekKey}`);

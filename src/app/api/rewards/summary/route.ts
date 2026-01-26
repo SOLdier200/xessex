@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getAccessContext } from "@/lib/access";
+import { DIAMOND_REWARD_TYPES, MEMBER_REWARD_TYPES } from "@/lib/claimables";
 
 export const runtime = "nodejs";
 
@@ -15,19 +16,21 @@ function formatAtomic(atomic: bigint): string {
 }
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) {
+  const ctx = await getAccessContext();
+  if (!ctx.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 
-  const userId = user.id;
-  const wallet = (user.solWallet || user.walletAddress || "").trim();
+  const userId = ctx.user.id;
+  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  const desiredVersion = ctx.tier === "member" ? 2 : 1;
+  const rewardTypes = desiredVersion === 2 ? MEMBER_REWARD_TYPES : DIAMOND_REWARD_TYPES;
 
   console.log("[rewards/summary] userId:", userId, "wallet:", wallet || "NONE");
 
   // Get the latest epoch that's set on-chain (claimable)
   const epoch = await db.claimEpoch.findFirst({
-    where: { setOnChain: true },
+    where: { setOnChain: true, version: desiredVersion },
     orderBy: { epoch: "desc" },
   });
 
@@ -43,12 +46,19 @@ export async function GET() {
     });
   }
 
-  // Get user's leaf for this epoch (by wallet)
-  const leaf = wallet
-    ? await db.claimLeaf.findUnique({
-        where: { epoch_wallet: { epoch: epoch.epoch, wallet } },
-      })
-    : null;
+  const epochVersion = epoch?.version ?? 1;
+
+  // Get user's leaf for this epoch
+  const leaf =
+    epochVersion === 2
+      ? await db.claimLeaf.findFirst({
+          where: { epoch: epoch.epoch, userId: userId },
+        })
+      : wallet
+        ? await db.claimLeaf.findUnique({
+            where: { epoch_wallet: { epoch: epoch.epoch, wallet } },
+          })
+        : null;
 
   console.log("[rewards/summary] Leaf for wallet:", leaf ? `amount=${leaf.amountAtomic}` : "NOT FOUND");
 
@@ -66,6 +76,7 @@ export async function GET() {
       weekKey: epoch.weekKey,
       status: "PAID",
       claimedAt: { not: null },
+      type: { in: rewardTypes },
     },
   });
 
@@ -81,7 +92,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
-    epoch: { id: epoch.epoch, epochNo: epoch.epoch, merkleRoot: epoch.rootHex },
+    epoch: { id: epoch.epoch, epochNo: epoch.epoch, merkleRoot: epoch.rootHex, version: epochVersion },
     pendingAmount: formatAtomic(pendingAmount),
     hasPending,
     claim: alreadyClaimed

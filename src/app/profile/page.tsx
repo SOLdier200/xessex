@@ -417,38 +417,61 @@ export default function ProfilePage() {
       const claimedTxSigs: string[] = [];
       let claimedAmountAtomic = 0n;
 
-      for (let i = 0; i < totalEpochs; i++) {
+        for (let i = 0; i < totalEpochs; i++) {
         const epoch = allData.claimableEpochs[i];
         setClaimAllProgress(`Claiming ${i + 1}/${totalEpochs} (Week ${epoch.weekKey})...`);
 
         try {
           // Wallet mismatch guard for this epoch
-          if (epoch.claimer && walletPubkey.toBase58() !== epoch.claimer) {
+          if (epoch.version !== 2 && epoch.claimer && walletPubkey.toBase58() !== epoch.claimer) {
             throw new Error(`WALLET_MISMATCH: expected ${epoch.claimer} got ${walletPubkey.toBase58()}`);
           }
 
           // Convert proof hex to bytes using strict converter
           const proofVec: number[][] = Array.isArray(epoch.proof) ? epoch.proof.map(hexToU8_32) : [];
 
-          const claimIx = await program.methods
-            .claim(
-              new anchor.BN(epoch.epoch),
-              new anchor.BN(epoch.amountAtomic),
-              epoch.index,
-              proofVec
-            )
-            .accounts({
-              config: new PublicKey(epoch.pdas.config),
-              vaultAuthority: new PublicKey(epoch.pdas.vaultAuthority),
-              epochRoot: new PublicKey(epoch.pdas.epochRoot),
-              receipt: new PublicKey(epoch.pdas.receipt),
-              claimer: walletPubkey,
-              vaultAta: new PublicKey(allData.vaultAta),
-              userAta,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              systemProgram: anchor.web3.SystemProgram.programId,
-            })
-            .instruction();
+          const isV2 = epoch.version === 2;
+          const claimIx = isV2
+            ? await program.methods
+                .claimV2(
+                  new anchor.BN(epoch.epoch),
+                  new anchor.BN(epoch.amountAtomic),
+                  epoch.index,
+                  hexToU8_32(epoch.userKeyHex),
+                  hexToU8_32(epoch.claimSaltHex),
+                  proofVec
+                )
+                .accounts({
+                  config: new PublicKey(epoch.pdas.config),
+                  vaultAuthority: new PublicKey(epoch.pdas.vaultAuthority),
+                  epochRoot: new PublicKey(epoch.pdas.epochRoot),
+                  receiptV2: new PublicKey(epoch.pdas.receiptV2),
+                  claimer: walletPubkey,
+                  vaultAta: new PublicKey(allData.vaultAta),
+                  userAta,
+                  tokenProgram: TOKEN_PROGRAM_ID,
+                  systemProgram: anchor.web3.SystemProgram.programId,
+                })
+                .instruction()
+            : await program.methods
+                .claim(
+                  new anchor.BN(epoch.epoch),
+                  new anchor.BN(epoch.amountAtomic),
+                  epoch.index,
+                  proofVec
+                )
+                .accounts({
+                  config: new PublicKey(epoch.pdas.config),
+                  vaultAuthority: new PublicKey(epoch.pdas.vaultAuthority),
+                  epochRoot: new PublicKey(epoch.pdas.epochRoot),
+                  receipt: new PublicKey(epoch.pdas.receipt),
+                  claimer: walletPubkey,
+                  vaultAta: new PublicKey(allData.vaultAta),
+                  userAta,
+                  tokenProgram: TOKEN_PROGRAM_ID,
+                  systemProgram: anchor.web3.SystemProgram.programId,
+                })
+                .instruction();
 
           const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
           const tx = new Transaction({
@@ -483,7 +506,13 @@ export default function ProfilePage() {
           await fetch("/api/rewards/claim/confirm", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ signature: sig, epoch: epoch.epoch }),
+            body: JSON.stringify({
+              signature: sig,
+              epoch: epoch.epoch,
+              version: epoch.version ?? 1,
+              userKeyHex: epoch.userKeyHex,
+              claimer: walletPubkey.toBase58(),
+            }),
           });
 
           successCount++;
@@ -580,33 +609,57 @@ export default function ProfilePage() {
       const userAta = getAssociatedTokenAddressSync(mint, walletPubkey);
       const userAtaInfo = await connection.getAccountInfo(userAta);
 
-      // 6) Wallet mismatch guard - prevent BadProof from signing with wrong wallet
-      if (prep.claimer && walletPubkey.toBase58() !== prep.claimer) {
+      const isV2 = prep.version === 2;
+
+      // 6) Wallet mismatch guard - prevent BadProof from signing with wrong wallet (V1 only)
+      if (!isV2 && prep.claimer && walletPubkey.toBase58() !== prep.claimer) {
         throw new Error(`WALLET_MISMATCH: expected ${prep.claimer} got ${walletPubkey.toBase58()}`);
       }
 
       // 7) Build claim instruction - use strict proof conversion
       const proofVec: number[][] = Array.isArray(prep.proof) ? prep.proof.map(hexToU8_32) : [];
 
-      const claimIx = await program.methods
-        .claim(
-          new anchor.BN(prep.epoch),
-          new anchor.BN(prep.amountAtomic),
-          prep.index,
-          proofVec
-        )
-        .accounts({
-          config: new PublicKey(prep.pdas.config),
-          vaultAuthority: new PublicKey(prep.pdas.vaultAuthority),
-          epochRoot: new PublicKey(prep.pdas.epochRoot),
-          receipt: new PublicKey(prep.pdas.receipt),
-          claimer: walletPubkey,
-          vaultAta: new PublicKey(prep.vaultAta),
-          userAta,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
+      const claimIx = isV2
+        ? await program.methods
+            .claimV2(
+              new anchor.BN(prep.epoch),
+              new anchor.BN(prep.amountAtomic),
+              prep.index,
+              hexToU8_32(prep.userKeyHex),
+              hexToU8_32(prep.claimSaltHex),
+              proofVec
+            )
+            .accounts({
+              config: new PublicKey(prep.pdas.config),
+              vaultAuthority: new PublicKey(prep.pdas.vaultAuthority),
+              epochRoot: new PublicKey(prep.pdas.epochRoot),
+              receiptV2: new PublicKey(prep.pdas.receiptV2),
+              claimer: walletPubkey,
+              vaultAta: new PublicKey(prep.vaultAta),
+              userAta,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: anchor.web3.SystemProgram.programId,
+            })
+            .instruction()
+        : await program.methods
+            .claim(
+              new anchor.BN(prep.epoch),
+              new anchor.BN(prep.amountAtomic),
+              prep.index,
+              proofVec
+            )
+            .accounts({
+              config: new PublicKey(prep.pdas.config),
+              vaultAuthority: new PublicKey(prep.pdas.vaultAuthority),
+              epochRoot: new PublicKey(prep.pdas.epochRoot),
+              receipt: new PublicKey(prep.pdas.receipt),
+              claimer: walletPubkey,
+              vaultAta: new PublicKey(prep.vaultAta),
+              userAta,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: anchor.web3.SystemProgram.programId,
+            })
+            .instruction();
 
       // 7) Build transaction - create ATA if missing, then claim
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
@@ -641,7 +694,13 @@ export default function ProfilePage() {
       const confirmRes = await fetch("/api/rewards/claim/confirm", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ signature: sig, epoch: prep.epoch }),
+        body: JSON.stringify({
+          signature: sig,
+          epoch: prep.epoch,
+          version: prep.version ?? 1,
+          userKeyHex: prep.userKeyHex,
+          claimer: walletPubkey.toBase58(),
+        }),
       });
       const confirmData = await confirmRes.json();
 

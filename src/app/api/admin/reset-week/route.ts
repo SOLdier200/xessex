@@ -54,6 +54,25 @@ export async function POST(req: NextRequest) {
 
   console.log(`[reset-week] Normalized weekKey: ${weekKey} (input was: ${rawWeekKey})`);
 
+  // Guard: refuse to delete epochs already set on-chain unless forced
+  const existingEpochs = await db.claimEpoch.findMany({
+    where: { weekKey },
+    select: { epoch: true, setOnChain: true, version: true },
+  });
+  const onChainEpoch = existingEpochs.find((e) => e.setOnChain);
+  if (onChainEpoch && body?.forceOnChain !== true) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "EPOCH_ONCHAIN",
+        message: `Epoch ${onChainEpoch.epoch} (v${onChainEpoch.version}) is already set on-chain. Refusing to delete. Pass forceOnChain=true to override.`,
+        weekKey,
+        epoch: onChainEpoch.epoch,
+      },
+      { status: 409 }
+    );
+  }
+
   // Delete in order (respect FK constraints)
   const results = await db.$transaction(async (tx) => {
     // 1. Delete ClaimLeaf records for this weekKey

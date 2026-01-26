@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { buildAndStoreClaimEpoch, getLatestEpoch } from "@/lib/claimEpochBuilder";
+import { getNextEpochNumber } from "@/lib/epochRoot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +67,9 @@ export async function POST(req: Request) {
       const weekKey = latestReward.weekKey;
 
       // Check if epoch already exists for this weekKey
-      const existingEpoch = await db.claimEpoch.findUnique({ where: { weekKey } });
+      const existingEpoch = await db.claimEpoch.findUnique({
+        where: { weekKey_version: { weekKey, version: 1 } },
+      });
       if (existingEpoch) {
         return NextResponse.json({
           ok: true,
@@ -80,7 +83,7 @@ export async function POST(req: Request) {
 
       // Determine next epoch number
       const lastEpoch = await getLatestEpoch();
-      const nextEpoch = (lastEpoch?.epoch ?? 0) + 1;
+      const nextEpoch = await getNextEpochNumber(lastEpoch?.epoch ?? null);
 
       const result = await buildAndStoreClaimEpoch({ epoch: nextEpoch, weekKey });
 

@@ -133,6 +133,9 @@ export async function POST(req: NextRequest) {
     const url = new URL("http://internal/api/cron/rewards/weekly-distribute");
     url.searchParams.set("weekKey", weekKey);
     url.searchParams.set("weekIndex", String(weekIndex));
+    if (force) {
+      url.searchParams.set("force", "1");
+    }
 
     const cronReq = new Request(url.toString(), {
       method: "POST",

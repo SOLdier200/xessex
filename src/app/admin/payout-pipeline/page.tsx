@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 type WeekInfo = {
   weekKey: string;
@@ -27,6 +28,7 @@ type EpochStatus = {
     setOnChain: boolean;
     onChainTxSig: string | null;
     createdAt: string;
+    version?: number;
   } | null;
 };
 
@@ -36,6 +38,8 @@ type DistributeResult = {
   message?: string;
   weekKey?: string;
   weekIndex?: number;
+  sourceWeekKey?: string;
+  payoutWeekKey?: string;
   detail?: {
     emission?: string;
     totalUsers?: number;
@@ -56,6 +60,8 @@ type BuildEpochResult = {
   rootHex?: string;
   leafCount?: number;
   totalAtomic?: string;
+  version?: number;
+  buildHash?: string;
   nextStep?: string;
 };
 
@@ -81,6 +87,7 @@ type ResetResult = {
 export default function PayoutPipelinePage() {
   const [weekData, setWeekData] = useState<WeekData | null>(null);
   const [epochStatus, setEpochStatus] = useState<EpochStatus | null>(null);
+  const [epochStatusV2, setEpochStatusV2] = useState<EpochStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Selected week
@@ -88,9 +95,14 @@ export default function PayoutPipelinePage() {
 
   // Step 1: Weekly Distribute
   const [distributeResult, setDistributeResult] = useState<DistributeResult | null>(null);
+  const [makeupResult, setMakeupResult] = useState<DistributeResult | null>(null);
+  const [makeupSourceWeek, setMakeupSourceWeek] = useState("");
+  const [makeupPayoutWeek, setMakeupPayoutWeek] = useState("");
+  const [makeupForce, setMakeupForce] = useState(false);
 
   // Step 2: Build Epoch
   const [buildResult, setBuildResult] = useState<BuildEpochResult | null>(null);
+  const [buildResultV2, setBuildResultV2] = useState<BuildEpochResult | null>(null);
 
   // Step 3: Mark On-Chain
   const [markEpoch, setMarkEpoch] = useState("");
@@ -105,13 +117,15 @@ export default function PayoutPipelinePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [weekRes, epochRes] = await Promise.all([
+      const [weekRes, epochRes, epochResV2] = await Promise.all([
         fetch("/api/admin/recompute-rewards-epoch", { method: "GET" }),
         fetch("/api/admin/build-claim-epoch", { method: "GET" }),
+        fetch("/api/admin/build-claim-epoch-v2", { method: "GET" }),
       ]);
 
       const weekJson = await weekRes.json();
       const epochJson = await epochRes.json();
+      const epochJsonV2 = await epochResV2.json();
 
       if (weekJson.ok) {
         setWeekData(weekJson);
@@ -120,7 +134,14 @@ export default function PayoutPipelinePage() {
         setEpochStatus(epochJson);
         // Pre-fill mark epoch field
         if (epochJson.latestEpoch && !epochJson.latestEpoch.setOnChain) {
-          setMarkEpoch(String(epochJson.latestEpoch.epoch));
+          setMarkEpoch((prev) => prev || String(epochJson.latestEpoch.epoch));
+        }
+      }
+      if (epochJsonV2.ok) {
+        setEpochStatusV2(epochJsonV2);
+        // Pre-fill mark epoch if empty and v2 latest is not on-chain
+        if (epochJsonV2.latestEpoch && !epochJsonV2.latestEpoch.setOnChain) {
+          setMarkEpoch((prev) => prev || String(epochJsonV2.latestEpoch.epoch));
         }
       }
     } catch {
@@ -134,6 +155,13 @@ export default function PayoutPipelinePage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (weekData) {
+      if (!makeupSourceWeek) setMakeupSourceWeek(weekData.lastWeek.weekKey);
+      if (!makeupPayoutWeek) setMakeupPayoutWeek(addDaysUTC(weekData.thisWeek.weekKey, 7));
+    }
+  }, [weekData, makeupSourceWeek, makeupPayoutWeek]);
+
   const currentWeekInfo = weekData
     ? selectedWeek === "this"
       ? weekData.thisWeek
@@ -145,6 +173,11 @@ export default function PayoutPipelinePage() {
     if (!currentWeekInfo) return;
     setRunning("distribute");
     setDistributeResult(null);
+
+    const toastId = toast.loading("Running weekly distribute...", {
+      description: `Processing week ${currentWeekInfo.weekKey}`,
+    });
+
     try {
       const r = await fetch("/api/admin/recompute-rewards-epoch", {
         method: "POST",
@@ -156,8 +189,69 @@ export default function PayoutPipelinePage() {
       });
       const j = await r.json();
       setDistributeResult(j);
+
+      if (j.ok) {
+        toast.success("Weekly distribute complete!", {
+          id: toastId,
+          description: `Created ${j.rewardCount || 0} rewards for ${j.userCount || 0} users`,
+        });
+      } else {
+        toast.error("Weekly distribute failed", {
+          id: toastId,
+          description: j.error || "Unknown error",
+        });
+      }
     } catch (e) {
       setDistributeResult({ ok: false, error: String(e) });
+      toast.error("Weekly distribute failed", {
+        id: toastId,
+        description: String(e),
+      });
+    }
+    setRunning(null);
+    loadData();
+  }
+
+  // Makeup payout: source week -> payout week
+  async function runMakeupPayout() {
+    if (!makeupSourceWeek || !makeupPayoutWeek) return;
+    setRunning("makeup");
+    setMakeupResult(null);
+
+    const toastId = toast.loading("Running makeup payout...", {
+      description: `${makeupSourceWeek} → ${makeupPayoutWeek}`,
+    });
+
+    try {
+      const r = await fetch("/api/admin/recompute-rewards-epoch-makeup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceWeekKey: makeupSourceWeek,
+          payoutWeekKey: makeupPayoutWeek,
+          force: makeupForce,
+        }),
+      });
+      const j = await r.json();
+      setMakeupResult(j);
+
+      if (j.ok) {
+        toast.success("Makeup payout complete!", {
+          id: toastId,
+          description: `Created ${j.detail?.totalRewards || 0} rewards for ${j.detail?.totalUsers || 0} users`,
+        });
+      } else {
+        toast.error("Makeup payout failed", {
+          id: toastId,
+          description: j.error || "Unknown error",
+        });
+      }
+    } catch (e) {
+      setMakeupResult({ ok: false, error: String(e) });
+      toast.error("Makeup payout failed", {
+        id: toastId,
+        description: String(e),
+      });
     }
     setRunning(null);
     loadData();
@@ -167,6 +261,11 @@ export default function PayoutPipelinePage() {
   async function runBuildEpoch() {
     setRunning("build");
     setBuildResult(null);
+
+    const toastId = toast.loading("Building claim epoch...", {
+      description: "Generating merkle tree",
+    });
+
     try {
       const r = await fetch("/api/admin/build-claim-epoch", { method: "POST" });
       const j = await r.json();
@@ -174,9 +273,58 @@ export default function PayoutPipelinePage() {
       // Pre-fill mark epoch field
       if (j.ok && j.epoch) {
         setMarkEpoch(String(j.epoch));
+        toast.success("Claim epoch built!", {
+          id: toastId,
+          description: `Epoch ${j.epoch} with ${j.leafCount || 0} leaves`,
+        });
+      } else {
+        toast.error("Build epoch failed", {
+          id: toastId,
+          description: j.error || "Unknown error",
+        });
       }
     } catch (e) {
       setBuildResult({ ok: false, error: String(e) });
+      toast.error("Build epoch failed", {
+        id: toastId,
+        description: String(e),
+      });
+    }
+    setRunning(null);
+    loadData();
+  }
+
+  // Step 2b: Run Build Epoch (V2 / Member)
+  async function runBuildEpochV2() {
+    setRunning("build_v2");
+    setBuildResultV2(null);
+
+    const toastId = toast.loading("Building claim epoch (v2)...", {
+      description: "Generating merkle tree for member rewards",
+    });
+
+    try {
+      const r = await fetch("/api/admin/build-claim-epoch-v2", { method: "POST" });
+      const j = await r.json();
+      setBuildResultV2(j);
+      if (j.ok && j.epoch) {
+        setMarkEpoch(String(j.epoch));
+        toast.success("Claim epoch (v2) built!", {
+          id: toastId,
+          description: `Epoch ${j.epoch} with ${j.leafCount || 0} leaves`,
+        });
+      } else {
+        toast.error("Build epoch (v2) failed", {
+          id: toastId,
+          description: j.error || "Unknown error",
+        });
+      }
+    } catch (e) {
+      setBuildResultV2({ ok: false, error: String(e) });
+      toast.error("Build epoch (v2) failed", {
+        id: toastId,
+        description: String(e),
+      });
     }
     setRunning(null);
     loadData();
@@ -187,6 +335,11 @@ export default function PayoutPipelinePage() {
     if (!markEpoch) return;
     setRunning("mark");
     setMarkResult(null);
+
+    const toastId = toast.loading("Marking epoch on-chain...", {
+      description: `Epoch ${markEpoch}`,
+    });
+
     try {
       const r = await fetch("/api/admin/mark-epoch-onchain", {
         method: "POST",
@@ -198,8 +351,24 @@ export default function PayoutPipelinePage() {
       });
       const j = await r.json();
       setMarkResult(j);
+
+      if (j.ok) {
+        toast.success("Epoch marked on-chain!", {
+          id: toastId,
+          description: `Epoch ${markEpoch} is now claimable`,
+        });
+      } else {
+        toast.error("Mark on-chain failed", {
+          id: toastId,
+          description: j.error || "Unknown error",
+        });
+      }
     } catch (e) {
       setMarkResult({ ok: false, error: String(e) });
+      toast.error("Mark on-chain failed", {
+        id: toastId,
+        description: String(e),
+      });
     }
     setRunning(null);
     loadData();
@@ -231,8 +400,11 @@ export default function PayoutPipelinePage() {
   }
 
   const latestEpoch = epochStatus?.latestEpoch;
+  const latestEpochV2 = epochStatusV2?.latestEpoch;
   const rootHex = buildResult?.rootHex || latestEpoch?.rootHex || "";
   const epochNum = buildResult?.epoch || latestEpoch?.epoch || 0;
+  const rootHexV2 = buildResultV2?.rootHex || latestEpochV2?.rootHex || "";
+  const epochNumV2 = buildResultV2?.epoch || latestEpochV2?.epoch || 0;
 
   return (
     <main className="min-h-screen p-6 max-w-4xl mx-auto">
@@ -257,30 +429,65 @@ export default function PayoutPipelinePage() {
         <h2 className="text-lg font-semibold text-white mb-4">Current Status</h2>
         {loading ? (
           <div className="text-white/50">Loading...</div>
-        ) : epochStatus ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-black/40 rounded-xl p-4">
-              <div className="text-xs text-white/50 mb-1">Pending Week</div>
-              <div className="font-mono text-white">
-                {epochStatus.pendingWeekKey || "none"}
+        ) : epochStatus || epochStatusV2 ? (
+          <div className="space-y-4">
+            <div>
+              <div className="text-xs text-white/50 mb-2">Diamond (v1)</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">Pending Week</div>
+                  <div className="font-mono text-white">
+                    {epochStatus?.pendingWeekKey || "none"}
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">Epoch Built</div>
+                  <div className={epochStatus?.pendingEpochBuilt ? "text-green-400" : "text-yellow-400"}>
+                    {epochStatus?.pendingEpochBuilt ? "Yes" : "No"}
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">On-Chain</div>
+                  <div className={epochStatus?.pendingEpochSetOnChain ? "text-green-400" : "text-yellow-400"}>
+                    {epochStatus?.pendingEpochSetOnChain ? "Yes" : "No"}
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">Latest Epoch</div>
+                  <div className="font-mono text-white">
+                    {latestEpoch ? `#${latestEpoch.epoch}` : "none"}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="bg-black/40 rounded-xl p-4">
-              <div className="text-xs text-white/50 mb-1">Epoch Built</div>
-              <div className={epochStatus.pendingEpochBuilt ? "text-green-400" : "text-yellow-400"}>
-                {epochStatus.pendingEpochBuilt ? "Yes" : "No"}
-              </div>
-            </div>
-            <div className="bg-black/40 rounded-xl p-4">
-              <div className="text-xs text-white/50 mb-1">On-Chain</div>
-              <div className={epochStatus.pendingEpochSetOnChain ? "text-green-400" : "text-yellow-400"}>
-                {epochStatus.pendingEpochSetOnChain ? "Yes" : "No"}
-              </div>
-            </div>
-            <div className="bg-black/40 rounded-xl p-4">
-              <div className="text-xs text-white/50 mb-1">Latest Epoch</div>
-              <div className="font-mono text-white">
-                {latestEpoch ? `#${latestEpoch.epoch}` : "none"}
+
+            <div>
+              <div className="text-xs text-white/50 mb-2">Member (v2)</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">Pending Week</div>
+                  <div className="font-mono text-white">
+                    {epochStatusV2?.pendingWeekKey || "none"}
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">Epoch Built</div>
+                  <div className={epochStatusV2?.pendingEpochBuilt ? "text-green-400" : "text-yellow-400"}>
+                    {epochStatusV2?.pendingEpochBuilt ? "Yes" : "No"}
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">On-Chain</div>
+                  <div className={epochStatusV2?.pendingEpochSetOnChain ? "text-green-400" : "text-yellow-400"}>
+                    {epochStatusV2?.pendingEpochSetOnChain ? "Yes" : "No"}
+                  </div>
+                </div>
+                <div className="bg-black/40 rounded-xl p-4">
+                  <div className="text-xs text-white/50 mb-1">Latest Epoch</div>
+                  <div className="font-mono text-white">
+                    {latestEpochV2 ? `#${latestEpochV2.epoch}` : "none"}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -322,6 +529,47 @@ export default function PayoutPipelinePage() {
                   className="text-xs text-blue-400 hover:underline break-all"
                 >
                   {latestEpoch.onChainTxSig}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        {latestEpochV2 && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="text-xs text-white/50 mb-2">Member (v2) Details</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="text-white/50">Week:</span>{" "}
+                <span className="font-mono">{latestEpochV2.weekKey}</span>
+              </div>
+              <div>
+                <span className="text-white/50">Leaves:</span>{" "}
+                <span>{latestEpochV2.leafCount}</span>
+              </div>
+              <div>
+                <span className="text-white/50">Total:</span>{" "}
+                <span className="font-mono">{formatAtomic(latestEpochV2.totalAtomic)} XESS</span>
+              </div>
+            </div>
+            {latestEpochV2.rootHex && (
+              <div className="mt-3">
+                <div className="text-xs text-white/50 mb-1">Root Hash:</div>
+                <code className="text-xs bg-black/60 p-2 rounded block break-all text-cyan-400">
+                  {latestEpochV2.rootHex}
+                </code>
+              </div>
+            )}
+            {latestEpochV2.onChainTxSig && (
+              <div className="mt-2">
+                <div className="text-xs text-white/50 mb-1">On-chain TX:</div>
+                <a
+                  href={`https://explorer.solana.com/tx/${latestEpochV2.onChainTxSig}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-400 hover:underline break-all"
+                >
+                  {latestEpochV2.onChainTxSig}
                 </a>
               </div>
             )}
@@ -463,6 +711,89 @@ export default function PayoutPipelinePage() {
           )}
         </div>
 
+        {/* Step 1b: Makeup Payout */}
+        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-400/40 flex items-center justify-center text-blue-300 font-bold">
+              1b
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">Makeup Payout (source week → payout week)</h3>
+              <p className="text-xs text-white/50">
+                Rebuild rewards from a past week and pay them out on a new weekKey
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs text-white/50 block mb-1">Source Week (stats)</label>
+              <input
+                type="text"
+                value={makeupSourceWeek}
+                onChange={(e) => setMakeupSourceWeek(e.target.value)}
+                placeholder="YYYY-MM-DD"
+                className="w-full rounded-lg bg-black/60 border border-white/10 px-3 py-2 text-white font-mono text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 block mb-1">Payout Week (new weekKey)</label>
+              <input
+                type="text"
+                value={makeupPayoutWeek}
+                onChange={(e) => setMakeupPayoutWeek(e.target.value)}
+                placeholder="YYYY-MM-DD"
+                className="w-full rounded-lg bg-black/60 border border-white/10 px-3 py-2 text-white font-mono text-sm"
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-white/60 mb-3">
+            <input
+              type="checkbox"
+              checked={makeupForce}
+              onChange={(e) => setMakeupForce(e.target.checked)}
+              className="accent-blue-400"
+            />
+            Force overwrite payout week (only if not on-chain)
+          </label>
+
+          <button
+            onClick={runMakeupPayout}
+            disabled={running !== null || !makeupSourceWeek || !makeupPayoutWeek}
+            className="px-4 py-2 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors text-sm font-medium text-black"
+          >
+            {running === "makeup" ? "Running..." : "Run Makeup Payout"}
+          </button>
+
+          {makeupResult && (
+            <div
+              className={`mt-4 p-4 rounded-lg text-sm ${
+                makeupResult.ok
+                  ? "bg-green-900/30 border border-green-500/30"
+                  : "bg-red-900/30 border border-red-500/30"
+              }`}
+            >
+              {makeupResult.ok ? (
+                <div>
+                  <div className="text-green-400 font-medium mb-2">Makeup Payout Created</div>
+                  <div className="text-white/70 space-y-1">
+                    <div>
+                      Source: {makeupResult.sourceWeekKey} → Payout: {makeupResult.payoutWeekKey}
+                    </div>
+                    <div>
+                      Users: {makeupResult.detail?.totalUsers} | Rewards: {makeupResult.detail?.totalRewards}
+                    </div>
+                    <div>Total: {makeupResult.detail?.totalAmount} XESS</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-red-400">Error: {makeupResult.error}</div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Step 2: Build Claim Epoch */}
         <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -524,14 +855,75 @@ export default function PayoutPipelinePage() {
           )}
         </div>
 
-        {/* Step 3: Set Root On-Chain (CLI) */}
+        {/* Step 2b: Build Claim Epoch (Member / V2) */}
+        <div className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-fuchsia-500/20 border border-fuchsia-400/50 flex items-center justify-center text-fuchsia-400 font-bold">
+              2b
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">Build Claim Epoch (Member / v2)</h3>
+              <p className="text-xs text-white/50">
+                Build V2 merkle tree for member rewards (userKey-based leaves)
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={runBuildEpochV2}
+            disabled={running !== null}
+            className="px-4 py-2 rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors text-sm font-medium text-black"
+          >
+            {running === "build_v2" ? "Running..." : "Build Claim Epoch (v2)"}
+          </button>
+
+          {buildResultV2 && (
+            <div
+              className={`mt-4 p-4 rounded-lg text-sm ${
+                buildResultV2.ok && !buildResultV2.skipped
+                  ? "bg-green-900/30 border border-green-500/30"
+                  : buildResultV2.skipped
+                  ? "bg-yellow-900/30 border border-yellow-500/30"
+                  : "bg-red-900/30 border border-red-500/30"
+              }`}
+            >
+              {buildResultV2.ok && !buildResultV2.skipped ? (
+                <div>
+                  <div className="text-green-400 font-medium mb-2">Epoch Built (v2)</div>
+                  <div className="text-white/70">
+                    Epoch: {buildResultV2.epoch} | Week: {buildResultV2.weekKey} | Leaves: {buildResultV2.leafCount}
+                  </div>
+                  {buildResultV2.rootHex && (
+                    <div className="mt-2">
+                      <div className="text-white/50 text-xs mb-1">Root Hash:</div>
+                      <code className="text-xs bg-black/40 p-2 rounded block break-all text-cyan-400">
+                        {buildResultV2.rootHex}
+                      </code>
+                    </div>
+                  )}
+                </div>
+              ) : buildResultV2.skipped ? (
+                <div className="text-yellow-400">
+                  Skipped: {buildResultV2.reason}
+                  {buildResultV2.rootHex && (
+                    <div className="mt-1 text-white/50 text-xs">Existing root: {buildResultV2.rootHex}</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-red-400">Error: {buildResultV2.error}</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Step 3: Set Root On-Chain (CLI) - Diamond (v1) */}
         <div className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-400/50 flex items-center justify-center text-orange-400 font-bold">
               3
             </div>
             <div>
-              <h3 className="font-semibold text-white">Set Root On-Chain (CLI)</h3>
+              <h3 className="font-semibold text-white">Set Root On-Chain (CLI) — Diamond (v1)</h3>
               <p className="text-xs text-white/50">
                 Run this command to publish the merkle root to Solana
               </p>
@@ -548,6 +940,32 @@ export default function PayoutPipelinePage() {
           <div className="mt-3 text-xs text-white/50">
             This will create the EpochRoot PDA on devnet with the merkle root.
             Copy the transaction signature for the next step.
+          </div>
+        </div>
+
+        {/* Step 3b: Set Root On-Chain (CLI) - Member (v2) */}
+        <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-400/40 flex items-center justify-center text-orange-300 font-bold">
+              3b
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">Set Root On-Chain (CLI) — Member (v2)</h3>
+              <p className="text-xs text-white/50">
+                Publish the v2 merkle root for member rewards
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-black/60 rounded-lg p-4 font-mono text-sm">
+            <div className="text-white/50 text-xs mb-2">Run in terminal:</div>
+            <code className="text-green-400 break-all">
+              node solana-programs/xess-claim/set-epoch-root.mjs {epochNumV2 || "<epoch>"} {rootHexV2 || "<rootHex>"}
+            </code>
+          </div>
+
+          <div className="mt-3 text-xs text-white/50">
+            Same on-chain publish step, just for the v2 epoch.
           </div>
         </div>
 
@@ -699,6 +1117,13 @@ export default function PayoutPipelinePage() {
       </div>
     </main>
   );
+}
+
+function addDaysUTC(weekKey: string, days: number): string {
+  const d = new Date(`${weekKey}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return weekKey;
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 // ClaimEpoch.totalAtomic uses 9 decimals (matches token mint)

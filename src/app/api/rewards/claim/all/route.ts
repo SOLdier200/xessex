@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
+import { DIAMOND_REWARD_TYPES, MEMBER_REWARD_TYPES } from "@/lib/claimables";
+import { fromHex32 } from "@/lib/merkleSha256";
 
 // Lazy-loaded to avoid build-time failures when env vars are not set
 function getProgramId() {
@@ -26,12 +28,16 @@ interface ClaimableEpoch {
   amountAtomic: string;
   index: number;
   proof: string[]; // hex strings
-  claimer: string; // base58 wallet address
+  version: number;
+  claimer?: string; // base58 wallet address (v1 only)
+  userKeyHex?: string; // v2 only
+  claimSaltHex?: string; // v2 only
   pdas: {
     config: string;
     vaultAuthority: string;
     epochRoot: string;
-    receipt: string;
+    receipt?: string;
+    receiptV2?: string;
   };
 }
 
@@ -45,25 +51,30 @@ export async function GET() {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const desiredVersion = ctx.tier === "member" ? 2 : 1;
   const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
-  if (!wallet) return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
+  if (desiredVersion === 1 && !wallet) {
+    return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
+  }
 
-  const claimerPk = new PublicKey(wallet);
+  const claimerPk = wallet ? new PublicKey(wallet) : null;
   const userId = ctx.user.id;
 
   // Get all on-chain epochs where user has a leaf
   const leaves = await db.claimLeaf.findMany({
-    where: { wallet },
+    where: desiredVersion === 1 ? { wallet } : { userId },
     include: {
       epochRel: {
-        select: { epoch: true, weekKey: true, setOnChain: true },
+        select: { epoch: true, weekKey: true, setOnChain: true, version: true },
       },
     },
     orderBy: { epoch: "asc" },
   });
 
   // Filter to only on-chain epochs
-  const onChainLeaves = leaves.filter((l) => l.epochRel.setOnChain);
+  const onChainLeaves = leaves.filter(
+    (l) => l.epochRel.setOnChain && (l.epochRel.version ?? 1) === desiredVersion
+  );
 
   if (onChainLeaves.length === 0) {
     return NextResponse.json({
@@ -94,13 +105,28 @@ export async function GET() {
       [Buffer.from("epoch_root"), u64LE(epoch)],
       getProgramId()
     );
-    const [receiptPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-      getProgramId()
-    );
+    const receiptPda =
+      desiredVersion === 1 && claimerPk
+        ? PublicKey.findProgramAddressSync(
+            [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
+            getProgramId()
+          )[0]
+        : null;
+
+    const receiptV2Pda =
+      desiredVersion === 2 && leaf.userKeyHex
+        ? PublicKey.findProgramAddressSync(
+            [Buffer.from("receipt_v2"), u64LE(epoch), fromHex32(leaf.userKeyHex)],
+            getProgramId()
+          )[0]
+        : null;
 
     // Check if already claimed on-chain
-    const receiptInfo = await connection.getAccountInfo(receiptPda);
+    const receiptInfo = receiptPda
+      ? await connection.getAccountInfo(receiptPda)
+      : receiptV2Pda
+        ? await connection.getAccountInfo(receiptV2Pda)
+        : null;
     if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
       // Already claimed - skip
       continue;
@@ -112,6 +138,7 @@ export async function GET() {
         userId,
         weekKey: leaf.weekKey,
         claimedAt: { not: null },
+        type: { in: desiredVersion === 1 ? DIAMOND_REWARD_TYPES : MEMBER_REWARD_TYPES },
       },
     });
 
@@ -127,12 +154,16 @@ export async function GET() {
       amountAtomic: leaf.amountAtomic.toString(),
       index: leaf.index,
       proof: leaf.proofHex as string[],
-      claimer: claimerPk.toBase58(),
+      version: desiredVersion,
+      claimer: claimerPk?.toBase58(),
+      userKeyHex: leaf.userKeyHex ?? undefined,
+      claimSaltHex: leaf.claimSaltHex ?? undefined,
       pdas: {
         config: configPda.toBase58(),
         vaultAuthority: vaultAuthority.toBase58(),
         epochRoot: epochRootPda.toBase58(),
-        receipt: receiptPda.toBase58(),
+        receipt: receiptPda?.toBase58(),
+        receiptV2: receiptV2Pda?.toBase58(),
       },
     });
 
@@ -156,6 +187,6 @@ export async function GET() {
     programId: getProgramId().toBase58(),
     xessMint: getXessMint().toBase58(),
     vaultAta: getVaultAta().toBase58(),
-    claimer: claimerPk.toBase58(),
+    claimer: claimerPk?.toBase58(),
   });
 }

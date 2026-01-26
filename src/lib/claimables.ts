@@ -12,6 +12,7 @@
  */
 
 import { db } from "@/lib/prisma";
+import { RewardType } from "@prisma/client";
 
 // Decimal precision constants
 export const REWARD_EVENT_DECIMALS = 6n;  // RewardEvent.amount uses 6 decimals
@@ -31,6 +32,18 @@ export type ClaimableRow = {
   amountAtomic: bigint;  // 9-decimal atomic units (matches token mint)
 };
 
+export const DIAMOND_REWARD_TYPES: RewardType[] = [
+  "WEEKLY_LIKES",
+  "WEEKLY_MVM",
+  "WEEKLY_COMMENTS",
+  "REF_L1",
+  "REF_L2",
+  "REF_L3",
+  "ALLTIME_LIKES",
+];
+
+export const MEMBER_REWARD_TYPES: RewardType[] = ["WEEKLY_VOTER"];
+
 /**
  * Compute claimable amounts for a specific week.
  * Sums RewardEvent.amount where:
@@ -40,7 +53,10 @@ export type ClaimableRow = {
  *
  * Returns amounts in 9-decimal atomic units (converted from 6-decimal storage).
  */
-export async function computeClaimablesForWeek(weekKey: string): Promise<ClaimableRow[]> {
+export async function computeClaimablesForWeek(
+  weekKey: string,
+  rewardTypes?: RewardType[]
+): Promise<ClaimableRow[]> {
   // Group by userId and sum amounts (stored in 6-decimal units)
   const grouped = await db.rewardEvent.groupBy({
     by: ["userId"],
@@ -48,6 +64,7 @@ export async function computeClaimablesForWeek(weekKey: string): Promise<Claimab
       weekKey,
       status: "PAID",
       claimedAt: null,
+      ...(rewardTypes && rewardTypes.length > 0 ? { type: { in: rewardTypes } } : {}),
     },
     _sum: { amount: true },
   });
@@ -114,7 +131,10 @@ export type ClaimableRowV2 = {
  * Returns amounts in 9-decimal atomic units (converted from 6-decimal storage).
  * Users do NOT need a linked wallet to be included.
  */
-export async function computeClaimablesForWeekV2(weekKey: string): Promise<ClaimableRowV2[]> {
+export async function computeClaimablesForWeekV2(
+  weekKey: string,
+  rewardTypes?: RewardType[]
+): Promise<ClaimableRowV2[]> {
   // Group by userId and sum amounts (stored in 6-decimal units)
   const grouped = await db.rewardEvent.groupBy({
     by: ["userId"],
@@ -122,6 +142,7 @@ export async function computeClaimablesForWeekV2(weekKey: string): Promise<Claim
       weekKey,
       status: "PAID",
       claimedAt: null,
+      ...(rewardTypes && rewardTypes.length > 0 ? { type: { in: rewardTypes } } : {}),
     },
     _sum: { amount: true },
   });

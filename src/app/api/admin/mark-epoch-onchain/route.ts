@@ -46,7 +46,12 @@ function parseEpochRootAccount(data: Buffer) {
 export async function POST(req: NextRequest) {
   try {
     const access = await getAccessContext();
-    if (!access.isAdminOrMod) {
+    const cronSecret = process.env.CRON_SECRET || "";
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const isCron = !!cronSecret && token === cronSecret;
+
+    if (!access.isAdminOrMod && !isCron) {
       return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
     }
 

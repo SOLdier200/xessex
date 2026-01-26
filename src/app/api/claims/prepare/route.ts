@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
     // Find epoch record
     const ce = await db.claimEpoch.findFirst({
-      where: epoch !== null ? { epoch } : { weekKey },
+      where: epoch !== null ? { epoch, version: 2 } : { weekKey, version: 2 },
       select: { epoch: true, weekKey: true, rootHex: true, setOnChain: true, version: true },
     });
 

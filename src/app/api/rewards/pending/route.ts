@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
+import { getAccessContext } from "@/lib/access";
 import { weekKeyUTC } from "@/lib/weekKey";
+import { DIAMOND_REWARD_TYPES, MEMBER_REWARD_TYPES } from "@/lib/claimables";
 
 export const runtime = "nodejs";
 
@@ -50,13 +51,14 @@ function format9(amount: bigint): string {
  * - nextPayout: Countdown to next Monday finalization
  */
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user) {
+  const ctx = await getAccessContext();
+  if (!ctx.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 
-  const userId = user.id;
-  const wallet = (user.solWallet || user.walletAddress || "").trim();
+  const userId = ctx.user.id;
+  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  const desiredVersion = ctx.tier === "member" ? 2 : 1;
   const now = new Date();
   const currentWeekKey = weekKeyUTC(now);
   const weekIndex = getWeekIndex(currentWeekKey);
@@ -108,23 +110,42 @@ export async function GET() {
   // Get all unclaimed weeks (finalized but not claimed)
   // A week is unclaimed if: ClaimEpoch exists with setOnChain=true AND user has ClaimLeaf
   // AND no RewardEvent.claimedAt set for that week
-  const unclaimedEpochs = wallet
-    ? await db.claimEpoch.findMany({
-        where: {
-          setOnChain: true,
-          leaves: {
-            some: { wallet },
+  const unclaimedEpochs =
+    desiredVersion === 1 && wallet
+      ? await db.claimEpoch.findMany({
+          where: {
+            setOnChain: true,
+            version: 1,
+            leaves: {
+              some: { wallet },
+            },
           },
-        },
-        include: {
-          leaves: {
-            where: { wallet },
-            select: { amountAtomic: true },
+          include: {
+            leaves: {
+              where: { wallet },
+              select: { amountAtomic: true },
+            },
           },
-        },
-        orderBy: { epoch: "desc" },
-      })
-    : [];
+          orderBy: { epoch: "desc" },
+        })
+      : desiredVersion === 2
+        ? await db.claimEpoch.findMany({
+            where: {
+              setOnChain: true,
+              version: 2,
+              leaves: {
+                some: { userId },
+              },
+            },
+            include: {
+              leaves: {
+                where: { userId },
+                select: { amountAtomic: true },
+              },
+            },
+            orderBy: { epoch: "desc" },
+          })
+        : [];
 
   // Filter to only truly unclaimed (check RewardEvent.claimedAt)
   const unclaimedWeeks: Array<{
@@ -141,6 +162,7 @@ export async function GET() {
         userId,
         weekKey: epochRow.weekKey,
         claimedAt: { not: null },
+        type: { in: desiredVersion === 1 ? DIAMOND_REWARD_TYPES : MEMBER_REWARD_TYPES },
       },
     });
 

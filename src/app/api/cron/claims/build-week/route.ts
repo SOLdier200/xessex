@@ -25,6 +25,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { buildClaimEpochV2Safe, getLatestEpoch } from "@/lib/claimEpochBuilder";
+import { getNextEpochNumber } from "@/lib/epochRoot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,7 +81,9 @@ export async function POST(req: Request) {
       const weekKey = latestReward.weekKey;
 
       // Check if epoch already exists for this weekKey
-      const existingEpoch = await db.claimEpoch.findUnique({ where: { weekKey } });
+      const existingEpoch = await db.claimEpoch.findUnique({
+        where: { weekKey_version: { weekKey, version: 2 } },
+      });
 
       // Determine epoch number
       let epoch: number;
@@ -100,7 +103,7 @@ export async function POST(req: Request) {
         epoch = existingEpoch.epoch;
       } else {
         const lastEpoch = await getLatestEpoch();
-        epoch = (lastEpoch?.epoch ?? 0) + 1;
+        epoch = await getNextEpochNumber(lastEpoch?.epoch ?? null);
       }
 
       // Build and store the epoch (V2 with userKey-based leaves)
@@ -180,7 +183,7 @@ export async function GET(req: Request) {
     // Check if the latest reward weekKey has an epoch
     const pendingWeekKey = latestReward?.weekKey;
     const pendingEpoch = pendingWeekKey
-      ? await db.claimEpoch.findUnique({ where: { weekKey: pendingWeekKey } })
+      ? await db.claimEpoch.findUnique({ where: { weekKey_version: { weekKey: pendingWeekKey, version: 2 } } })
       : null;
 
     return NextResponse.json({

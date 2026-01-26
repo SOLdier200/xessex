@@ -167,8 +167,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const weekKey = searchParams.get("weekKey");
+  const weekKey = searchParams.get("weekKey"); // payout week
+  const statsWeekKey = searchParams.get("statsWeekKey") || weekKey; // stats source week
   const weekIndexStr = searchParams.get("weekIndex");
+  const force = searchParams.get("force") === "1" || searchParams.get("force") === "true";
 
   if (!weekKey || !weekIndexStr) {
     return NextResponse.json(
@@ -188,10 +190,44 @@ export async function POST(req: NextRequest) {
   // Check if already processed
   const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey } });
   if (existingBatch) {
-    return NextResponse.json(
-      { ok: false, error: "ALREADY_PROCESSED", weekKey },
-      { status: 409 }
-    );
+    if (!force) {
+      return NextResponse.json(
+        { ok: false, error: "ALREADY_PROCESSED", weekKey },
+        { status: 409 }
+      );
+    }
+
+    // Force rerun: refuse if any epoch for this week is already on-chain
+    const onChainEpoch = await db.claimEpoch.findFirst({
+      where: { weekKey, setOnChain: true },
+      select: { epoch: true, version: true },
+    });
+    if (onChainEpoch) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "EPOCH_ONCHAIN",
+          message: `Epoch ${onChainEpoch.epoch} (v${onChainEpoch.version}) is already on-chain. Refusing to rerun.`,
+          weekKey,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Clear derived data for this week so the rerun is clean
+    await db.$transaction(async (tx) => {
+      await tx.claimLeaf.deleteMany({ where: { weekKey } });
+      await tx.claimEpoch.deleteMany({ where: { weekKey } });
+      await tx.rewardEvent.deleteMany({ where: { weekKey } });
+      await tx.rewardBatch.deleteMany({ where: { weekKey } });
+      // Reset paidAtomic for the stats source week
+      if (statsWeekKey) {
+        await tx.weeklyUserStat.updateMany({
+          where: { weekKey: statsWeekKey },
+          data: { paidAtomic: 0n },
+        });
+      }
+    });
   }
 
   const now = new Date();
@@ -218,7 +254,10 @@ export async function POST(req: NextRequest) {
     const allTimeLikesPool = (likesPool * allTimeLikesBps) / 10000n;
     const memberVoterPool = (likesPool * memberVoterBps) / 10000n;
 
-    console.log(`[weekly-distribute] Week ${weekKey} (index ${weekIndex})`);
+    console.log(`[weekly-distribute] Payout Week ${weekKey} (index ${weekIndex})`);
+    if (statsWeekKey && statsWeekKey !== weekKey) {
+      console.log(`[weekly-distribute] Stats Source Week ${statsWeekKey}`);
+    }
     console.log(`[weekly-distribute] Emission: ${formatXess(totalEmission)} XESS`);
     console.log(`[weekly-distribute] Pools - Likes: ${formatXess(likesPool)}, MVM: ${formatXess(mvmPool)}, Comments: ${formatXess(commentsPool)}, Referrals: ${formatXess(referralsPool)}`);
     console.log(`[weekly-distribute] Likes sub-pools - Weekly: ${formatXess(weeklyDiamondPool)}, AllTime: ${formatXess(allTimeLikesPool)}, Voter: ${formatXess(memberVoterPool)}`);
@@ -227,7 +266,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Weekly Diamond Score (top 50 by scoreReceived) - Diamond only
     console.log(`\n[weekly-distribute] === WEEKLY SCORE REWARDS (Top 50, >= ${minWeeklyScoreThreshold} score) ===`);
-    const top50 = await getTop50Score(weekKey, minWeeklyScoreThreshold, now);
+    const top50 = await getTop50Score(statsWeekKey!, minWeeklyScoreThreshold, now);
     const sumScore = top50.reduce((acc, w) => acc + w.score, 0);
 
     console.log(`[weekly-distribute] Found ${top50.length} eligible Diamond users with >= ${minWeeklyScoreThreshold} weekly score`);
@@ -323,7 +362,7 @@ export async function POST(req: NextRequest) {
     console.log(`\n[weekly-distribute] === MEMBER VOTER REWARDS ===`);
     const voterStats = await db.weeklyVoterStat.findMany({
       where: {
-        weekKey,
+        weekKey: statsWeekKey!,
         votesCast: { gt: 0 },
       },
       include: {
@@ -354,7 +393,7 @@ export async function POST(req: NextRequest) {
 
     // 4. MVM Pool (monthly stats, weekly payout) - Diamond only
     console.log(`\n[weekly-distribute] === MVM REWARDS (Monthly ranking) ===`);
-    const monthKey = monthKeyUTC(new Date(weekKey));
+    const monthKey = monthKeyUTC(new Date(statsWeekKey!));
     const mvmStats = await db.monthlyUserStat.findMany({
       where: {
         monthKey,
@@ -409,7 +448,7 @@ export async function POST(req: NextRequest) {
     // DEBUG: Query raw stats WITHOUT eligibility filter to diagnose issues
     const rawCommentStats = await db.weeklyUserStat.findMany({
       where: {
-        weekKey,
+        weekKey: statsWeekKey!,
         diamondComments: { gt: 0 },
       },
       include: {
@@ -432,7 +471,7 @@ export async function POST(req: NextRequest) {
 
     const commentStats = await db.weeklyUserStat.findMany({
       where: {
-        weekKey,
+        weekKey: statsWeekKey!,
         diamondComments: { gt: 0 },
         user: eligibleDiamondUserWhere(now),
       },
@@ -645,9 +684,9 @@ export async function POST(req: NextRequest) {
       for (const [userId, data] of userRewards) {
         const paidAtomic9 = data.amount * DECIMAL_CONVERSION;
         await tx.weeklyUserStat.upsert({
-          where: { weekKey_userId: { weekKey, userId } },
+          where: { weekKey_userId: { weekKey: statsWeekKey!, userId } },
           create: {
-            weekKey,
+            weekKey: statsWeekKey!,
             userId,
             paidAtomic: paidAtomic9,
           },
@@ -665,6 +704,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       weekKey,
+      statsWeekKey,
       weekIndex,
       emission: formatXess(totalEmission),
       pools: {

@@ -590,6 +590,7 @@ enum AdminActionKey {
   FLUSH_CLOUDFLARE_CACHE
   RECOMPUTE_ANALYTICS
   BUILD_CLAIM_EPOCH
+  BUILD_CLAIM_EPOCH_V2
 }
 
 enum ClaimStatus {
@@ -656,7 +657,7 @@ enum WinnerStatus {
 
 model ClaimEpoch {
   epoch        Int         @id
-  weekKey      String      @unique // "2026-01-18" = Sunday midnight PT
+  weekKey      String      // "2026-01-18" = Sunday midnight PT
   rootHex      String      @db.VarChar(64) // 32 bytes hex, lowercase
   totalAtomic  BigInt
   leafCount    Int
@@ -668,6 +669,8 @@ model ClaimEpoch {
   buildHash    String?     // SHA256 of inputs for idempotency
 
   leaves       ClaimLeaf[]
+
+  @@unique([weekKey, version])
 }
 
 model ClaimLeaf {
@@ -688,7 +691,6 @@ model ClaimLeaf {
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([epoch, wallet])
-  @@unique([weekKey, wallet])
   @@unique([epoch, userKeyHex])
   @@index([weekKey, userId])
   @@index([wallet])

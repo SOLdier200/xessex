@@ -8,7 +8,7 @@
  * IMPORTANT: Run `anchor build` to regenerate the IDL with claim_v2 instruction.
  */
 
-import { Connection, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import * as anchor from "@coral-xyz/anchor";
 import BN from "bn.js";
@@ -27,6 +27,17 @@ export const RPC_URL =
 import idl from "@/solana/idl/xess_claim.json";
 
 // ---- Helpers ----
+
+/**
+ * Detect Phantom Android in-app browser.
+ * Phantom mobile confirm UI breaks on large txs - we split into 2 smaller txs.
+ */
+function isPhantomAndroid(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return ua.includes("android") && ua.includes("phantom");
+}
+
 function hexToBytes32(hex: string): number[] {
   const h = hex.startsWith("0x") ? hex.slice(2) : hex;
   if (!/^[0-9a-fA-F]{64}$/.test(h)) throw new Error("Expected 32-byte hex");
@@ -152,7 +163,9 @@ export async function claimXessV2(opts: {
   // user ATA = ATA(owner=claimer wallet, mint=XESS_MINT)
   const userAta = getAssociatedTokenAddressSync(XESS_MINT, wallet.publicKey, false);
 
-  // 4) Create user ATA if missing (so claim works 1-click)
+  // 4) Create user ATA if missing
+  // Desktop: keep 1-click by pre-including ATA ix
+  // Phantom Android: do 2 txs (ATA first, then claim) to avoid confirm-button cutoff bug
   const ixs: TransactionInstruction[] = [];
   const userAtaInfo = await connection.getAccountInfo(userAta, commitment);
   if (!userAtaInfo) {
@@ -166,9 +179,10 @@ export async function claimXessV2(opts: {
     );
   }
 
-  // 5) Send claim_v2
+  // 5) Build claim_v2 call
   // NOTE: Anchor exposes claim_v2 as claimV2 (camelCase)
-  const sig = await program.methods
+  // NOTE: After Anchor program update, systemProgram is removed from accounts
+  const claimCall = program.methods
     .claimV2(epochBn, amountBn, index, userKeyBytes32, saltBytes32, proofVec)
     .accounts({
       config: configPda,
@@ -179,10 +193,21 @@ export async function claimXessV2(opts: {
       vaultAta,
       userAta,
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-      systemProgram: SystemProgram.programId,
-    })
-    .preInstructions(ixs)
-    .rpc({ commitment });
+      systemProgram: SystemProgram.programId, // needed for receipt_v2 init
+    });
+
+  // 6) Send transaction(s)
+  let sig: string;
+  if (ixs.length > 0 && isPhantomAndroid()) {
+    // ✅ Phantom Android: send ATA in its own tx (small confirm modal)
+    const ataTx = new Transaction().add(...ixs);
+    await provider.sendAndConfirm(ataTx, [], { commitment });
+    // Then claim (ATA now exists)
+    sig = await claimCall.rpc({ commitment });
+  } else {
+    // ✅ Desktop/others: keep 1 tx by pre-including ATA ix when needed
+    sig = await claimCall.preInstructions(ixs).rpc({ commitment });
+  }
 
   return { signature: sig };
 }

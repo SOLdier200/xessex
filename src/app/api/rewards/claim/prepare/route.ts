@@ -95,9 +95,11 @@ export async function POST(req: Request) {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // Get the latest epoch with a root set on-chain
+  const desiredVersion = ctx.tier === "member" ? 2 : 1;
+
+  // Get the latest epoch with a root set on-chain (by version)
   const epochRow = await db.claimEpoch.findFirst({
-    where: { setOnChain: true },
+    where: { setOnChain: true, version: desiredVersion },
     orderBy: { epoch: "desc" },
   });
 
