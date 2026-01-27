@@ -151,8 +151,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, weekKey, results, message: "Drawing not found after refresh" });
     }
 
-    // Calculate match (1:1 up to cap)
-    const capRemaining = budget.creditsMatchCapMicro - budget.creditsMatchedMicro;
+    // Calculate match (1:1). If cap is 0, treat as "match all" (no cap).
+    const capRemaining =
+      budget.creditsMatchCapMicro === 0n
+        ? refreshed.userPoolCreditsMicro
+        : budget.creditsMatchCapMicro - budget.creditsMatchedMicro;
     const matchCredits =
       capRemaining > 0n
         ? refreshed.userPoolCreditsMicro <= capRemaining

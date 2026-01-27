@@ -6,18 +6,26 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-// Use DB_PATH env var if set, otherwise fallback to local path for dev
-const dbPath = process.env.DB_PATH || path.join(process.cwd(), "embeds.db");
-console.log("[db.ts] Using database path:", dbPath);
+export type DbSource = "embeds" | "xvidprem";
 
-let db: Database.Database | null = null;
+// Database paths - use env vars if set, otherwise local paths
+const dbPaths: Record<DbSource, string> = {
+  embeds: process.env.DB_PATH || path.join(process.cwd(), "embeds.db"),
+  xvidprem: process.env.XVIDPREM_DB_PATH || path.join(process.cwd(), "xvidprem.db"),
+};
 
-export function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(dbPath, { readonly: false });
-    db.pragma("journal_mode = WAL");
+console.log("[db.ts] Database paths:", dbPaths);
+
+// Connection cache for each database
+const dbConnections: Partial<Record<DbSource, Database.Database>> = {};
+
+export function getDb(source: DbSource = "embeds"): Database.Database {
+  if (!dbConnections[source]) {
+    const dbPath = dbPaths[source];
+    dbConnections[source] = new Database(dbPath, { readonly: false });
+    dbConnections[source]!.pragma("journal_mode = WAL");
   }
-  return db;
+  return dbConnections[source]!;
 }
 
 export type Video = {
@@ -41,9 +49,12 @@ export type VideoWithCuration = Video & {
 
 export type CurationStatus = "pending" | "approved" | "rejected" | "maybe";
 
+export type SortBy = "views" | "duration";
+export type SortDir = "desc" | "asc";
+
 // Keyset pagination cursor
 export type Cursor = {
-  views: number;
+  value: number; // The sort column value (views or duration)
   viewkey: string;
 } | null;
 
@@ -63,10 +74,21 @@ export function getVideos(options: {
   favoriteOnly?: boolean;
   cursor?: Cursor;
   limit?: number;
+  sortBy?: SortBy;
+  sortDir?: SortDir;
+  source?: DbSource;
 }): VideoListResult {
-  const db = getDb();
+  const db = getDb(options.source);
   const limit = options.limit || 50;
+  const sortBy = options.sortBy || "views";
+  const sortDir = options.sortDir || "desc";
   const params: (string | number)[] = [];
+
+  // Build ORDER BY and keyset condition based on sort
+  const sortCol = sortBy === "duration" ? "v.duration" : "v.views";
+  const sortOp = sortDir === "desc" ? "<" : ">";
+  const sortOrder = sortDir === "desc" ? "DESC" : "ASC";
+  const viewkeyOrder = sortDir === "desc" ? "ASC" : "DESC"; // Tie-breaker opposite direction
 
   let sql: string;
 
@@ -112,11 +134,12 @@ export function getVideos(options: {
 
     // Keyset pagination
     if (options.cursor) {
-      sql += ` AND (v.views < ? OR (v.views = ? AND v.viewkey > ?))`;
-      params.push(options.cursor.views, options.cursor.views, options.cursor.viewkey);
+      const viewkeyOp = sortDir === "desc" ? ">" : "<";
+      sql += ` AND (${sortCol} ${sortOp} ? OR (${sortCol} = ? AND v.viewkey ${viewkeyOp} ?))`;
+      params.push(options.cursor.value, options.cursor.value, options.cursor.viewkey);
     }
 
-    sql += ` ORDER BY v.views DESC, v.viewkey ASC LIMIT ?`;
+    sql += ` ORDER BY ${sortCol} ${sortOrder}, v.viewkey ${viewkeyOrder} LIMIT ?`;
     params.push(limit + 1); // Fetch one extra to check hasMore
   } else {
     // No search - direct query
@@ -151,11 +174,12 @@ export function getVideos(options: {
 
     // Keyset pagination
     if (options.cursor) {
-      sql += ` AND (v.views < ? OR (v.views = ? AND v.viewkey > ?))`;
-      params.push(options.cursor.views, options.cursor.views, options.cursor.viewkey);
+      const viewkeyOp = sortDir === "desc" ? ">" : "<";
+      sql += ` AND (${sortCol} ${sortOp} ? OR (${sortCol} = ? AND v.viewkey ${viewkeyOp} ?))`;
+      params.push(options.cursor.value, options.cursor.value, options.cursor.viewkey);
     }
 
-    sql += ` ORDER BY v.views DESC, v.viewkey ASC LIMIT ?`;
+    sql += ` ORDER BY ${sortCol} ${sortOrder}, v.viewkey ${viewkeyOrder} LIMIT ?`;
     params.push(limit + 1);
   }
 
@@ -167,7 +191,8 @@ export function getVideos(options: {
   let nextCursor: Cursor = null;
   if (hasMore && videos.length > 0) {
     const last = videos[videos.length - 1];
-    nextCursor = { views: last.views || 0, viewkey: last.viewkey };
+    const cursorValue = sortBy === "duration" ? (last.duration || 0) : (last.views || 0);
+    nextCursor = { value: cursorValue, viewkey: last.viewkey };
   }
 
   return { videos, nextCursor, hasMore };
@@ -176,8 +201,8 @@ export function getVideos(options: {
 /**
  * Get a single video by viewkey
  */
-export function getVideoByViewkey(viewkey: string): VideoWithCuration | undefined {
-  const db = getDb();
+export function getVideoByViewkey(viewkey: string, source: DbSource = "embeds"): VideoWithCuration | undefined {
+  const db = getDb(source);
   return db
     .prepare(
       `SELECT v.id, v.viewkey, v.title, v.primary_thumb, v.duration, v.views,
@@ -195,9 +220,10 @@ export function getVideoByViewkey(viewkey: string): VideoWithCuration | undefine
  */
 export function updateCuration(
   viewkey: string,
-  data: { status?: CurationStatus; note?: string; favorite?: boolean }
+  data: { status?: CurationStatus; note?: string; favorite?: boolean },
+  source: DbSource = "embeds"
 ): void {
-  const db = getDb();
+  const db = getDb(source);
 
   // Check if curation record exists
   const existing = db.prepare("SELECT 1 FROM curation WHERE viewkey = ?").get(viewkey);
@@ -240,14 +266,14 @@ export function updateCuration(
 /**
  * Get stats
  */
-export function getStats(): {
+export function getStats(source: DbSource = "embeds"): {
   total: number;
   approved: number;
   rejected: number;
   pending: number;
   favorites: number;
 } {
-  const db = getDb();
+  const db = getDb(source);
   const total = (db.prepare("SELECT COUNT(*) as cnt FROM videos").get() as { cnt: number }).cnt;
   const approved = (
     db.prepare("SELECT COUNT(*) as cnt FROM curation WHERE status = 'approved'").get() as { cnt: number }
@@ -266,8 +292,8 @@ export function getStats(): {
 /**
  * Get unique categories from all videos
  */
-export function getCategories(): string[] {
-  const db = getDb();
+export function getCategories(source: DbSource = "embeds"): string[] {
+  const db = getDb(source);
   const rows = db
     .prepare("SELECT DISTINCT categories FROM videos WHERE categories IS NOT NULL")
     .all() as { categories: string }[];
@@ -305,8 +331,8 @@ export function getApprovedVideos(): Omit<VideoWithCuration, "embed_html">[] {
 /**
  * Delete all rejected videos from database
  */
-export function deleteRejectedVideos(): number {
-  const db = getDb();
+export function deleteRejectedVideos(source: DbSource = "embeds"): number {
+  const db = getDb(source);
 
   // Get viewkeys of rejected videos
   const rejected = db

@@ -1,25 +1,20 @@
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 export async function GET() {
-  const body = `User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /admin/
-Disallow: /signup
-Disallow: /login
-Disallow: /age
-
-# Yandex-specific directives
-Host: https://xessex.me
-Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content /
-
-Sitemap: https://xessex.me/sitemap.xml
-`;
+  const body = [
+    "User-agent: *",
+    "Allow: /",
+    "Host: xessex.me",
+    "Sitemap: https://xessex.me/sitemap.xml",
+    "",
+  ].join("\n");
 
   return new NextResponse(body, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "public, max-age=300",
     },
   });
 }

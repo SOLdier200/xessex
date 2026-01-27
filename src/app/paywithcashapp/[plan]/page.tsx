@@ -318,7 +318,7 @@ export default function CashAppPaymentPage() {
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2">Wallet Required for Diamond</h2>
                 <p className="text-white/70 mb-6">
-                  Diamond membership requires a connected wallet to receive XESS rewards and access exclusive features.
+                  Diamond membership requires a Solana wallet which will be your account.
                 </p>
                 <Link
                   href="/login/diamond"

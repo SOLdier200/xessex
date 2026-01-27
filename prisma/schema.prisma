@@ -45,6 +45,7 @@ model User {
   rewardClaims         RewardClaim[]
   rewardEpochLeaves    RewardEpochLeaf[]
   rewardEvents         RewardEvent[]
+  referralEarningsFrom RewardEvent[]         @relation("ReferralSource")
   claimLeaves          ClaimLeaf[]
   manualPayments       ManualPayment[]
   sessions             Session[]
@@ -395,6 +396,7 @@ model SiteStat {
 model RewardEvent {
   id          String       @id @default(cuid())
   userId      String
+  referralFromUserId String?
   type        RewardType
   amount      BigInt
   status      RewardStatus @default(PENDING)
@@ -408,10 +410,12 @@ model RewardEvent {
   merkleIndex Int?
   merkleProof String?
   user        User         @relation(fields: [userId], references: [id])
+  referralFromUser User?   @relation("ReferralSource", fields: [referralFromUserId], references: [id], onDelete: SetNull)
 
   @@unique([refType, refId])
   @@index([weekKey, status])
   @@index([userId, status])
+  @@index([referralFromUserId])
   @@index([type, status])
 }
 
@@ -487,12 +491,16 @@ model WeeklyVoterStat {
 }
 
 model RewardBatch {
-  id          String   @id @default(cuid())
-  weekKey     String   @unique
-  merkleRoot  String
-  totalAmount BigInt
-  totalUsers  Int
-  createdAt   DateTime @default(now())
+  id          String      @id @default(cuid())
+  weekKey     String      @unique
+  status      BatchStatus @default(RUNNING)
+  runId       String?     // For observability/tracing
+  merkleRoot  String?     // Null until complete
+  totalAmount BigInt?     // Null until complete
+  totalUsers  Int?        // Null until complete
+  startedAt   DateTime    @default(now())
+  finishedAt  DateTime?
+  createdAt   DateTime    @default(now())
 }
 
 model RewardEpoch {
@@ -580,6 +588,12 @@ enum RewardType {
   REF_L3
   WEEKLY_VOTER
   ALLTIME_LIKES
+}
+
+enum BatchStatus {
+  RUNNING
+  DONE
+  FAILED
 }
 
 enum AdminActionKey {

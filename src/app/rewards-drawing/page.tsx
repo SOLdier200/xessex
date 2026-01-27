@@ -27,6 +27,15 @@ type DrawingStatusResp = {
     prizeCreditsMicro: string;
     expiresAt: string; // ISO
   }>;
+  recentWinners?: Array<{
+    weekKey: string;
+    winners: Array<{
+      place: number;
+      prizeCreditsMicro: string;
+      status: string;
+      label: string | null;
+    }>;
+  }>;
 };
 
 function fmtInt(n: string) {
@@ -342,6 +351,38 @@ export default function RewardsDrawingPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* Recent winners */}
+          <div className="rounded-2xl border border-white/10 bg-black/40 p-6 mb-6">
+            <div className="text-white font-bold text-xl">Recent Winners</div>
+            <div className="text-white/60 text-sm mt-1">
+              Winners from the latest weeks (Special Credits drawing)
+            </div>
+
+            {data.recentWinners && data.recentWinners.length > 0 ? (
+              <div className="mt-4 space-y-4">
+                {data.recentWinners.map((wk) => (
+                  <div key={wk.weekKey} className="rounded-xl border border-white/10 bg-black/30 p-4">
+                    <div className="text-white/70 text-sm mb-2">Week Ending: {wk.weekKey}</div>
+                    <div className="space-y-2">
+                      {wk.winners.map((w) => (
+                        <div key={`${wk.weekKey}-${w.place}`} className="flex items-center justify-between">
+                          <div className="text-white/80 text-sm">
+                            {placeLabel(w.place)} — {w.label || "Unknown"}
+                          </div>
+                          <div className="text-emerald-400 text-sm font-semibold">
+                            {microToCreditsStr(w.prizeCreditsMicro)} Credits
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 text-white/60">No winners posted yet.</div>
             )}
           </div>
 

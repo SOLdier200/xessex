@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -37,13 +38,79 @@ interface VideoSearchProps {
   showcaseSlugs?: string[];
 }
 
+// Session storage key for scroll position
+const SCROLL_KEY = "xessex_videos_scroll";
+
 export default function VideoSearch({ videos, canViewPremium = true, showcaseSlugs = [] }: VideoSearchProps) {
   const VIDEOS_PER_PAGE = 50;
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
-  const [duration, setDuration] = useState("any");
-  const [sort, setSort] = useState("rank");
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read initial state from URL params
+  const [search, setSearch] = useState(searchParams.get("q") || "");
+  const [category, setCategory] = useState(searchParams.get("cat") || "all");
+  const [duration, setDuration] = useState(searchParams.get("dur") || "any");
+  const [sort, setSort] = useState(searchParams.get("sort") || "rank");
+  const [page, setPage] = useState(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    return p >= 1 ? p : 1;
+  });
+
+  // Sync state to URL (without adding to history for filter changes, with history for page changes)
+  const updateUrl = useCallback((newParams: Record<string, string | number>, replace = false) => {
+    const params = new URLSearchParams();
+
+    const finalSearch = "q" in newParams ? String(newParams.q) : search;
+    const finalCategory = "cat" in newParams ? String(newParams.cat) : category;
+    const finalDuration = "dur" in newParams ? String(newParams.dur) : duration;
+    const finalSort = "sort" in newParams ? String(newParams.sort) : sort;
+    const finalPage = "page" in newParams ? Number(newParams.page) : page;
+
+    if (finalSearch) params.set("q", finalSearch);
+    if (finalCategory !== "all") params.set("cat", finalCategory);
+    if (finalDuration !== "any") params.set("dur", finalDuration);
+    if (finalSort !== "rank") params.set("sort", finalSort);
+    if (finalPage > 1) params.set("page", String(finalPage));
+
+    const queryString = params.toString();
+    const newUrl = queryString ? `/videos?${queryString}` : "/videos";
+
+    if (replace) {
+      router.replace(newUrl, { scroll: false });
+    } else {
+      router.push(newUrl, { scroll: false });
+    }
+  }, [router, search, category, duration, sort, page]);
+
+  // Save scroll position before navigating away
+  useEffect(() => {
+    const saveScroll = () => {
+      sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+    };
+
+    // Save on any link click within the video grid
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('a[href^="/videos/"]')) {
+        saveScroll();
+      }
+    };
+
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
+
+  // Restore scroll position on mount (back navigation)
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+    if (savedScroll) {
+      // Small delay to ensure content is rendered
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScroll, 10));
+        sessionStorage.removeItem(SCROLL_KEY);
+      }, 100);
+    }
+  }, []);
 
   const filteredVideos = useMemo(() => {
     let result = [...videos];
@@ -110,10 +177,59 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     return result;
   }, [videos, search, category, duration, sort, canViewPremium, showcaseSlugs]);
 
-  // Reset to page 1 when filters change
+  // Ref to track if we're syncing from URL (to prevent reverse sync)
+  const isSyncingFromUrl = useRef(false);
+
+  // Sync state FROM URL when user navigates back/forward
   useEffect(() => {
-    setPage(1);
+    const urlSearch = searchParams.get("q") || "";
+    const urlCategory = searchParams.get("cat") || "all";
+    const urlDuration = searchParams.get("dur") || "any";
+    const urlSort = searchParams.get("sort") || "rank";
+    const urlPage = parseInt(searchParams.get("page") || "1", 10);
+
+    // Check if anything changed
+    const hasChanges =
+      urlSearch !== search ||
+      urlCategory !== category ||
+      urlDuration !== duration ||
+      urlSort !== sort ||
+      (urlPage !== page && urlPage >= 1);
+
+    if (hasChanges) {
+      isSyncingFromUrl.current = true;
+      if (urlSearch !== search) setSearch(urlSearch);
+      if (urlCategory !== category) setCategory(urlCategory);
+      if (urlDuration !== duration) setDuration(urlDuration);
+      if (urlSort !== sort) setSort(urlSort);
+      if (urlPage !== page && urlPage >= 1) setPage(urlPage);
+      // Reset flag after state updates are processed
+      setTimeout(() => { isSyncingFromUrl.current = false; }, 0);
+    }
+  }, [searchParams]);
+  // Note: state vars intentionally omitted from deps - we're syncing FROM URL TO state
+
+  // Track previous values to detect user-initiated filter changes
+  const [prevFilters, setPrevFilters] = useState({ search, category, duration, sort });
+
+  // Sync filter changes TO URL (when user changes filters, not from URL sync)
+  useEffect(() => {
+    // Skip if we're syncing from URL
+    if (isSyncingFromUrl.current) return;
+
+    const filtersChanged =
+      search !== prevFilters.search ||
+      category !== prevFilters.category ||
+      duration !== prevFilters.duration ||
+      sort !== prevFilters.sort;
+
+    if (filtersChanged) {
+      setPage(1);
+      updateUrl({ q: search, cat: category, dur: duration, sort, page: 1 }, true);
+      setPrevFilters({ search, category, duration, sort });
+    }
   }, [search, category, duration, sort]);
+  // Note: prevFilters and updateUrl intentionally omitted to avoid loops
 
   const totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
   const startIndex = (page - 1) * VIDEOS_PER_PAGE;
@@ -128,6 +244,8 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
   const goToPage = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
+      // Use push (not replace) so back button works for page navigation
+      updateUrl({ page: newPage }, false);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -249,7 +367,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                       {v.primary_thumb ? (
                         <img
                           src={v.primary_thumb}
-                          alt=""
+                          alt={`Premium video: ${v.title} - Unlock with membership`}
                           className="w-full h-full object-cover blur-lg scale-110"
                         />
                       ) : (
@@ -259,7 +377,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                       )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                         <div className="text-center">
-                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                           </svg>
                           <span className="text-xs text-yellow-300 font-semibold mt-1 block">PREMIUM</span>

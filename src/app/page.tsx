@@ -171,7 +171,7 @@ export default async function HomePage() {
                       {v.primary_thumb ? (
                         <img
                           src={v.primary_thumb}
-                          alt=""
+                          alt={`Premium video: ${v.title} - Unlock with membership`}
                           className="w-full h-full object-cover blur-lg scale-110"
                         />
                       ) : (
@@ -181,7 +181,7 @@ export default async function HomePage() {
                       )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                         <div className="text-center">
-                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                           </svg>
                           <span className="text-xs text-yellow-300 font-semibold mt-1 block">PREMIUM</span>
@@ -320,13 +320,13 @@ export default async function HomePage() {
                       {featured.primary_thumb && (
                         <img
                           src={featured.primary_thumb}
-                          alt=""
+                          alt={`Featured premium video: ${featured.title} - Unlock with membership`}
                           className="w-full h-full object-cover blur-lg scale-110"
                         />
                       )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                         <div className="text-center">
-                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                           </svg>
                           <span className="text-sm text-yellow-300 font-semibold mt-2 block">PREMIUM</span>
@@ -352,7 +352,7 @@ export default async function HomePage() {
                     {featured.primary_thumb && (
                       <img
                         src={featured.primary_thumb}
-                        alt={featured.title}
+                        alt={`Featured video: ${featured.title}`}
                         className="w-full h-full object-cover hover:scale-105 transition-transform"
                       />
                     )}
@@ -390,13 +390,13 @@ export default async function HomePage() {
                       {topRanked.primary_thumb && (
                         <img
                           src={topRanked.primary_thumb}
-                          alt=""
+                          alt={`Top ranked premium video: ${topRanked.title} - Unlock with membership`}
                           className="w-full h-full object-cover blur-lg scale-110"
                         />
                       )}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                         <div className="text-center">
-                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                           </svg>
                           <span className="text-sm text-yellow-300 font-semibold mt-2 block">PREMIUM</span>
@@ -422,7 +422,7 @@ export default async function HomePage() {
                     {topRanked.primary_thumb && (
                       <img
                         src={topRanked.primary_thumb}
-                        alt={topRanked.title}
+                        alt={`Top ranked video: ${topRanked.title}`}
                         className="w-full h-full object-cover hover:scale-105 transition-transform"
                       />
                     )}

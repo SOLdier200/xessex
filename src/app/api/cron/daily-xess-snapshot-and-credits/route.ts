@@ -51,10 +51,12 @@ export async function POST(req: NextRequest) {
 
     console.log(`[DAILY_SNAPSHOT] Running for dateKey=${dateKey}, weekKey=${weekKey}`);
 
-    // Find all users with linked solWallet
+    // Find all users with a wallet (use solWallet if set, else walletAddress)
     const usersWithWallets = await db.user.findMany({
-      where: { solWallet: { not: null } },
-      select: { id: true, solWallet: true },
+      where: {
+        OR: [{ solWallet: { not: null } }, { walletAddress: { not: null } }],
+      },
+      select: { id: true, solWallet: true, walletAddress: true },
     });
 
     console.log(`[DAILY_SNAPSHOT] Found ${usersWithWallets.length} users with wallets`);
@@ -75,9 +77,10 @@ export async function POST(req: NextRequest) {
     const walletToUser = new Map<string, string>();
     const wallets: string[] = [];
     for (const user of usersWithWallets) {
-      if (user.solWallet) {
-        walletToUser.set(user.solWallet, user.id);
-        wallets.push(user.solWallet);
+      const wallet = user.solWallet || user.walletAddress;
+      if (wallet) {
+        walletToUser.set(wallet, user.id);
+        wallets.push(wallet);
       }
     }
 
@@ -135,7 +138,7 @@ export async function POST(req: NextRequest) {
         // Check if already accrued for this date (idempotency)
         const refId = `${userId}:${dateKey}`;
         const existingLedger = await db.specialCreditLedger.findUnique({
-          where: { refType_refId: { refType: "daily", refId } },
+          where: { refType_refId: { refType: CreditReason.DAILY_ACCRUAL, refId } },
         });
 
         if (existingLedger) {

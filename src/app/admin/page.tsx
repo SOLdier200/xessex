@@ -60,7 +60,10 @@ type Video = {
   favorite: number;
 };
 
-type Cursor = { views: number; viewkey: string } | null;
+type Cursor = { value: number; viewkey: string } | null;
+type SortBy = "views" | "duration";
+type SortDir = "desc" | "asc";
+type DbSource = "embeds" | "xvidprem";
 
 type Stats = {
   total: number;
@@ -112,11 +115,16 @@ export default function AdminPage() {
     }
   }, [dismissToast]);
 
+  // Database source
+  const [dbSource, setDbSource] = useState<DbSource>("embeds");
+
   // Filters
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>("views");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // Cursor-based pagination
   const [cursorStack, setCursorStack] = useState<Cursor[]>([null]); // Stack of previous cursors for "back"
@@ -136,6 +144,7 @@ export default function AdminPage() {
   const fetchVideos = useCallback(async (cursor: Cursor = null, resetStack = false) => {
     setLoading(true);
     const params = new URLSearchParams();
+    params.set("source", dbSource);
     if (search) params.set("search", search);
     if (statusFilter === "all") {
       params.set("excludeApproved", "1"); // Exclude approved from main curation view
@@ -143,8 +152,10 @@ export default function AdminPage() {
       params.set("status", statusFilter);
     }
     if (favoriteOnly) params.set("favorite", "1");
+    params.set("sortBy", sortBy);
+    params.set("sortDir", sortDir);
     if (cursor) {
-      params.set("cursorViews", String(cursor.views));
+      params.set("cursorValue", String(cursor.value));
       params.set("cursorViewkey", cursor.viewkey);
     }
 
@@ -161,7 +172,7 @@ export default function AdminPage() {
     }
 
     setLoading(false);
-  }, [search, statusFilter, favoriteOnly]);
+  }, [dbSource, search, statusFilter, favoriteOnly, sortBy, sortDir]);
 
   // Initial load and when filters change
   useEffect(() => {
@@ -193,7 +204,7 @@ export default function AdminPage() {
     await fetch(`/api/admin/videos/${viewkey}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
+      body: JSON.stringify({ ...patch, source: dbSource }),
     });
 
     // Refresh the list
@@ -202,7 +213,7 @@ export default function AdminPage() {
 
     // Update modal if open
     if (selectedVideo?.viewkey === viewkey) {
-      const res = await fetch(`/api/admin/videos/${viewkey}`);
+      const res = await fetch(`/api/admin/videos/${viewkey}?source=${dbSource}`);
       const updated = await res.json();
       setSelectedVideo(updated);
     }
@@ -213,7 +224,7 @@ export default function AdminPage() {
       return;
     }
     setDeleting(true);
-    const res = await fetch("/api/admin/videos/rejected", { method: "DELETE" });
+    const res = await fetch(`/api/admin/videos/rejected?source=${dbSource}`, { method: "DELETE" });
     const data = await res.json();
     setDeleting(false);
 
@@ -373,6 +384,30 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Database Switcher */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setDbSource("embeds")}
+          className={`px-6 py-3 rounded-xl font-bold text-lg transition ${
+            dbSource === "embeds"
+              ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/30"
+              : "bg-black/40 text-white/60 border border-white/20 hover:border-white/40"
+          }`}
+        >
+          PH Embeds DB
+        </button>
+        <button
+          onClick={() => setDbSource("xvidprem")}
+          className={`px-6 py-3 rounded-xl font-bold text-lg transition ${
+            dbSource === "xvidprem"
+              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30"
+              : "bg-black/40 text-white/60 border border-white/20 hover:border-white/40"
+          }`}
+        >
+          Xvidprem DB
+        </button>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-5 gap-3 mb-6">
         <div className="neon-border rounded-xl p-3 bg-black/30">
@@ -433,6 +468,25 @@ export default function AdminPage() {
               <option value="pending">Pending</option>
               <option value="rejected">Rejected</option>
               <option value="maybe">Maybe</option>
+            </select>
+          </div>
+
+          {/* Sort Options */}
+          <div>
+            <label className="block text-xs text-white/70 mb-1">Sort By</label>
+            <select
+              value={`${sortBy}-${sortDir}`}
+              onChange={(e) => {
+                const [field, dir] = e.target.value.split("-") as [SortBy, SortDir];
+                setSortBy(field);
+                setSortDir(dir);
+              }}
+              className="rounded-xl bg-black/40 neon-border px-3 py-2 text-white"
+            >
+              <option value="views-desc">Views (High to Low)</option>
+              <option value="views-asc">Views (Low to High)</option>
+              <option value="duration-desc">Duration (Longest)</option>
+              <option value="duration-asc">Duration (Shortest)</option>
             </select>
           </div>
 

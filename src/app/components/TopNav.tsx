@@ -8,7 +8,7 @@ import WalletStatus from "./WalletStatus";
 const tokenLinks = [
   { label: "Tokenomics", href: "/tokenomics" },
   { label: "Whitepaper", href: "/whitepaper" },
-  { label: "Jupiter Swap", href: "/jupiter-swap" },
+  { label: "Swap", href: "/swap" },
   { label: "Xess News", href: "/xess-news" },
 ];
 
@@ -49,7 +49,7 @@ export default function TopNav() {
   return (
     <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
       {/* Preload images so they're ready when needed - hidden but forces browser to load */}
-      <div className="hidden">
+      <div className="hidden" aria-hidden="true">
         <Image src="/logos/textlogo/siteset3/profile100.png" alt="" width={1} height={1} priority />
         <Image src="/logos/textlogo/siteset3/diamond100.png" alt="" width={1} height={1} priority />
         <Image src="/logos/textlogo/siteset3/member100.png" alt="" width={1} height={1} priority />

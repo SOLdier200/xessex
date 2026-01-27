@@ -49,8 +49,9 @@ export default function EmailLoginBox() {
         return;
       }
 
+      // Use the computed membership from access context, not the raw user.role
       const m: Membership =
-        u.role === "DIAMOND" ? "DIAMOND" : u.role === "MEMBER" ? "MEMBER" : "FREE";
+        j.membership === "DIAMOND" ? "DIAMOND" : j.membership === "MEMBER" ? "MEMBER" : "FREE";
 
       setMe({ id: u.id, email: u.email ?? null, role: m });
       setMembership(m);

@@ -19,6 +19,18 @@ import { chanceAnyPrizePct } from "@/lib/raffleOdds";
 
 export const runtime = "nodejs";
 
+function maskEmail(email: string | null): string | null {
+  if (!email) return null;
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  return `${local.slice(0, 2)}***@${domain}`;
+}
+
+function truncateWallet(address: string | null): string | null {
+  if (!address) return null;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
 export async function GET() {
   const ctx = await getAccessContext();
 
@@ -93,6 +105,43 @@ export async function GET() {
       })
     : [];
 
+  // Recent winners (last 6 weeks, credits only)
+  const recentWinners = await db.raffleWinner.findMany({
+    where: {
+      raffle: { type: "CREDITS" },
+    },
+    include: {
+      raffle: { select: { weekKey: true } },
+      user: { select: { id: true, email: true, solWallet: true, walletAddress: true } },
+    },
+    orderBy: [{ raffle: { weekKey: "desc" } }, { place: "asc" }],
+    take: 18, // 6 weeks * 3 places
+  });
+
+  const winnersByWeek = new Map<string, Array<{
+    place: number;
+    prizeCreditsMicro: string;
+    status: string;
+    label: string | null;
+  }>>();
+
+  for (const w of recentWinners) {
+    const week = w.raffle.weekKey;
+    const label =
+      maskEmail(w.user.email) ||
+      truncateWallet(w.user.solWallet || w.user.walletAddress) ||
+      `${w.user.id.slice(0, 8)}...`;
+
+    const arr = winnersByWeek.get(week) || [];
+    arr.push({
+      place: w.place,
+      prizeCreditsMicro: w.prizeCreditsMicro.toString(),
+      status: w.status,
+      label,
+    });
+    winnersByWeek.set(week, arr);
+  }
+
   return NextResponse.json({
     ok: true,
     weekKey,
@@ -105,6 +154,10 @@ export async function GET() {
       place: w.place,
       prizeCreditsMicro: w.prizeCreditsMicro.toString(),
       expiresAt: w.expiresAt.toISOString(),
+    })),
+    recentWinners: Array.from(winnersByWeek.entries()).map(([week, winners]) => ({
+      weekKey: week,
+      winners,
     })),
     rules: {
       creditsPurchasable: false,

@@ -19,7 +19,7 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
 
         <div className="rounded-2xl p-4 md:p-8 bg-black/60 relative overflow-hidden">
           {/* See-through logo behind the box content */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0" aria-hidden="true">
             <img
               src="/logos/xessexcoinlogo2.png"
               alt=""

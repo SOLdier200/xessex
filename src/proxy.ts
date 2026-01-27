@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
  */
 
 const BOT_RE =
-  /\b(googlebot|yandex(bot|images|video|news)?|bingbot|duckduckbot|baiduspider|slurp|facebookexternalhit|twitterbot|linkedinbot|applebot)\b/i;
+  /\b(googlebot|yandex(?:[a-z0-9_-]*bot|images|video|news|blogs|accessibility|mobile|market|media|metrika|direct|adnet|favicons)?|bingbot|duckduckbot|baiduspider|slurp|facebookexternalhit|twitterbot|linkedinbot|applebot)\b/i;
 
 function isIndexerBot(req: NextRequest) {
   const ua = req.headers.get("user-agent") || "";
@@ -29,6 +29,11 @@ export default function proxy(req: NextRequest) {
 
   // Never gate static assets
   if (pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+    return NextResponse.next();
+  }
+
+  // Never gate API routes
+  if (pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 

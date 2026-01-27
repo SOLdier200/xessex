@@ -25,12 +25,12 @@ const tokenLinks = [
     hoverGradient: "hover:from-blue-500/30 hover:to-cyan-500/30",
   },
   {
-    label: "Jupiter Swap",
-    href: "/jupiter-swap",
-    description: "Swap tokens on Jupiter",
-    gradient: "from-orange-500/20 to-amber-500/20",
-    border: "border-orange-400/40",
-    hoverGradient: "hover:from-orange-500/30 hover:to-amber-500/30",
+    label: "Swap",
+    href: "/swap",
+    description: "Swap XESS on Orca, Raydium, Jupiter",
+    gradient: "from-cyan-500/20 to-purple-500/20",
+    border: "border-cyan-400/40",
+    hoverGradient: "hover:from-cyan-500/30 hover:to-purple-500/30",
   },
   {
     label: "Xess News",
@@ -39,6 +39,14 @@ const tokenLinks = [
     gradient: "from-pink-500/20 to-rose-500/20",
     border: "border-pink-400/40",
     hoverGradient: "hover:from-pink-500/30 hover:to-rose-500/30",
+  },
+  {
+    label: "Drawing",
+    href: "/rewards-drawing",
+    description: "Weekly XESS rewards drawing",
+    gradient: "from-yellow-500/20 to-amber-500/20",
+    border: "border-yellow-400/40",
+    hoverGradient: "hover:from-yellow-500/30 hover:to-amber-500/30",
   },
 ];
 

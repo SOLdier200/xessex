@@ -21,7 +21,7 @@ type Video = {
   favorite: number;
 };
 
-type Cursor = { views: number; viewkey: string } | null;
+type Cursor = { value: number; viewkey: string } | null;
 
 type ApiResponse = {
   videos: Video[];
@@ -53,7 +53,7 @@ export default function ReviewApprovedPage() {
     params.set("status", "approved"); // Always filter to approved only
     if (search) params.set("search", search);
     if (cursor) {
-      params.set("cursorViews", String(cursor.views));
+      params.set("cursorValue", String(cursor.value));
       params.set("cursorViewkey", cursor.viewkey);
     }
 

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { monthKeyUTC } from "@/lib/weekKey";
 import { getAdminConfig } from "@/lib/adminConfig";
-import { SubscriptionTier, SubscriptionStatus, Prisma } from "@prisma/client";
+import { SubscriptionTier, SubscriptionStatus, Prisma, BatchStatus } from "@prisma/client";
+
+// Stale batch threshold (30 minutes) - RUNNING batches older than this can be force-reset
+const STALE_BATCH_MS = 30 * 60 * 1000;
 
 // Verify cron secret
 const CRON_SECRET = process.env.CRON_SECRET || "";
@@ -49,6 +52,7 @@ interface UserReward {
   walletAddress: string | null;  // null for voters without wallet - they can claim when they link one
   amount: bigint;
   type: "WEEKLY_LIKES" | "WEEKLY_MVM" | "WEEKLY_COMMENTS" | "WEEKLY_VOTER" | "ALLTIME_LIKES" | "REF_L1" | "REF_L2" | "REF_L3";
+  referralFromUserId?: string | null; // for referral rewards, the earning user
 }
 
 /**
@@ -187,50 +191,142 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Check if already processed
-  const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey } });
-  if (existingBatch) {
-    if (!force) {
-      return NextResponse.json(
-        { ok: false, error: "ALREADY_PROCESSED", weekKey },
-        { status: 409 }
-      );
-    }
+  const now = new Date();
+  const runId = `${weekKey}-${now.getTime()}`;
 
-    // Force rerun: refuse if any epoch for this week is already on-chain
-    const onChainEpoch = await db.claimEpoch.findFirst({
-      where: { weekKey, setOnChain: true },
-      select: { epoch: true, version: true },
-    });
-    if (onChainEpoch) {
-      return NextResponse.json(
-        {
+  // Check for existing batch and handle idempotency
+  const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey } });
+
+  if (existingBatch) {
+    // Already completed - return success (idempotent)
+    if (existingBatch.status === BatchStatus.DONE) {
+      if (!force) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: "already_processed",
+          weekKey,
+          batchId: existingBatch.id,
+          totalUsers: existingBatch.totalUsers,
+          totalAmount: existingBatch.totalAmount?.toString(),
+        });
+      }
+
+      // Force rerun: refuse if any epoch for this week is already on-chain
+      const onChainEpoch = await db.claimEpoch.findFirst({
+        where: { weekKey, setOnChain: true },
+        select: { epoch: true, version: true },
+      });
+      if (onChainEpoch) {
+        return NextResponse.json({
           ok: false,
           error: "EPOCH_ONCHAIN",
           message: `Epoch ${onChainEpoch.epoch} (v${onChainEpoch.version}) is already on-chain. Refusing to rerun.`,
           weekKey,
-        },
-        { status: 409 }
-      );
-    }
+        }, { status: 409 });
+      }
 
-    // Clear derived data for this week so the rerun is clean
-    await db.$transaction(async (tx) => {
-      await tx.claimLeaf.deleteMany({ where: { weekKey } });
-      await tx.claimEpoch.deleteMany({ where: { weekKey } });
-      await tx.rewardEvent.deleteMany({ where: { weekKey } });
-      await tx.rewardBatch.deleteMany({ where: { weekKey } });
-      // Reset paidAtomic for the stats source week
-      if (statsWeekKey) {
-        await tx.weeklyUserStat.updateMany({
-          where: { weekKey: statsWeekKey },
-          data: { paidAtomic: 0n },
+      // Clear derived data for force rerun
+      await db.$transaction(async (tx) => {
+        await tx.claimLeaf.deleteMany({ where: { weekKey } });
+        await tx.claimEpoch.deleteMany({ where: { weekKey } });
+        await tx.rewardEvent.deleteMany({ where: { weekKey } });
+        await tx.rewardBatch.delete({ where: { weekKey } });
+        if (statsWeekKey) {
+          await tx.weeklyUserStat.updateMany({
+            where: { weekKey: statsWeekKey },
+            data: { paidAtomic: 0n },
+          });
+        }
+      });
+      // Continue to re-process below
+    }
+    // Currently running
+    else if (existingBatch.status === BatchStatus.RUNNING) {
+      const batchAge = now.getTime() - existingBatch.startedAt.getTime();
+
+      // If stale (older than threshold), allow force takeover
+      if (batchAge > STALE_BATCH_MS && force) {
+        console.log(`[weekly-distribute] Stale batch detected (${Math.round(batchAge / 1000)}s old), force resetting...`);
+        await db.$transaction(async (tx) => {
+          await tx.claimLeaf.deleteMany({ where: { weekKey } });
+          await tx.claimEpoch.deleteMany({ where: { weekKey } });
+          await tx.rewardEvent.deleteMany({ where: { weekKey } });
+          await tx.rewardBatch.delete({ where: { weekKey } });
+          if (statsWeekKey) {
+            await tx.weeklyUserStat.updateMany({
+              where: { weekKey: statsWeekKey },
+              data: { paidAtomic: 0n },
+            });
+          }
+        });
+        // Continue to re-process below
+      } else {
+        // Another run is in progress - return success (idempotent "in progress")
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: "already_running",
+          weekKey,
+          batchId: existingBatch.id,
+          startedAt: existingBatch.startedAt.toISOString(),
+          runId: existingBatch.runId,
         });
       }
-    });
+    }
+    // Failed batch - allow retry
+    else if (existingBatch.status === BatchStatus.FAILED) {
+      console.log(`[weekly-distribute] Previous batch failed, clearing and retrying...`);
+      await db.$transaction(async (tx) => {
+        await tx.claimLeaf.deleteMany({ where: { weekKey } });
+        await tx.claimEpoch.deleteMany({ where: { weekKey } });
+        await tx.rewardEvent.deleteMany({ where: { weekKey } });
+        await tx.rewardBatch.delete({ where: { weekKey } });
+        if (statsWeekKey) {
+          await tx.weeklyUserStat.updateMany({
+            where: { weekKey: statsWeekKey },
+            data: { paidAtomic: 0n },
+          });
+        }
+      });
+      // Continue to re-process below
+    }
   }
 
-  const now = new Date();
+  // Claim this week by creating the batch row with RUNNING status
+  let batch;
+  try {
+    batch = await db.rewardBatch.create({
+      data: {
+        weekKey,
+        status: BatchStatus.RUNNING,
+        runId,
+        startedAt: now,
+      },
+    });
+  } catch (e: any) {
+    // Unique constraint violation - another process claimed it
+    if (e?.code === "P2002") {
+      const existing = await db.rewardBatch.findUnique({ where: { weekKey } });
+      if (existing?.status === BatchStatus.DONE) {
+        return NextResponse.json({
+          ok: true,
+          skipped: true,
+          reason: "already_processed",
+          weekKey,
+          batchId: existing.id,
+        });
+      }
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: "already_running",
+        weekKey,
+        batchId: existing?.id,
+      });
+    }
+    throw e;
+  }
 
   try {
     // Load admin config (thresholds and pool slices)
@@ -586,39 +682,25 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] Scaling referrals to ${(Number(scale) / 10000).toFixed(2)}%`);
     }
 
-    // Aggregate referral rewards by referrer+type to avoid duplicate refId constraint violations
-    // When a referrer has multiple referred users who earn, we sum their referral rewards
-    const aggregatedRefRewards = new Map<string, { userId: string; walletAddress: string; amount: bigint; type: "REF_L1" | "REF_L2" | "REF_L3" }>();
-
+    // Create referral rewards per earner (keeps per-referral attribution)
+    let refCreated = 0;
     for (const r of referralOwed) {
       const scaled = (r.amount * scale) / 1_000_000n;
       if (scaled <= 0n) continue;
 
-      const key = `${r.userId}:${r.type}`;
-      const existing = aggregatedRefRewards.get(key);
-
-      if (existing) {
-        existing.amount += scaled;
-      } else {
-        aggregatedRefRewards.set(key, {
-          userId: r.userId,
-          walletAddress: r.walletAddress,
-          amount: scaled,
-          type: r.type,
-        });
-      }
+      rewards.push({
+        userId: r.userId,
+        walletAddress: r.walletAddress,
+        amount: scaled,
+        type: r.type,
+        referralFromUserId: r.earnerId,
+      });
+      refCreated++;
 
       const tierLabel = r.type;
       console.log(`  ${tierLabel}: ${r.userId.slice(0, 8)}... (from ${r.earnerId.slice(0, 8)}...) - ${formatXess(scaled)} XESS`);
     }
-
-    // Add aggregated referral rewards to the rewards array
-    let refCreated = 0;
-    for (const [, reward] of aggregatedRefRewards) {
-      rewards.push(reward);
-      refCreated++;
-    }
-    console.log(`[weekly-distribute] Created ${refCreated} referral rewards (aggregated by referrer)`);
+    console.log(`[weekly-distribute] Created ${refCreated} referral rewards (per earner)`);
 
     // Aggregate rewards by user for summary
     const userRewards = new Map<string, { amount: bigint; wallet: string | null; types: Set<string> }>();
@@ -645,38 +727,35 @@ export async function POST(req: NextRequest) {
     // Total amount for this week
     const totalAmount = Array.from(userRewards.values()).reduce((sum, r) => sum + r.amount, 0n);
 
-    // Create RewardBatch and RewardEvents in a transaction
+    // Prepare RewardEvent data for createMany
     // NOTE: Merkle tree is built separately by build-week cron using our Solana-compatible merkle library.
     // RewardEvents are marked PAID here so build-week can aggregate them into a ClaimEpoch.
-    const result = await db.$transaction(async (tx) => {
-      // Create batch (placeholder merkle root - actual root is in ClaimEpoch)
-      const batch = await tx.rewardBatch.create({
-        data: {
-          weekKey,
-          merkleRoot: "pending_build_week",
-          totalAmount,
-          totalUsers: userRewards.size,
-        },
+    const rewardEventData = rewards.map((reward) => {
+      const refType = reward.type === "WEEKLY_LIKES" ? "weekly_score" : `weekly_${reward.type.toLowerCase()}`;
+      const isReferral = reward.type.startsWith("REF_");
+      const refId = isReferral && reward.referralFromUserId
+        ? `${weekKey}:${reward.userId}:${reward.referralFromUserId}:${refType}`
+        : `${weekKey}:${reward.userId}:${refType}`;
+
+      return {
+        userId: reward.userId,
+        referralFromUserId: reward.referralFromUserId ?? null,
+        type: reward.type,
+        amount: reward.amount,
+        status: "PAID" as const,  // Mark as PAID so build-week picks them up
+        weekKey,
+        refType,
+        refId,
+      };
+    });
+
+    // Create RewardEvents and update batch in a transaction
+    await db.$transaction(async (tx) => {
+      // Create RewardEvents with skipDuplicates (idempotent - unique on refType+refId)
+      await tx.rewardEvent.createMany({
+        data: rewardEventData,
+        skipDuplicates: true,
       });
-
-      // Create individual RewardEvents with status PAID (claimedAt=null means unclaimed)
-      for (const reward of rewards) {
-        // Use distinct refType for score-based rewards
-        const refType = reward.type === "WEEKLY_LIKES" ? "weekly_score" : `weekly_${reward.type.toLowerCase()}`;
-        const refId = `${weekKey}:${reward.userId}:${refType}`;
-
-        await tx.rewardEvent.create({
-          data: {
-            userId: reward.userId,
-            type: reward.type,
-            amount: reward.amount,
-            status: "PAID",  // Mark as PAID so build-week picks them up
-            weekKey,
-            refType,
-            refId,
-          },
-        });
-      }
 
       // Update paidAtomic on WeeklyUserStat for each user
       // Convert 6-decimal RewardEvent amounts to 9-decimal on-chain amounts
@@ -696,10 +775,20 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return batch;
+      // Mark batch as DONE
+      await tx.rewardBatch.update({
+        where: { id: batch.id },
+        data: {
+          status: BatchStatus.DONE,
+          merkleRoot: "pending_build_week",
+          totalAmount,
+          totalUsers: userRewards.size,
+          finishedAt: new Date(),
+        },
+      });
     });
 
-    console.log(`[weekly-distribute] Created batch ${result.id} for ${userRewards.size} users`);
+    console.log(`[weekly-distribute] Completed batch ${batch.id} for ${userRewards.size} users`);
 
     return NextResponse.json({
       ok: true,
@@ -721,11 +810,20 @@ export async function POST(req: NextRequest) {
       totalUsers: userRewards.size,
       totalRewards: rewards.length,
       totalAmount: formatXess(totalAmount),
-      batchId: result.id,
+      batchId: batch.id,
       nextStep: "Run build-week cron to create merkle tree for on-chain claims",
     });
   } catch (error) {
     console.error("[WEEKLY_DISTRIBUTE] Error:", error);
+
+    // Mark batch as FAILED if it exists
+    if (batch) {
+      await db.rewardBatch.update({
+        where: { id: batch.id },
+        data: { status: BatchStatus.FAILED },
+      }).catch(() => {}); // Ignore errors in cleanup
+    }
+
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { ok: false, error: "INTERNAL_ERROR", message },

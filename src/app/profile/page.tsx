@@ -64,6 +64,25 @@ type ProfileData = {
   } | null;
 };
 
+type ReferralSummary = {
+  levels: {
+    L1: Array<{ id: string; label: string | null; wallet: string | null; createdAt: string; earned: string; earnedAtomic: string }>;
+    L2: Array<{ id: string; label: string | null; wallet: string | null; createdAt: string; earned: string; earnedAtomic: string }>;
+    L3: Array<{ id: string; label: string | null; wallet: string | null; createdAt: string; earned: string; earnedAtomic: string }>;
+  };
+  totals: {
+    L1: string;
+    L2: string;
+    L3: string;
+    total: string;
+  };
+  unattributed?: {
+    L1?: string;
+    L2?: string;
+    L3?: string;
+  };
+};
+
 type AnalyticsData = {
   totals: {
     totalVideos: number;
@@ -141,6 +160,8 @@ export default function ProfilePage() {
   const [refCodeLoading, setRefCodeLoading] = useState(false);
   const [refCodeError, setRefCodeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [referralSummary, setReferralSummary] = useState<ReferralSummary | null>(null);
+  const [referralLoading, setReferralLoading] = useState(false);
 
   // Cancel subscription state
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -255,6 +276,21 @@ export default function ProfilePage() {
         .finally(() => setAnalyticsLoading(false));
     }
   }, [activeTab, data?.membership, analyticsData, analyticsLoading]);
+
+  // Load referral summary for referrals tab
+  useEffect(() => {
+    const canView = activeTab === "referrals" && (data?.membership === "DIAMOND" || data?.membership === "MEMBER");
+    if (canView && !referralSummary && !referralLoading) {
+      setReferralLoading(true);
+      fetch("/api/referrals/summary", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.ok) setReferralSummary(json);
+        })
+        .catch(() => {})
+        .finally(() => setReferralLoading(false));
+    }
+  }, [activeTab, data?.membership, referralSummary, referralLoading]);
 
   // Load rewards totals for Members (for XESS display on profile)
   useEffect(() => {
@@ -1732,6 +1768,82 @@ export default function ProfilePage() {
                   <div className="text-white/60 text-center py-4">
                     No referral code available. Contact support if you believe this is an error.
                   </div>
+                )}
+              </div>
+
+              {/* Referral Earnings + Network */}
+              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-white">Referral Earnings</h2>
+                  {referralLoading && (
+                    <span className="text-xs text-white/50">Loading…</span>
+                  )}
+                </div>
+
+                {referralSummary ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                      <div className="bg-black/40 rounded-xl p-4 text-center">
+                        <div className="text-xs text-white/50">L1 Total</div>
+                        <div className="text-lg font-bold text-purple-400">{referralSummary.totals.L1} XESS</div>
+                      </div>
+                      <div className="bg-black/40 rounded-xl p-4 text-center">
+                        <div className="text-xs text-white/50">L2 Total</div>
+                        <div className="text-lg font-bold text-pink-400">{referralSummary.totals.L2} XESS</div>
+                      </div>
+                      <div className="bg-black/40 rounded-xl p-4 text-center">
+                        <div className="text-xs text-white/50">L3 Total</div>
+                        <div className="text-lg font-bold text-yellow-400">{referralSummary.totals.L3} XESS</div>
+                      </div>
+                      <div className="bg-black/40 rounded-xl p-4 text-center">
+                        <div className="text-xs text-white/50">All Levels</div>
+                        <div className="text-lg font-bold text-emerald-400">{referralSummary.totals.total} XESS</div>
+                      </div>
+                    </div>
+
+                    {(referralSummary.unattributed?.L1 !== "0" ||
+                      referralSummary.unattributed?.L2 !== "0" ||
+                      referralSummary.unattributed?.L3 !== "0") && (
+                      <div className="mb-4 p-3 rounded-xl bg-yellow-500/10 border border-yellow-400/30 text-xs text-yellow-300">
+                        Older referral rewards without per‑referral attribution exist (earned before tracking). They’re included in totals.
+                      </div>
+                    )}
+
+                    {([
+                      { key: "L1", label: "Level 1 (Direct)", color: "text-purple-300" },
+                      { key: "L2", label: "Level 2", color: "text-pink-300" },
+                      { key: "L3", label: "Level 3", color: "text-yellow-300" },
+                    ] as const).map((lvl) => {
+                      const list = referralSummary.levels[lvl.key];
+                      return (
+                        <div key={lvl.key} className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className={`text-sm font-semibold ${lvl.color}`}>{lvl.label}</div>
+                            <div className="text-xs text-white/50">{list.length} referrals</div>
+                          </div>
+                          {list.length === 0 ? (
+                            <div className="text-xs text-white/50">No referrals yet.</div>
+                          ) : (
+                            <div className="space-y-2">
+                              {list.map((r) => (
+                                <div key={r.id} className="bg-black/40 rounded-lg p-3 flex items-center justify-between">
+                                  <div className="min-w-0">
+                                    <div className="text-sm text-white truncate">{r.label || "Unknown user"}</div>
+                                    <div className="text-xs text-white/40">{formatDate(r.createdAt)}</div>
+                                  </div>
+                                  <div className="text-sm font-semibold text-emerald-400 whitespace-nowrap">
+                                    {r.earned} XESS
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                ) : (
+                  !referralLoading && <div className="text-white/50 text-sm">No referral data yet.</div>
                 )}
               </div>
 

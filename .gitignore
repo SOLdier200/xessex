@@ -44,6 +44,8 @@ ai-media/
 *.db-journal
 *.db-wal
 *.db-shm
+xvidprem.db
+xvidprem.csv
 
 # Data folder (except approved.json for production)
 /data/*

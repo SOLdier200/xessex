@@ -82,6 +82,44 @@ export default function XessNewsPage() {
             </div>
           </article>
 
+          {/* Rewards Drawing & Content DB */}
+          <article className="bg-gradient-to-br from-yellow-900/40 to-amber-900/30 border-2 border-yellow-400/50 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 text-xs font-bold bg-yellow-500/30 text-yellow-300 rounded-full uppercase tracking-wide">
+                  New Feature
+                </span>
+                <span className="text-sm text-yellow-400/70">January 2026</span>
+              </div>
+              <h2 className="text-2xl font-bold mb-3 text-white">Rewards Drawing Page Now Live!</h2>
+              <div className="space-y-3 text-white/80">
+                <p>
+                  We&apos;ve launched the <Link href="/rewards-drawing" className="text-yellow-300 font-semibold hover:underline">Rewards Drawing</Link> page
+                  — a new way to visualize and track weekly XESS token distributions! The drawing displays an animated
+                  wheel showing all reward pools: Likes, MVM, Comments, Referrals, and Voter rewards.
+                </p>
+                <p>
+                  <span className="text-yellow-300 font-semibold">How it works:</span> Each week, Diamond members
+                  are entered into the rewards pools based on their activity. The drawing wheel shows the distribution
+                  breakdown, and you can see exactly how much XESS is allocated to each category.
+                </p>
+                <p>
+                  <span className="text-yellow-300 font-semibold">New Content Database:</span> We&apos;re also expanding
+                  our content library! A new database has been added as we actively search the web to find and curate
+                  high-quality content for our members. More videos means more opportunities to earn XESS rewards.
+                </p>
+                <Link
+                  href="/rewards-drawing"
+                  className="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-xl bg-yellow-500/20 border border-yellow-400/50 text-yellow-300 font-semibold hover:bg-yellow-500/30 transition"
+                >
+                  View Rewards Drawing
+                  <span>→</span>
+                </Link>
+              </div>
+            </div>
+          </article>
+
           {/* Weekly Rewards - Now Live */}
           <article className="bg-gray-900/50 border border-pink-500/30 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-3">
