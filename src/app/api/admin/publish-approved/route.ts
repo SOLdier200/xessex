@@ -12,6 +12,7 @@ type ApprovedRow = {
   primary_thumb?: string | null;
   tags?: string | null; // semicolon-separated
   views?: number | null;
+  source?: "embeds" | "xvidprem"; // Database source from export
 };
 
 function toTagsArray(tags?: string | null): string[] {
@@ -20,6 +21,35 @@ function toTagsArray(tags?: string | null): string[] {
     .split(";")
     .map((t) => t.trim())
     .filter(Boolean);
+}
+
+/**
+ * Get embed platform from database source
+ * - embeds = PornHub
+ * - xvidprem = XVideos
+ */
+function getEmbedPlatform(row: ApprovedRow): "pornhub" | "xvideos" {
+  // If source is explicitly set, use it
+  if (row.source === "xvidprem") return "xvideos";
+  if (row.source === "embeds") return "pornhub";
+
+  // Fallback: detect from viewkey pattern
+  const viewkey = row.viewkey?.trim() || "";
+
+  // PornHub viewkeys start with "ph" or are hex-like
+  if (viewkey.startsWith("ph") || /^[0-9a-f]{13,}$/i.test(viewkey)) {
+    return "pornhub";
+  }
+
+  // XVideos viewkeys are typically alphanumeric
+  return "xvideos";
+}
+
+function getEmbedUrl(viewkey: string, source: "pornhub" | "xvideos"): string {
+  if (source === "xvideos") {
+    return `https://www.xvideos.com/embedframe/${viewkey}`;
+  }
+  return `https://www.pornhub.com/embed/${viewkey}`;
 }
 
 export async function POST() {
@@ -51,9 +81,11 @@ export async function POST() {
     }
 
     const title = (row.title || "").trim() || viewkey;
-    const embedUrl = `https://www.pornhub.com/embed/${viewkey}`;
+    const platform = getEmbedPlatform(row);
+    const embedUrl = getEmbedUrl(viewkey, platform);
     const tags = toTagsArray(row.tags);
-    const sourceViews = Number(row.views || 0) || 0; // PH views from source
+    const sourceViews = Number(row.views || 0) || 0;
+    const thumbnailUrl = row.primary_thumb || null;
 
     await db.video.upsert({
       where: { slug: viewkey },
@@ -62,7 +94,8 @@ export async function POST() {
         title,
         embedUrl,
         tags,
-        sourceViews, // PH views - not viewsCount (which tracks Xessex local views)
+        sourceViews,
+        thumbnailUrl,
         isShowcase: false,
       },
       update: {
@@ -70,6 +103,7 @@ export async function POST() {
         embedUrl,
         tags,
         sourceViews,
+        thumbnailUrl,
         // do NOT overwrite isShowcase on update
       },
     });

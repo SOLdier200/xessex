@@ -1850,9 +1850,47 @@ function SignupInner() {
   );
 }
 
+function TierFallback() {
+  return (
+    <section className="max-w-4xl mx-auto mt-10">
+      <h2 className="text-2xl font-bold text-white mb-6 text-center">Membership Options</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Member Tier Fallback */}
+        <div className="rounded-2xl p-6 bg-black/30 border border-sky-400/30">
+          <h3 className="text-xl font-semibold text-sky-400 mb-3">Member</h3>
+          <p className="text-white/70 mb-4">Full video access and HD streaming quality.</p>
+          <ul className="space-y-2 text-sm text-white/60">
+            <li>• Full access to all videos</li>
+            <li>• HD streaming quality</li>
+            <li>• Vote on comments</li>
+            <li>• No ads</li>
+          </ul>
+          <p className="mt-4 text-white/50 text-sm">Starting at $10 for 90 days</p>
+        </div>
+        {/* Diamond Tier Fallback */}
+        <div className="rounded-2xl p-6 bg-gradient-to-b from-yellow-500/10 to-purple-500/10 border border-yellow-400/50">
+          <h3 className="text-xl font-semibold text-yellow-400 mb-3">Diamond</h3>
+          <p className="text-white/70 mb-4">Premium features including commenting, ratings, and crypto rewards.</p>
+          <ul className="space-y-2 text-sm text-white/60">
+            <li>• Full access to all videos</li>
+            <li>• 4K streaming quality</li>
+            <li>• Post &amp; vote on comments</li>
+            <li>• Earn XESS tokens for engagement</li>
+            <li>• Diamond Ladder rankings</li>
+          </ul>
+          <p className="mt-4 text-white/50 text-sm">Starting at $9 for 30 days</p>
+        </div>
+      </div>
+      <div className="mt-8 text-center text-white/60">
+        <p>Payments supported via cryptocurrency (NOWPayments) and Cash App. Credit cards coming soon.</p>
+      </div>
+    </section>
+  );
+}
+
 export default function SignupClient() {
   return (
-    <Suspense fallback={<div className="text-white/50 text-center py-10">Loading membership options...</div>}>
+    <Suspense fallback={<TierFallback />}>
       <SignupInner />
     </Suspense>
   );

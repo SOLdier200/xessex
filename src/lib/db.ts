@@ -310,12 +310,16 @@ export function getCategories(source: DbSource = "embeds"): string[] {
   return Array.from(allCats).sort();
 }
 
+export type VideoWithSource = Omit<VideoWithCuration, "embed_html"> & {
+  source: DbSource;
+};
+
 /**
  * Export approved videos for production
  */
-export function getApprovedVideos(): Omit<VideoWithCuration, "embed_html">[] {
-  const db = getDb();
-  return db
+export function getApprovedVideos(source: DbSource = "embeds"): VideoWithSource[] {
+  const db = getDb(source);
+  const rows = db
     .prepare(
       `SELECT v.id, v.viewkey, v.title, v.primary_thumb, v.duration, v.views,
               v.tags, v.categories, v.performers,
@@ -326,6 +330,22 @@ export function getApprovedVideos(): Omit<VideoWithCuration, "embed_html">[] {
        ORDER BY c.favorite DESC, v.views DESC`
     )
     .all() as Omit<VideoWithCuration, "embed_html">[];
+
+  // Add source field to each video
+  return rows.map((row) => ({ ...row, source }));
+}
+
+/**
+ * Export approved videos from all sources
+ */
+export function getAllApprovedVideos(): VideoWithSource[] {
+  const embeds = getApprovedVideos("embeds");
+  const xvidprem = getApprovedVideos("xvidprem");
+  // Merge and sort by favorite then views
+  return [...embeds, ...xvidprem].sort((a, b) => {
+    if (a.favorite !== b.favorite) return b.favorite - a.favorite;
+    return (b.views || 0) - (a.views || 0);
+  });
 }
 
 /**

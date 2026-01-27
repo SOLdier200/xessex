@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { getApprovedVideos } from "@/lib/db";
+import { getAllApprovedVideos } from "@/lib/db";
 import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const videos = getApprovedVideos();
+  const videos = getAllApprovedVideos();
 
   const outDir = path.join(process.cwd(), "data");
   const outFile = path.join(outDir, "approved.json");
@@ -20,9 +20,15 @@ export async function POST() {
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(outFile, JSON.stringify(videos, null, 2), "utf8");
 
+  // Count by source
+  const embedsCount = videos.filter((v) => v.source === "embeds").length;
+  const xvidpremCount = videos.filter((v) => v.source === "xvidprem").length;
+
   return NextResponse.json({
     ok: true,
     exported: videos.length,
+    embeds: embedsCount,
+    xvidprem: xvidpremCount,
     file: "data/approved.json",
   });
 }
