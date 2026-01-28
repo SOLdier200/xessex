@@ -284,6 +284,7 @@ model CommentModVote {
   value         Int
   flipCount     Int      @default(0)
   lastChangedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
   comment       Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
   mod           User     @relation(fields: [modId], references: [id], onDelete: Cascade)
 
