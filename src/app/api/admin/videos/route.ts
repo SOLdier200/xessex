@@ -53,5 +53,6 @@ export async function GET(request: NextRequest) {
     hasMore: result.hasMore,
     stats,
     categories,
+    source, // Return which database source is being queried
   });
 }

@@ -293,16 +293,16 @@ export default function LeaderboardPage() {
               Want to climb the Diamond Ladder?
             </h3>
             <p className="mt-2 text-sm md:text-base text-white/70">
-              Register as a Diamond Member and start earning{" "}
+              Connect your wallet and start earning{" "}
               <span className="text-green-400 font-bold">XESS</span> for your
               contributions!
             </p>
             <Link
-              href="/signup"
+              href="/login/diamond"
               className="inline-block mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-extrabold hover:from-purple-400 hover:to-pink-400 transition shadow-lg"
               style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
             >
-              Become a Diamond Member
+              Connect Wallet
             </Link>
           </section>
         )}

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import { getVideoAccessForContext } from "@/lib/videoAccess";
 import TopNav from "../../components/TopNav";
 import VideoPlayback from "./VideoPlayback";
 
@@ -68,32 +69,46 @@ export async function generateMetadata(
 
 export default async function VideoPage({ params }: VideoPageProps) {
   const { slug } = await params;
-  const access = await getAccessContext();
+  const ctx = await getAccessContext();
 
   const video = await db.video.findFirst({
     where: { slug },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      embedUrl: true,
+      thumbnailUrl: true,
+      viewsCount: true,
+      sourceViews: true,
+      avgStars: true,
+      starsCount: true,
+      unlockCost: true,
+      kind: true,
+      createdAt: true,
+    },
   });
 
   if (!video) notFound();
 
-  const canViewPremium = access.canViewAllVideos;
+  // Get video access status
+  const access = await getVideoAccessForContext({
+    videoId: video.id,
+    userId: ctx.user?.id ?? null,
+    isAdminOrMod: ctx.isAdminOrMod,
+    creditBalance: ctx.creditBalance,
+  });
 
-  // Hard gate: premium videos 404 for free users (no title leak)
-  if (!video.isShowcase && !canViewPremium) {
-    notFound();
-  }
-
-  // Tier-aware engagement permissions
-  const canRateStars = !!access.user && access.canRateStars; // diamond-only
-  const canPostComment = !!access.user && access.canComment; // diamond-only
-  const canVoteComments = !!access.user && access.canVoteComments; // paid+
+  // All authenticated users can comment/rate/vote
+  const canRateStars = !!ctx.user && ctx.canRateStars;
+  const canPostComment = !!ctx.user && ctx.canComment;
+  const canVoteComments = !!ctx.user && ctx.canVoteComments;
 
   // Get related videos for sidebar - fetch more and randomize
   const allRelated = await db.video.findMany({
     where: {
       id: { not: video.id },
-      // Show showcase to everyone, premium only to paid
-      ...(canViewPremium ? {} : { isShowcase: true }),
+      isActive: true,
     },
     select: {
       id: true,
@@ -102,6 +117,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       thumbnailUrl: true,
       avgStars: true,
     },
+    take: 20,
   });
 
   // Shuffle and take 4 random videos
@@ -160,18 +176,22 @@ export default async function VideoPage({ params }: VideoPageProps) {
           slug: video.slug,
           title: video.title,
           embedUrl: video.embedUrl,
-          isShowcase: video.isShowcase,
           viewsCount: video.viewsCount,
           sourceViews: video.sourceViews,
           avgStars: video.avgStars,
           starsCount: video.starsCount,
+          unlockCost: video.unlockCost,
+          thumbnailUrl: video.thumbnailUrl,
         }}
         relatedVideos={relatedVideos}
         canRateStars={canRateStars}
         canPostComment={canPostComment}
         canVoteComments={canVoteComments}
-        canViewPremium={canViewPremium}
-        isAdminOrMod={access.isAdminOrMod}
+        isAuthed={ctx.isAuthed}
+        hasWallet={ctx.hasWallet}
+        creditBalance={ctx.creditBalance}
+        access={access}
+        isAdminOrMod={ctx.isAdminOrMod}
       />
     </main>
   );

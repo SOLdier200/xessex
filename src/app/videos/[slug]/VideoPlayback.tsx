@@ -13,11 +13,12 @@ type VideoPayload = {
   slug: string;
   title: string;
   embedUrl: string;
-  isShowcase: boolean;
   viewsCount: number;
   sourceViews: number;
   avgStars: number;
   starsCount: number;
+  unlockCost?: number;
+  thumbnailUrl?: string | null;
 };
 
 type RelatedVideo = {
@@ -28,13 +29,21 @@ type RelatedVideo = {
   avgStars: number;
 };
 
+type VideoAccess =
+  | { ok: true; unlocked: true; reason: "free" | "unlocked" | "staff"; unlockCost: number }
+  | { ok: true; unlocked: false; reason: "locked"; unlockCost: number; creditBalance: number }
+  | { ok: false; error: "not_found" | "not_authenticated" };
+
 type VideoPlaybackProps = {
   initialVideo: VideoPayload;
   relatedVideos: RelatedVideo[];
   canRateStars: boolean;
   canPostComment: boolean;
   canVoteComments: boolean;
-  canViewPremium: boolean;
+  isAuthed: boolean;
+  hasWallet: boolean;
+  creditBalance: number;
+  access: VideoAccess;
   isAdminOrMod?: boolean;
 };
 
@@ -85,7 +94,10 @@ export default function VideoPlayback({
   canRateStars,
   canPostComment,
   canVoteComments,
-  canViewPremium,
+  isAuthed,
+  hasWallet,
+  creditBalance,
+  access,
   isAdminOrMod,
 }: VideoPlaybackProps) {
   const [currentVideo, setCurrentVideo] = useState<VideoPayload>(initialVideo);
@@ -93,9 +105,38 @@ export default function VideoPlayback({
   const [isLoadingNext, setIsLoadingNext] = useState(false);
   const [isFirefoxMobile, setIsFirefoxMobile] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const currentVideoRef = useRef(currentVideo);
   const loadingRef = useRef(false);
+
+  // Local access state (refreshed per video for autoplay-next)
+  const [localUnlocked, setLocalUnlocked] = useState(access.ok && access.unlocked);
+  const [localUnlockCost, setLocalUnlockCost] = useState(access.ok ? access.unlockCost : (initialVideo.unlockCost ?? 0));
+  const [localCredits, setLocalCredits] = useState(creditBalance);
+  const [localIsAuthed, setLocalIsAuthed] = useState(isAuthed);
+  const [localHasWallet, setLocalHasWallet] = useState(hasWallet);
+
+  const locked = !localUnlocked && localUnlockCost > 0;
+  const canAfford = localCredits >= localUnlockCost;
+
+  // Refresh access state for a given video
+  const refreshAccess = useCallback(async (videoId: string) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}/access`, { method: "GET" });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) return;
+
+      setLocalUnlocked(!!json.unlocked);
+      setLocalUnlockCost(Number(json.unlockCost ?? 0));
+      setLocalCredits(Number(json.creditBalance ?? 0));
+      setLocalIsAuthed(!!json.isAuthed);
+      setLocalHasWallet(!!json.hasWallet);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     currentVideoRef.current = currentVideo;
@@ -128,14 +169,17 @@ export default function VideoPlayback({
       if (!res.ok) return;
       const data = await res.json();
       if (!data?.ok || !data.next) return;
-      setCurrentVideo(data.next as VideoPayload);
+      const next = data.next as VideoPayload;
+      setCurrentVideo(next);
+      setUnlockError(null);
+      refreshAccess(next.id);
     } catch {
       // ignore fetch errors
     } finally {
       loadingRef.current = false;
       setIsLoadingNext(false);
     }
-  }, []);
+  }, [refreshAccess]);
 
   useEffect(() => {
     if (countdown === null) return;
@@ -161,6 +205,127 @@ export default function VideoPlayback({
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+  async function handleUnlock() {
+    setUnlockError(null);
+    setIsUnlocking(true);
+    try {
+      const res = await fetch(`/api/videos/${currentVideo.id}/unlock`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        setUnlockError(json?.error ?? "unlock_failed");
+        return;
+      }
+      setLocalUnlocked(true);
+      setLocalCredits(json.creditBalance);
+    } catch {
+      setUnlockError("network_error");
+    } finally {
+      setIsUnlocking(false);
+    }
+  }
+
+  // Show locked overlay
+  if (locked) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-white">
+              {currentVideo.title}
+            </h1>
+            <div className="mt-1 text-xs text-white/50 font-mono break-all">
+              {currentVideo.slug}
+            </div>
+          </div>
+          <Link
+            href="/videos"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
+          >
+            Back to Videos
+          </Link>
+        </div>
+
+        <div className="neon-border rounded-2xl overflow-hidden bg-black/30">
+          <div className="relative w-full bg-black" style={{ paddingTop: "56.25%" }}>
+            {/* Blurred thumbnail background */}
+            {currentVideo.thumbnailUrl ? (
+              <img
+                src={currentVideo.thumbnailUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover blur-lg scale-110 opacity-60"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-900/30 to-purple-900/30" />
+            )}
+
+            {/* Lock overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 bg-black/50">
+              <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+
+              <div className="text-center max-w-md">
+                <h2 className="text-xl font-semibold text-white">Video Locked</h2>
+
+                {!localIsAuthed || !localHasWallet ? (
+                  <p className="mt-2 text-sm text-white/80">
+                    Connect your wallet to unlock videos with Special Credits.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-white/80">
+                    Cost: <span className="font-bold text-yellow-400">{localUnlockCost}</span> Credits
+                    <span className="mx-2">•</span>
+                    You have: <span className="font-bold">{localCredits}</span>
+                  </p>
+                )}
+
+                {unlockError && (
+                  <p className="mt-2 text-sm text-red-400">
+                    {unlockError === "insufficient_credits" && "Not enough credits"}
+                    {unlockError === "no_credit_account" && "No credit account found"}
+                    {unlockError === "already_unlocked" && "Already unlocked - refreshing..."}
+                    {unlockError === "not_found" && "Video not found"}
+                    {unlockError === "network_error" && "Network error - try again"}
+                    {!["insufficient_credits", "no_credit_account", "already_unlocked", "not_found", "network_error"].includes(unlockError) && unlockError}
+                  </p>
+                )}
+              </div>
+
+              {(!localIsAuthed || !localHasWallet) ? (
+                <Link
+                  href="/login/diamond"
+                  className="px-6 py-3 rounded-xl bg-pink-500 hover:bg-pink-600 text-white font-semibold transition"
+                >
+                  Connect Wallet
+                </Link>
+              ) : (
+                <button
+                  onClick={handleUnlock}
+                  disabled={isUnlocking || !canAfford}
+                  className="px-6 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUnlocking ? "Unlocking..." : canAfford ? `Unlock for ${localUnlockCost} Credits` : "Not enough Credits"}
+                </button>
+              )}
+
+              {localIsAuthed && localHasWallet && !canAfford && (
+                <p className="text-xs text-white/60">
+                  Hold 50,000+ XESS to start earning Special Credits.
+                </p>
+              )}
+
+              <p className="text-xs text-white/50 max-w-sm text-center">
+                Unlock this video to curate and earn more XESS.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <ViewTracker videoId={currentVideo.id} />
@@ -176,12 +341,12 @@ export default function VideoPlayback({
           <div className="mt-2 flex items-center gap-2">
             <span
               className={`text-[10px] px-3 py-1 rounded-full border ${
-                currentVideo.isShowcase
+                localUnlockCost === 0
                   ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-200"
                   : "bg-pink-500/20 border-pink-400/30 text-pink-200"
               }`}
             >
-              {currentVideo.isShowcase ? "free" : "premium"}
+              {localUnlockCost === 0 ? "free" : "unlocked"}
             </span>
             <span className="text-xs text-white/30">
               PH Views: {currentVideo.sourceViews.toLocaleString()}
@@ -328,18 +493,14 @@ export default function VideoPlayback({
             </div>
           )}
 
-          {!canViewPremium && (
+          {/* Credits display */}
+          {localIsAuthed && (
             <div className="mt-6 neon-border rounded-xl p-4 bg-black/30">
-              <h3 className="text-sm font-semibold text-white mb-2">Want more?</h3>
-              <p className="text-xs text-white/60 mb-3">
-                Upgrade to unlock the full premium catalog.
+              <h3 className="text-sm font-semibold text-white mb-2">Special Credits</h3>
+              <p className="text-2xl font-bold text-yellow-400">{localCredits}</p>
+              <p className="text-xs text-white/50 mt-1">
+                Earn credits by holding XESS tokens
               </p>
-              <Link
-                href="/signup"
-                className="block w-full text-center px-4 py-2 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 text-yellow-100 text-sm font-semibold transition"
-              >
-                Upgrade
-              </Link>
             </div>
           )}
         </div>
@@ -352,7 +513,7 @@ export default function VideoPlayback({
               <div>
                 <h3 className="text-lg font-semibold text-white">Video Troubleshooting</h3>
                 <p className="mt-1 text-sm text-white/70">
-                  If you are using Firefox, make sure “Enhanced Tracking Protection” is disabled or
+                  If you are using Firefox, make sure &quot;Enhanced Tracking Protection&quot; is disabled or
                   your videos may not play.
                 </p>
               </div>

@@ -95,7 +95,7 @@ export async function POST(req: Request) {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const desiredVersion = ctx.tier === "member" ? 2 : 1;
+  const desiredVersion = 2; // V2 uses userId-based rewards
 
   // Get the latest epoch with a root set on-chain (by version)
   const epochRow = await db.claimEpoch.findFirst({

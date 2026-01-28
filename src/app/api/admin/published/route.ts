@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
           ],
         }
       : undefined,
-    select: { slug: true, title: true, isShowcase: true },
+    select: { slug: true, title: true, embedUrl: true, unlockCost: true },
     orderBy: [{ rank: "asc" }],
     take: 250,
   });

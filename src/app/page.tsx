@@ -3,9 +3,6 @@ import Image from "next/image";
 import fs from "fs";
 import path from "path";
 import TopNav from "./components/TopNav";
-import AdminManualPaymentNotice from "./components/AdminManualPaymentNotice";
-import TrialBanner from "./components/TrialBanner";
-import DiamondTeaser from "./components/DiamondTeaser";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -54,17 +51,29 @@ function formatViews(views: number | null): string {
 export default async function HomePage() {
   const approvedVideos = getApprovedVideos();
   const access = await getAccessContext();
-  const canViewPremium = access.canViewAllVideos;
+  // In wallet-native model, all authenticated users can view content
+  // Video access is gated by unlockCost (0=free, >0=needs unlock)
+  const isAuthed = access.isAuthed;
 
-  // Get showcase video slugs and all video ranks from database
+  // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, isShowcase: true },
+    select: { slug: true, rank: true, unlockCost: true },
     orderBy: { rank: "asc" },
   });
 
   // Create a map of slug -> rank
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
-  const showcaseSlugs = dbVideos.filter((v) => v.isShowcase).map((v) => v.slug);
+  const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
+
+  // Get user's unlocked videos if authenticated
+  let unlockedSlugs: string[] = [];
+  if (access.user?.id) {
+    const userUnlocks = await db.videoUnlock.findMany({
+      where: { userId: access.user.id },
+      select: { video: { select: { slug: true } } },
+    });
+    unlockedSlugs = userUnlocks.map((u) => u.video.slug);
+  }
 
   // Merge rank into approved videos and sort by rank
   const videos = approvedVideos
@@ -82,16 +91,9 @@ export default async function HomePage() {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
-        <AdminManualPaymentNotice />
-
-        {/* Trial status banner (for trial users) */}
-        <TrialBanner />
-
-        {/* Diamond upsell (for trial/member users) */}
-        {canViewPremium && <div className="mb-4"><DiamondTeaser /></div>}
 
         {/* Free Videos Section - Only shown to free users */}
-        {!canViewPremium && showcaseSlugs.length > 0 && (
+        {!isAuthed && freeSlugs.length > 0 && (
           <section className="mb-6 neon-border rounded-2xl p-4 md:p-6 bg-gradient-to-r from-emerald-900/20 via-black/30 to-emerald-900/20">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -101,7 +103,7 @@ export default async function HomePage() {
                 <h2 className="text-lg font-semibold text-white">Watch Now - No Account Needed</h2>
               </div>
               <Link
-                href="/signup"
+                href="/login/diamond"
                 className="px-4 py-2 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 text-yellow-100 text-sm font-semibold transition"
               >
                 Unlock All Videos
@@ -109,7 +111,7 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {videos
-                .filter((v) => showcaseSlugs.includes(v.viewkey))
+                .filter((v) => freeSlugs.includes(v.viewkey))
                 .slice(0, 3)
                 .map((v) => (
                   <Link
@@ -158,8 +160,10 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
             {videos.slice(0, 20).map((v) => {
-              const isShowcase = showcaseSlugs.includes(v.viewkey);
-              const isLocked = !canViewPremium && !isShowcase;
+              const isFree = freeSlugs.includes(v.viewkey);
+              const hasUnlocked = unlockedSlugs.includes(v.viewkey);
+              // Video is locked unless it's free OR user has unlocked it
+              const isLocked = !isFree && !hasUnlocked;
 
               if (isLocked) {
                 return (
@@ -237,7 +241,7 @@ export default async function HomePage() {
                         ★
                       </div>
                     )}
-                    {isShowcase && !canViewPremium && (
+                    {isFree && !isAuthed && (
                       <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
                         FREE
                       </div>
@@ -308,8 +312,8 @@ export default async function HomePage() {
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (() => {
             const featured = videos[0];
-            const isFeaturedShowcase = showcaseSlugs.includes(featured.viewkey);
-            const isFeaturedLocked = !canViewPremium && !isFeaturedShowcase;
+            const isFeaturedFree = freeSlugs.includes(featured.viewkey);
+            const isFeaturedLocked = !isAuthed && !isFeaturedFree;
 
             if (isFeaturedLocked) {
               return (
@@ -378,8 +382,8 @@ export default async function HomePage() {
           {videos.length > 0 && (() => {
             // Get actual #1 ranked video (videos already sorted by rank)
             const topRanked = videos[0];
-            const isTopShowcase = showcaseSlugs.includes(topRanked.viewkey);
-            const isTopLocked = !canViewPremium && !isTopShowcase;
+            const isTopFree = freeSlugs.includes(topRanked.viewkey);
+            const isTopLocked = !isAuthed && !isTopFree;
 
             if (isTopLocked) {
               return (

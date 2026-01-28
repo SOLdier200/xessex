@@ -200,7 +200,7 @@ export default function EarnCryptoWatchingPornPage() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              href="/signup"
+              href="/login/diamond"
               className="rounded-xl border border-pink-400/50 bg-black px-6 py-4 font-bold text-pink-400 hover:bg-pink-500/10 transition"
             >
               Start Earning Rewards

@@ -126,7 +126,6 @@ export async function POST(req: Request) {
         id: true,
         walletAddress: true,
         solWallet: true,
-        subscription: { select: { tier: true, status: true, expiresAt: true } },
       },
     });
 
@@ -159,7 +158,6 @@ export async function POST(req: Request) {
               id: true,
               walletAddress: true,
               solWallet: true,
-              subscription: { select: { tier: true, status: true, expiresAt: true } },
             },
           });
           break;
@@ -184,26 +182,11 @@ export async function POST(req: Request) {
       }).catch(() => {});
     }
 
-    // Check if already active Diamond
-    const alreadyActive =
-      user.subscription?.tier === "DIAMOND" &&
-      user.subscription?.status === "ACTIVE" &&
-      (!user.subscription?.expiresAt || user.subscription.expiresAt.getTime() > Date.now());
-
-    if (!alreadyActive) {
-      // Upsert subscription to DIAMOND + PENDING
-      await db.subscription.upsert({
-        where: { userId: user.id },
-        update: { tier: "DIAMOND", status: "PENDING" },
-        create: { userId: user.id, tier: "DIAMOND", status: "PENDING" },
-      });
-    }
-
     // Create session
     const { token, expiresAt } = await createSession(user.id);
 
     const res = NextResponse.json(
-      { ok: true, alreadyActive },
+      { ok: true },
       { headers: noCache }
     );
 

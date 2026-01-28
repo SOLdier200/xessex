@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { toast } from "sonner";
-import ShowcaseModal from "../ShowcaseModal";
 
 type Video = {
   id: number;
@@ -22,12 +22,14 @@ type Video = {
 };
 
 type Cursor = { value: number; viewkey: string } | null;
+type DbSource = "embeds" | "xvidprem";
 
 type ApiResponse = {
   videos: Video[];
   nextCursor: Cursor;
   hasMore: boolean;
   stats: { approved: number };
+  source: DbSource;
 };
 
 export default function ReviewApprovedPage() {
@@ -37,7 +39,9 @@ export default function ReviewApprovedPage() {
   const [publishing, setPublishing] = useState(false);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [showShowcaseModal, setShowShowcaseModal] = useState(false);
+
+  // Database source
+  const [dbSource, setDbSource] = useState<DbSource>("embeds");
 
   // Cursor-based pagination
   const [cursorStack, setCursorStack] = useState<Cursor[]>([null]);
@@ -47,9 +51,18 @@ export default function ReviewApprovedPage() {
   // Modal state
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
+  // Get correct embed URL based on database source
+  const getEmbedUrl = (viewkey: string) => {
+    if (dbSource === "xvidprem") {
+      return `https://www.xvideos.com/embedframe/${viewkey}`;
+    }
+    return `https://www.pornhub.com/embed/${viewkey}`;
+  };
+
   const fetchVideos = useCallback(async (cursor: Cursor = null, resetStack = false) => {
     setLoading(true);
     const params = new URLSearchParams();
+    params.set("source", dbSource);
     params.set("status", "approved"); // Always filter to approved only
     if (search) params.set("search", search);
     if (cursor) {
@@ -70,7 +83,7 @@ export default function ReviewApprovedPage() {
     }
 
     setLoading(false);
-  }, [search]);
+  }, [dbSource, search]);
 
   useEffect(() => {
     fetchVideos(null, true);
@@ -101,7 +114,7 @@ export default function ReviewApprovedPage() {
     await fetch(`/api/admin/videos/${viewkey}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
+      body: JSON.stringify({ ...patch, source: dbSource }),
     });
 
     // Refresh the list
@@ -148,6 +161,10 @@ export default function ReviewApprovedPage() {
 
   return (
     <main className="min-h-screen p-6">
+      {/* X-Frame-Bypass scripts for embedding xvideos */}
+      <Script src="https://unpkg.com/@ungap/custom-elements-builtin" strategy="beforeInteractive" />
+      <Script type="module" src="https://unpkg.com/x-frame-bypass" strategy="beforeInteractive" />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -157,12 +174,6 @@ export default function ReviewApprovedPage() {
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <button
-            onClick={() => setShowShowcaseModal(true)}
-            className="px-4 py-2 rounded-full border border-yellow-400/50 bg-yellow-500/20 text-white text-sm font-semibold hover:bg-yellow-500/30 transition"
-          >
-            Select the 3 Free Page Vids
-          </button>
           <button
             onClick={publishApprovedToLive}
             disabled={publishing || approvedCount === 0}
@@ -177,6 +188,30 @@ export default function ReviewApprovedPage() {
             Back to Admin
           </Link>
         </div>
+      </div>
+
+      {/* Database Switcher */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setDbSource("embeds")}
+          className={`px-6 py-3 rounded-xl font-bold text-lg transition ${
+            dbSource === "embeds"
+              ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/30"
+              : "bg-black/40 text-white/60 border border-white/20 hover:border-white/40"
+          }`}
+        >
+          PH Embeds DB
+        </button>
+        <button
+          onClick={() => setDbSource("xvidprem")}
+          className={`px-6 py-3 rounded-xl font-bold text-lg transition ${
+            dbSource === "xvidprem"
+              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30"
+              : "bg-black/40 text-white/60 border border-white/20 hover:border-white/40"
+          }`}
+        >
+          Xvidprem DB
+        </button>
       </div>
 
       {/* Search */}
@@ -326,14 +361,25 @@ export default function ReviewApprovedPage() {
 
             {/* Video Embed */}
             <div className="p-4">
-              <div className="aspect-video bg-black rounded-xl overflow-hidden">
-                <iframe
-                  src={`https://www.pornhub.com/embed/${selectedVideo.viewkey}`}
-                  frameBorder={0}
-                  width="100%"
-                  height="100%"
-                  allowFullScreen
-                />
+              <div className="bg-black rounded-xl overflow-hidden aspect-video">
+                {dbSource === "xvidprem" ? (
+                  <iframe
+                    is="x-frame-bypass"
+                    src={getEmbedUrl(selectedVideo.viewkey)}
+                    frameBorder={0}
+                    width="100%"
+                    height="100%"
+                    allowFullScreen
+                  />
+                ) : (
+                  <iframe
+                    src={getEmbedUrl(selectedVideo.viewkey)}
+                    frameBorder={0}
+                    width="100%"
+                    height="100%"
+                    allowFullScreen
+                  />
+                )}
               </div>
             </div>
 
@@ -398,11 +444,6 @@ export default function ReviewApprovedPage() {
         </div>
       )}
 
-      {/* Showcase Modal */}
-      <ShowcaseModal
-        open={showShowcaseModal}
-        onClose={() => setShowShowcaseModal(false)}
-      />
     </main>
   );
 }

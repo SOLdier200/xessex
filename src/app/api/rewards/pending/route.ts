@@ -58,7 +58,7 @@ export async function GET() {
 
   const userId = ctx.user.id;
   const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
-  const desiredVersion = ctx.tier === "member" ? 2 : 1;
+  const desiredVersion = 2; // V2 uses userId-based rewards
   const now = new Date();
   const currentWeekKey = weekKeyUTC(now);
   const weekIndex = getWeekIndex(currentWeekKey);
@@ -109,43 +109,23 @@ export async function GET() {
 
   // Get all unclaimed weeks (finalized but not claimed)
   // A week is unclaimed if: ClaimEpoch exists with setOnChain=true AND user has ClaimLeaf
-  // AND no RewardEvent.claimedAt set for that week
-  const unclaimedEpochs =
-    desiredVersion === 1 && wallet
-      ? await db.claimEpoch.findMany({
-          where: {
-            setOnChain: true,
-            version: 1,
-            leaves: {
-              some: { wallet },
-            },
-          },
-          include: {
-            leaves: {
-              where: { wallet },
-              select: { amountAtomic: true },
-            },
-          },
-          orderBy: { epoch: "desc" },
-        })
-      : desiredVersion === 2
-        ? await db.claimEpoch.findMany({
-            where: {
-              setOnChain: true,
-              version: 2,
-              leaves: {
-                some: { userId },
-              },
-            },
-            include: {
-              leaves: {
-                where: { userId },
-                select: { amountAtomic: true },
-              },
-            },
-            orderBy: { epoch: "desc" },
-          })
-        : [];
+  // AND no RewardEvent.claimedAt set for that week (V2 uses userId)
+  const unclaimedEpochs = await db.claimEpoch.findMany({
+    where: {
+      setOnChain: true,
+      version: 2,
+      leaves: {
+        some: { userId },
+      },
+    },
+    include: {
+      leaves: {
+        where: { userId },
+        select: { amountAtomic: true },
+      },
+    },
+    orderBy: { epoch: "desc" },
+  });
 
   // Filter to only truly unclaimed (check RewardEvent.claimedAt)
   const unclaimedWeeks: Array<{
@@ -162,7 +142,7 @@ export async function GET() {
         userId,
         weekKey: epochRow.weekKey,
         claimedAt: { not: null },
-        type: { in: desiredVersion === 1 ? DIAMOND_REWARD_TYPES : MEMBER_REWARD_TYPES },
+        type: { in: MEMBER_REWARD_TYPES }, // V2 uses member reward types
       },
     });
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { monthKeyUTC } from "@/lib/weekKey";
 import { getAdminConfig } from "@/lib/adminConfig";
-import { SubscriptionTier, SubscriptionStatus, Prisma, BatchStatus } from "@prisma/client";
+import { Prisma, BatchStatus } from "@prisma/client";
 
 // Stale batch threshold (30 minutes) - RUNNING batches older than this can be force-reset
 const STALE_BATCH_MS = 30 * 60 * 1000;
@@ -110,39 +110,27 @@ function formatXess(amount: bigint): string {
 }
 
 /**
- * Eligibility filter for Diamond payouts:
- * - Subscription.tier = DIAMOND
- * - Subscription.status = ACTIVE
- * - Subscription.expiresAt is null OR in the future
+ * Eligibility filter for payouts (wallet-native model):
+ * - User has a linked wallet (solWallet)
  *
- * Note: Users still need a linked wallet (solWallet) to actually receive payouts,
- * but wallet linking is NOT required for eligibility. Diamond membership is the
- * only requirement for being eligible for XESS rewards.
+ * In the wallet-native model, all users with a linked wallet are eligible
+ * for rewards based on their activity.
  */
-function eligibleDiamondUserWhere(now: Date): Prisma.UserWhereInput {
+function eligibleUserWhere(): Prisma.UserWhereInput {
   return {
-    subscription: {
-      is: {
-        tier: SubscriptionTier.DIAMOND,
-        status: SubscriptionStatus.ACTIVE,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: now } },
-        ],
-      },
-    },
+    solWallet: { not: null },
   };
 }
 
 /**
- * Get top 50 users by weekly scoreReceived (Diamond only)
+ * Get top 50 users by weekly scoreReceived (users with linked wallets)
  */
 async function getTop50Score(weekKey: string, minThreshold: number, now: Date): Promise<Winner[]> {
   const top50 = await db.weeklyUserStat.findMany({
     where: {
       weekKey,
       scoreReceived: { gte: minThreshold },
-      user: eligibleDiamondUserWhere(now),
+      user: eligibleUserWhere(),
     },
     orderBy: { scoreReceived: "desc" },
     take: 50,
@@ -360,12 +348,12 @@ export async function POST(req: NextRequest) {
 
     const rewards: UserReward[] = [];
 
-    // 1. Weekly Diamond Score (top 50 by scoreReceived) - Diamond only
+    // 1. Weekly Diamond Score (top 50 by scoreReceived) - wallet required
     console.log(`\n[weekly-distribute] === WEEKLY SCORE REWARDS (Top 50, >= ${minWeeklyScoreThreshold} score) ===`);
     const top50 = await getTop50Score(statsWeekKey!, minWeeklyScoreThreshold, now);
     const sumScore = top50.reduce((acc, w) => acc + w.score, 0);
 
-    console.log(`[weekly-distribute] Found ${top50.length} eligible Diamond users with >= ${minWeeklyScoreThreshold} weekly score`);
+    console.log(`[weekly-distribute] Found ${top50.length} eligible users with >= ${minWeeklyScoreThreshold} weekly score`);
     console.log(`[weekly-distribute] Total weekly score in top 50: ${sumScore}`);
 
     if (top50.length > 0) {
@@ -407,12 +395,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. All-Time Likes (top 50 by all-time scoreReceived) - Diamond only
+    // 2. All-Time Likes (top 50 by all-time scoreReceived) - wallet required
     console.log(`\n[weekly-distribute] === ALL-TIME SCORE REWARDS ===`);
     const allTimeStats = await db.allTimeUserStat.findMany({
       where: {
         scoreReceived: { gt: 0 },
-        user: eligibleDiamondUserWhere(now),
+        user: eligibleUserWhere(),
       },
       orderBy: { scoreReceived: "desc" },
       take: 50,
@@ -426,7 +414,7 @@ export async function POST(req: NextRequest) {
       const basePool = (allTimeLikesPool * 80n) / 100n;
       const ladderPool = (allTimeLikesPool * 20n) / 100n;
 
-      console.log(`[weekly-distribute] All-time top ${allTimeStats.length} eligible Diamond users, total score: ${totalAllTimeScore}`);
+      console.log(`[weekly-distribute] All-time top ${allTimeStats.length} eligible users, total score: ${totalAllTimeScore}`);
 
       for (let i = 0; i < allTimeStats.length; i++) {
         const stat = allTimeStats[i];
@@ -487,14 +475,14 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No voters or pool is 0`);
     }
 
-    // 4. MVM Pool (monthly stats, weekly payout) - Diamond only
+    // 4. MVM Pool (monthly stats, weekly payout) - wallet required
     console.log(`\n[weekly-distribute] === MVM REWARDS (Monthly ranking) ===`);
     const monthKey = monthKeyUTC(new Date(statsWeekKey!));
     const mvmStats = await db.monthlyUserStat.findMany({
       where: {
         monthKey,
         mvmPoints: { gte: minMvmThreshold },
-        user: eligibleDiamondUserWhere(now),
+        user: eligibleUserWhere(),
       },
       orderBy: { mvmPoints: "desc" },
       take: 50,
@@ -511,7 +499,7 @@ export async function POST(req: NextRequest) {
       const basePool = (mvmPool * 80n) / 100n;
       const ladderPool = (mvmPool * 20n) / 100n;
 
-      console.log(`[weekly-distribute] MVM rewards: ${mvmStats.length} eligible Diamond users, ${totalMonthMvm} total MVM points`);
+      console.log(`[weekly-distribute] MVM rewards: ${mvmStats.length} eligible users, ${totalMonthMvm} total MVM points`);
 
       for (let i = 0; i < mvmStats.length; i++) {
         const stat = mvmStats[i];
@@ -535,51 +523,27 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      console.log(`[weekly-distribute] No eligible Diamond users for MVM rewards`);
+      console.log(`[weekly-distribute] No eligible users for MVM rewards`);
     }
 
-    // 5. Comments Pool (Diamond users proportional to diamondComments)
+    // 5. Comments Pool (users with wallets proportional to diamondComments)
     console.log(`\n[weekly-distribute] === COMMENTS REWARDS ===`);
-
-    // DEBUG: Query raw stats WITHOUT eligibility filter to diagnose issues
-    const rawCommentStats = await db.weeklyUserStat.findMany({
-      where: {
-        weekKey: statsWeekKey!,
-        diamondComments: { gt: 0 },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            solWallet: true,
-            subscription: {
-              select: { tier: true, status: true, expiresAt: true },
-            },
-          },
-        },
-      },
-    });
-    console.log(`[weekly-distribute] RAW comment stats (no eligibility filter): ${rawCommentStats.length} users`);
-    for (const stat of rawCommentStats) {
-      const sub = stat.user.subscription;
-      console.log(`  - User ${stat.userId.slice(0, 8)}... : ${stat.diamondComments} comments, wallet=${stat.user.solWallet ? "YES" : "NO"}, tier=${sub?.tier ?? "NONE"}, status=${sub?.status ?? "NONE"}, expires=${sub?.expiresAt?.toISOString() ?? "null"}`);
-    }
 
     const commentStats = await db.weeklyUserStat.findMany({
       where: {
         weekKey: statsWeekKey!,
         diamondComments: { gt: 0 },
-        user: eligibleDiamondUserWhere(now),
+        user: eligibleUserWhere(),
       },
       include: {
         user: { select: { id: true, solWallet: true } },
       },
     });
-    console.log(`[weekly-distribute] After Diamond eligibility filter: ${commentStats.length} users`);
+    console.log(`[weekly-distribute] Found ${commentStats.length} eligible users with comments`);
 
     if (commentStats.length > 0) {
       const totalComments = commentStats.reduce((sum, s) => sum + s.diamondComments, 0);
-      console.log(`[weekly-distribute] Comments rewards: ${commentStats.length} eligible Diamond commenters, ${totalComments} total comments`);
+      console.log(`[weekly-distribute] Comments rewards: ${commentStats.length} eligible commenters, ${totalComments} total comments`);
 
       for (const stat of commentStats) {
         if (!stat.user.solWallet) continue;
@@ -594,7 +558,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      console.log(`[weekly-distribute] No eligible Diamond commenters`);
+      console.log(`[weekly-distribute] No eligible commenters`);
     }
 
     // 6. Referral Rewards (% of each earner's rewards, capped by referral pool budget)

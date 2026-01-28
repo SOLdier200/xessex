@@ -27,10 +27,6 @@ model User {
   referredById             String?
   recoveryEmail            String?                  @unique
   recoveryEmailVerifiedAt  DateTime?
-  // Free trial tracking
-  trialUsed                Boolean                  @default(false)
-  trialStartedAt           DateTime?
-  trialEndsAt              DateTime?
   allTimeStat          AllTimeUserStat?
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
@@ -47,9 +43,7 @@ model User {
   rewardEvents         RewardEvent[]
   referralEarningsFrom RewardEvent[]         @relation("ReferralSource")
   claimLeaves          ClaimLeaf[]
-  manualPayments       ManualPayment[]
   sessions             Session[]
-  subscription         Subscription?
   referredBy           User?                    @relation("UserReferrals", fields: [referredById], references: [id])
   referrals            User[]                   @relation("UserReferrals")
   scoreAdjustments     VideoScoreAdjustment[]
@@ -66,6 +60,9 @@ model User {
   raffleTickets        RaffleTicket[]
   raffleWins           RaffleWinner[]
   claimSalts           ClaimSalt[]
+
+  // Video unlock system
+  videoUnlocks         VideoUnlock[]
 
   @@index([referredById])
 }
@@ -85,7 +82,6 @@ model Session {
 enum WalletLinkPurpose {
   PAYOUT_LINK
   AUTH_LINK
-  DIAMOND_UPGRADE
 }
 
 model WalletLinkChallenge {
@@ -151,34 +147,6 @@ model ResendWebhookEvent {
   @@index([to])
 }
 
-model Subscription {
-  id                   String             @id @default(cuid())
-  userId               String             @unique
-  tier                 SubscriptionTier
-  status               SubscriptionStatus @default(PENDING)
-  expiresAt            DateTime?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  nowPaymentsPaymentId String?
-  nowPaymentsInvoiceId String?
-  lastTxSig            String?
-  nowPaymentsOrderId   String?            @unique
-  cancelAtPeriodEnd    Boolean            @default(false)
-  paymentMethod        PaymentMethod      @default(CRYPTO)
-  amountCents          Int?
-  manualPaymentId      String?
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-  @@index([expiresAt])
-  @@index([paymentMethod])
-}
-
-enum PaymentMethod {
-  CRYPTO
-  CARD
-  CASHAPP
-}
 
 // Stores NOWPayments IPN callbacks that couldn't be linked to a subscription.
 // Used for manual reconciliation when payment comes in but user's subscription row is missing.
@@ -227,7 +195,6 @@ model Video {
   embedUrl     String
   tags         String[]               @default([])
   createdAt    DateTime               @default(now())
-  isShowcase   Boolean                @default(false)
   adminScore   Int                    @default(75)
   viewsCount   Int                    @default(0)
   avgStars     Float                  @default(0)
@@ -235,13 +202,23 @@ model Video {
   thumbnailUrl String?
   sourceViews  Int                    @default(0)
   rank         Int?                   @unique
+
+  // Video unlock system fields
+  kind         VideoKind              @default(EMBED)
+  isActive     Boolean                @default(true)
+  sortOrder    Int                    @default(0)
+  unlockCost   Int                    @default(0)  // 0=free, 100=embed, 1000=xessex
+  mediaUrl     String?                             // For XESSEX-owned content
+  posterUrl    String?
+
   comments     Comment[]
   sourceGrades CommentSourceGrade[]
   adjustments  VideoScoreAdjustment[]
   starRatings  VideoStarRating[]
+  unlocks      VideoUnlock[]
 
-  @@index([isShowcase])
   @@index([rank])
+  @@index([kind, isActive, sortOrder])
 }
 
 model VideoStarRating {
@@ -269,6 +246,8 @@ model Comment {
   removedReason    String?
   memberDislikes   Int                    @default(0)
   memberLikes      Int                    @default(0)
+  modLikes         Int                    @default(0)
+  modDislikes      Int                    @default(0)
   score            Int                    @default(0)
   author           User                   @relation("CommentAuthor", fields: [authorId], references: [id])
   removedBy        User?                  @relation("CommentRemovedBy", fields: [removedById], references: [id])
@@ -553,19 +532,6 @@ enum UserRole {
   ADMIN
 }
 
-enum SubscriptionTier {
-  MEMBER
-  DIAMOND
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  TRIAL
-  EXPIRED
-  CANCELED
-  PENDING
-  PARTIAL
-}
 
 enum CommentStatus {
   ACTIVE
@@ -613,9 +579,12 @@ enum ClaimStatus {
   FAILED
 }
 
-enum ManualPayMethod {
-  CASHAPP
+// Video content type for unlock system
+enum VideoKind {
+  EMBED  // External embed (PornHub, XVideos, etc.)
+  XESSEX // Xessex-owned content
 }
+
 
 enum DiamondTokenKind {
   VERIFY_EMAIL
@@ -640,12 +609,6 @@ model DiamondToken {
   @@index([expiresAt])
 }
 
-enum ManualPayStatus {
-  PENDING
-  APPROVED
-  DENIED
-  EXPIRED
-}
 
 // ========== Rewards Drawing & Special Credits Enums ==========
 
@@ -710,33 +673,6 @@ model ClaimLeaf {
   @@index([wallet])
 }
 
-model ManualPayment {
-  id               String           @id @default(cuid())
-  userId           String
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  method           ManualPayMethod  @default(CASHAPP)
-  status           ManualPayStatus  @default(PENDING)
-
-  requestedTier    SubscriptionTier // MEMBER | DIAMOND
-  planCode         String           // member_monthly | diamond_yearly etc
-  amountUsd        Int              // cents
-  currency         String           @default("USD")
-
-  payerHandle      String?
-  note             String?
-  proofUrl         String?
-  verifyCode       String           @unique
-
-  provisionalUntil DateTime
-  createdAt        DateTime         @default(now())
-  reviewedAt       DateTime?
-  reviewedBy       String?
-  adminNote        String?
-
-  @@index([status, createdAt])
-  @@index([userId, createdAt])
-}
 
 // ========== Raffle & Special Credits Models ==========
 
@@ -874,6 +810,23 @@ model ClaimSalt {
 
   @@unique([epoch, userId])
   @@index([userId])
+}
+
+// ========== Video Unlock System ==========
+
+model VideoUnlock {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+  videoId   String
+  cost      Int      // Credits spent at time of unlock (audit trail)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
 }
 
 // ========== iOS Wallet Auth - Nonce for signature challenges ==========

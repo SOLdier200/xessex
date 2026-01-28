@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import PendingManualBadge from "../components/PendingManualBadge";
+import Script from "next/script";
 
 type Toast = {
   id: number;
@@ -339,8 +339,20 @@ export default function AdminPage() {
     }
   };
 
+  // Get correct embed URL based on database source
+  const getEmbedUrl = (viewkey: string) => {
+    if (dbSource === "xvidprem") {
+      return `https://www.xvideos.com/embedframe/${viewkey}`;
+    }
+    return `https://www.pornhub.com/embed/${viewkey}`;
+  };
+
   return (
     <main className="min-h-screen p-6">
+      {/* X-Frame-Bypass scripts for embedding xvideos */}
+      <Script src="https://unpkg.com/@ungap/custom-elements-builtin" strategy="beforeInteractive" />
+      <Script type="module" src="https://unpkg.com/x-frame-bypass" strategy="beforeInteractive" />
+
       {/* Progress Banner */}
       <div className="mb-4 py-3 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 rounded-xl text-center border border-emerald-400/50 shadow-lg">
         <span className="text-xl font-bold text-white">
@@ -357,10 +369,9 @@ export default function AdminPage() {
         <div className="flex gap-3 flex-wrap">
           <Link
             href="/admin/controls"
-            className="px-4 py-2 rounded-full border border-purple-400/50 bg-purple-500/20 text-white text-sm font-semibold hover:bg-purple-500/30 transition flex items-center"
+            className="px-4 py-2 rounded-full border border-purple-400/50 bg-purple-500/20 text-white text-sm font-semibold hover:bg-purple-500/30 transition"
           >
             Admin Controls
-            <PendingManualBadge />
           </Link>
           <Link
             href="/admin/review"
@@ -633,7 +644,7 @@ export default function AdminPage() {
                 ? "w-1 h-1 opacity-0 pointer-events-none"
                 : minimizeState === "pip"
                 ? "neon-border rounded-xl overflow-hidden bg-black shadow-2xl"
-                : "rounded-xl overflow-hidden"
+                : "rounded-xl overflow-hidden bg-black"
             }`}
             style={
               minimizeState === "full"
@@ -643,13 +654,24 @@ export default function AdminPage() {
                 : { right: pipPosition.x, bottom: pipPosition.y, width: 1, height: 1 }
             }
           >
-            <iframe
-              src={`https://www.pornhub.com/embed/${selectedVideo.viewkey}`}
-              frameBorder={0}
-              width="100%"
-              height="100%"
-              allowFullScreen
-            />
+{dbSource === "xvidprem" ? (
+              <iframe
+                is="x-frame-bypass"
+                src={getEmbedUrl(selectedVideo.viewkey)}
+                frameBorder={0}
+                width="100%"
+                height="100%"
+                allowFullScreen
+              />
+            ) : (
+              <iframe
+                src={getEmbedUrl(selectedVideo.viewkey)}
+                frameBorder={0}
+                width="100%"
+                height="100%"
+                allowFullScreen
+              />
+            )}
             {/* PiP Controls Overlay */}
             {minimizeState === "pip" && (
               <>

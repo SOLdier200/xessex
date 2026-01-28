@@ -10,26 +10,22 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       authenticated: false,
-      tier: "free",
-      isDiamond: false,
-      isMember: false,
       isAdminOrMod: false,
       canComment: false,
       canVoteComments: false,
       canRateStars: false,
+      creditBalance: 0,
     }, { headers: noCache });
   }
 
   return NextResponse.json({
     ok: true,
     authenticated: true,
-    tier: access.tier,
-    isDiamond: access.tier === "diamond",
-    isMember: access.tier === "member" || access.tier === "diamond",
     isAdminOrMod: access.isAdminOrMod,
     canComment: access.canComment,
     canVoteComments: access.canVoteComments,
     canRateStars: access.canRateStars,
-    wallet: truncWallet(access.user.walletAddress, access.user.email),
+    creditBalance: access.creditBalance,
+    wallet: truncWallet(access.user.walletAddress, null),
   }, { headers: noCache });
 }

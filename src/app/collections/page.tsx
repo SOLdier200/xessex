@@ -79,6 +79,17 @@ export default function CategoriesPage() {
           <p className="mt-2 text-sm text-white/70">
             Browse videos by collection
           </p>
+          <p className="mt-2 text-sm text-white/60">
+            New here?{" "}
+            <Link href="/login/diamond" className="text-pink-400 hover:text-pink-300 underline">
+              Connect your wallet
+            </Link>{" "}
+            to unlock videos, or learn how to{" "}
+            <Link href="/earn-crypto-watching-porn" className="text-pink-400 hover:text-pink-300 underline">
+              earn crypto rewards
+            </Link>{" "}
+            while watching.
+          </p>
         </section>
 
         <div className="mt-4 md:mt-6 flex flex-wrap items-start gap-3 md:gap-4">

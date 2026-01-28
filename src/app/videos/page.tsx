@@ -6,8 +6,6 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import TopNav from "../components/TopNav";
 import VideoSearch from "../components/VideoSearch";
-import TrialBanner from "../components/TrialBanner";
-import DiamondTeaser from "../components/DiamondTeaser";
 
 export const dynamic = "force-dynamic";
 
@@ -56,17 +54,28 @@ function getApprovedVideos(): ApprovedVideo[] {
 export default async function VideosPage() {
   const approvedVideos = getApprovedVideos();
   const access = await getAccessContext();
-  const canViewPremium = access.canViewAllVideos;
+  // In wallet-native model, all authenticated users can view content
+  const isAuthed = access.isAuthed;
 
-  // Get showcase video slugs and all video ranks from database
+  // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, isShowcase: true },
+    select: { slug: true, rank: true, unlockCost: true },
     orderBy: { rank: "asc" },
   });
 
   // Create a map of slug -> rank
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
-  const showcaseSlugs = dbVideos.filter((v) => v.isShowcase).map((v) => v.slug);
+  const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
+
+  // Get user's unlocked videos if authenticated
+  let unlockedSlugs: string[] = [];
+  if (access.user?.id) {
+    const userUnlocks = await db.videoUnlock.findMany({
+      where: { userId: access.user.id },
+      select: { video: { select: { slug: true } } },
+    });
+    unlockedSlugs = userUnlocks.map((u) => u.video.slug);
+  }
 
   // Merge rank into approved videos and sort by rank
   const videos = approvedVideos
@@ -83,26 +92,20 @@ export default async function VideosPage() {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
-        {/* Trial status banner (for trial users) */}
-        <TrialBanner />
-
-        {/* Diamond upsell (for trial/member users) */}
-        {canViewPremium && <div className="mb-4"><DiamondTeaser /></div>}
-
-        {!canViewPremium && (
+        {!isAuthed && (
           <div className="mb-6 neon-border rounded-2xl p-4 bg-black/30">
             <div className="text-white/70 text-sm">
-              Free users get 3 showcase videos. Upgrade to unlock the full catalog.
+              Connect your wallet to unlock videos with Special Credits.
             </div>
             <div className="mt-3 flex gap-2">
               <Link
-                href="/signup"
+                href="/login/diamond"
                 className="px-4 py-2 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 text-yellow-100 text-sm font-semibold transition"
               >
-                Upgrade
+                Connect Wallet
               </Link>
               <Link
-                href="/login"
+                href="/login/diamond"
                 className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
               >
                 Log in
@@ -111,7 +114,7 @@ export default async function VideosPage() {
           </div>
         )}
 
-        <VideoSearch videos={videos} canViewPremium={canViewPremium} showcaseSlugs={showcaseSlugs} />
+        <VideoSearch videos={videos} isAuthed={isAuthed} freeSlugs={freeSlugs} unlockedSlugs={unlockedSlugs} />
       </div>
     </main>
   );

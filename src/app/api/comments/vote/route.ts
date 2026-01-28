@@ -75,35 +75,66 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const existing = await db.commentMemberVote.findUnique({
-    where: { commentId_voterId: { commentId, voterId } },
-  });
+  // Check for existing vote - mods use CommentModVote, members use CommentMemberVote
+  const isModVoter = access.isAdminOrMod;
+  const existingModVote = isModVoter
+    ? await db.commentModVote.findUnique({
+        where: { commentId_modId: { commentId, modId: voterId } },
+      })
+    : null;
+  const existingMemberVote = !isModVoter
+    ? await db.commentMemberVote.findUnique({
+        where: { commentId_voterId: { commentId, voterId } },
+      })
+    : null;
+  const existing = existingModVote || existingMemberVote;
 
 
   // First vote
   if (!existing) {
     const wk = weekKeyUTC(new Date());
     const scoreDelta = getScoreDelta(value, access.isAdminOrMod);
+    const isModVote = access.isAdminOrMod;
 
     const updated = await db.$transaction(async (tx) => {
-      await tx.commentMemberVote.create({
-        data: {
-          commentId,
-          voterId,
-          value,
-          flipCount: 0,
-          lastChangedAt: new Date(),
-        },
-      });
+      // Use CommentModVote for admin/mod, CommentMemberVote for regular users
+      if (isModVote) {
+        await tx.commentModVote.create({
+          data: {
+            commentId,
+            modId: voterId,
+            value,
+            flipCount: 0,
+            lastChangedAt: new Date(),
+          },
+        });
+      } else {
+        await tx.commentMemberVote.create({
+          data: {
+            commentId,
+            voterId,
+            value,
+            flipCount: 0,
+            lastChangedAt: new Date(),
+          },
+        });
+      }
 
+      // Update different fields based on voter type
       const c = await tx.comment.update({
         where: { id: commentId },
-        data: {
-          memberLikes: { increment: value === 1 ? 1 : 0 },
-          memberDislikes: { increment: value === -1 ? 1 : 0 },
-          score: { increment: scoreDelta },
-        },
-        select: { memberLikes: true, memberDislikes: true, authorId: true, score: true },
+        data: isModVote
+          ? {
+              modLikes: { increment: value === 1 ? 1 : 0 },
+              modDislikes: { increment: value === -1 ? 1 : 0 },
+              score: { increment: scoreDelta },
+            }
+          : {
+              memberLikes: { increment: value === 1 ? 1 : 0 },
+              memberDislikes: { increment: value === -1 ? 1 : 0 },
+              score: { increment: scoreDelta },
+            },
+        select: { memberLikes: true, memberDislikes: true, modLikes: true, modDislikes: true, authorId: true, score: true },
       });
 
       // Track score for author (positive deltas only for weekly)
@@ -131,11 +162,14 @@ export async function POST(req: NextRequest) {
       });
 
       // Track voter stats for all members (wallet checked at distribution time)
-      await tx.weeklyVoterStat.upsert({
-        where: { weekKey_userId: { weekKey: wk, userId: voterId } },
-        create: { weekKey: wk, userId: voterId, votesCast: 1 },
-        update: { votesCast: { increment: 1 } },
-      });
+      // Mod votes don't count toward voter rewards
+      if (!isModVote) {
+        await tx.weeklyVoterStat.upsert({
+          where: { weekKey_userId: { weekKey: wk, userId: voterId } },
+          create: { weekKey: wk, userId: voterId, votesCast: 1 },
+          update: { votesCast: { increment: 1 } },
+        });
+      }
 
       return c;
     });
@@ -145,6 +179,8 @@ export async function POST(req: NextRequest) {
       userVote: value,
       memberLikes: updated.memberLikes,
       memberDislikes: updated.memberDislikes,
+      modLikes: updated.modLikes,
+      modDislikes: updated.modDislikes,
       voteLocked: false,
       secondsLeftToFlip: 60,
     });
@@ -190,29 +226,45 @@ export async function POST(req: NextRequest) {
   const netScoreDelta = newScoreDelta - oldScoreDelta;
 
   const updated = await db.$transaction(async (tx) => {
-    // Update vote row
-    await tx.commentMemberVote.update({
-      where: { commentId_voterId: { commentId, voterId } },
-      data: {
-        value,
-        flipCount: 1,
-        lastChangedAt: new Date(),
-      },
-    });
+    // Update vote row - use appropriate table based on voter type
+    if (isModVoter) {
+      await tx.commentModVote.update({
+        where: { commentId_modId: { commentId, modId: voterId } },
+        data: {
+          value,
+          flipCount: 1,
+          lastChangedAt: new Date(),
+        },
+      });
+    } else {
+      await tx.commentMemberVote.update({
+        where: { commentId_voterId: { commentId, voterId } },
+        data: {
+          value,
+          flipCount: 1,
+          lastChangedAt: new Date(),
+        },
+      });
+    }
 
     // Update counters on comment: remove old, add new
+    const likeIncrement = (value === 1 ? 1 : 0) + (existing.value === 1 ? -1 : 0);
+    const dislikeIncrement = (value === -1 ? 1 : 0) + (existing.value === -1 ? -1 : 0);
+
     const afterFlip = await tx.comment.update({
       where: { id: commentId },
-      data: {
-        memberLikes: {
-          increment: (value === 1 ? 1 : 0) + (existing.value === 1 ? -1 : 0),
-        },
-        memberDislikes: {
-          increment: (value === -1 ? 1 : 0) + (existing.value === -1 ? -1 : 0),
-        },
-        score: { increment: netScoreDelta },
-      },
-      select: { memberLikes: true, memberDislikes: true, authorId: true, score: true },
+      data: isModVoter
+        ? {
+            modLikes: { increment: likeIncrement },
+            modDislikes: { increment: dislikeIncrement },
+            score: { increment: netScoreDelta },
+          }
+        : {
+            memberLikes: { increment: likeIncrement },
+            memberDislikes: { increment: dislikeIncrement },
+            score: { increment: netScoreDelta },
+          },
+      select: { memberLikes: true, memberDislikes: true, modLikes: true, modDislikes: true, authorId: true, score: true },
     });
 
     // Update weekly stats for author (only positive deltas)
@@ -251,6 +303,8 @@ export async function POST(req: NextRequest) {
     userVote: value,
     memberLikes: updated.memberLikes,
     memberDislikes: updated.memberDislikes,
+    modLikes: updated.modLikes,
+    modDislikes: updated.modDislikes,
     voteLocked: true, // they used their one flip
     secondsLeftToFlip: 0,
   });

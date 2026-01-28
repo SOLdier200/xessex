@@ -78,21 +78,21 @@ export function formatXess6(amount6Str: string, decimals = 2): string {
 export function rewardTypeLabel(type: string): string {
   switch (type) {
     case "WEEKLY_LIKES":
-      return "Likes Received";
+      return "Weekly Likes Pool";
     case "WEEKLY_MVM":
-      return "MVM Bonus";
+      return "Weekly MVM Pool";
     case "WEEKLY_COMMENTS":
-      return "Comments";
+      return "Weekly Comments Pool";
     case "ALLTIME_LIKES":
-      return "Most Likes Ever";
+      return "All-Time Likes Pool";
     case "REF_L1":
-      return "Referral (L1)";
+      return "Referral L1 (Direct)";
     case "REF_L2":
-      return "Referral (L2)";
+      return "Referral L2";
     case "REF_L3":
-      return "Referral (L3)";
+      return "Referral L3";
     case "WEEKLY_VOTER":
-      return "Votes Cast";
+      return "Weekly Voter Pool";
     default:
       return type;
   }

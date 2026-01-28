@@ -4,12 +4,11 @@
  *
  * POST /api/auth/auth-wallet-link/verify
  *
- * Member wallet linking - sets solWallet (payout wallet) ONLY.
+ * Wallet linking - sets solWallet (payout wallet) ONLY.
  * This is NOT for auth identity; it's for reward payouts.
  *
  * Requirements:
  * - User must be logged in
- * - User must have an active Member subscription
  * - Wallet must not be linked to another account
  */
 
@@ -25,25 +24,6 @@ export async function POST(req: Request) {
   const access = await getAccessContext();
   if (!access.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
-  }
-
-  // Gate behind active Member subscription
-  const sub = await db.subscription.findUnique({
-    where: { userId: access.user.id },
-    select: { tier: true, status: true, expiresAt: true },
-  });
-
-  const isActiveMember =
-    sub &&
-    sub.tier === "MEMBER" &&
-    sub.status === "ACTIVE" &&
-    (!sub.expiresAt || sub.expiresAt.getTime() > Date.now());
-
-  if (!isActiveMember) {
-    return NextResponse.json(
-      { ok: false, error: "Member subscription required to link payout wallet" },
-      { status: 403 }
-    );
   }
 
   const { wallet, signature, nonce } = await req.json();

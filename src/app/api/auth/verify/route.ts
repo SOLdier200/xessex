@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     // IMPORTANT: solWallet is payout-only, NOT for authentication
     const existingWalletUser = await db.user.findUnique({
       where: { walletAddress: w },
-      select: { id: true, subscription: { select: { tier: true, status: true } } },
+      select: { id: true },
     });
 
     // Check if user is already logged in with a different account
@@ -135,14 +135,10 @@ export async function POST(req: Request) {
         // Wallet belongs to an existing account - switch to that account
         const { token, expiresAt } = await createSession(existingWalletUser.id);
 
-        const switchedToDiamond =
-          existingWalletUser.subscription?.tier === "DIAMOND" && existingWalletUser.subscription?.status === "ACTIVE";
-
         const res = NextResponse.json(
           {
             ok: true,
             switched: true,
-            switchedToDiamond,
           },
           { headers: noCache }
         );
@@ -163,25 +159,7 @@ export async function POST(req: Request) {
       return res;
     }
 
-    // NEW WALLET: Only allow account creation through Diamond signup flow
-    // Check the challenge cookie for purpose - must be DIAMOND_SIGNUP to create new account
-    let purpose: string | undefined;
-    if (cookieMatch?.[1]) {
-      const token = decodeURIComponent(cookieMatch[1]);
-      const chk = verifyChallengeCookie(token);
-      if (chk.ok) {
-        purpose = chk.payload.p;
-      }
-    }
-
-    if (purpose !== "DIAMOND_SIGNUP") {
-      // New wallet trying to sign in without going through Diamond signup
-      return NextResponse.json(
-        { ok: false, error: "WALLET_NOT_REGISTERED", message: "Please sign up as a Diamond Member first" },
-        { status: 403, headers: noCache }
-      );
-    }
-
+    // NEW WALLET: In wallet-native model, any new wallet can create an account
     // Look up referrer if refCode provided
     let referredById: string | null = null;
     if (referralCode) {

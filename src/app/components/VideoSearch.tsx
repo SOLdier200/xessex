@@ -34,14 +34,15 @@ function formatViews(views: number | null): string {
 
 interface VideoSearchProps {
   videos: Video[];
-  canViewPremium?: boolean;
-  showcaseSlugs?: string[];
+  isAuthed?: boolean;
+  freeSlugs?: string[];
+  unlockedSlugs?: string[];
 }
 
 // Session storage key for scroll position
 const SCROLL_KEY = "xessex_videos_scroll";
 
-export default function VideoSearch({ videos, canViewPremium = true, showcaseSlugs = [] }: VideoSearchProps) {
+export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], unlockedSlugs = [] }: VideoSearchProps) {
   const VIDEOS_PER_PAGE = 50;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -162,20 +163,20 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
     }
     // "new" keeps original order
 
-    // For free users, put showcase (free) videos at the top
-    if (!canViewPremium && showcaseSlugs.length > 0) {
-      const showcaseSet = new Set(showcaseSlugs);
+    // For non-authed users, put free videos at the top
+    if (!isAuthed && freeSlugs.length > 0) {
+      const freeSet = new Set(freeSlugs);
       result.sort((a, b) => {
-        const aIsShowcase = showcaseSet.has(a.viewkey);
-        const bIsShowcase = showcaseSet.has(b.viewkey);
-        if (aIsShowcase && !bIsShowcase) return -1;
-        if (!aIsShowcase && bIsShowcase) return 1;
+        const aIsFree = freeSet.has(a.viewkey);
+        const bIsFree = freeSet.has(b.viewkey);
+        if (aIsFree && !bIsFree) return -1;
+        if (!aIsFree && bIsFree) return 1;
         return 0;
       });
     }
 
     return result;
-  }, [videos, search, category, duration, sort, canViewPremium, showcaseSlugs]);
+  }, [videos, search, category, duration, sort, isAuthed, freeSlugs]);
 
   // Ref to track if we're syncing from URL (to prevent reverse sync)
   const isSyncingFromUrl = useRef(false);
@@ -354,8 +355,10 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
         ) : (
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {paginatedVideos.map((v) => {
-              const isShowcase = showcaseSlugs.includes(v.viewkey);
-              const isLocked = !canViewPremium && !isShowcase;
+              const isFree = freeSlugs.includes(v.viewkey);
+              const hasUnlocked = unlockedSlugs.includes(v.viewkey);
+              // Video is locked unless it's free OR user has unlocked it
+              const isLocked = !isFree && !hasUnlocked;
 
               if (isLocked) {
                 return (
@@ -434,7 +437,7 @@ export default function VideoSearch({ videos, canViewPremium = true, showcaseSlu
                         ★
                       </div>
                     )}
-                    {isShowcase && !canViewPremium && (
+                    {isFree && !isAuthed && (
                       <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
                         FREE
                       </div>

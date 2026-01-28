@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { isSubscriptionActive } from "@/lib/auth";
+import { CREDIT_MICRO } from "@/lib/rewardsConstants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,23 +22,25 @@ export async function GET() {
   if (!token) {
     result.sessionFound = false;
     result.userId = null;
-    result.subscription = null;
-    result.derivedTier = "free (no cookie)";
+    result.authed = false;
     return NextResponse.json(result);
   }
 
   const session = await db.session.findUnique({
     where: { token },
     include: {
-      user: { include: { subscription: true } },
+      user: {
+        include: {
+          specialCreditAccount: true,
+        },
+      },
     },
   });
 
   if (!session) {
     result.sessionFound = false;
     result.userId = null;
-    result.subscription = null;
-    result.derivedTier = "free (no session in db)";
+    result.authed = false;
     return NextResponse.json(result);
   }
 
@@ -49,45 +51,22 @@ export async function GET() {
 
   if (sessionExpired) {
     result.userId = session.userId;
-    result.subscription = null;
-    result.derivedTier = "free (session expired)";
+    result.authed = false;
     return NextResponse.json(result);
   }
 
   const user = session.user;
-  const sub = user.subscription;
 
+  result.authed = true;
   result.userId = user.id;
-  result.userEmail = user.email ?? null;
-  result.userWallet = user.walletAddress ?? null;
+  result.walletAddress = user.walletAddress ?? null;
+  result.solWallet = user.solWallet ?? null;
+  result.role = user.role;
 
-  if (!sub) {
-    result.subscription = null;
-    result.derivedTier = "free (no subscription)";
-    return NextResponse.json(result);
-  }
-
-  result.subscription = {
-    tier: sub.tier,
-    status: sub.status,
-    expiresAt: sub.expiresAt?.toISOString() ?? null,
-    expiresAtMs: sub.expiresAt?.getTime() ?? null,
-    nowMs: Date.now(),
-    isExpired: sub.expiresAt ? sub.expiresAt.getTime() < Date.now() : false,
-  };
-
-  const active = isSubscriptionActive(sub);
-  result.isSubscriptionActive = active;
-
-  if (!active) {
-    result.derivedTier = "free (subscription inactive)";
-  } else if (sub.tier === "DIAMOND") {
-    result.derivedTier = "diamond";
-  } else if (sub.tier === "MEMBER") {
-    result.derivedTier = "member";
-  } else {
-    result.derivedTier = "free (unknown tier)";
-  }
+  // Credit balance
+  const creditBalanceMicro = user.specialCreditAccount?.balanceMicro ?? 0n;
+  result.creditBalance = Number(creditBalanceMicro / CREDIT_MICRO);
+  result.creditBalanceMicro = creditBalanceMicro.toString();
 
   return NextResponse.json(result);
 }

@@ -52,17 +52,16 @@ function LinkWalletContent() {
     return (
       <main className="max-w-lg mx-auto px-4 py-12 space-y-6">
         <div className="neon-border rounded-2xl bg-black/80 p-6 md:p-8 border-pink-400/40">
-          <h1 className="text-2xl font-bold text-pink-400 mb-4">Membership Required</h1>
+          <h1 className="text-2xl font-bold text-pink-400 mb-4">Account Required</h1>
           <p className="text-white/70 mb-6">
-            Linking a payout wallet requires an active{" "}
-            <span className="text-pink-300 font-medium">Member</span> or{" "}
-            <span className="text-cyan-300 font-medium">Diamond</span> subscription.
+            Linking a payout wallet requires an account.
+            Please connect your wallet to create one.
           </p>
           <button
-            onClick={() => router.push("/signup")}
+            onClick={() => router.push("/login/diamond")}
             className="w-full py-3 px-6 rounded-xl bg-pink-500/20 border border-pink-400/50 text-pink-300 font-semibold hover:bg-pink-500/30 transition"
           >
-            Get Membership
+            Connect Wallet
           </button>
           <div className="mt-4 pt-4 border-t border-white/10">
             <button

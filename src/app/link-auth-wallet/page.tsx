@@ -4,20 +4,13 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * DEPRECATED: This page has been replaced by /upgrade-to-diamond
- *
- * The old "auth wallet link" flow has been removed because:
- * - Members should only link payout wallets (solWallet) via /link-wallet
- * - Setting walletAddress (auth identity) should only happen via Diamond signup or upgrade
- *
- * This page now redirects to the appropriate location.
+ * DEPRECATED: Redirects to wallet connect page.
  */
 export default function LinkAuthWalletPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the new upgrade page
-    router.replace("/upgrade-to-diamond");
+    router.replace("/login/diamond");
   }, [router]);
 
   return (

@@ -72,7 +72,6 @@ export async function POST() {
   let upserted = 0;
   let skipped = 0;
 
-  // NOTE: we do NOT force isShowcase here — showcase is managed by /api/admin/showcase
   for (const row of parsed) {
     const viewkey = row.viewkey?.trim();
     if (!viewkey) {
@@ -96,7 +95,6 @@ export async function POST() {
         tags,
         sourceViews,
         thumbnailUrl,
-        isShowcase: false,
       },
       update: {
         title,
@@ -104,7 +102,6 @@ export async function POST() {
         tags,
         sourceViews,
         thumbnailUrl,
-        // do NOT overwrite isShowcase on update
       },
     });
 

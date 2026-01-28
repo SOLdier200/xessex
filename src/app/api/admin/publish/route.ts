@@ -57,7 +57,6 @@ export async function POST() {
         thumbnailUrl,
         tags,
         sourceViews, // PH views - not viewsCount (which tracks Xessex local views)
-        isShowcase: false, // publish defaults to premium; ShowcaseModal sets showcase
       },
       update: {
         title,

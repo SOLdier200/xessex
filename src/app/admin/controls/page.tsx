@@ -3,9 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import SystemActionsPanel from "./SystemActionsPanel";
-import ManualPaymentsPanel from "./ManualPaymentsPanel";
 import HonestModeratorsPanel from "./HonestModeratorsPanel";
-import PendingManualBadge from "../../components/PendingManualBadge";
 
 export default function AdminControlsPage() {
   const [siteViews, setSiteViews] = useState<string | null>(null);
@@ -96,25 +94,6 @@ export default function AdminControlsPage() {
           </Link>
         </div>
 
-        {/* Manage NOWPayments Subscriptions Card */}
-        <div className="neon-border rounded-2xl p-6 bg-black/30">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center">
-              <span className="text-2xl">💎</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Manage NOWPayments Subscriptions</h2>
-              <p className="text-sm text-white/60">User membership management</p>
-            </div>
-          </div>
-          <Link
-            href="/admin/subscriptions"
-            className="block w-full px-4 py-3 rounded-xl border border-emerald-400/50 bg-emerald-500/20 text-emerald-300 font-semibold hover:bg-emerald-500/30 transition text-center"
-          >
-            Manage Users
-          </Link>
-        </div>
-
         {/* Manage Rewards Card */}
         <div className="neon-border rounded-2xl p-6 bg-black/30">
           <div className="flex items-center gap-3 mb-4">
@@ -151,26 +130,6 @@ export default function AdminControlsPage() {
           >
             Open Pipeline
           </Link>
-        </div>
-
-        {/* Cash App Payments Card */}
-        <div className="neon-border rounded-2xl p-6 bg-black/30">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center">
-              <span className="text-2xl">💸</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-white">Cash App Payments</h2>
-              <PendingManualBadge />
-            </div>
-          </div>
-          <p className="text-sm text-white/60 mb-4">Approve or deny pending Cash App submissions</p>
-          <a
-            href="#manual-payments"
-            className="block w-full px-4 py-3 rounded-xl border border-amber-400/50 bg-amber-500/20 text-amber-200 font-semibold hover:bg-amber-500/30 transition text-center"
-          >
-            Jump to Payments
-          </a>
         </div>
 
         {/* Honest Moderators Card */}
@@ -211,10 +170,6 @@ export default function AdminControlsPage() {
           )}
         </div>
       )}
-
-      <div className="mt-8">
-        <ManualPaymentsPanel />
-      </div>
 
       <div className="mt-8">
         <HonestModeratorsPanel />

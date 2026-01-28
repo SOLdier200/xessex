@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { toast } from "sonner";
 
 export default function LogoutModal({
   open,
@@ -9,7 +10,6 @@ export default function LogoutModal({
   onLogoutComplete,
   email,
   walletAddress,
-  tier,
 }: {
   open: boolean;
   onClose: () => void;
@@ -20,8 +20,6 @@ export default function LogoutModal({
 }) {
   const [loading, setLoading] = useState(false);
   const { disconnect, connected } = useWallet();
-
-  const isDiamond = tier === "diamond";
 
   const handleLogout = async () => {
     if (loading) return;
@@ -52,51 +50,36 @@ export default function LogoutModal({
     }
   };
 
+  const handleCopyWallet = async () => {
+    if (!walletAddress) return;
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      toast.success("Copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
+
   if (!open) return null;
-
-  // Determine what to display based on tier
-  // Diamond: Show wallet address (primary)
-  // Member: Show email (primary)
-  const isMember = tier === "member";
-
-  let displayValue: string | null = null;
-  if (isDiamond && walletAddress) {
-    displayValue = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
-  } else if (isMember && email) {
-    displayValue = email;
-  } else if (email) {
-    displayValue = email;
-  } else if (walletAddress) {
-    displayValue = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
-  }
-
-  const tierLabel = isDiamond ? "Diamond Member" : isMember ? "Member" : null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/90 p-6">
         {/* Show logged in user info */}
-        {displayValue && (
+        {walletAddress && (
           <div className="mb-4 pb-4 border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-white/50 uppercase tracking-wide">Logged in as</span>
-              {tierLabel && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  isDiamond
-                    ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-400/30"
-                    : "bg-pink-500/20 text-pink-300 border border-pink-400/30"
-                }`}>
-                  {tierLabel}
-                </span>
-              )}
-            </div>
-            <div className="text-sm text-white font-medium mt-1 truncate font-mono">
-              {displayValue}
-            </div>
-            {/* Show email for diamond members who also have email */}
-            {isDiamond && email && walletAddress && (
-              <div className="text-xs text-white/50 mt-1 truncate">
+            <div className="text-xs text-white/50 uppercase tracking-wide mb-2">Logged in as</div>
+            <button
+              onClick={handleCopyWallet}
+              className="w-full text-left text-sm text-cyan-400 hover:text-cyan-300 font-mono break-all transition cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2"
+              title="Click to copy"
+            >
+              {walletAddress}
+            </button>
+            {/* Show email if also has email */}
+            {email && (
+              <div className="text-xs text-white/50 mt-2 truncate">
                 {email}
               </div>
             )}

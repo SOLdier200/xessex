@@ -301,34 +301,25 @@ export default function WalletLoginButton() {
       {showNotRegisteredModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-black/95 border border-pink-500/40 rounded-2xl p-6 max-w-md mx-4 shadow-[0_0_30px_rgba(236,72,153,0.3)]">
-            <h3 className="text-xl font-bold text-white mb-2">Wallet Not Registered</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Wallet Not Connected</h3>
             <p className="text-white/70 text-sm mb-6">
-              This wallet is not linked to an account. Would you like to create one?
+              Connect your wallet to create an account and get started.
             </p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => {
                   setShowNotRegisteredModal(false);
-                  window.location.href = "/signup#diamond-card-crypto";
+                  window.location.href = "/login/diamond";
                 }}
                 className="w-full py-3 px-6 rounded-xl font-semibold text-white transition bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400"
               >
-                Create Diamond Account now?
-              </button>
-              <button
-                onClick={() => {
-                  setShowNotRegisteredModal(false);
-                  window.location.href = "/signup";
-                }}
-                className="w-full py-3 px-6 rounded-xl font-semibold text-white/90 transition bg-white/10 border border-white/20 hover:bg-white/20"
-              >
-                Create Member Account now?
+                Connect Wallet
               </button>
               <button
                 onClick={() => setShowNotRegisteredModal(false)}
                 className="w-full py-2 px-6 rounded-xl font-semibold text-white/60 transition hover:text-white/80"
               >
-                Exit
+                Cancel
               </button>
             </div>
           </div>

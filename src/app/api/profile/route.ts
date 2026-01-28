@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser, isSubscriptionActive } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/prisma";
+import { CREDIT_MICRO } from "@/lib/rewardsConstants";
 
 export const runtime = "nodejs";
 
@@ -12,18 +13,13 @@ export async function GET() {
     return NextResponse.json({ ok: true, authed: false }, { headers: noCache });
   }
 
-  const sub = user.subscription ?? null;
-  const active = !!sub && isSubscriptionActive(sub);
-
-  const membership =
-    active && sub?.tier === "DIAMOND"
-      ? "DIAMOND"
-      : active
-        ? "MEMBER"
-        : "FREE";
-
   // Get video watch count (count of star ratings as proxy for videos watched)
   const videosWatched = await db.videoStarRating.count({
+    where: { userId: user.id },
+  });
+
+  // Get video unlock count
+  const videosUnlocked = await db.videoUnlock.count({
     where: { userId: user.id },
   });
 
@@ -47,11 +43,9 @@ export async function GET() {
   }
 
   // Get special credits balance
-  const specialCreditAccount = await db.specialCreditAccount.findUnique({
-    where: { userId: user.id },
-    select: { balanceMicro: true },
-  });
-  const specialCreditsMicro = specialCreditAccount?.balanceMicro ?? 0n;
+  const specialCreditAccount = user.specialCreditAccount;
+  const creditBalanceMicro = specialCreditAccount?.balanceMicro ?? 0n;
+  const creditBalance = Number(creditBalanceMicro / CREDIT_MICRO);
 
   // Get latest wallet snapshot to determine XESS tier
   let xessTier = 0;
@@ -69,33 +63,15 @@ export async function GET() {
     }
   }
 
-  // Check for pending manual payments (Cash App)
-  const pendingManualPayment = await db.manualPayment.findFirst({
-    where: { userId: user.id, status: "PENDING" },
-    select: { id: true, planCode: true, requestedTier: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-  });
-
   return NextResponse.json({
     ok: true,
     authed: true,
-    email: user.email ?? null,
     walletAddress: user.walletAddress ?? null,
     solWallet: user.solWallet ?? null,
-    recoveryEmail: user.recoveryEmail ?? null,
-    recoveryEmailVerified: !!user.recoveryEmailVerifiedAt,
     memberId: user.memberId ?? null,
-    membership,
-    sub: sub
-      ? {
-          tier: sub.tier,
-          status: sub.status,
-          expiresAt: sub.expiresAt?.toISOString() ?? null,
-          cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
-        }
-      : null,
     stats: {
       videosWatched,
+      videosUnlocked,
       accountCreated: user.createdAt.toISOString(),
     },
     referral: {
@@ -104,16 +80,9 @@ export async function GET() {
       referredById: user.referredById ?? null,
       referredByEmail,
     },
-    specialCreditsMicro: specialCreditsMicro.toString(),
+    creditBalance,
+    creditBalanceMicro: creditBalanceMicro.toString(),
     xessTier,
     xessBalance,
-    pendingManualPayment: pendingManualPayment
-      ? {
-          id: pendingManualPayment.id,
-          planCode: pendingManualPayment.planCode,
-          requestedTier: pendingManualPayment.requestedTier,
-          createdAt: pendingManualPayment.createdAt.toISOString(),
-        }
-      : null,
   }, { headers: noCache });
 }

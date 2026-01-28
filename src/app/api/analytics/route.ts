@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { weekKeyUTC } from "@/lib/weekKey";
-import { SubscriptionTier, SubscriptionStatus, Prisma } from "@prisma/client";
 
 // Genesis week start date (Monday)
 const GENESIS_MONDAY = new Date("2026-01-13T00:00:00Z");
@@ -37,21 +36,10 @@ const LADDER_PERCENTS: number[] = [
   ...Array(40).fill(0.625),           // Ranks 11-50
 ];
 
-function eligibleDiamondUserWhere(now: Date): Prisma.UserWhereInput {
-  return {
-    subscription: {
-      is: {
-        tier: SubscriptionTier.DIAMOND,
-        status: SubscriptionStatus.ACTIVE,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-    },
-  };
-}
-
 /**
  * GET /api/analytics
- * Diamond analytics page data with live pending estimates
+ * User analytics page data with live pending estimates
+ * Available to all authenticated users
  */
 export async function GET() {
   const access = await getAccessContext();
@@ -63,19 +51,12 @@ export async function GET() {
     );
   }
 
-  if (access.tier !== "diamond") {
-    return NextResponse.json(
-      { error: "DIAMOND_ONLY" },
-      { status: 403 }
-    );
-  }
-
   const userId = access.user.id;
 
   // Total videos in system
   const totalVideos = await db.video.count();
 
-  // Get all comments by this Diamond user
+  // Get all comments by this user
   const comments = await db.comment.findMany({
     where: { authorId: userId },
     orderBy: { createdAt: "desc" },
@@ -168,7 +149,6 @@ export async function GET() {
         where: {
           weekKey: currentWeekKey,
           scoreReceived: { gt: currentStats.scoreReceived },
-          user: eligibleDiamondUserWhere(now),
         },
       });
       userLikesRank = likesRankResult + 1; // 1-indexed rank
@@ -187,7 +167,6 @@ export async function GET() {
         where: {
           weekKey: currentWeekKey,
           mvmPoints: { gt: currentStats.mvmPoints },
-          user: eligibleDiamondUserWhere(now),
         },
       });
       userMvmRank = mvmRankResult + 1;
@@ -206,7 +185,6 @@ export async function GET() {
         where: {
           weekKey: currentWeekKey,
           diamondComments: { gt: currentStats.diamondComments },
-          user: eligibleDiamondUserWhere(now),
         },
       });
       userCommentsRank = commentsRankResult + 1;

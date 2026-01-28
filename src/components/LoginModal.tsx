@@ -56,7 +56,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         <p className="text-center text-white/60 mb-8">Choose your login method</p>
 
         <div className="space-y-4">
-          {/* Diamond Login - Full blue border with moving highlight */}
+          {/* Wallet Connect - Blue border with moving highlight */}
           <div className="relative group">
             {/* Base blue border */}
             <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500" />
@@ -76,35 +76,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               }}
               className="relative w-full py-4 px-6 rounded-xl bg-black hover:bg-gray-900 transition-all duration-200 flex items-center justify-center gap-3"
             >
-              <Image
-                src="/logos/textlogo/siteset3/diamond100.png"
-                alt="Diamond Login"
-                width={1536}
-                height={282}
-                priority
-                className="h-[40px] w-auto"
-              />
-            </button>
-          </div>
-
-          {/* Member Login - Pink border with subtle pulse */}
-          <div className="relative group">
-            <div className="absolute -inset-[2px] rounded-xl bg-pink-500 animate-pulse-subtle" />
-            <button
-              onClick={() => {
-                onClose();
-                router.push("/login/member");
-              }}
-              className="relative w-full py-4 px-6 rounded-xl bg-black hover:bg-gray-900 transition-all duration-200 flex items-center justify-center gap-3"
-            >
-              <Image
-                src="/logos/textlogo/siteset3/member100.png"
-                alt="Member Login"
-                width={974}
-                height={286}
-                priority
-                className="h-[40px] w-auto"
-              />
+              <span className="text-xl font-bold text-white">Connect Wallet</span>
             </button>
           </div>
 

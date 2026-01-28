@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { getAccessContext } from "@/lib/access";
+import { getAccessContext, canAccessVideo } from "@/lib/access";
 import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -10,16 +10,19 @@ const VIDEO_SELECT = {
   slug: true,
   title: true,
   embedUrl: true,
-  isShowcase: true,
   viewsCount: true,
   sourceViews: true,
   avgStars: true,
   starsCount: true,
+  unlockCost: true,
 };
 
-async function pickShowcase(excludeViewkey: string | null) {
+/**
+ * Pick a random free video (unlockCost = 0)
+ */
+async function pickFreeVideo(excludeViewkey: string | null) {
   const where = {
-    isShowcase: true,
+    unlockCost: 0,
     ...(excludeViewkey ? { slug: { not: excludeViewkey } } : {}),
   };
 
@@ -38,6 +41,9 @@ async function pickShowcase(excludeViewkey: string | null) {
   return videos[0] ?? null;
 }
 
+/**
+ * Pick a random video from approved SQLite list
+ */
 async function pickApprovedFromSqlite(excludeViewkey: string | null) {
   try {
     const sqlite = getDb();
@@ -65,8 +71,9 @@ export async function GET(req: NextRequest) {
   const excludeViewkey = req.nextUrl.searchParams.get("excludeViewkey") || null;
   const access = await getAccessContext();
 
-  if (!access.canViewAllVideos) {
-    const video = await pickShowcase(excludeViewkey);
+  // Not authenticated - only show free videos
+  if (!access.isAuthed) {
+    const video = await pickFreeVideo(excludeViewkey);
     if (!video) {
       return NextResponse.json(
         { ok: false, error: "NO_NEXT_VIDEO" },
@@ -78,7 +85,10 @@ export async function GET(req: NextRequest) {
     return res;
   }
 
+  // Authenticated user - try to find an unlocked video
+  const userId = access.user?.id;
   const MAX_ATTEMPTS = 5;
+
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const viewkey = await pickApprovedFromSqlite(excludeViewkey);
     if (!viewkey) break;
@@ -88,11 +98,23 @@ export async function GET(req: NextRequest) {
       select: VIDEO_SELECT,
     });
 
-    if (video) {
-      const res = NextResponse.json({ ok: true, next: video });
-      res.headers.set("Cache-Control", "no-store");
-      return res;
+    if (video && userId) {
+      // Check if user can access this video
+      const accessCheck = await canAccessVideo(userId, video.id);
+      if (accessCheck.canAccess) {
+        const res = NextResponse.json({ ok: true, next: video });
+        res.headers.set("Cache-Control", "no-store");
+        return res;
+      }
     }
+  }
+
+  // Fallback to free video if no unlocked video found
+  const freeVideo = await pickFreeVideo(excludeViewkey);
+  if (freeVideo) {
+    const res = NextResponse.json({ ok: true, next: freeVideo });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
   }
 
   return NextResponse.json(

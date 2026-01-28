@@ -24,16 +24,10 @@ export default function MembersPreviewPage() {
 
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/login"
+                href="/login/diamond"
                 className="px-6 py-3 rounded-xl bg-pink-500/20 border border-pink-400/40 text-pink-100 font-semibold hover:bg-pink-500/30 transition"
               >
-                Log In
-              </Link>
-              <Link
-                href="/signup"
-                className="px-6 py-3 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-100 font-semibold hover:bg-sky-500/30 transition"
-              >
-                Sign Up
+                Connect Wallet
               </Link>
             </div>
           </section>

@@ -125,13 +125,13 @@ export default function AnalyticsPage() {
               Diamond Members Only
             </h2>
             <p className="text-white/70 mb-6">
-              Analytics are exclusively available to Diamond Members.
+              Analytics are exclusively available to authenticated users.
             </p>
             <Link
-              href="/signup"
+              href="/login/diamond"
               className="inline-block px-6 py-3 rounded-xl bg-yellow-500/80 hover:bg-yellow-500 text-black font-medium transition"
             >
-              Become a Diamond Member
+              Connect Wallet
             </Link>
           </div>
         </div>
@@ -307,7 +307,7 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Comments Table */}
+        {/* Comments List */}
         <div className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
           <h2 className="text-lg font-semibold neon-text mb-4">
             Your Comments ({comments.length})
@@ -315,61 +315,38 @@ export default function AnalyticsPage() {
 
           {comments.length === 0 ? (
             <p className="text-white/50 text-center py-8">
-              You haven't posted any comments yet.
+              You haven&apos;t posted any comments yet.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-white/50 border-b border-white/10">
-                    <th className="pb-3 font-medium">Source ID</th>
-                    <th className="pb-3 font-medium">Comment</th>
-                    <th className="pb-3 font-medium text-center">Score</th>
-                    <th className="pb-3 font-medium text-center">Likes</th>
-                    <th className="pb-3 font-medium text-center min-w-[90px]">Status</th>
-                    <th className="pb-3 font-medium min-w-[80px]">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comments.map((c) => (
-                    <tr
-                      key={c.sourceId}
-                      className="border-b border-white/5 hover:bg-white/5 cursor-pointer"
-                      onClick={() => setSelectedComment({
-                        body: c.body,
-                        createdAt: c.createdAt,
-                        score: c.score,
-                        memberLikes: c.memberLikes,
-                        memberDislikes: c.memberDislikes,
-                        utilized: c.utilized,
-                      })}
-                    >
-                      <td className="py-3 font-mono text-xs text-white/60">
-                        #{c.sourceId.slice(-6)}
-                      </td>
-                      <td className="py-3 max-w-xs truncate text-white/80">
-                        {c.body}
-                      </td>
-                      <td className="py-3 text-center">
-                        <span
-                          className={`font-semibold ${
-                            c.score > 0
-                              ? "text-green-400"
-                              : c.score < 0
-                              ? "text-red-400"
-                              : "text-white/50"
-                          }`}
-                        >
-                          {c.score > 0 ? "+" : ""}
-                          {c.score}
+            <div className="space-y-3">
+              {comments.map((c) => {
+                const openModal = () => {
+                  setSelectedComment({
+                    body: c.body,
+                    createdAt: c.createdAt,
+                    score: c.score,
+                    memberLikes: c.memberLikes,
+                    memberDislikes: c.memberDislikes,
+                    utilized: c.utilized,
+                  });
+                };
+                return (
+                  <div
+                    key={c.sourceId}
+                    className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-pink-500/40 transition-colors"
+                  >
+                    {/* Header row with stats */}
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="font-mono text-xs text-white/50">#{c.sourceId.slice(-6)}</span>
+                        <span className={`font-semibold ${c.score > 0 ? "text-green-400" : c.score < 0 ? "text-red-400" : "text-white/50"}`}>
+                          Score: {c.score > 0 ? "+" : ""}{c.score}
                         </span>
-                      </td>
-                      <td className="py-3 text-center">
-                        <span className="text-green-400">{c.memberLikes}</span>
-                        <span className="text-white/30 mx-1">/</span>
-                        <span className="text-red-400">{c.memberDislikes}</span>
-                      </td>
-                      <td className="py-3 text-center min-w-[90px]">
+                        <span className="text-white/60">
+                          <span className="text-green-400">{c.memberLikes}</span>
+                          <span className="text-white/30 mx-1">/</span>
+                          <span className="text-red-400">{c.memberDislikes}</span>
+                        </span>
                         {c.utilized ? (
                           <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/30">
                             MVM
@@ -379,14 +356,28 @@ export default function AnalyticsPage() {
                             Pending
                           </span>
                         )}
-                      </td>
-                      <td className="py-3 text-white/50 text-xs min-w-[80px]">
+                      </div>
+                      <span className="text-white/40 text-xs">
                         {new Date(c.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </span>
+                    </div>
+
+                    {/* Comment preview and View button */}
+                    <div className="flex items-start gap-3">
+                      <p className="flex-1 text-white/80 text-sm line-clamp-2 min-h-[2.5rem]">
+                        {c.body}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={openModal}
+                        className="flex-shrink-0 px-4 py-2 text-sm font-semibold rounded-lg bg-pink-500/30 text-pink-300 hover:bg-pink-500/50 border border-pink-500/50 transition-all hover:scale-105 active:scale-95"
+                      >
+                        View Full
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

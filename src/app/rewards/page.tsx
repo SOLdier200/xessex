@@ -382,7 +382,7 @@ export default function RewardsPage() {
         <div className="text-center">
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="/signup"
+              href="/login/diamond"
               className="rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 px-8 py-4 font-semibold text-white hover:from-pink-400 hover:to-purple-400 transition text-lg"
             >
               Start Earning Now
