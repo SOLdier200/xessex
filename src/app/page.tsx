@@ -3,6 +3,8 @@ import Image from "next/image";
 import fs from "fs";
 import path from "path";
 import TopNav from "./components/TopNav";
+import LockedVideoCard from "./components/LockedVideoCard";
+import LockedFeaturedCard from "./components/LockedFeaturedCard";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -75,11 +77,23 @@ export default async function HomePage() {
     unlockedSlugs = userUnlocks.map((u) => u.video.slug);
   }
 
-  // Merge rank into approved videos and sort by rank
+  // Create sets for fast lookup
+  const freeSet = new Set(freeSlugs);
+  const unlockedSet = new Set(unlockedSlugs);
+
+  // Merge rank into approved videos and sort: unlocked first (by rank), then locked (by rank)
   const videos = approvedVideos
     .map((v) => ({ ...v, rank: rankMap.get(v.viewkey) ?? null }))
     .sort((a, b) => {
-      // Videos with rank come first, sorted by rank ascending
+      // Determine if each video is unlocked (free or user-unlocked)
+      const aUnlocked = freeSet.has(a.viewkey) || unlockedSet.has(a.viewkey);
+      const bUnlocked = freeSet.has(b.viewkey) || unlockedSet.has(b.viewkey);
+
+      // Unlocked videos come first
+      if (aUnlocked && !bUnlocked) return -1;
+      if (!aUnlocked && bUnlocked) return 1;
+
+      // Within same group (both unlocked or both locked), sort by rank
       if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
       if (a.rank !== null) return -1;
       if (b.rank !== null) return 1;
@@ -100,47 +114,23 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
             {videos.slice(0, 20).map((v) => {
-              const isFree = freeSlugs.includes(v.viewkey);
-              const hasUnlocked = unlockedSlugs.includes(v.viewkey);
+              const isFree = freeSet.has(v.viewkey);
+              const hasUnlocked = unlockedSet.has(v.viewkey);
               // Video is locked unless it's free OR user has unlocked it
               const isLocked = !isFree && !hasUnlocked;
 
               if (isLocked) {
                 return (
-                  <div
+                  <LockedVideoCard
                     key={v.viewkey}
-                    className="neon-border rounded-2xl bg-black/30 overflow-hidden relative"
-                  >
-                    <div className="relative aspect-video bg-black/60">
-                      {v.primary_thumb ? (
-                        <img
-                          src={v.primary_thumb}
-                          alt="Premium video"
-                          className="w-full h-full object-cover blur-lg scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/30 blur-md">
-                          No Thumbnail
-                        </div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <div className="text-center">
-                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-xs text-yellow-300 font-semibold mt-1 block">PREMIUM</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-2 md:p-3">
-                      <div className="font-semibold text-white/40 text-xs md:text-sm italic">
-                        Locked Video
-                      </div>
-                      <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/30">
-                        <span>{formatDuration(v.duration)}</span>
-                      </div>
-                    </div>
-                  </div>
+                    viewkey={v.viewkey}
+                    title={v.title}
+                    thumb={v.primary_thumb}
+                    duration={formatDuration(v.duration)}
+                    rank={v.rank}
+                    isAuthed={isAuthed}
+                    size="small"
+                  />
                 );
               }
 
@@ -249,39 +239,22 @@ export default async function HomePage() {
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (() => {
             const featured = videos[0];
-            const isFeaturedFree = freeSlugs.includes(featured.viewkey);
-            const isFeaturedLocked = !isAuthed && !isFeaturedFree;
+            const isFeaturedFree = freeSet.has(featured.viewkey);
+            const isFeaturedUnlocked = unlockedSet.has(featured.viewkey);
+            // Locked unless free OR user has unlocked it
+            const isFeaturedLocked = !isFeaturedFree && !isFeaturedUnlocked;
 
             if (isFeaturedLocked) {
               return (
-                <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
-                  <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
-                  <div className="block w-full">
-                    <div className="relative aspect-video rounded-xl overflow-hidden">
-                      {featured.primary_thumb && (
-                        <img
-                          src={featured.primary_thumb}
-                          alt={`Featured premium video: ${featured.title} - Unlock with membership`}
-                          className="w-full h-full object-cover blur-lg scale-110"
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <div className="text-center">
-                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-sm text-yellow-300 font-semibold mt-2 block">PREMIUM</span>
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="mt-3 text-lg font-semibold text-white/40 blur-sm select-none">
-                      {featured.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-white/30 blur-sm">
-                      {featured.performers || "Unknown"}
-                    </p>
-                  </div>
-                </section>
+                <LockedFeaturedCard
+                  viewkey={featured.viewkey}
+                  title={featured.title}
+                  thumb={featured.primary_thumb}
+                  duration={formatDuration(featured.duration)}
+                  performers={featured.performers || "Unknown"}
+                  isAuthed={isAuthed}
+                  variant="featured"
+                />
               );
             }
 
@@ -317,41 +290,24 @@ export default async function HomePage() {
 
           {/* Top Ranked Video */}
           {videos.length > 0 && (() => {
-            // Get actual #1 ranked video (videos already sorted by rank)
-            const topRanked = videos[0];
-            const isTopFree = freeSlugs.includes(topRanked.viewkey);
-            const isTopLocked = !isAuthed && !isTopFree;
+            // Get actual #1 ranked video (find by rank=1, not array position)
+            const topRanked = videos.find((v) => v.rank === 1) || videos[0];
+            const isTopFree = freeSet.has(topRanked.viewkey);
+            const isTopUnlocked = unlockedSet.has(topRanked.viewkey);
+            // Locked unless free OR user has unlocked it
+            const isTopLocked = !isTopFree && !isTopUnlocked;
 
             if (isTopLocked) {
               return (
-                <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30">
-                  <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
-                  <div className="block w-full">
-                    <div className="relative aspect-video rounded-xl overflow-hidden">
-                      {topRanked.primary_thumb && (
-                        <img
-                          src={topRanked.primary_thumb}
-                          alt={`Top ranked premium video: ${topRanked.title} - Unlock with membership`}
-                          className="w-full h-full object-cover blur-lg scale-110"
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <div className="text-center">
-                          <svg className="w-10 h-10 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-sm text-yellow-300 font-semibold mt-2 block">PREMIUM</span>
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="mt-3 text-lg font-semibold text-white/40 blur-sm select-none">
-                      {topRanked.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-white/30 blur-sm">
-                      {topRanked.performers || "Unknown"}
-                    </p>
-                  </div>
-                </section>
+                <LockedFeaturedCard
+                  viewkey={topRanked.viewkey}
+                  title={topRanked.title}
+                  thumb={topRanked.primary_thumb}
+                  duration={formatDuration(topRanked.duration)}
+                  performers={topRanked.performers || "Unknown"}
+                  isAuthed={isAuthed}
+                  variant="topRanked"
+                />
               );
             }
 

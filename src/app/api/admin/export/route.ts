@@ -22,13 +22,13 @@ export async function POST() {
 
   // Count by source
   const embedsCount = videos.filter((v) => v.source === "embeds").length;
-  const xvidpremCount = videos.filter((v) => v.source === "xvidprem").length;
+  const youpornCount = videos.filter((v) => v.source === "youporn").length;
 
   return NextResponse.json({
     ok: true,
     exported: videos.length,
     embeds: embedsCount,
-    xvidprem: xvidpremCount,
+    youporn: youpornCount,
     file: "data/approved.json",
   });
 }

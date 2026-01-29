@@ -6,12 +6,12 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-export type DbSource = "embeds" | "xvidprem";
+export type DbSource = "embeds" | "youporn";
 
 // Database paths - use env vars if set, otherwise local paths
 const dbPaths: Record<DbSource, string> = {
   embeds: process.env.DB_PATH || path.join(process.cwd(), "embeds.db"),
-  xvidprem: process.env.XVIDPREM_DB_PATH || path.join(process.cwd(), "xvidprem.db"),
+  youporn: process.env.YOUPORN_DB_PATH || path.join(process.cwd(), "youpornembeds.db"),
 };
 
 console.log("[db.ts] Database paths:", dbPaths);
@@ -340,9 +340,9 @@ export function getApprovedVideos(source: DbSource = "embeds"): VideoWithSource[
  */
 export function getAllApprovedVideos(): VideoWithSource[] {
   const embeds = getApprovedVideos("embeds");
-  const xvidprem = getApprovedVideos("xvidprem");
+  const youporn = getApprovedVideos("youporn");
   // Merge and sort by favorite then views
-  return [...embeds, ...xvidprem].sort((a, b) => {
+  return [...embeds, ...youporn].sort((a, b) => {
     if (a.favorite !== b.favorite) return b.favorite - a.favorite;
     return (b.views || 0) - (a.views || 0);
   });

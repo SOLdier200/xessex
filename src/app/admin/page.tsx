@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import Script from "next/script";
 
 type Toast = {
   id: number;
@@ -63,7 +62,7 @@ type Video = {
 type Cursor = { value: number; viewkey: string } | null;
 type SortBy = "views" | "duration";
 type SortDir = "desc" | "asc";
-type DbSource = "embeds" | "xvidprem";
+type DbSource = "embeds" | "youporn";
 
 type Stats = {
   total: number;
@@ -341,18 +340,14 @@ export default function AdminPage() {
 
   // Get correct embed URL based on database source
   const getEmbedUrl = (viewkey: string) => {
-    if (dbSource === "xvidprem") {
-      return `https://www.xvideos.com/embedframe/${viewkey}`;
+    if (dbSource === "youporn") {
+      return `https://www.youporn.com/embed/${viewkey}`;
     }
     return `https://www.pornhub.com/embed/${viewkey}`;
   };
 
   return (
     <main className="min-h-screen p-6">
-      {/* X-Frame-Bypass scripts for embedding xvideos */}
-      <Script src="https://unpkg.com/@ungap/custom-elements-builtin" strategy="beforeInteractive" />
-      <Script type="module" src="https://unpkg.com/x-frame-bypass" strategy="beforeInteractive" />
-
       {/* Progress Banner */}
       <div className="mb-4 py-3 px-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 rounded-xl text-center border border-emerald-400/50 shadow-lg">
         <span className="text-xl font-bold text-white">
@@ -408,14 +403,14 @@ export default function AdminPage() {
           PH Embeds DB
         </button>
         <button
-          onClick={() => setDbSource("xvidprem")}
+          onClick={() => setDbSource("youporn")}
           className={`px-6 py-3 rounded-xl font-bold text-lg transition ${
-            dbSource === "xvidprem"
-              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30"
+            dbSource === "youporn"
+              ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30"
               : "bg-black/40 text-white/60 border border-white/20 hover:border-white/40"
           }`}
         >
-          Xvidprem DB
+          YouP DB
         </button>
       </div>
 
@@ -654,24 +649,13 @@ export default function AdminPage() {
                 : { right: pipPosition.x, bottom: pipPosition.y, width: 1, height: 1 }
             }
           >
-{dbSource === "xvidprem" ? (
-              <iframe
-                is="x-frame-bypass"
+<iframe
                 src={getEmbedUrl(selectedVideo.viewkey)}
                 frameBorder={0}
                 width="100%"
                 height="100%"
                 allowFullScreen
               />
-            ) : (
-              <iframe
-                src={getEmbedUrl(selectedVideo.viewkey)}
-                frameBorder={0}
-                width="100%"
-                height="100%"
-                allowFullScreen
-              />
-            )}
             {/* PiP Controls Overlay */}
             {minimizeState === "pip" && (
               <>

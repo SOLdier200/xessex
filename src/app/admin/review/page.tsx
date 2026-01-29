@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Script from "next/script";
 import { toast } from "sonner";
 
 type Video = {
@@ -22,14 +21,13 @@ type Video = {
 };
 
 type Cursor = { value: number; viewkey: string } | null;
-type DbSource = "embeds" | "xvidprem";
+type DbSource = "embeds" | "youporn";
 
 type ApiResponse = {
   videos: Video[];
   nextCursor: Cursor;
   hasMore: boolean;
   stats: { approved: number };
-  source: DbSource;
 };
 
 export default function ReviewApprovedPage() {
@@ -53,8 +51,8 @@ export default function ReviewApprovedPage() {
 
   // Get correct embed URL based on database source
   const getEmbedUrl = (viewkey: string) => {
-    if (dbSource === "xvidprem") {
-      return `https://www.xvideos.com/embedframe/${viewkey}`;
+    if (dbSource === "youporn") {
+      return `https://www.youporn.com/embed/${viewkey}`;
     }
     return `https://www.pornhub.com/embed/${viewkey}`;
   };
@@ -161,10 +159,6 @@ export default function ReviewApprovedPage() {
 
   return (
     <main className="min-h-screen p-6">
-      {/* X-Frame-Bypass scripts for embedding xvideos */}
-      <Script src="https://unpkg.com/@ungap/custom-elements-builtin" strategy="beforeInteractive" />
-      <Script type="module" src="https://unpkg.com/x-frame-bypass" strategy="beforeInteractive" />
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -203,14 +197,14 @@ export default function ReviewApprovedPage() {
           PH Embeds DB
         </button>
         <button
-          onClick={() => setDbSource("xvidprem")}
+          onClick={() => setDbSource("youporn")}
           className={`px-6 py-3 rounded-xl font-bold text-lg transition ${
-            dbSource === "xvidprem"
-              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30"
+            dbSource === "youporn"
+              ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30"
               : "bg-black/40 text-white/60 border border-white/20 hover:border-white/40"
           }`}
         >
-          Xvidprem DB
+          YouP DB
         </button>
       </div>
 
@@ -362,24 +356,13 @@ export default function ReviewApprovedPage() {
             {/* Video Embed */}
             <div className="p-4">
               <div className="bg-black rounded-xl overflow-hidden aspect-video">
-                {dbSource === "xvidprem" ? (
-                  <iframe
-                    is="x-frame-bypass"
-                    src={getEmbedUrl(selectedVideo.viewkey)}
-                    frameBorder={0}
-                    width="100%"
-                    height="100%"
-                    allowFullScreen
-                  />
-                ) : (
-                  <iframe
-                    src={getEmbedUrl(selectedVideo.viewkey)}
-                    frameBorder={0}
-                    width="100%"
-                    height="100%"
-                    allowFullScreen
-                  />
-                )}
+                <iframe
+                  src={getEmbedUrl(selectedVideo.viewkey)}
+                  frameBorder={0}
+                  width="100%"
+                  height="100%"
+                  allowFullScreen
+                />
               </div>
             </div>
 

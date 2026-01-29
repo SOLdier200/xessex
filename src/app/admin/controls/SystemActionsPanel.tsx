@@ -46,14 +46,6 @@ export default function SystemActionsPanel() {
         endpoint: "/api/admin/recalculate-leaderboards",
       },
       {
-        key: "REBUILD_SEARCH_INDEX",
-        title: "Rebuild Search Index",
-        subtitle: "Regenerate the search index from videos and metadata.",
-        icon: "🗂️",
-        endpoint: "/api/admin/rebuild-search-index",
-        danger: true,
-      },
-      {
         key: "FLUSH_CLOUDFLARE_CACHE",
         title: "Flush Cloudflare Cache",
         subtitle: "Purge the entire zone cache (purge_everything).",

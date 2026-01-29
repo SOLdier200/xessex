@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const favoriteOnly = searchParams.get("favorite") === "1";
   const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "50", 10)));
 
-  // Database source (embeds or xvidprem)
+  // Database source (embeds or youporn)
   const source = (searchParams.get("source") as DbSource) || "embeds";
 
   // Sort options

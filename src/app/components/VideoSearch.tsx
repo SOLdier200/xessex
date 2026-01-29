@@ -696,11 +696,13 @@ export default function VideoSearch({
               </button>
             </div>
 
-            {!canAfford && (
-              <p className="text-xs text-white/50 text-center mt-4">
-                Hold 10,000+ XESS to start earning Special Credits
-              </p>
-            )}
+            <p className="text-xs text-white/50 text-center mt-4">
+              Want to unlock new videos faster? Go to{" "}
+              <a href="/swap" className="text-cyan-400 hover:text-cyan-300 underline">
+                Swap
+              </a>{" "}
+              to get XESS tokens to hold in your wallet and earn special credits!
+            </p>
           </div>
         </div>
       )}

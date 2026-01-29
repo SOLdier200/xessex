@@ -97,19 +97,19 @@ export default function XessNewsPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-sm">
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">50K XESS</div>
-                    <div className="text-white/60">30/month</div>
+                    <div className="text-white/60">60/month</div>
                   </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">100K XESS</div>
-                    <div className="text-white/60">100/month</div>
+                    <div className="text-white/60">200/month</div>
                   </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">500K XESS</div>
-                    <div className="text-white/60">500/month</div>
+                    <div className="text-white/60">1,000/month</div>
                   </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">1M+ XESS</div>
-                    <div className="text-white/60">1000+/month</div>
+                    <div className="text-white/60">2,000+/month</div>
                   </div>
                 </div>
                 <p className="mt-4 text-white/60 text-sm">

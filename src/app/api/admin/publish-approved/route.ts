@@ -12,7 +12,7 @@ type ApprovedRow = {
   primary_thumb?: string | null;
   tags?: string | null; // semicolon-separated
   views?: number | null;
-  source?: "embeds" | "xvidprem"; // Database source from export
+  source?: "embeds" | "youporn"; // Database source from export
 };
 
 function toTagsArray(tags?: string | null): string[] {
@@ -26,11 +26,11 @@ function toTagsArray(tags?: string | null): string[] {
 /**
  * Get embed platform from database source
  * - embeds = PornHub
- * - xvidprem = XVideos
+ * - youporn = YouPorn
  */
-function getEmbedPlatform(row: ApprovedRow): "pornhub" | "xvideos" {
+function getEmbedPlatform(row: ApprovedRow): "pornhub" | "youporn" {
   // If source is explicitly set, use it
-  if (row.source === "xvidprem") return "xvideos";
+  if (row.source === "youporn") return "youporn";
   if (row.source === "embeds") return "pornhub";
 
   // Fallback: detect from viewkey pattern
@@ -41,13 +41,13 @@ function getEmbedPlatform(row: ApprovedRow): "pornhub" | "xvideos" {
     return "pornhub";
   }
 
-  // XVideos viewkeys are typically alphanumeric
-  return "xvideos";
+  // YouPorn viewkeys are typically numeric
+  return "youporn";
 }
 
-function getEmbedUrl(viewkey: string, source: "pornhub" | "xvideos"): string {
-  if (source === "xvideos") {
-    return `https://www.xvideos.com/embedframe/${viewkey}`;
+function getEmbedUrl(viewkey: string, source: "pornhub" | "youporn"): string {
+  if (source === "youporn") {
+    return `https://www.youporn.com/embed/${viewkey}`;
   }
   return `https://www.pornhub.com/embed/${viewkey}`;
 }
