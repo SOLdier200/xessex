@@ -28,7 +28,14 @@ export default function proxy(req: NextRequest) {
   }
 
   // Never gate static assets
-  if (pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/logos/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?|ttf|otf|webm|mp4)$/i.test(pathname)
+  ) {
     return NextResponse.next();
   }
 

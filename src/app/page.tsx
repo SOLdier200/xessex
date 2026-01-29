@@ -115,7 +115,7 @@ export default async function HomePage() {
                       {v.primary_thumb ? (
                         <img
                           src={v.primary_thumb}
-                          alt={`Premium video: ${v.title} - Unlock with membership`}
+                          alt="Premium video"
                           className="w-full h-full object-cover blur-lg scale-110"
                         />
                       ) : (
@@ -133,11 +133,8 @@ export default async function HomePage() {
                       </div>
                     </div>
                     <div className="p-2 md:p-3">
-                      <div className="font-semibold text-white/40 text-xs md:text-sm line-clamp-2 blur-sm select-none">
-                        {v.title}
-                      </div>
-                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/30 truncate blur-sm">
-                        {v.performers || "Unknown"}
+                      <div className="font-semibold text-white/40 text-xs md:text-sm italic">
+                        Locked Video
                       </div>
                       <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/30">
                         <span>{formatDuration(v.duration)}</span>

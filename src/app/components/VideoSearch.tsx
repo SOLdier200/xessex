@@ -450,7 +450,7 @@ export default function VideoSearch({
                       {v.primary_thumb ? (
                         <img
                           src={v.primary_thumb}
-                          alt={`Premium video: ${v.title}`}
+                          alt="Premium video"
                           className="w-full h-full object-cover blur-md scale-110 opacity-60"
                         />
                       ) : (
@@ -492,11 +492,8 @@ export default function VideoSearch({
                       </div>
                     </div>
                     <div className="p-2 md:p-3">
-                      <div className="font-semibold text-white/70 text-xs md:text-sm line-clamp-2">
-                        {v.title}
-                      </div>
-                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/50 truncate">
-                        {v.performers || "Unknown"}
+                      <div className="font-semibold text-white/40 text-xs md:text-sm line-clamp-2 italic">
+                        Locked Video
                       </div>
                       <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-yellow-400">
                         <span>{nextCost} credits to unlock</span>
@@ -627,10 +624,6 @@ export default function VideoSearch({
                   <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>
               </div>
-
-              <p className="text-sm text-white/70 mb-2 line-clamp-2">
-                {unlockModal.title}
-              </p>
 
               <p className="text-lg text-white mb-2">
                 Unlock this video for
