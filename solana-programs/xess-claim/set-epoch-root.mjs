@@ -8,9 +8,27 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PROGRAM_ID = new PublicKey("AKRLZssgxwQwC2gGgUtYtcU7JrhDyEfk1FHqQkZnFUax");
-const EPOCH = BigInt(process.argv[2] || "1");
-// For testing, use a placeholder root. In production, compute real merkle root.
-const ROOT_HEX = process.argv[3] || "0".repeat(64);  // 32 bytes of zeros for testing
+
+// Safety guards - prevent accidental zero roots or missing args
+if (!process.argv[2] || !process.argv[3]) {
+  console.error("Usage: node set-epoch-root.mjs <EPOCH> <ROOT_HEX>");
+  console.error("Example: node set-epoch-root.mjs 1 a1b2c3...64chars");
+  process.exit(1);
+}
+
+const EPOCH = BigInt(process.argv[2]);
+const ROOT_HEX = process.argv[3].replace(/^0x/, "");
+
+if (!/^[0-9a-fA-F]{64}$/.test(ROOT_HEX)) {
+  console.error("ERROR: ROOT_HEX must be exactly 64 hex characters (32 bytes).");
+  console.error("Got:", ROOT_HEX.length, "chars");
+  process.exit(1);
+}
+
+if (/^0{64}$/.test(ROOT_HEX)) {
+  console.error("ERROR: Refusing to set all-zero root. This is likely a mistake.");
+  process.exit(1);
+}
 
 const RPC_URL = "https://api.devnet.solana.com";
 

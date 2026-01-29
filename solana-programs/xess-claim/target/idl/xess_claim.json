@@ -174,9 +174,10 @@
     {
       "name": "claim_v2",
       "docs": [
-        "V2 claim instruction: allows claiming with userKey instead of wallet pubkey.",
-        "Receipt PDA is keyed by (epoch, user_key) instead of (epoch, wallet).",
-        "Anyone with the correct salt can claim to any wallet they control."
+        "V2 claim instruction: wallet-based identity.",
+        "user_key is derived from claimer.key().to_bytes() (not passed as arg).",
+        "Receipt PDA is keyed by (epoch, claimer_pubkey).",
+        "This makes claims cryptographically tied to the signing wallet."
       ],
       "discriminator": [
         229,
@@ -289,8 +290,8 @@
                 "path": "epoch"
               },
               {
-                "kind": "arg",
-                "path": "user_key"
+                "kind": "account",
+                "path": "claimer"
               }
             ]
           }
@@ -329,15 +330,6 @@
         {
           "name": "index",
           "type": "u32"
-        },
-        {
-          "name": "user_key",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
         },
         {
           "name": "salt",
@@ -780,7 +772,7 @@
     {
       "name": "ReceiptV2",
       "docs": [
-        "V2 Receipt: keyed by (epoch, user_key) instead of (epoch, wallet)"
+        "V2 Receipt: keyed by (epoch, claimer_pubkey) - wallet-based identity"
       ],
       "type": {
         "kind": "struct",

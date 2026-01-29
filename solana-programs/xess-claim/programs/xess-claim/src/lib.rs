@@ -85,16 +85,16 @@ pub mod xess_claim {
         Ok(())
     }
 
-    /// V2 claim instruction: allows claiming with userKey instead of wallet pubkey.
-    /// Receipt PDA is keyed by (epoch, user_key) instead of (epoch, wallet).
-    /// Anyone with the correct salt can claim to any wallet they control.
+    /// V2 claim instruction: wallet-based identity.
+    /// user_key is derived from claimer.key().to_bytes() (not passed as arg).
+    /// Receipt PDA is keyed by (epoch, claimer_pubkey).
+    /// This makes claims cryptographically tied to the signing wallet.
     pub fn claim_v2(
         ctx: Context<ClaimV2>,
         epoch: u64,
         amount: u64,
         index: u32,
-        user_key: [u8; 32],   // keccak256(userId)
-        salt: [u8; 32],       // per-(epoch, user) secret
+        salt: [u8; 32],       // per-(epoch, wallet) secret
         proof: Vec<[u8; 32]>,
     ) -> Result<()> {
         require_eq!(ctx.accounts.epoch_root.epoch, epoch, XessError::BadEpoch);
@@ -102,11 +102,14 @@ pub mod xess_claim {
         // Verify user_ata belongs to claimer (prevent routing to wrong wallet)
         require_keys_eq!(ctx.accounts.user_ata.owner, ctx.accounts.claimer.key(), XessError::BadOwner);
 
+        // user_key is derived from claimer pubkey - not passed as arg
+        let user_key: [u8; 32] = ctx.accounts.claimer.key().to_bytes();
+
         let leaf = leaf_hash_v2(user_key, epoch, amount, index, salt);
         let ok = verify_merkle(leaf, &proof, ctx.accounts.epoch_root.root, index);
         require!(ok, XessError::BadProof);
 
-        // Receipt PDA prevents double-claim (init happens once per epoch+user_key)
+        // Receipt PDA prevents double-claim (init happens once per epoch+claimer)
         let r = &mut ctx.accounts.receipt_v2;
         r.epoch = epoch;
         r.user_key = user_key;
@@ -180,12 +183,12 @@ impl Receipt {
     pub const SIZE: usize = 8 + 32 + 8 + 4 + 1;
 }
 
-/// V2 Receipt: keyed by (epoch, user_key) instead of (epoch, wallet)
+/// V2 Receipt: keyed by (epoch, claimer_pubkey) - wallet-based identity
 #[account]
 pub struct ReceiptV2 {
     pub epoch: u64,
-    pub user_key: [u8; 32],   // keccak256(userId) - who earned this
-    pub claimed_to: Pubkey,   // which wallet received tokens
+    pub user_key: [u8; 32],   // claimer.key().to_bytes() - wallet pubkey
+    pub claimed_to: Pubkey,   // which wallet received tokens (same as user_key)
     pub amount: u64,
     pub index: u32,
     pub bump: u8,
@@ -298,9 +301,9 @@ pub struct Claim<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// V2 Claim: Receipt PDA keyed by (epoch, user_key) instead of (epoch, wallet)
+/// V2 Claim: Receipt PDA keyed by (epoch, claimer_pubkey) - wallet-based identity
 #[derive(Accounts)]
-#[instruction(epoch: u64, amount: u64, index: u32, user_key: [u8; 32])]
+#[instruction(epoch: u64, amount: u64, index: u32)]
 pub struct ClaimV2<'info> {
     #[account(seeds = [b"config"], bump)]
     pub config: Account<'info, Config>,
@@ -322,7 +325,7 @@ pub struct ClaimV2<'info> {
         init,
         payer = claimer,
         space = 8 + ReceiptV2::SIZE,
-        seeds = [b"receipt_v2", epoch.to_le_bytes().as_ref(), user_key.as_ref()],
+        seeds = [b"receipt_v2", epoch.to_le_bytes().as_ref(), claimer.key().as_ref()],
         bump
     )]
     pub receipt_v2: Account<'info, ReceiptV2>,
@@ -350,7 +353,8 @@ fn leaf_hash(claimer: Pubkey, epoch: u64, amount: u64, index: u32) -> [u8; 32] {
     solana_program::keccak::hashv(&[claimer.as_ref(), &epoch_b, &amt_b, &idx_b]).to_bytes()
 }
 
-/// V2 leaf hash: hash(user_key || epoch || amount || index || salt)
+/// V2 leaf hash: hash(claimer_pubkey || epoch || amount || index || salt)
+/// user_key is claimer.key().to_bytes() (wallet pubkey, not keccak(userId))
 fn leaf_hash_v2(user_key: [u8; 32], epoch: u64, amount: u64, index: u32, salt: [u8; 32]) -> [u8; 32] {
     solana_program::keccak::hashv(&[
         &user_key,                  // 32 bytes

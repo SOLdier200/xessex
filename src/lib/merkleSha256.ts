@@ -18,14 +18,14 @@ export type LeafInput = {
   index: number;         // u32
 };
 
-// ==================== V2 Types (userKey-based) ====================
+// ==================== V2 Types (wallet-based identity) ====================
 
 export type LeafInputV2 = {
-  userKey32: Buffer;     // 32 bytes - keccak256(userId)
+  userKey32: Buffer;     // 32 bytes - wallet pubkey bytes (not keccak hash)
   epoch: bigint;         // u64
   amountAtomic: bigint;  // u64
   index: number;         // u32
-  salt32: Buffer;        // 32 bytes - per-(epoch, user) secret
+  salt32: Buffer;        // 32 bytes - per-(epoch, wallet) secret
 };
 
 export function u64le(n: bigint): Buffer {
@@ -62,8 +62,9 @@ export function leafHash(input: LeafInput): Buffer {
 }
 
 /**
- * V2: Compute userKey from userId.
- * userKey = keccak256(utf8(userId)) → 32 bytes
+ * DEPRECATED: V2 originally used keccak256(userId).
+ * Now V2 uses wallet pubkey bytes directly.
+ * Keeping for backward compatibility with old epochs.
  */
 export function userKey32FromUserId(userId: string): Buffer {
   const hash = keccak_256.create();
@@ -72,8 +73,19 @@ export function userKey32FromUserId(userId: string): Buffer {
 }
 
 /**
+ * V2 (wallet-based): Convert wallet pubkey to 32-byte user key.
+ * userKey = wallet.toBytes() → 32 bytes (no hashing)
+ */
+export function userKey32FromWallet(walletBase58: string): Buffer {
+  const pk = new PublicKey(walletBase58);
+  return pk.toBuffer();
+}
+
+/**
  * V2: Compute leaf hash matching on-chain claim_v2:
- * hashv([userKey, epoch_le_u64, amount_le_u64, index_le_u32, salt])
+ * hashv([wallet_pubkey, epoch_le_u64, amount_le_u64, index_le_u32, salt])
+ *
+ * userKey32 should be wallet.toBytes() (32 bytes), not keccak hash.
  */
 export function leafHashV2(input: LeafInputV2): Buffer {
   if (input.userKey32.length !== 32) throw new Error("userKey32 must be 32 bytes");

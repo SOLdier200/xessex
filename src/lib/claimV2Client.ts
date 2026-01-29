@@ -79,9 +79,9 @@ function findEpochRootPda(epoch: bigint) {
   )[0];
 }
 
-function findReceiptV2Pda(epoch: bigint, userKeyBytes32: number[]) {
+function findReceiptV2Pda(epoch: bigint, claimerPubkey: PublicKey) {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("receipt_v2"), u64leBuf(epoch), Buffer.from(userKeyBytes32)],
+    [Buffer.from("receipt_v2"), u64leBuf(epoch), claimerPubkey.toBuffer()],
     PROGRAM_ID
   )[0];
 }
@@ -104,9 +104,11 @@ type WalletLike = anchor.Wallet & {
 };
 
 /**
- * Claims XESS to the currently connected wallet (ANY wallet).
+ * Claims XESS to the currently connected wallet.
+ * V2 wallet-based: the claimer pubkey IS the identity (no userKey arg needed).
  * - Requires user to be logged into your site (prepare-claim is auth gated)
  * - Requires wallet-adapter connection for signing
+ * - The claim MUST be made with the wallet that earned the rewards
  */
 export async function claimXessV2(opts: {
   epoch: number;
@@ -135,13 +137,44 @@ export async function claimXessV2(opts: {
     throw new Error(`Unexpected claim version=${data.version}. This helper is for v2.`);
   }
 
+  // Verify wallet matches the leaf's userKeyHex (wallet pubkey)
+  const connectedWalletHex = wallet.publicKey.toBuffer().toString("hex");
+  if (data.userKeyHex !== connectedWalletHex) {
+    throw new Error(
+      `Wallet mismatch: connected wallet ${connectedWalletHex.slice(0, 16)}... ` +
+      `does not match claim wallet ${data.userKeyHex.slice(0, 16)}...`
+    );
+  }
+
   const epochBn = new BN(String(data.epoch));
   const amountBn = new BN(data.amountAtomic);
   const index = data.index;
 
-  const userKeyBytes32 = hexToBytes32(data.userKeyHex);
+  // V2 wallet-based: userKey is derived on-chain from claimer, not passed as arg
   const saltBytes32 = hexToBytes32(data.claimSaltHex);
-  const proofVec = proofHexToVec(data.proofHex);
+
+  // Ensure proofHex is a string array (it comes from JSON, might need parsing)
+  const proofHexArray = Array.isArray(data.proofHex)
+    ? data.proofHex
+    : (typeof data.proofHex === 'string' ? JSON.parse(data.proofHex) : data.proofHex);
+  const proofVec = proofHexToVec(proofHexArray);
+
+  // Sanity checks before calling claimV2
+  if (!Array.isArray(saltBytes32) || saltBytes32.length !== 32) {
+    throw new Error(`saltBytes32 must be number[32], got ${typeof saltBytes32} len=${saltBytes32?.length}`);
+  }
+  if (!Array.isArray(proofVec) || (proofVec.length > 0 && (!Array.isArray(proofVec[0]) || proofVec[0].length !== 32))) {
+    throw new Error(`proofVec must be number[][32], got proofVec[0] len=${proofVec?.[0]?.length}`);
+  }
+
+  console.log("[claimV2] Args check:", {
+    epoch: data.epoch,
+    amount: data.amountAtomic,
+    index: data.index,
+    saltLen: saltBytes32.length,
+    proofCount: proofVec.length,
+    proofElementLen: proofVec[0]?.length,
+  });
 
   // 2) Build Anchor provider + program
   const provider = new anchor.AnchorProvider(connection, wallet, {
@@ -155,7 +188,8 @@ export async function claimXessV2(opts: {
   const configPda = findConfigPda();
   const vaultAuthorityPda = findVaultAuthorityPda(configPda);
   const epochRootPda = findEpochRootPda(BigInt(data.epoch));
-  const receiptV2Pda = findReceiptV2Pda(BigInt(data.epoch), userKeyBytes32);
+  // V2: receipt PDA uses claimer pubkey (not userKeyBytes32)
+  const receiptV2Pda = findReceiptV2Pda(BigInt(data.epoch), wallet.publicKey);
 
   // vault ATA = ATA(owner=vault_authority PDA, mint=XESS_MINT)
   const vaultAta = getAssociatedTokenAddressSync(XESS_MINT, vaultAuthorityPda, true);
@@ -181,9 +215,9 @@ export async function claimXessV2(opts: {
 
   // 5) Build claim_v2 call
   // NOTE: Anchor exposes claim_v2 as claimV2 (camelCase)
-  // NOTE: After Anchor program update, systemProgram is removed from accounts
+  // V2 wallet-based: no userKeyBytes32 arg (derived on-chain from claimer)
   const claimCall = program.methods
-    .claimV2(epochBn, amountBn, index, userKeyBytes32, saltBytes32, proofVec)
+    .claimV2(epochBn, amountBn, index, saltBytes32, proofVec)
     .accounts({
       config: configPda,
       vaultAuthority: vaultAuthorityPda,
@@ -213,19 +247,20 @@ export async function claimXessV2(opts: {
 }
 
 /**
- * Check if a user has already claimed for a specific epoch.
+ * Check if a wallet has already claimed for a specific epoch.
+ * V2 wallet-based: takes wallet pubkey (base58), not userKeyHex.
  * Returns the receipt PDA address and whether it exists.
  */
 export async function checkClaimStatus(opts: {
   epoch: number;
-  userKeyHex: string;
+  walletPubkey: string; // base58 wallet address
   connection?: Connection;
 }): Promise<{ receiptPda: string; claimed: boolean }> {
-  const { epoch, userKeyHex } = opts;
+  const { epoch, walletPubkey } = opts;
   const connection = opts.connection ?? new Connection(RPC_URL, "confirmed");
 
-  const userKeyBytes32 = hexToBytes32(userKeyHex);
-  const receiptV2Pda = findReceiptV2Pda(BigInt(epoch), userKeyBytes32);
+  const claimerPubkey = new PublicKey(walletPubkey);
+  const receiptV2Pda = findReceiptV2Pda(BigInt(epoch), claimerPubkey);
 
   const acctInfo = await connection.getAccountInfo(receiptV2Pda, "confirmed");
   const claimed = acctInfo !== null && acctInfo.owner.equals(PROGRAM_ID);

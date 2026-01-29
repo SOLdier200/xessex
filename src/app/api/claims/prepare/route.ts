@@ -3,12 +3,17 @@
  *
  * Returns the user's claim proof data for a specific epoch.
  * Only the logged-in user can obtain their {proof, userKey, salt}.
- * Users can claim to ANY wallet because the wallet isn't part of the leaf anymore.
+ *
+ * V2 wallet-based identity:
+ * - userKeyHex is the wallet pubkey (not keccak hash)
+ * - Claims must be made with the wallet that earned the rewards
+ * - User must have a linked wallet that matches the leaf
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { userKey32FromWallet, toHex32 } from "@/lib/merkleSha256";
 
 export const runtime = "nodejs";
 
@@ -34,9 +39,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "missing_epoch_or_weekKey" }, { status: 400 });
     }
 
-    // Find epoch record
+    // Find epoch record (use orderBy for deterministic selection)
     const ce = await db.claimEpoch.findFirst({
-      where: epoch !== null ? { epoch, version: 2 } : { weekKey, version: 2 },
+      where: epoch !== null
+        ? { epoch, version: 2 }
+        : { weekKey, version: 2, setOnChain: true },
+      orderBy: { epoch: "desc" },
       select: { epoch: true, weekKey: true, rootHex: true, setOnChain: true, version: true },
     });
 
@@ -52,9 +60,10 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Fetch the user's leaf for this epoch
+    // Fetch the user's leaf for this epoch (orderBy for determinism if duplicates exist)
     const leaf = await db.claimLeaf.findFirst({
       where: { epoch: ce.epoch, userId: user.id },
+      orderBy: { createdAt: "desc" },
       select: {
         epoch: true,
         weekKey: true,
@@ -71,6 +80,40 @@ export async function GET(req: NextRequest) {
         { ok: false, error: "no_claim_for_user", epoch: ce.epoch, weekKey: ce.weekKey },
         { status: 404 }
       );
+    }
+
+    // V2 wallet-based: verify user has a linked wallet that matches the leaf
+    const userWallet = (user.solWallet || user.walletAddress || "").trim();
+    const expectedUserKeyHex = userWallet ? toHex32(userKey32FromWallet(userWallet)) : null;
+    const walletMismatch = !expectedUserKeyHex || leaf.userKeyHex !== expectedUserKeyHex;
+
+    // Debug logging for BadProof diagnosis
+    const epochMatchCount = await db.claimEpoch.count({
+      where: epoch !== null ? { epoch, version: 2 } : { weekKey, version: 2 },
+    });
+
+    console.log("[claims/prepare] Diagnostics:", {
+      epochMatchCount,
+      userId: user.id,
+      userWallet: userWallet || "(none)",
+      expectedUserKeyHex: expectedUserKeyHex || "(no wallet)",
+      leafUserKeyHex: leaf.userKeyHex,
+      walletMismatch,
+    });
+
+    console.log("[claims/prepare] Serving claim:", {
+      epoch: leaf.epoch,
+      weekKey: leaf.weekKey,
+      index: leaf.index,
+      amountAtomic: leaf.amountAtomic.toString(),
+      rootHex: ce.rootHex,
+      setOnChain: ce.setOnChain,
+    });
+
+    // Warn if wallet mismatch detected (this would cause BadProof)
+    if (walletMismatch) {
+      console.warn("[claims/prepare] WARNING: Wallet mismatch! User's linked wallet doesn't match the leaf.");
+      console.warn("[claims/prepare] The user must claim with the wallet that earned the rewards.");
     }
 
     return NextResponse.json({

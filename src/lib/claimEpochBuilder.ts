@@ -8,8 +8,8 @@
  * IMPORTANT: amountAtomic in ClaimLeaf uses 9 decimals (matches token mint).
  * The computeClaimablesForWeek function handles 6→9 decimal conversion.
  *
- * V1: Wallet-based leaves (requires linked wallet)
- * V2: UserKey-based leaves (no wallet required, claim to any wallet at claim time)
+ * V1: Wallet-based leaves (requires linked wallet) - uses wallet pubkey
+ * V2: Wallet-based leaves (requires linked wallet) - uses wallet pubkey bytes as identity
  */
 
 import { db } from "@/lib/prisma";
@@ -26,7 +26,7 @@ import {
   leafHash,
   leafHashV2,
   toHex32,
-  userKey32FromUserId,
+  userKey32FromWallet,
   generateSalt32,
 } from "@/lib/merkleSha256";
 import crypto from "crypto";
@@ -171,7 +171,7 @@ export async function getLeafByWeekAndWallet(weekKey: string, wallet: string) {
   });
 }
 
-// ==================== V2 Epoch Builder (UserKey-based) ====================
+// ==================== V2 Epoch Builder (Wallet-based) ====================
 
 export type BuildEpochResultV2 = {
   ok: boolean;
@@ -203,7 +203,7 @@ function computeBuildHash(
 }
 
 /**
- * V2: Build and store a claim epoch using userKey-based leaves.
+ * V2: Build and store a claim epoch using wallet-based leaves.
  *
  * Features:
  * - No wallet requirement (users earn rewards without linking wallet)
@@ -222,15 +222,20 @@ export async function buildClaimEpochV2Safe(args: {
 }): Promise<BuildEpochResultV2> {
   const { epoch, weekKey, rewardTypes } = args;
 
-  // Check existing epoch
-  const existing = await db.claimEpoch.findFirst({
-    where: {
-      OR: [
-        { epoch },
-        { weekKey, version: 2 },
-      ],
-    },
+  // Use findUnique with weekKey+version as the identity key (not OR with epoch)
+  // This ensures we always find the correct existing epoch for this week
+  const existing = await db.claimEpoch.findUnique({
+    where: { weekKey_version: { weekKey, version: 2 } },
   });
+
+  // Hard assertion: if existing epoch differs from passed epoch, something is wrong
+  // This catches bugs where the route and builder disagree on epoch assignment
+  if (existing && existing.epoch !== epoch) {
+    throw new Error(
+      `epoch_mismatch: route passed epoch=${epoch} but existing for weekKey=${weekKey} is epoch=${existing.epoch}. ` +
+      `Use existing.epoch=${existing.epoch} or clear the existing epoch first.`
+    );
+  }
 
   // Immutability guard: if on-chain, cannot rebuild
   if (existing?.setOnChain) {
@@ -271,18 +276,29 @@ export async function buildClaimEpochV2Safe(args: {
   }
 
   // Deterministic ordering (CRITICAL for reproducible merkle tree)
-  // Sort by userId for consistency
-  rows.sort((a, b) => a.userId.localeCompare(b.userId));
-
-  // Get or create salts for each user
-  const saltMap = new Map<string, Buffer>();
+  // Sort by wallet pubkey hex for consistency with wallet-based leaf identity
   const userKeyMap = new Map<string, Buffer>();
+  for (const row of rows) {
+    // V2 wallet-based: userKey32 is wallet pubkey bytes (not keccak hash)
+    const userKey32 = userKey32FromWallet(row.wallet);
+    userKeyMap.set(row.userId, userKey32);
+  }
+
+  rows.sort((a, b) => {
+    const aKeyHex = toHex32(userKeyMap.get(a.userId)!);
+    const bKeyHex = toHex32(userKeyMap.get(b.userId)!);
+    return aKeyHex.localeCompare(bKeyHex);
+  });
+
+  // Get or create salts for each user (keyed by wallet, not userId)
+  const saltMap = new Map<string, Buffer>();
 
   for (const row of rows) {
-    const userKey32 = userKey32FromUserId(row.userId);
-    userKeyMap.set(row.userId, userKey32);
+    const userKey32 = userKeyMap.get(row.userId)!;
+    const userKeyHex = toHex32(userKey32);
 
-    // Check if salt already exists for this (epoch, user)
+    // Check if salt already exists for this (epoch, wallet)
+    // Note: We use userId for DB lookup but userKeyHex is the wallet pubkey now
     const existingSalt = await db.claimSalt.findUnique({
       where: { epoch_userId: { epoch, userId: row.userId } },
     });
@@ -294,12 +310,12 @@ export async function buildClaimEpochV2Safe(args: {
       const salt32 = generateSalt32();
       saltMap.set(row.userId, salt32);
 
-      // Store the salt
+      // Store the salt with wallet pubkey hex as userKeyHex
       await db.claimSalt.create({
         data: {
           epoch,
           userId: row.userId,
-          userKeyHex: toHex32(userKey32),
+          userKeyHex, // Now stores wallet pubkey hex, not keccak(userId)
           claimSaltHex: toHex32(salt32),
         },
       });
@@ -327,9 +343,10 @@ export async function buildClaimEpochV2Safe(args: {
   // Write epoch + leaves in transaction
   await db.$transaction(async (tx) => {
     // Delete existing epoch and leaves if rebuilding
+    // IMPORTANT: Delete by existing.epoch (not the new epoch number) to handle weekKey conflicts
     if (existing) {
-      await tx.claimLeaf.deleteMany({ where: { epoch } });
-      await tx.claimEpoch.delete({ where: { epoch } });
+      await tx.claimLeaf.deleteMany({ where: { epoch: existing.epoch } });
+      await tx.claimEpoch.delete({ where: { epoch: existing.epoch } });
     }
 
     await tx.claimEpoch.create({
@@ -354,11 +371,11 @@ export async function buildClaimEpochV2Safe(args: {
           epoch,
           weekKey,
           userId: rows[i].userId,
-          wallet: null, // V2 doesn't use wallet
+          wallet: rows[i].wallet, // V2 wallet-based: store wallet for lookup
           index: i,
           amountAtomic: rows[i].amountAtomic,
           proofHex,
-          userKeyHex: toHex32(userKey32),
+          userKeyHex: toHex32(userKey32), // wallet pubkey hex
           claimSaltHex: toHex32(salt32),
         },
       });

@@ -4,7 +4,7 @@
  * DATA-DRIVEN APPROACH:
  * - Finds the latest weekKey that has PAID, unclaimed RewardEvents
  * - Builds merkle epoch for that exact weekKey using V2 format
- * - V2: userKey-based leaves (no wallet required, claim to any wallet)
+ * - V2: wallet-based leaves (wallet required, claim tied to earning wallet)
  * - Guarantees alignment with weekly-distribute's weekKey format
  *
  * Schedule: Sunday 00:02 AM (and optionally 00:10 as retry)
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         epoch = await getNextEpochNumber(lastEpoch?.epoch ?? null);
       }
 
-      // Build and store the epoch (V2 with userKey-based leaves)
+      // Build and store the epoch (V2 with wallet-based leaves)
       const built = await buildClaimEpochV2Safe({ epoch, weekKey });
 
       // Return result with next step reminder

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
-import { userKey32FromUserId, toHex32, fromHex32 } from "@/lib/merkleSha256";
+import { fromHex32 } from "@/lib/merkleSha256";
 
 // Lazy-loaded to avoid build-time failures when env vars are not set
 function getProgramId() {
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const desiredVersion = 2; // V2 uses userId-based rewards
+  const desiredVersion = 2; // V2 uses wallet-based rewards
 
   // Get the latest epoch with a root set on-chain (by version)
   const epochRow = await db.claimEpoch.findFirst({
@@ -119,8 +119,23 @@ export async function POST(req: Request) {
   const epoch = BigInt(epochRow.epoch);
   const epochVersion = epochRow.version ?? 1;
 
-  // V2 epoch: userKey-based (no wallet required)
+  // V2 epoch: wallet-based identity (userKeyHex is wallet pubkey bytes)
   if (epochVersion === 2) {
+    // V2 requires a linked wallet
+    const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+    if (!wallet) {
+      return NextResponse.json({
+        ok: true,
+        claimable: false,
+        reason: "no_wallet_linked",
+        version: 2,
+        epoch: epochRow.epoch,
+        message: "V2 claims require a linked wallet. Please link your wallet first.",
+      });
+    }
+
+    const claimerPk = new PublicKey(wallet);
+
     // Get user's leaf by userId
     const leaf = await db.claimLeaf.findFirst({
       where: { epoch: epochRow.epoch, userId: ctx.user.id },
@@ -138,6 +153,24 @@ export async function POST(req: Request) {
       });
     }
 
+    // Verify user's current wallet matches the leaf's wallet
+    const leafWalletHex = leaf.userKeyHex;
+    const currentWalletHex = claimerPk.toBuffer().toString("hex");
+    if (leafWalletHex !== currentWalletHex) {
+      console.warn("[claim/prepare] V2 Wallet mismatch!", {
+        leafWalletHex: leafWalletHex.slice(0, 16) + "...",
+        currentWalletHex: currentWalletHex.slice(0, 16) + "...",
+      });
+      return NextResponse.json({
+        ok: true,
+        claimable: false,
+        reason: "wallet_mismatch",
+        version: 2,
+        epoch: epochRow.epoch,
+        message: "Your current wallet doesn't match the wallet that earned these rewards.",
+      });
+    }
+
     // Compute PDAs for V2
     const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], getProgramId());
     const [vaultAuthority] = PublicKey.findProgramAddressSync(
@@ -149,10 +182,9 @@ export async function POST(req: Request) {
       getProgramId()
     );
 
-    // V2 receipt PDA uses user_key instead of wallet
-    const userKeyBytes = fromHex32(leaf.userKeyHex);
+    // V2 receipt PDA uses claimer pubkey (not keccak hash of userId)
     const [receiptV2Pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("receipt_v2"), u64LE(epoch), userKeyBytes],
+      [Buffer.from("receipt_v2"), u64LE(epoch), claimerPk.toBuffer()],
       getProgramId()
     );
 

@@ -117,22 +117,23 @@ export async function getUnclaimedRewardsForUserWeek(userId: string, weekKey: st
   });
 }
 
-// ==================== V2 Claimables (no wallet required) ====================
+// ==================== V2 Claimables (wallet-based identity) ====================
 
 export type ClaimableRowV2 = {
   userId: string;
+  wallet: string;        // base58 - REQUIRED for wallet-based identity
   amountAtomic: bigint;  // 9-decimal atomic units (matches token mint)
 };
 
 /**
- * V2: Compute claimable amounts for a specific week WITHOUT wallet requirement.
+ * V2: Compute claimable amounts for a specific week WITH wallet requirement.
  * Sums RewardEvent.amount where:
  *   - weekKey matches
  *   - status = PAID (earned/owed)
  *   - claimedAt is null (not yet claimed)
  *
  * Returns amounts in 9-decimal atomic units (converted from 6-decimal storage).
- * Users do NOT need a linked wallet to be included.
+ * Users WITHOUT a linked wallet are EXCLUDED (they must link wallet first).
  */
 export async function computeClaimablesForWeekV2(
   weekKey: string,
@@ -152,14 +153,27 @@ export async function computeClaimablesForWeekV2(
 
   if (grouped.length === 0) return [];
 
-  // Convert to rows with 6->9 decimal conversion (no wallet filter)
+  // Fetch wallets for these users
+  const userIds = grouped.map(g => g.userId);
+  const users = await db.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, solWallet: true, walletAddress: true },
+  });
+
+  const walletByUser = new Map(
+    users.map(u => [u.id, (u.solWallet || u.walletAddress || "").trim()])
+  );
+
+  // Convert to rows with 6->9 decimal conversion
+  // IMPORTANT: Filter out users without wallets (wallet-based identity requires wallet)
   const rows: ClaimableRowV2[] = grouped
     .map(g => {
+      const wallet = walletByUser.get(g.userId) || "";
       const amount6 = BigInt((g._sum.amount as bigint) ?? 0n);
       const amountAtomic = amount6 * DECIMALS_MULT; // convert 6 -> 9 decimals
-      return { userId: g.userId, amountAtomic };
+      return { userId: g.userId, wallet, amountAtomic };
     })
-    .filter(r => r.amountAtomic > 0n);
+    .filter(r => r.wallet && r.amountAtomic > 0n);
 
   return rows;
 }

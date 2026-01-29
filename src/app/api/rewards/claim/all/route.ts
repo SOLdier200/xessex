@@ -51,7 +51,7 @@ export async function GET() {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const desiredVersion = 2; // V2 uses userId-based rewards
+  const desiredVersion = 2; // V2 uses wallet-based rewards
   const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
 
   const claimerPk = wallet ? new PublicKey(wallet) : null;

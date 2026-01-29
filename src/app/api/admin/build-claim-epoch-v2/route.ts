@@ -64,7 +64,7 @@ export async function POST() {
       epoch = await getNextEpochNumber(lastEpoch?.epoch ?? null);
     }
 
-    // Build and store the epoch (V2 / userKey-based)
+    // Build and store the epoch (V2 / wallet-based)
     const built = await buildClaimEpochV2Safe({ epoch, weekKey });
 
     const msg = `Built v2 epoch ${built.epoch} for ${weekKey}: ${built.leafCount || 0} leaves, root=${built.rootHex?.slice(0, 16)}...`;

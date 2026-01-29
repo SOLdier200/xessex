@@ -643,7 +643,7 @@ model ClaimEpoch {
   setOnChain   Boolean     @default(false)
   onChainTxSig String?
   setOnChainAt DateTime?
-  version      Int         @default(1) // 1 = wallet-based, 2 = userKey-based
+  version      Int         @default(1) // 1 = wallet-based (no salt), 2 = wallet-based (with salt)
   buildHash    String?     // SHA256 of inputs for idempotency
 
   leaves       ClaimLeaf[]
@@ -670,6 +670,7 @@ model ClaimLeaf {
 
   @@unique([epoch, wallet])
   @@unique([epoch, userKeyHex])
+  @@unique([epoch, userId])
   @@index([weekKey, userId])
   @@index([wallet])
 }
@@ -797,13 +798,13 @@ model RaffleMatchBudget {
   updatedAt            DateTime @updatedAt
 }
 
-// ========== V2 Claim System - Per-epoch salts for userKey-based claims ==========
+// ========== V2 Claim System - Per-epoch salts for wallet-based claims ==========
 
 model ClaimSalt {
   id           String   @id @default(cuid())
   epoch        Int
   userId       String
-  userKeyHex   String   @db.VarChar(64) // 32 bytes hex - keccak256(userId)
+  userKeyHex   String   @db.VarChar(64) // 32 bytes hex - wallet pubkey bytes
   claimSaltHex String   @db.VarChar(64) // 32 bytes hex - random per (epoch, user)
   createdAt    DateTime @default(now())
 

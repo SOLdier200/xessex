@@ -318,9 +318,9 @@ export default function FAQPage() {
             <Image
               src="/logos/mainsitelogo.png"
               alt="Xessex"
-              width={285}
-              height={95}
-              className="h-[80px] w-auto"
+              width={855}
+              height={285}
+              className="h-[240px] w-auto"
               priority
             />
           </Link>
