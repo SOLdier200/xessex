@@ -150,6 +150,44 @@ export default function AdminControlsPage() {
             Review Flags
           </a>
         </div>
+
+        {/* Video Unlocks Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 border border-yellow-400/50 flex items-center justify-center">
+              <span className="text-2xl">🔓</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Video Unlocks</h2>
+              <p className="text-sm text-white/60">Audit unlocks: user, video, cost, time</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/unlocks"
+            className="block w-full px-4 py-3 rounded-xl border border-yellow-400/50 bg-yellow-500/20 text-yellow-200 font-semibold hover:bg-yellow-500/30 transition text-center"
+          >
+            View Unlocks
+          </Link>
+        </div>
+
+        {/* Unlock Analytics Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center">
+              <span className="text-2xl">📈</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Unlock Analytics</h2>
+              <p className="text-sm text-white/60">Funnel + spend overview</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/analytics/unlocks"
+            className="block w-full px-4 py-3 rounded-xl border border-emerald-400/50 bg-emerald-500/20 text-emerald-200 font-semibold hover:bg-emerald-500/30 transition text-center"
+          >
+            View Analytics
+          </Link>
+        </div>
       </div>
 
       {/* Site Stats Panel */}

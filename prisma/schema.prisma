@@ -842,3 +842,20 @@ model WalletNonce {
 
   @@index([expiresAt])
 }
+
+// ========== Unlock Analytics ==========
+
+model UnlockAnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String?
+  videoId   String?
+  event     String   // e.g. LOCKED_IMPRESSION, UNLOCK_CLICK, UNLOCK_SUCCESS, etc.
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([event, createdAt])
+  @@index([userId, createdAt])
+  @@index([videoId, createdAt])
+}

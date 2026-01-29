@@ -67,6 +67,58 @@ export default function XessNewsPage() {
         </Link>
 
         <div className="space-y-6">
+          {/* Xessex Goes Free Announcement */}
+          <article className="bg-gradient-to-br from-cyan-900/40 to-blue-900/30 border-2 border-cyan-400/50 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 text-xs font-bold bg-cyan-500/30 text-cyan-300 rounded-full uppercase tracking-wide">
+                  Major Update
+                </span>
+                <span className="text-sm text-cyan-400/70">January 2026</span>
+              </div>
+              <h2 className="text-2xl font-bold mb-3 text-white">Xessex Is Now Free For Everyone!</h2>
+              <div className="space-y-3 text-white/80">
+                <p>
+                  We&apos;ve completely redesigned how Xessex works. <span className="text-cyan-300 font-semibold">No more memberships. No more subscriptions. No more paywalls.</span> Xessex is now 100% free to join and use.
+                </p>
+                <p>
+                  <span className="text-cyan-300 font-semibold">How It Works Now:</span>
+                </p>
+                <ul className="list-disc list-inside space-y-2 ml-2">
+                  <li><span className="text-cyan-300">Connect your wallet</span> — That&apos;s it. You&apos;re in. No email, no password, no payment.</li>
+                  <li><span className="text-cyan-300">Unlock videos with Special Credits</span> — Hold XESS tokens in your wallet to earn daily Special Credits automatically.</li>
+                  <li><span className="text-cyan-300">Progressive unlock costs</span> — Your first unlocks are cheaper. The more you unlock, the more it costs (encouraging exploration).</li>
+                  <li><span className="text-cyan-300">Earn XESS rewards</span> — Like comments, engage with content, and earn XESS tokens every week.</li>
+                </ul>
+                <p className="mt-4">
+                  <span className="text-cyan-300 font-semibold">Special Credits Tiers:</span> The more XESS you hold, the more credits you earn daily:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-sm">
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">50K XESS</div>
+                    <div className="text-white/60">30/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">100K XESS</div>
+                    <div className="text-white/60">100/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">500K XESS</div>
+                    <div className="text-white/60">500/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">1M+ XESS</div>
+                    <div className="text-white/60">1000+/month</div>
+                  </div>
+                </div>
+                <p className="mt-4 text-white/60 text-sm">
+                  This new model aligns incentives: hold XESS, earn credits, unlock content, engage to earn more XESS. A true circular economy powered by the community.
+                </p>
+              </div>
+            </div>
+          </article>
+
           {/* Devnet Launch Announcement */}
           <article className="bg-gradient-to-br from-green-900/40 to-emerald-900/30 border-2 border-green-400/50 rounded-2xl p-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
@@ -110,14 +162,14 @@ export default function XessNewsPage() {
                   wheel showing all reward pools: Likes, MVM, Comments, Referrals, and Voter rewards.
                 </p>
                 <p>
-                  <span className="text-yellow-300 font-semibold">How it works:</span> Each week, Diamond members
+                  <span className="text-yellow-300 font-semibold">How it works:</span> Each week, users
                   are entered into the rewards pools based on their activity. The drawing wheel shows the distribution
                   breakdown, and you can see exactly how much XESS is allocated to each category.
                 </p>
                 <p>
                   <span className="text-yellow-300 font-semibold">New Content Database:</span> We&apos;re also expanding
                   our content library! A new database has been added as we actively search the web to find and curate
-                  high-quality content for our members. More videos means more opportunities to earn XESS rewards.
+                  high-quality content for our users. More videos means more opportunities to earn XESS rewards.
                 </p>
                 <Link
                   href="/rewards-drawing"
@@ -140,7 +192,7 @@ export default function XessNewsPage() {
             </div>
             <h2 className="text-xl font-semibold mb-2 text-white">Weekly Rewards Pipeline Complete</h2>
             <p className="text-white/70">
-              The weekly rewards distribution system is now fully operational on Devnet. Diamond members
+              The weekly rewards distribution system is now fully operational on Devnet. All users
               earn XESS tokens through likes received, MVM contributions, comments, and referrals.
               Claim your rewards every week via on-chain merkle proofs.
             </p>

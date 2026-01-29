@@ -31,6 +31,7 @@ export default function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/logos/") ||
+    pathname.startsWith("/.well-known/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||

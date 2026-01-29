@@ -112,19 +112,20 @@ export default function VideoSearch({
 
   const canAfford = localCredits >= nextCost;
 
-  async function handleUnlock(videoId: string) {
+  async function handleUnlock(videoKey: string) {
     setUnlockError(null);
     setIsUnlocking(true);
     try {
-      const res = await fetch(`/api/videos/${videoId}/unlock`, { method: "POST" });
+      const res = await fetch(`/api/videos/${videoKey}/unlock`, { method: "POST" });
       const json = await res.json();
       if (!res.ok || !json?.ok) {
         setUnlockError(json?.error ?? "unlock_failed");
         return;
       }
       // Update local state with new balance, count, and next cost
+      // Use videoSlug from response (canonical slug) for local state tracking
       setLocalCredits(json.creditBalance);
-      setLocalUnlockedSlugs((prev) => [...prev, unlockModal?.videoId ?? videoId]);
+      setLocalUnlockedSlugs((prev) => [...prev, json.videoSlug ?? videoKey]);
       setUnlockedCount(json.unlockedCount);
       setNextCost(json.nextCost);
       setUnlockModal(null);
@@ -255,8 +256,28 @@ export default function VideoSearch({
       });
     }
 
+    // For authed users, put unlocked/free videos first (sorted by rank), then locked videos (sorted by rank)
+    if (isAuthed) {
+      const freeSet = new Set(freeSlugs);
+      const unlockedSet = new Set(localUnlockedSlugs);
+      result.sort((a, b) => {
+        const aUnlocked = freeSet.has(a.viewkey) || unlockedSet.has(a.viewkey);
+        const bUnlocked = freeSet.has(b.viewkey) || unlockedSet.has(b.viewkey);
+
+        // Unlocked videos come first
+        if (aUnlocked && !bUnlocked) return -1;
+        if (!aUnlocked && bUnlocked) return 1;
+
+        // Within same group (both unlocked or both locked), sort by rank
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        return 0;
+      });
+    }
+
     return result;
-  }, [videos, search, category, duration, sort, isAuthed, freeSlugs]);
+  }, [videos, search, category, duration, sort, isAuthed, freeSlugs, localUnlockedSlugs]);
 
   // Ref to track if we're syncing from URL (to prevent reverse sync)
   const isSyncingFromUrl = useRef(false);

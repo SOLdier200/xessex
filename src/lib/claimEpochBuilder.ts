@@ -17,7 +17,7 @@ import {
   computeClaimablesForWeek,
   computeClaimablesForWeekV2,
   DIAMOND_REWARD_TYPES,
-  MEMBER_REWARD_TYPES,
+  ALL_REWARD_TYPES,
 } from "@/lib/claimables";
 import { RewardType } from "@prisma/client";
 import {
@@ -246,8 +246,8 @@ export async function buildClaimEpochV2Safe(args: {
     };
   }
 
-  // Compute claimables (V2 - no wallet required)
-  const rows = await computeClaimablesForWeekV2(weekKey, rewardTypes ?? MEMBER_REWARD_TYPES);
+  // Compute claimables (V2 - all reward types for free model)
+  const rows = await computeClaimablesForWeekV2(weekKey, rewardTypes ?? ALL_REWARD_TYPES);
 
   if (rows.length === 0) {
     throw new Error(`No claimables for weekKey=${weekKey}`);

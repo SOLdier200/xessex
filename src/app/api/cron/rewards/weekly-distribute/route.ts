@@ -57,7 +57,7 @@ interface UserReward {
 
 /**
  * Get referral chain for a user (up to 3 levels)
- * Returns [L1, L2, L3] userIds with their wallets (if they exist and have wallets linked)
+ * Returns [L1, L2, L3] userIds with their wallets (solWallet preferred, walletAddress as fallback)
  */
 async function getReferralChain(userId: string): Promise<{ id: string; wallet: string }[]> {
   const chain: { id: string; wallet: string }[] = [];
@@ -71,10 +71,11 @@ async function getReferralChain(userId: string): Promise<{ id: string; wallet: s
   // L1 - direct referrer
   const l1User = await db.user.findUnique({
     where: { id: u1.referredById },
-    select: { id: true, solWallet: true, referredById: true },
+    select: { id: true, solWallet: true, walletAddress: true, referredById: true },
   });
-  if (l1User?.solWallet) {
-    chain.push({ id: l1User.id, wallet: l1User.solWallet });
+  const l1Wallet = l1User?.solWallet || l1User?.walletAddress;
+  if (l1User && l1Wallet) {
+    chain.push({ id: l1User.id, wallet: l1Wallet });
   }
 
   if (!l1User?.referredById) return chain;
@@ -82,10 +83,11 @@ async function getReferralChain(userId: string): Promise<{ id: string; wallet: s
   // L2 - referrer's referrer
   const l2User = await db.user.findUnique({
     where: { id: l1User.referredById },
-    select: { id: true, solWallet: true, referredById: true },
+    select: { id: true, solWallet: true, walletAddress: true, referredById: true },
   });
-  if (l2User?.solWallet) {
-    chain.push({ id: l2User.id, wallet: l2User.solWallet });
+  const l2Wallet = l2User?.solWallet || l2User?.walletAddress;
+  if (l2User && l2Wallet) {
+    chain.push({ id: l2User.id, wallet: l2Wallet });
   }
 
   if (!l2User?.referredById) return chain;
@@ -93,10 +95,11 @@ async function getReferralChain(userId: string): Promise<{ id: string; wallet: s
   // L3 - L2's referrer
   const l3User = await db.user.findUnique({
     where: { id: l2User.referredById },
-    select: { id: true, solWallet: true },
+    select: { id: true, solWallet: true, walletAddress: true },
   });
-  if (l3User?.solWallet) {
-    chain.push({ id: l3User.id, wallet: l3User.solWallet });
+  const l3Wallet = l3User?.solWallet || l3User?.walletAddress;
+  if (l3User && l3Wallet) {
+    chain.push({ id: l3User.id, wallet: l3Wallet });
   }
 
   return chain;
@@ -111,14 +114,13 @@ function formatXess(amount: bigint): string {
 
 /**
  * Eligibility filter for payouts (wallet-native model):
- * - User has a linked wallet (solWallet)
- *
- * In the wallet-native model, all users with a linked wallet are eligible
- * for rewards based on their activity.
+ * - ALL users are eligible since everyone must have a wallet to have an account
+ * - walletAddress is required for all users (login wallet)
+ * - solWallet is optional override for payout destination
  */
 function eligibleUserWhere(): Prisma.UserWhereInput {
   return {
-    solWallet: { not: null },
+    walletAddress: { not: null },  // All users have this (required for account)
   };
 }
 
@@ -360,18 +362,18 @@ export async function POST(req: NextRequest) {
       const basePool = (weeklyDiamondPool * 80n) / 100n;  // 80% proportional
       const ladderPool = (weeklyDiamondPool * 20n) / 100n; // 20% ladder
 
-      // Get wallet addresses for winners
+      // Get wallet addresses for winners (solWallet preferred, walletAddress as fallback)
       const userIds = top50.map(w => w.userId);
       const users = await db.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true, solWallet: true },
+        select: { id: true, solWallet: true, walletAddress: true },
       });
-      const walletMap = new Map(users.map(u => [u.id, u.solWallet]));
+      const walletMap = new Map(users.map(u => [u.id, u.solWallet || u.walletAddress]));
 
       for (let i = 0; i < top50.length; i++) {
         const w = top50[i];
         const wallet = walletMap.get(w.userId);
-        if (!wallet) continue;
+        if (!wallet) continue;  // Should never happen since all users have walletAddress
 
         // Base reward (proportional to score)
         const base = sumScore > 0
@@ -395,7 +397,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. All-Time Likes (top 50 by all-time scoreReceived) - wallet required
+    // 2. All-Time Likes (top 50 by all-time scoreReceived) - all users eligible
     console.log(`\n[weekly-distribute] === ALL-TIME SCORE REWARDS ===`);
     const allTimeStats = await db.allTimeUserStat.findMany({
       where: {
@@ -405,7 +407,7 @@ export async function POST(req: NextRequest) {
       orderBy: { scoreReceived: "desc" },
       take: 50,
       include: {
-        user: { select: { id: true, solWallet: true } },
+        user: { select: { id: true, solWallet: true, walletAddress: true } },
       },
     });
 
@@ -418,7 +420,7 @@ export async function POST(req: NextRequest) {
 
       for (let i = 0; i < allTimeStats.length; i++) {
         const stat = allTimeStats[i];
-        if (!stat.user.solWallet) continue;
+        const payoutWallet = stat.user.solWallet || stat.user.walletAddress;
 
         const baseReward = totalAllTimeScore > 0
           ? (basePool * BigInt(stat.scoreReceived)) / BigInt(totalAllTimeScore)
@@ -431,7 +433,7 @@ export async function POST(req: NextRequest) {
         if (totalReward > 0n) {
           rewards.push({
             userId: stat.userId,
-            walletAddress: stat.user.solWallet,
+            walletAddress: payoutWallet,
             amount: totalReward,
             type: "ALLTIME_LIKES",
           });
@@ -441,31 +443,30 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No eligible users for all-time rewards or pool is 0`);
     }
 
-    // 3. Member Voter Rewards (proportional to votes cast) - ALL voters, wallet not required
-    // Voters without wallets will have rewards created and can claim when they link a wallet
-    console.log(`\n[weekly-distribute] === MEMBER VOTER REWARDS ===`);
+    // 3. Voter Rewards (proportional to votes cast) - all users eligible
+    console.log(`\n[weekly-distribute] === VOTER REWARDS ===`);
     const voterStats = await db.weeklyVoterStat.findMany({
       where: {
         weekKey: statsWeekKey!,
         votesCast: { gt: 0 },
+        user: eligibleUserWhere(),
       },
       include: {
-        user: { select: { id: true, solWallet: true } },
+        user: { select: { id: true, solWallet: true, walletAddress: true } },
       },
     });
 
     if (voterStats.length > 0 && memberVoterPool > 0n) {
       const totalVotes = voterStats.reduce((sum, s) => sum + s.votesCast, 0);
-      const votersWithWallet = voterStats.filter(s => s.user.solWallet).length;
-      const votersWithoutWallet = voterStats.length - votersWithWallet;
-      console.log(`[weekly-distribute] Voter rewards: ${voterStats.length} voters (${votersWithWallet} with wallet, ${votersWithoutWallet} without), ${totalVotes} total votes`);
+      console.log(`[weekly-distribute] Voter rewards: ${voterStats.length} voters, ${totalVotes} total votes`);
 
       for (const stat of voterStats) {
+        const payoutWallet = stat.user.solWallet || stat.user.walletAddress;
         const reward = (memberVoterPool * BigInt(stat.votesCast)) / BigInt(totalVotes);
         if (reward > 0n) {
           rewards.push({
             userId: stat.userId,
-            walletAddress: stat.user.solWallet,  // null if no wallet - they can claim later
+            walletAddress: payoutWallet,
             amount: reward,
             type: "WEEKLY_VOTER",
           });
@@ -475,7 +476,7 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No voters or pool is 0`);
     }
 
-    // 4. MVM Pool (monthly stats, weekly payout) - wallet required
+    // 4. MVM Pool (monthly stats, weekly payout) - all users eligible
     console.log(`\n[weekly-distribute] === MVM REWARDS (Monthly ranking) ===`);
     const monthKey = monthKeyUTC(new Date(statsWeekKey!));
     const mvmStats = await db.monthlyUserStat.findMany({
@@ -487,7 +488,7 @@ export async function POST(req: NextRequest) {
       orderBy: { mvmPoints: "desc" },
       take: 50,
       include: {
-        user: { select: { id: true, solWallet: true } },
+        user: { select: { id: true, solWallet: true, walletAddress: true } },
       },
     });
 
@@ -503,7 +504,7 @@ export async function POST(req: NextRequest) {
 
       for (let i = 0; i < mvmStats.length; i++) {
         const stat = mvmStats[i];
-        if (!stat.user.solWallet) continue;
+        const payoutWallet = stat.user.solWallet || stat.user.walletAddress;
 
         const baseReward = totalMonthMvm > 0
           ? (basePool * BigInt(stat.mvmPoints)) / BigInt(totalMonthMvm)
@@ -516,7 +517,7 @@ export async function POST(req: NextRequest) {
         if (totalReward > 0n) {
           rewards.push({
             userId: stat.userId,
-            walletAddress: stat.user.solWallet,
+            walletAddress: payoutWallet,
             amount: totalReward,
             type: "WEEKLY_MVM",
           });
@@ -526,7 +527,7 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] No eligible users for MVM rewards`);
     }
 
-    // 5. Comments Pool (users with wallets proportional to diamondComments)
+    // 5. Comments Pool (proportional to comments made) - all users eligible
     console.log(`\n[weekly-distribute] === COMMENTS REWARDS ===`);
 
     const commentStats = await db.weeklyUserStat.findMany({
@@ -536,7 +537,7 @@ export async function POST(req: NextRequest) {
         user: eligibleUserWhere(),
       },
       include: {
-        user: { select: { id: true, solWallet: true } },
+        user: { select: { id: true, solWallet: true, walletAddress: true } },
       },
     });
     console.log(`[weekly-distribute] Found ${commentStats.length} eligible users with comments`);
@@ -546,12 +547,12 @@ export async function POST(req: NextRequest) {
       console.log(`[weekly-distribute] Comments rewards: ${commentStats.length} eligible commenters, ${totalComments} total comments`);
 
       for (const stat of commentStats) {
-        if (!stat.user.solWallet) continue;
+        const payoutWallet = stat.user.solWallet || stat.user.walletAddress;
         const reward = (commentsPool * BigInt(stat.diamondComments)) / BigInt(totalComments);
         if (reward > 0n) {
           rewards.push({
             userId: stat.userId,
-            walletAddress: stat.user.solWallet,
+            walletAddress: payoutWallet,
             amount: reward,
             type: "WEEKLY_COMMENTS",
           });
