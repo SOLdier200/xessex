@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
-import { DIAMOND_REWARD_TYPES, MEMBER_REWARD_TYPES } from "@/lib/claimables";
+import { ALL_REWARD_TYPES } from "@/lib/claimables";
 import { fromHex32 } from "@/lib/merkleSha256";
 
 // Lazy-loaded to avoid build-time failures when env vars are not set
@@ -111,12 +111,24 @@ export async function GET() {
         )[0]
       : null;
 
+    console.log(`[claim/all] Checking epoch ${epoch} (${leaf.weekKey}), userKeyHex: ${leaf.userKeyHex?.slice(0, 16) ?? "NONE"}`);
+
     // Check if already claimed on-chain
     const receiptInfo = receiptV2Pda
       ? await connection.getAccountInfo(receiptV2Pda)
       : null;
     if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-      // Already claimed - skip
+      console.log(`[claim/all] Epoch ${epoch} already claimed on-chain, syncing DB`);
+      // Sync DB: mark rewards as claimed since on-chain receipt exists
+      await db.rewardEvent.updateMany({
+        where: {
+          userId,
+          weekKey: leaf.weekKey,
+          claimedAt: null,
+          type: { in: ALL_REWARD_TYPES },
+        },
+        data: { claimedAt: new Date() },
+      });
       continue;
     }
 
@@ -126,14 +138,16 @@ export async function GET() {
         userId,
         weekKey: leaf.weekKey,
         claimedAt: { not: null },
-        type: { in: MEMBER_REWARD_TYPES }, // V2 uses member reward types
+        type: { in: ALL_REWARD_TYPES },
       },
     });
 
     if (claimedReward) {
-      // Already claimed in DB - skip
+      console.log(`[claim/all] Epoch ${epoch} already claimed in DB`);
       continue;
     }
+
+    console.log(`[claim/all] Epoch ${epoch} is CLAIMABLE`);
 
     // This epoch is claimable
     claimableEpochs.push({

@@ -179,9 +179,6 @@ export default function WhitepaperPage() {
                   <ul className="text-sm space-y-1">
                     <li>unlock additional videos</li>
                     <li>unlock owned content</li>
-                    <li>non-transferable</li>
-                    <li>non-monetary</li>
-                    <li>non-purchasable</li>
                   </ul>
                 </div>
               </div>
@@ -208,7 +205,6 @@ export default function WhitepaperPage() {
                 <li>it functions even if token price drops</li>
                 <li>it functions without selling access</li>
                 <li>it functions without payment processors</li>
-                <li>it functions without ads</li>
                 <li>it functions without subscriptions</li>
               </ul>
               <p className="mt-2 font-semibold text-white/90">This makes Xessex structurally durable.</p>
@@ -292,8 +288,8 @@ export default function WhitepaperPage() {
               </ul>
               <p>This guarantees: fair onboarding, equal starting point, no paywalls, no discrimination by wealth.</p>
 
-              <h3 className="text-lg font-semibold text-white mt-6 mb-2">5.2 Unlocking Additional Embeds</h3>
-              <p>Additional embed videos are locked by default. Unlock rules:</p>
+              <h3 className="text-lg font-semibold text-white mt-6 mb-2">5.2 Unlocking Additional Videos</h3>
+              <p>Additional videos are locked by default. Unlock rules:</p>
               <ul className="list-disc pl-6 space-y-1">
                 <li>cost: 100 Special Credits</li>
                 <li>unlocks are permanent</li>
@@ -310,7 +306,7 @@ export default function WhitepaperPage() {
                 <li>higher reward weighting</li>
                 <li>cost: 1,000 Special Credits</li>
               </ul>
-              <p>This creates a natural progression ladder: Starter → Embed Expansion → Owned Content</p>
+              <p>This creates a natural progression ladder: Starter → Video Expansion → Owned Content</p>
 
               <h3 className="text-lg font-semibold text-white mt-6 mb-2">5.5 Engagement Integrity</h3>
               <p>Users may only rate, comment, and vote on videos they have unlocked. This prevents: farming, spam, automated abuse, reward inflation.</p>
@@ -338,22 +334,11 @@ export default function WhitepaperPage() {
               <h3 className="text-lg font-semibold text-white mt-6 mb-2">6.2 Earning Credits</h3>
               <p>Credits are earned by:</p>
               <ul className="list-disc pl-6 space-y-1">
-                <li>holding ≥ 50,000 XESS</li>
+                <li>holding ≥ 10,000 XESS</li>
                 <li>remaining qualified over time</li>
                 <li>participating consistently</li>
               </ul>
-              <p>Credits accrue weekly once qualified. This creates: holding incentive, long-term alignment, stable progression, reduced churn.</p>
-
-              <h3 className="text-lg font-semibold text-white mt-6 mb-2">6.4 Why Credits Exist Separately</h3>
-              <p>Credits are deliberately off-chain to:</p>
-              <ul className="list-disc pl-6 space-y-1">
-                <li>avoid being classified as money</li>
-                <li>avoid financial regulation</li>
-                <li>allow fast iteration</li>
-                <li>enable flexible access tuning</li>
-                <li>keep unlocks cheap and instant</li>
-              </ul>
-              <p className="font-semibold text-white/90">This is a core legal and architectural decision.</p>
+              <p>Credits accrue daily once qualified. This creates: holding incentive, long-term alignment, stable progression, reduced churn.</p>
             </div>
           </section>
 
@@ -395,7 +380,20 @@ export default function WhitepaperPage() {
               <p>Users claim rewards directly: from their wallet, on Solana, using a Merkle proof, without Xessex holding funds.</p>
 
               <h3 className="text-lg font-semibold text-white mt-6 mb-2">7.5 Drawings Pool</h3>
-              <p>5% of total supply is reserved for reward drawings: weekly or scheduled, participation-based eligibility, no paid entry, no randomness for sale, transparent rules.</p>
+              <p>5% of total supply is reserved for reward drawings.</p>
+              <ul className="list-disc pl-6 space-y-1 mt-2">
+                <li>weekly claim</li>
+                <li>participation-based eligibility</li>
+                <li>no paid entry</li>
+                <li>no randomness for sale</li>
+                <li>transparent rules</li>
+              </ul>
+              <p className="mt-3">This increases:</p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>retention</li>
+                <li>excitement</li>
+                <li>long-term engagement</li>
+              </ul>
             </div>
           </section>
 
@@ -437,7 +435,7 @@ export default function WhitepaperPage() {
               <h3 className="text-lg font-semibold text-white mt-6 mb-2">8.2 Vesting & Locks</h3>
               <ul className="list-disc pl-6 space-y-1">
                 <li><strong>Private Presale:</strong> 20% TGE, 6-month linear</li>
-                <li><strong>Team / Creators:</strong> 12-month cliff, then linear vest</li>
+                <li><strong>Team / Creators:</strong> 25% at month 3, 25% at month 12, 25% at month 14, 25% at month 15.</li>
                 <li><strong>Treasury:</strong> staged unlock</li>
                 <li><strong>Liquidity:</strong> locked 6–12 months</li>
                 <li><strong>Burn Reserve:</strong> 1% per year for 5 years</li>
@@ -516,7 +514,7 @@ export default function WhitepaperPage() {
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 border border-purple-400/30">
                   <div className="font-semibold text-purple-400 mb-2">Phase 2 — Growth</div>
-                  <p className="text-sm">Weekly content expansion, Partner embed onboarding, Credit tuning, UI/UX polish, Anti-abuse automation</p>
+                  <p className="text-sm">Weekly content expansion, Partner video onboarding, Credit tuning, UI/UX polish, Anti-abuse automation</p>
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 border border-pink-400/30">
                   <div className="font-semibold text-pink-400 mb-2">Phase 3 — Scale</div>
@@ -560,13 +558,6 @@ export default function WhitepaperPage() {
 
               <h3 className="text-lg font-semibold text-white mt-6 mb-2">Token Classification</h3>
               <p>XESS: is a utility token, provides no ownership, provides no profit guarantee, is not required to use the platform, does not represent revenue share.</p>
-
-              <h3 className="text-lg font-semibold text-white mt-6 mb-2">Credits Classification</h3>
-              <p>Special Credits: are internal-only, are not transferable, have no monetary value, cannot be purchased, cannot be withdrawn. They exist solely to manage access capacity.</p>
-
-              <h3 className="text-lg font-semibold text-white mt-6 mb-2">Jurisdictional Awareness</h3>
-              <p>Xessex does not: custody funds, sell access, sell content, process payments.</p>
-              <p className="font-semibold text-white/90">This dramatically reduces regulatory exposure across jurisdictions.</p>
             </div>
           </section>
 
@@ -590,11 +581,9 @@ export default function WhitepaperPage() {
 
           {/* Footer */}
           <div className="text-center text-white/40 text-sm mt-12 pt-8 border-t border-white/10">
-            <p>End of Whitepaper v1.0</p>
-            <div className="mt-4 flex justify-center gap-4">
+            <div className="flex justify-center gap-4">
               <Link href="/tokenomics" className="text-cyan-400 hover:text-cyan-300">Tokenomics</Link>
               <Link href="/faq" className="text-cyan-400 hover:text-cyan-300">FAQ</Link>
-              <Link href="/" className="text-cyan-400 hover:text-cyan-300">Home</Link>
             </div>
           </div>
         </div>

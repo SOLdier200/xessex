@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { weekKeyUTC } from "@/lib/weekKey";
-import { DIAMOND_REWARD_TYPES, MEMBER_REWARD_TYPES } from "@/lib/claimables";
+import { ALL_REWARD_TYPES } from "@/lib/claimables";
+import { fromHex32 } from "@/lib/merkleSha256";
 
 export const runtime = "nodejs";
+
+// Lazy-loaded to avoid build-time failures when env vars are not set
+function getProgramId() {
+  return new PublicKey(process.env.NEXT_PUBLIC_XESS_CLAIM_PROGRAM_ID!);
+}
+
+function u64LE(n: bigint) {
+  const b = Buffer.alloc(8);
+  b.writeBigUInt64LE(n);
+  return b;
+}
 
 // Emission schedule (in XESS tokens, 6 decimals - same as weekly-distribute)
 const EMISSION_DECIMALS = 6n;
@@ -121,13 +134,13 @@ export async function GET() {
     include: {
       leaves: {
         where: { userId },
-        select: { amountAtomic: true },
+        select: { amountAtomic: true, userKeyHex: true },
       },
     },
     orderBy: { epoch: "desc" },
   });
 
-  // Filter to only truly unclaimed (check RewardEvent.claimedAt)
+  // Filter to only truly unclaimed (check DB and on-chain receipt)
   const unclaimedWeeks: Array<{
     epoch: number;
     weekKey: string;
@@ -135,25 +148,65 @@ export async function GET() {
     amountAtomic: string;
   }> = [];
 
+  // Setup Solana connection for on-chain receipt checks
+  const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+  const connection = new Connection(rpc, "confirmed");
+
   for (const epochRow of unclaimedEpochs) {
-    // Check if any reward for this week is claimed
+    const leaf = epochRow.leaves[0];
+    if (!leaf) continue;
+
+    // First check DB for claimed status
     const claimedReward = await db.rewardEvent.findFirst({
       where: {
         userId,
         weekKey: epochRow.weekKey,
         claimedAt: { not: null },
-        type: { in: MEMBER_REWARD_TYPES }, // V2 uses member reward types
+        type: { in: ALL_REWARD_TYPES },
       },
     });
 
-    if (!claimedReward && epochRow.leaves[0]) {
-      unclaimedWeeks.push({
-        epoch: epochRow.epoch,
-        weekKey: epochRow.weekKey,
-        amount: format9(epochRow.leaves[0].amountAtomic),
-        amountAtomic: epochRow.leaves[0].amountAtomic.toString(),
-      });
+    if (claimedReward) {
+      // Already claimed in DB - skip
+      continue;
     }
+
+    // Also check on-chain receipt (in case DB wasn't updated after claim)
+    if (leaf.userKeyHex) {
+      try {
+        const epochBigInt = BigInt(epochRow.epoch);
+        const [receiptV2Pda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("receipt_v2"), u64LE(epochBigInt), fromHex32(leaf.userKeyHex)],
+          getProgramId()
+        );
+
+        const receiptInfo = await connection.getAccountInfo(receiptV2Pda);
+        if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
+          console.log(`[rewards/pending] Epoch ${epochRow.epoch} already claimed on-chain, syncing DB`);
+          // Sync DB: mark rewards as claimed since on-chain receipt exists
+          await db.rewardEvent.updateMany({
+            where: {
+              userId,
+              weekKey: epochRow.weekKey,
+              claimedAt: null,
+              type: { in: ALL_REWARD_TYPES },
+            },
+            data: { claimedAt: new Date() },
+          });
+          continue;
+        }
+      } catch (err) {
+        console.error(`[rewards/pending] Error checking on-chain receipt for epoch ${epochRow.epoch}:`, err);
+      }
+    }
+
+    // This week is truly unclaimed
+    unclaimedWeeks.push({
+      epoch: epochRow.epoch,
+      weekKey: epochRow.weekKey,
+      amount: format9(leaf.amountAtomic),
+      amountAtomic: leaf.amountAtomic.toString(),
+    });
   }
 
   // Total unclaimed

@@ -44,6 +44,9 @@ export const DIAMOND_REWARD_TYPES: RewardType[] = [
 
 export const MEMBER_REWARD_TYPES: RewardType[] = ["WEEKLY_VOTER"];
 
+// All reward types combined
+export const ALL_REWARD_TYPES: RewardType[] = [...DIAMOND_REWARD_TYPES, ...MEMBER_REWARD_TYPES];
+
 /**
  * Compute claimable amounts for a specific week.
  * Sums RewardEvent.amount where:

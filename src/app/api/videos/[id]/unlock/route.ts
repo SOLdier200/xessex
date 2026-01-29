@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessContext } from "@/lib/access";
 import { unlockVideoTx } from "@/lib/unlockVideoTx";
+import { getUnlockCostForNext } from "@/lib/unlockPricing";
 
 export const runtime = "nodejs";
 
@@ -43,5 +44,7 @@ export async function POST(
     unlocked: true,
     cost: res.cost,
     creditBalance: res.newCredits,
+    unlockedCount: res.unlockedCount,
+    nextCost: getUnlockCostForNext(res.unlockedCount),
   });
 }

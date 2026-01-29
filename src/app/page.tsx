@@ -92,66 +92,6 @@ export default async function HomePage() {
 
       <div className="px-4 md:px-6 pb-10">
 
-        {/* Free Videos Section - Only shown to free users */}
-        {!isAuthed && freeSlugs.length > 0 && (
-          <section className="mb-6 neon-border rounded-2xl p-4 md:p-6 bg-gradient-to-r from-emerald-900/20 via-black/30 to-emerald-900/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 text-sm font-semibold">
-                  FREE
-                </span>
-                <h2 className="text-lg font-semibold text-white">Watch Now - No Account Needed</h2>
-              </div>
-              <Link
-                href="/login/diamond"
-                className="px-4 py-2 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/30 text-yellow-100 text-sm font-semibold transition"
-              >
-                Unlock All Videos
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {videos
-                .filter((v) => freeSlugs.includes(v.viewkey))
-                .slice(0, 3)
-                .map((v) => (
-                  <Link
-                    key={v.viewkey}
-                    href={`/videos/${v.viewkey}`}
-                    className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
-                  >
-                    <div className="relative aspect-video bg-black/60">
-                      {v.primary_thumb ? (
-                        <img
-                          src={v.primary_thumb}
-                          alt={v.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/30">
-                          No Thumbnail
-                        </div>
-                      )}
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
-                        {formatDuration(v.duration)}
-                      </div>
-                      <div className="absolute top-2 right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
-                        FREE
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="font-semibold text-white text-sm line-clamp-2 group-hover:text-pink-300 transition">
-                        {v.title}
-                      </div>
-                      <div className="mt-2 text-xs text-white/60 truncate">
-                        {v.performers || "Unknown"}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </section>
-        )}
-
         {/* Top 20 Videos */}
         <section className="neon-border rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>
           <div className="mb-4">

@@ -169,17 +169,17 @@ export default function TopNav() {
         {/* Mobile Dropdown Menu */}
         <nav
           className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            menuOpen ? "max-h-[500px] opacity-100 mt-3" : "max-h-0 opacity-0"
+            menuOpen ? "max-h-[600px] opacity-100 mt-3" : "max-h-0 opacity-0"
           }`}
         >
-          <div className="flex flex-col items-center gap-3 pb-2">
-            {/* WalletStatus + Login100 grouped together */}
-            <div className="flex items-center gap-2">
-              <WalletStatus />
-              <Link href="/login/diamond" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-                <Image src="/logos/textlogo/siteset3/login100.png" alt="Connect Wallet" width={982} height={247} className="h-[32px] w-auto" />
-              </Link>
-            </div>
+          <div className="flex flex-col items-center gap-4 pb-3">
+            {/* WalletStatus on its own row */}
+            <WalletStatus />
+
+            {/* Nav items stacked and centered below WalletStatus */}
+            <Link href="/login/diamond" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+              <Image src="/logos/textlogo/siteset3/login100.png" alt="Connect Wallet" width={982} height={247} className="h-[32px] w-auto" />
+            </Link>
             <Link href="/collections" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} className="h-[30px] w-auto" />
             </Link>

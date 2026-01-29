@@ -86,6 +86,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
       unlockCost: true,
       kind: true,
       createdAt: true,
+      rank: true,
     },
   });
 
@@ -98,6 +99,10 @@ export default async function VideoPage({ params }: VideoPageProps) {
     isAdminOrMod: ctx.isAdminOrMod,
     creditBalance: ctx.creditBalance,
   });
+
+  // SECURITY: Only expose embedUrl if user has access (unlocked or free video)
+  const canEmbed = !!(access?.ok && access?.unlocked);
+  const safeEmbedUrl = canEmbed ? (video.embedUrl ?? "") : "";
 
   // All authenticated users can comment/rate/vote
   const canRateStars = !!ctx.user && ctx.canRateStars;
@@ -144,7 +149,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
             description,
             thumbnailUrl: thumb ? [thumb] : undefined,
             uploadDate: new Date(video.createdAt).toISOString(),
-            embedUrl: video.embedUrl,
+            // SECURITY: Only include embedUrl if user has access
+            ...(canEmbed && video.embedUrl ? { embedUrl: video.embedUrl } : {}),
             contentUrl: pageUrl,
             isFamilyFriendly: false,
             potentialAction: {
@@ -155,33 +161,38 @@ export default async function VideoPage({ params }: VideoPageProps) {
         }}
       />
       {/* Server-visible fallback so crawlers can still "see" an embed without JS */}
-      <noscript>
-        <div style={{ maxWidth: "1152px", margin: "0 auto", padding: "24px 16px" }}>
-          <div style={{ aspectRatio: "16 / 9", background: "black", borderRadius: "16px", overflow: "hidden" }}>
-            <iframe
-              src={video.embedUrl}
-              width="100%"
-              height="100%"
-              frameBorder={0}
-              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-              referrerPolicy="origin-when-cross-origin"
-              allowFullScreen
-            />
+      {/* SECURITY: Only render noscript iframe if user has access */}
+      {canEmbed && video.embedUrl ? (
+        <noscript>
+          <div style={{ maxWidth: "1152px", margin: "0 auto", padding: "24px 16px" }}>
+            <div style={{ aspectRatio: "16 / 9", background: "black", borderRadius: "16px", overflow: "hidden" }}>
+              <iframe
+                src={video.embedUrl}
+                width="100%"
+                height="100%"
+                frameBorder={0}
+                allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                referrerPolicy="origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>
           </div>
-        </div>
-      </noscript>
+        </noscript>
+      ) : null}
       <VideoPlayback
         initialVideo={{
           id: video.id,
           slug: video.slug,
           title: video.title,
-          embedUrl: video.embedUrl,
+          // SECURITY: Only pass embedUrl if user has access
+          embedUrl: safeEmbedUrl,
           viewsCount: video.viewsCount,
           sourceViews: video.sourceViews,
           avgStars: video.avgStars,
           starsCount: video.starsCount,
           unlockCost: video.unlockCost,
           thumbnailUrl: video.thumbnailUrl,
+          rank: video.rank,
         }}
         relatedVideos={relatedVideos}
         canRateStars={canRateStars}

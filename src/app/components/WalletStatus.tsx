@@ -85,7 +85,7 @@ export default function WalletStatus() {
   // Handle click based on state
   const handleClick = () => {
     if (!authed) {
-      // Not logged in - redirect to wallet connect
+      // Not logged in - redirect to wallet connect/sign-in
       router.push("/login/diamond");
     } else {
       // Logged in - show logout modal
@@ -93,18 +93,19 @@ export default function WalletStatus() {
     }
   };
 
-  // Determine styles
+  // Three states:
+  // 1. Not connected (no wallet) → "Connect"
+  // 2. Connected but not signed in → "Sign in"
+  // 3. Signed in → Show pubkey
+  const walletConnected = connected && publicKey;
+
+  // Determine styles based on state
   let bgClass = "";
   let borderClass = "";
   let textColor = "";
 
-  if (!authed) {
-    // Not logged in - show connect wallet prompt
-    bgClass = "bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30";
-    borderClass = "border-pink-400/50";
-    textColor = "text-pink-400";
-  } else if (hasWallet) {
-    // Logged in with wallet - color by wallet type
+  if (authed && hasWallet) {
+    // State 3: Signed in with wallet - color by wallet type
     const isPhantom = walletName.includes("phantom");
     const isSolflare = walletName.includes("solflare");
     if (isPhantom) {
@@ -120,10 +121,16 @@ export default function WalletStatus() {
       borderClass = "border-sky-400/50";
       textColor = "text-sky-400";
     }
+  } else if (walletConnected && !authed) {
+    // State 2: Wallet connected but not signed in - yellow prompt
+    bgClass = "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30";
+    borderClass = "border-yellow-400/50";
+    textColor = "text-yellow-400";
   } else {
-    bgClass = "bg-gradient-to-r from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30";
-    borderClass = "border-sky-400/50";
-    textColor = "text-sky-400";
+    // State 1: No wallet connected - pink prompt
+    bgClass = "bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30";
+    borderClass = "border-pink-400/50";
+    textColor = "text-pink-400";
   }
 
   return (
@@ -133,6 +140,7 @@ export default function WalletStatus() {
         className={`neon-border rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 cursor-pointer transition ${bgClass} ${borderClass}`}
       >
         {authed ? (
+          // State 3: Signed in - show pubkey
           <div className="flex items-center gap-2">
             <div className={`text-[10px] md:text-xs font-mono ${textColor}`}>
               {walletAddress ?? "Connected"}
@@ -143,11 +151,20 @@ export default function WalletStatus() {
               </div>
             )}
           </div>
+        ) : walletConnected ? (
+          // State 2: Wallet connected but not signed in
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full animate-pulse shrink-0 bg-yellow-400`} />
+            <div className={`text-[10px] md:text-xs font-semibold ${textColor}`}>
+              Sign in
+            </div>
+          </div>
         ) : (
+          // State 1: No wallet connected
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full animate-pulse shrink-0 bg-pink-400`} />
             <div className={`text-[10px] md:text-xs font-semibold ${textColor}`}>
-              Connect Wallet
+              Connect
             </div>
           </div>
         )}

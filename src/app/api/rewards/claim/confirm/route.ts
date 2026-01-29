@@ -4,7 +4,7 @@ import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 import { fromHex32 } from "@/lib/merkleSha256";
-import { DIAMOND_REWARD_TYPES, MEMBER_REWARD_TYPES } from "@/lib/claimables";
+import { ALL_REWARD_TYPES } from "@/lib/claimables";
 
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 
@@ -109,13 +109,15 @@ export async function POST(req: Request) {
           userId: ctx.user!.id,
           weekKey,
           claimedAt: null,
-          type: { in: MEMBER_REWARD_TYPES },
+          type: { in: ALL_REWARD_TYPES },
         },
         data: { claimedAt: new Date(), txSig },
       });
 
       if (updated.count === 0) {
         const syntheticRefId = `claim-v2-${ctx.user!.id}-${weekKey}`;
+        // Convert from 9 decimals (on-chain) to 6 decimals (RewardEvent.amount)
+        const amount6Decimals = leaf!.amountAtomic / 1000n;
         await db.rewardEvent.upsert({
           where: {
             refType_refId: {
@@ -127,7 +129,7 @@ export async function POST(req: Request) {
             userId: ctx.user!.id,
             weekKey,
             type: "WEEKLY_LIKES",
-            amount: leaf!.amountAtomic,
+            amount: amount6Decimals,
             status: "PAID",
             refType: "CLAIM_V2",
             refId: syntheticRefId,
@@ -258,7 +260,7 @@ export async function POST(req: Request) {
         userId: ctx.user!.id,
         weekKey,
         claimedAt: null,
-        type: { in: DIAMOND_REWARD_TYPES },
+        type: { in: ALL_REWARD_TYPES },
       },
       data: { claimedAt: new Date(), txSig },
     });
@@ -266,6 +268,8 @@ export async function POST(req: Request) {
     // If no rows were updated, create a synthetic RewardEvent so history is preserved
     if (updated.count === 0) {
       const syntheticRefId = `claim-${ctx.user!.id}-${weekKey}`;
+      // Convert from 9 decimals (on-chain) to 6 decimals (RewardEvent.amount)
+      const amount6Decimals = leaf!.amountAtomic / 1000n;
       await db.rewardEvent.upsert({
         where: {
           refType_refId: {
@@ -277,7 +281,7 @@ export async function POST(req: Request) {
           userId: ctx.user!.id,
           weekKey,
           type: "WEEKLY_LIKES",
-          amount: leaf!.amountAtomic,
+          amount: amount6Decimals,
           status: "PAID",
           refType: "CLAIM",
           refId: syntheticRefId,

@@ -4,6 +4,7 @@ import path from "path";
 import type { Metadata } from "next";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import { getUnlockCostForNext } from "@/lib/unlockPricing";
 import TopNav from "../components/TopNav";
 import VideoSearch from "../components/VideoSearch";
 
@@ -69,13 +70,18 @@ export default async function VideosPage() {
 
   // Get user's unlocked videos if authenticated
   let unlockedSlugs: string[] = [];
+  let unlockedCount = 0;
   if (access.user?.id) {
     const userUnlocks = await db.videoUnlock.findMany({
       where: { userId: access.user.id },
       select: { video: { select: { slug: true } } },
     });
     unlockedSlugs = userUnlocks.map((u) => u.video.slug);
+    unlockedCount = userUnlocks.length;
   }
+
+  // Calculate next unlock cost from progressive ladder
+  const nextCost = getUnlockCostForNext(unlockedCount);
 
   // Merge rank into approved videos and sort by rank
   const videos = approvedVideos
@@ -114,7 +120,15 @@ export default async function VideosPage() {
           </div>
         )}
 
-        <VideoSearch videos={videos} isAuthed={isAuthed} freeSlugs={freeSlugs} unlockedSlugs={unlockedSlugs} />
+        <VideoSearch
+          videos={videos}
+          isAuthed={isAuthed}
+          freeSlugs={freeSlugs}
+          unlockedSlugs={unlockedSlugs}
+          creditBalance={access.creditBalance}
+          initialUnlockedCount={unlockedCount}
+          initialNextCost={nextCost}
+        />
       </div>
     </main>
   );

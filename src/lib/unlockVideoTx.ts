@@ -1,13 +1,15 @@
 /**
  * Atomic video unlock transaction.
  * Uses existing SpecialCreditAccount (microcredits) system.
+ * Cost determined by progressive pricing ladder based on user's unlock count.
  */
 
 import { db } from "@/lib/prisma";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+import { getUnlockCostForNext } from "@/lib/unlockPricing";
 
 type UnlockResult =
-  | { ok: true; newCredits: number; cost: number }
+  | { ok: true; newCredits: number; cost: number; unlockedCount: number }
   | { ok: false; error: "not_found" | "already_unlocked" | "insufficient_credits" | "no_credit_account" };
 
 /**
@@ -46,18 +48,21 @@ export async function unlockVideoTx(params: {
 
     if (!video) return { ok: false as const, error: "not_found" };
 
-    const cost = video.unlockCost ?? 0;
-
-    if (cost <= 0) {
+    // Check if video is free (unlockCost = 0 means free content)
+    if (video.unlockCost === 0) {
       // Free content: treat as already accessible
-      const account = await tx.specialCreditAccount.findUnique({
-        where: { userId },
-        select: { balanceMicro: true },
-      });
+      const [account, existingCount] = await Promise.all([
+        tx.specialCreditAccount.findUnique({
+          where: { userId },
+          select: { balanceMicro: true },
+        }),
+        tx.videoUnlock.count({ where: { userId } }),
+      ]);
       return {
         ok: true as const,
         newCredits: Number((account?.balanceMicro ?? 0n) / CREDIT_MICRO),
         cost: 0,
+        unlockedCount: existingCount,
       };
     }
 
@@ -68,6 +73,14 @@ export async function unlockVideoTx(params: {
     });
 
     if (existing) return { ok: false as const, error: "already_unlocked" };
+
+    // Count user's existing unlocks to determine ladder position
+    const unlockedCount = await tx.videoUnlock.count({
+      where: { userId },
+    });
+
+    // Get cost from progressive pricing ladder
+    const cost = getUnlockCostForNext(unlockedCount);
 
     // Get credit account
     const account = await tx.specialCreditAccount.findUnique({
@@ -120,6 +133,7 @@ export async function unlockVideoTx(params: {
       ok: true as const,
       newCredits: Number((accountAfter?.balanceMicro ?? 0n) / CREDIT_MICRO),
       cost,
+      unlockedCount: unlockedCount + 1, // +1 because we just unlocked this video
     };
   });
 }

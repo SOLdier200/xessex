@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 
 type Video = {
   viewkey: string;
@@ -37,12 +36,23 @@ interface VideoSearchProps {
   isAuthed?: boolean;
   freeSlugs?: string[];
   unlockedSlugs?: string[];
+  creditBalance?: number;
+  initialUnlockedCount?: number;
+  initialNextCost?: number;
 }
 
 // Session storage key for scroll position
 const SCROLL_KEY = "xessex_videos_scroll";
 
-export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], unlockedSlugs = [] }: VideoSearchProps) {
+export default function VideoSearch({
+  videos,
+  isAuthed = false,
+  freeSlugs = [],
+  unlockedSlugs = [],
+  creditBalance = 0,
+  initialUnlockedCount = 0,
+  initialNextCost = 10,
+}: VideoSearchProps) {
   const VIDEOS_PER_PAGE = 50;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,6 +66,76 @@ export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], 
     const p = parseInt(searchParams.get("page") || "1", 10);
     return p >= 1 ? p : 1;
   });
+
+  // Unlock modal state
+  const [unlockModal, setUnlockModal] = useState<{ videoId: string; title: string } | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [localCredits, setLocalCredits] = useState(creditBalance);
+  const [localUnlockedSlugs, setLocalUnlockedSlugs] = useState<string[]>(unlockedSlugs);
+  const [unlockedCount, setUnlockedCount] = useState(initialUnlockedCount);
+  const [nextCost, setNextCost] = useState(initialNextCost);
+
+  // Sync credit balance when prop changes
+  useEffect(() => {
+    setLocalCredits(creditBalance);
+  }, [creditBalance]);
+
+  // Sync unlocked slugs when prop changes
+  useEffect(() => {
+    setLocalUnlockedSlugs(unlockedSlugs);
+  }, [unlockedSlugs]);
+
+  // Sync unlock count and next cost when props change
+  useEffect(() => {
+    setUnlockedCount(initialUnlockedCount);
+  }, [initialUnlockedCount]);
+
+  useEffect(() => {
+    setNextCost(initialNextCost);
+  }, [initialNextCost]);
+
+  // Fetch unlock summary on mount if authed (to get latest pricing)
+  useEffect(() => {
+    if (!isAuthed) return;
+    fetch("/api/videos/unlocks/summary")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) {
+          setUnlockedCount(d.unlockedCount);
+          setNextCost(d.nextCost);
+          setLocalCredits(d.creditBalance);
+        }
+      })
+      .catch(() => {});
+  }, [isAuthed]);
+
+  const canAfford = localCredits >= nextCost;
+
+  async function handleUnlock(videoId: string) {
+    setUnlockError(null);
+    setIsUnlocking(true);
+    try {
+      const res = await fetch(`/api/videos/${videoId}/unlock`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        setUnlockError(json?.error ?? "unlock_failed");
+        return;
+      }
+      // Update local state with new balance, count, and next cost
+      setLocalCredits(json.creditBalance);
+      setLocalUnlockedSlugs((prev) => [...prev, unlockModal?.videoId ?? videoId]);
+      setUnlockedCount(json.unlockedCount);
+      setNextCost(json.nextCost);
+      setUnlockModal(null);
+      // Optionally refresh the page to get fresh data
+      router.refresh();
+    } catch {
+      setUnlockError("network_error");
+    } finally {
+      setIsUnlocking(false);
+    }
+  }
 
   // Sync state to URL (without adding to history for filter changes, with history for page changes)
   const updateUrl = useCallback((newParams: Record<string, string | number>, replace = false) => {
@@ -356,7 +436,7 @@ export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], 
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {paginatedVideos.map((v) => {
               const isFree = freeSlugs.includes(v.viewkey);
-              const hasUnlocked = unlockedSlugs.includes(v.viewkey);
+              const hasUnlocked = localUnlockedSlugs.includes(v.viewkey);
               // Video is locked unless it's free OR user has unlocked it
               const isLocked = !isFree && !hasUnlocked;
 
@@ -364,38 +444,62 @@ export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], 
                 return (
                   <div
                     key={v.viewkey}
-                    className="neon-border rounded-2xl bg-black/30 overflow-hidden relative"
+                    className="neon-border rounded-2xl bg-black/30 overflow-hidden relative group"
                   >
                     <div className="relative aspect-video bg-black/60">
                       {v.primary_thumb ? (
                         <img
                           src={v.primary_thumb}
-                          alt={`Premium video: ${v.title} - Unlock with membership`}
-                          className="w-full h-full object-cover blur-lg scale-110"
+                          alt={`Premium video: ${v.title}`}
+                          className="w-full h-full object-cover blur-md scale-110 opacity-60"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/30 blur-md">
+                        <div className="w-full h-full flex items-center justify-center text-white/30">
                           No Thumbnail
                         </div>
                       )}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <div className="text-center">
-                          <svg className="w-8 h-8 mx-auto text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                          </svg>
-                          <span className="text-xs text-yellow-300 font-semibold mt-1 block">PREMIUM</span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                        <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                          <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                        </svg>
+                        {isAuthed ? (
+                          <button
+                            onClick={() => setUnlockModal({ videoId: v.viewkey, title: v.title })}
+                            className="mt-2 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold transition"
+                          >
+                            Unlock
+                          </button>
+                        ) : (
+                          <Link
+                            href="/login"
+                            className="mt-2 px-3 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-400 text-white text-xs font-bold transition"
+                          >
+                            Login to Unlock
+                          </Link>
+                        )}
+                      </div>
+                      {/* Rank badge if has rank */}
+                      {v.rank != null && (
+                        <div
+                          className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                          style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                        >
+                          #{v.rank}
                         </div>
+                      )}
+                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                        {formatDuration(v.duration)}
                       </div>
                     </div>
                     <div className="p-2 md:p-3">
-                      <div className="font-semibold text-white/40 text-xs md:text-sm line-clamp-2 blur-sm select-none">
+                      <div className="font-semibold text-white/70 text-xs md:text-sm line-clamp-2">
                         {v.title}
                       </div>
-                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/30 truncate blur-sm">
+                      <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/50 truncate">
                         {v.performers || "Unknown"}
                       </div>
-                      <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/30">
-                        <span>{formatDuration(v.duration)}</span>
+                      <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-yellow-400">
+                        <span>{nextCost} credits to unlock</span>
                       </div>
                     </div>
                   </div>
@@ -435,11 +539,6 @@ export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], 
                     {v.favorite === 1 && (
                       <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
                         ★
-                      </div>
-                    )}
-                    {isFree && !isAuthed && (
-                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
-                        FREE
                       </div>
                     )}
                   </div>
@@ -503,6 +602,94 @@ export default function VideoSearch({ videos, isAuthed = false, freeSlugs = [], 
           </div>
         )}
       </section>
+
+      {/* Unlock Confirmation Modal */}
+      {unlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gray-900 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Unlock Video</h3>
+              <button
+                onClick={() => {
+                  setUnlockModal(null);
+                  setUnlockError(null);
+                }}
+                className="text-white/60 hover:text-white text-2xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="text-center py-4">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+
+              <p className="text-sm text-white/70 mb-2 line-clamp-2">
+                {unlockModal.title}
+              </p>
+
+              <p className="text-lg text-white mb-2">
+                Unlock this video for
+              </p>
+              <p className="text-3xl font-bold text-yellow-400 mb-4">
+                {nextCost} Credits
+              </p>
+
+              <div className="bg-black/30 rounded-lg p-3 mb-4">
+                <p className="text-sm text-white/70">Your balance:</p>
+                <p className={`text-xl font-bold ${canAfford ? "text-green-400" : "text-red-400"}`}>
+                  {localCredits} Credits
+                </p>
+                {!canAfford && (
+                  <p className="text-xs text-red-400 mt-1">
+                    You need {nextCost - localCredits} more credits
+                  </p>
+                )}
+              </div>
+
+              {unlockError && (
+                <p className="text-sm text-red-400 mb-4">
+                  {unlockError === "insufficient_credits" && "Not enough credits"}
+                  {unlockError === "no_credit_account" && "No credit account found"}
+                  {unlockError === "already_unlocked" && "Already unlocked!"}
+                  {unlockError === "not_found" && "Video not found"}
+                  {unlockError === "network_error" && "Network error - try again"}
+                  {!["insufficient_credits", "no_credit_account", "already_unlocked", "not_found", "network_error"].includes(unlockError) && unlockError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setUnlockModal(null);
+                  setUnlockError(null);
+                }}
+                className="flex-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleUnlock(unlockModal.videoId)}
+                disabled={isUnlocking || !canAfford}
+                className="flex-1 px-4 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUnlocking ? "Unlocking..." : "Confirm Unlock"}
+              </button>
+            </div>
+
+            {!canAfford && (
+              <p className="text-xs text-white/50 text-center mt-4">
+                Hold 10,000+ XESS to start earning Special Credits
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

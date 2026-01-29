@@ -67,6 +67,14 @@ async function pickApprovedFromSqlite(excludeViewkey: string | null) {
   }
 }
 
+// SECURITY: Strip embedUrl unless video is actually accessible
+function safeVideoResponse(video: typeof VIDEO_SELECT extends infer T ? { [K in keyof T]: any } : never, canWatch: boolean) {
+  return {
+    ...video,
+    embedUrl: canWatch ? video.embedUrl : "",
+  };
+}
+
 export async function GET(req: NextRequest) {
   const excludeViewkey = req.nextUrl.searchParams.get("excludeViewkey") || null;
   const access = await getAccessContext();
@@ -80,7 +88,9 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-    const res = NextResponse.json({ ok: true, next: video });
+    // Free videos (unlockCost=0) are always watchable
+    const canWatch = video.unlockCost === 0;
+    const res = NextResponse.json({ ok: true, next: safeVideoResponse(video, canWatch) });
     res.headers.set("Cache-Control", "no-store");
     return res;
   }
@@ -102,7 +112,8 @@ export async function GET(req: NextRequest) {
       // Check if user can access this video
       const accessCheck = await canAccessVideo(userId, video.id);
       if (accessCheck.canAccess) {
-        const res = NextResponse.json({ ok: true, next: video });
+        // User has access - can watch
+        const res = NextResponse.json({ ok: true, next: safeVideoResponse(video, true) });
         res.headers.set("Cache-Control", "no-store");
         return res;
       }
@@ -112,7 +123,9 @@ export async function GET(req: NextRequest) {
   // Fallback to free video if no unlocked video found
   const freeVideo = await pickFreeVideo(excludeViewkey);
   if (freeVideo) {
-    const res = NextResponse.json({ ok: true, next: freeVideo });
+    // Free videos are always watchable
+    const canWatch = freeVideo.unlockCost === 0;
+    const res = NextResponse.json({ ok: true, next: safeVideoResponse(freeVideo, canWatch) });
     res.headers.set("Cache-Control", "no-store");
     return res;
   }

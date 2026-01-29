@@ -19,6 +19,7 @@ type VideoPayload = {
   starsCount: number;
   unlockCost?: number;
   thumbnailUrl?: string | null;
+  rank?: number | null;
 };
 
 type RelatedVideo = {
@@ -107,6 +108,7 @@ export default function VideoPlayback({
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const currentVideoRef = useRef(currentVideo);
   const loadingRef = useRef(false);
@@ -205,7 +207,7 @@ export default function VideoPlayback({
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  async function handleUnlock() {
+  async function handleUnlock(): Promise<boolean> {
     setUnlockError(null);
     setIsUnlocking(true);
     try {
@@ -213,12 +215,15 @@ export default function VideoPlayback({
       const json = await res.json();
       if (!res.ok || !json?.ok) {
         setUnlockError(json?.error ?? "unlock_failed");
-        return;
+        return false;
       }
       setLocalUnlocked(true);
       setLocalCredits(json.creditBalance);
+      setShowUnlockModal(false);
+      return true;
     } catch {
       setUnlockError("network_error");
+      return false;
     } finally {
       setIsUnlocking(false);
     }
@@ -302,17 +307,16 @@ export default function VideoPlayback({
                 </Link>
               ) : (
                 <button
-                  onClick={handleUnlock}
-                  disabled={isUnlocking || !canAfford}
-                  className="px-6 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setShowUnlockModal(true)}
+                  className="px-6 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-semibold transition"
                 >
-                  {isUnlocking ? "Unlocking..." : canAfford ? `Unlock for ${localUnlockCost} Credits` : "Not enough Credits"}
+                  Unlock Video
                 </button>
               )}
 
               {localIsAuthed && localHasWallet && !canAfford && (
                 <p className="text-xs text-white/60">
-                  Hold 50,000+ XESS to start earning Special Credits.
+                  Hold 10,000+ XESS to start earning Special Credits.
                 </p>
               )}
 
@@ -322,6 +326,84 @@ export default function VideoPlayback({
             </div>
           </div>
         </div>
+
+        {/* Unlock Confirmation Modal */}
+        {showUnlockModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gray-900 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Unlock Video</h3>
+                <button
+                  onClick={() => setShowUnlockModal(false)}
+                  className="text-white/60 hover:text-white text-2xl leading-none"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="text-center py-4">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                  </svg>
+                </div>
+
+                <p className="text-lg text-white mb-2">
+                  Unlock this video for
+                </p>
+                <p className="text-3xl font-bold text-yellow-400 mb-4">
+                  {localUnlockCost} Credits
+                </p>
+
+                <div className="bg-black/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-white/70">Your balance:</p>
+                  <p className={`text-xl font-bold ${canAfford ? "text-green-400" : "text-red-400"}`}>
+                    {localCredits} Credits
+                  </p>
+                  {!canAfford && (
+                    <p className="text-xs text-red-400 mt-1">
+                      You need {localUnlockCost - localCredits} more credits
+                    </p>
+                  )}
+                </div>
+
+                {unlockError && (
+                  <p className="text-sm text-red-400 mb-4">
+                    {unlockError === "insufficient_credits" && "Not enough credits"}
+                    {unlockError === "no_credit_account" && "No credit account found"}
+                    {unlockError === "already_unlocked" && "Already unlocked - refreshing..."}
+                    {unlockError === "not_found" && "Video not found"}
+                    {unlockError === "network_error" && "Network error - try again"}
+                    {!["insufficient_credits", "no_credit_account", "already_unlocked", "not_found", "network_error"].includes(unlockError) && unlockError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowUnlockModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUnlock}
+                  disabled={isUnlocking || !canAfford}
+                  className="flex-1 px-4 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-600 text-black font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUnlocking ? "Unlocking..." : "Confirm Unlock"}
+                </button>
+              </div>
+
+              {!canAfford && (
+                <p className="text-xs text-white/50 text-center mt-4">
+                  Hold 10,000+ XESS to start earning Special Credits
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -338,16 +420,12 @@ export default function VideoPlayback({
           <div className="mt-1 text-xs text-white/50 font-mono break-all">
             {currentVideo.slug}
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <span
-              className={`text-[10px] px-3 py-1 rounded-full border ${
-                localUnlockCost === 0
-                  ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-200"
-                  : "bg-pink-500/20 border-pink-400/30 text-pink-200"
-              }`}
-            >
-              {localUnlockCost === 0 ? "free" : "unlocked"}
-            </span>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {currentVideo.rank && (
+              <span className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500/30 to-amber-500/30 border border-yellow-400/50 text-yellow-300 font-bold">
+                Rank #{currentVideo.rank}
+              </span>
+            )}
             <span className="text-xs text-white/30">
               PH Views: {currentVideo.sourceViews.toLocaleString()}
             </span>

@@ -1,10 +1,12 @@
 /**
  * Video access helpers for the unlock system.
  * Works with existing SpecialCreditAccount (microcredits).
+ * Uses progressive pricing ladder for unlock costs.
  */
 
 import { db } from "@/lib/prisma";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+import { getUnlockCostForNext } from "@/lib/unlockPricing";
 
 export type VideoAccessResult =
   | { ok: true; unlocked: true; reason: "free" | "unlocked" | "staff"; unlockCost: number }
@@ -47,16 +49,21 @@ export async function getVideoAccessForContext(params: {
     return { ok: false, error: "not_authenticated" };
   }
 
-  const unlock = await db.videoUnlock.findUnique({
-    where: { userId_videoId: { userId, videoId } },
-    select: { id: true },
-  });
+  const [unlock, unlockedCount] = await Promise.all([
+    db.videoUnlock.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+      select: { id: true },
+    }),
+    db.videoUnlock.count({ where: { userId } }),
+  ]);
 
   if (unlock) {
     return { ok: true, unlocked: true, reason: "unlocked", unlockCost };
   }
 
-  return { ok: true, unlocked: false, reason: "locked", unlockCost, creditBalance };
+  // Use progressive pricing ladder for the next unlock cost
+  const nextCost = getUnlockCostForNext(unlockedCount);
+  return { ok: true, unlocked: false, reason: "locked", unlockCost: nextCost, creditBalance };
 }
 
 /**
@@ -94,7 +101,7 @@ export async function getVideoAccess(params: {
     return { ok: false, error: "not_authenticated" };
   }
 
-  const [unlock, creditAccount] = await Promise.all([
+  const [unlock, creditAccount, unlockedCount] = await Promise.all([
     db.videoUnlock.findUnique({
       where: { userId_videoId: { userId, videoId } },
       select: { id: true },
@@ -103,6 +110,7 @@ export async function getVideoAccess(params: {
       where: { userId },
       select: { balanceMicro: true },
     }),
+    db.videoUnlock.count({ where: { userId } }),
   ]);
 
   if (unlock) {
@@ -110,5 +118,7 @@ export async function getVideoAccess(params: {
   }
 
   const creditBalance = Number((creditAccount?.balanceMicro ?? 0n) / CREDIT_MICRO);
-  return { ok: true, unlocked: false, reason: "locked", unlockCost, creditBalance };
+  // Use progressive pricing ladder for the next unlock cost
+  const nextCost = getUnlockCostForNext(unlockedCount);
+  return { ok: true, unlocked: false, reason: "locked", unlockCost: nextCost, creditBalance };
 }

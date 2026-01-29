@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useWallet } from "@solana/wallet-adapter-react";
 import TopNav from "../components/TopNav";
 import RewardsTab from "../components/RewardsTab";
 import VotingParticipationStat from "../components/VotingParticipationStat";
@@ -52,7 +53,7 @@ type ProfileData = {
     referredById: string | null;
     referredByEmail: string | null;
   };
-  specialCreditsMicro: string;
+  creditBalanceMicro: string;
   xessTier: number;
   xessBalance: string;
   pendingManualPayment: {
@@ -142,6 +143,7 @@ function truncateWallet(address: string | null): string {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { publicKey: walletPublicKey, signTransaction, connected: walletConnected } = useWallet();
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"profile" | "analytics" | "referrals" | "history">("profile");
@@ -400,12 +402,12 @@ export default function ProfilePage() {
         throw new Error(allData.error || "No claimable epochs");
       }
 
-      // Connect wallet
-      const provider = (window as any).solana;
-      if (!provider?.isPhantom) throw new Error("PHANTOM_NOT_FOUND");
-      await provider.connect();
+      // Use connected wallet from adapter
+      if (!walletConnected || !walletPublicKey || !signTransaction) {
+        throw new Error("WALLET_NOT_CONNECTED");
+      }
 
-      const walletPubkey = new PublicKey(provider.publicKey.toString());
+      const walletPubkey = walletPublicKey;
       const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
       const connection = new Connection(rpc, "confirmed");
 
@@ -506,7 +508,7 @@ export default function ProfilePage() {
 
           tx.add(claimIx);
 
-          const signed = await provider.signTransaction(tx);
+          const signed = await signTransaction(tx);
           const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
           await connection.confirmTransaction(sig, "confirmed");
 
@@ -593,12 +595,12 @@ export default function ProfilePage() {
         throw new Error(prep.reason || "NOT_CLAIMABLE");
       }
 
-      // 2) Connect to Phantom wallet
-      const provider = (window as any).solana;
-      if (!provider?.isPhantom) throw new Error("PHANTOM_NOT_FOUND");
-      await provider.connect();
+      // 2) Use connected wallet from adapter
+      if (!walletConnected || !walletPublicKey || !signTransaction) {
+        throw new Error("WALLET_NOT_CONNECTED");
+      }
 
-      const walletPubkey = new PublicKey(provider.publicKey.toString());
+      const walletPubkey = walletPublicKey;
 
       // 3) Set up connection
       const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
@@ -692,11 +694,31 @@ export default function ProfilePage() {
 
       tx.add(claimIx);
 
-      toast.info("Claiming tokens...");
+      // Show loading toast with spinner
+      const claimToastId = toast.loading("Signing transaction...", {
+        description: "Please approve the transaction in your wallet",
+      });
 
-      const signed = await provider.signTransaction(tx);
+      const signed = await signTransaction(tx);
+
+      toast.loading("Submitting transaction...", {
+        id: claimToastId,
+        description: "Broadcasting to Solana network",
+      });
+
       const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+
+      toast.loading("Confirming transaction...", {
+        id: claimToastId,
+        description: "Waiting for blockchain confirmation",
+      });
+
       await connection.confirmTransaction(sig, "confirmed");
+
+      toast.loading("Finalizing claim...", {
+        id: claimToastId,
+        description: "Updating your rewards history",
+      });
 
       // 8) Confirm with backend (marks rewards as claimed in DB)
       const confirmRes = await fetch("/api/rewards/claim/confirm", {
@@ -713,9 +735,17 @@ export default function ProfilePage() {
       const confirmData = await confirmRes.json();
 
       if (confirmData.ok) {
-        toast.success("Claim successful! Tokens transferred to your wallet.");
+        toast.success("Tokens Successfully Claimed!", {
+          id: claimToastId,
+          description: `${prep.amountFormatted || ""} XESS transferred to your wallet`,
+          duration: 5000,
+        });
       } else {
-        toast.warning("Claimed on-chain but DB update failed. Contact support.");
+        toast.warning("Claimed on-chain but sync failed", {
+          id: claimToastId,
+          description: "Your tokens are safe. Contact support if not showing.",
+          duration: 8000,
+        });
       }
 
       // Refresh all data to update UI
@@ -947,7 +977,7 @@ export default function ProfilePage() {
                           Balance
                         </div>
                         <div className="text-2xl font-bold text-cyan-400 mt-1">
-                          {(Number(data.specialCreditsMicro) / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
+                          {(Number(data.creditBalanceMicro || "0") / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
                         </div>
                       </div>
                       <Link
@@ -958,7 +988,7 @@ export default function ProfilePage() {
                       </Link>
                     </div>
                     <p className="text-xs mt-3">
-                      <span className="animate-pulse-pink-white-black">Hold over 50k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
+                      <span className="animate-pulse-pink-white-black">Hold over 10k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
                       <button
                         onClick={() => setShowCreditsModal(true)}
                         className="text-cyan-400 hover:text-cyan-300 underline transition"
@@ -1559,7 +1589,7 @@ export default function ProfilePage() {
                 ) : (
                   <div className="mb-3 p-2 sm:p-3 bg-white/5 border border-white/20 rounded-xl">
                     <span className="text-white/50 text-xs sm:text-sm">
-                      Hold 50k+ XESS to start earning
+                      Hold 10k+ XESS to start earning
                     </span>
                   </div>
                 )}
@@ -1567,13 +1597,15 @@ export default function ProfilePage() {
                 {/* Tier table - compact for mobile */}
                 <div className="space-y-1.5 mb-3 max-h-[40vh] sm:max-h-none overflow-y-auto">
                   {[
-                    { tier: 1, min: "50,000", credits: "30" },
-                    { tier: 2, min: "100,000", credits: "100" },
-                    { tier: 3, min: "250,000", credits: "250" },
-                    { tier: 4, min: "500,000", credits: "500" },
-                    { tier: 5, min: "1,000,000", credits: "1,000" },
-                    { tier: 6, min: "2,500,000", credits: "1,500" },
-                    { tier: 7, min: "5,000,000", credits: "2,000" },
+                    { tier: 1, min: "10,000", credits: "10" },
+                    { tier: 2, min: "25,000", credits: "30" },
+                    { tier: 3, min: "50,000", credits: "60" },
+                    { tier: 4, min: "100,000", credits: "200" },
+                    { tier: 5, min: "250,000", credits: "500" },
+                    { tier: 6, min: "500,000", credits: "1,000" },
+                    { tier: 7, min: "1,000,000", credits: "2,000" },
+                    { tier: 8, min: "2,500,000", credits: "3,000" },
+                    { tier: 9, min: "5,000,000", credits: "4,000" },
                   ].map((t) => {
                     const isCurrentTier = data?.xessTier === t.tier;
                     return (

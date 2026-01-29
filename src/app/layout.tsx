@@ -122,11 +122,22 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <Toaster
           position="top-center"
+          expand={true}
+          richColors
           toastOptions={{
             style: {
-              background: "#000000",
-              border: "1px solid rgba(236, 72, 153, 0.3)",
+              background: "rgba(0, 0, 0, 0.95)",
+              border: "1px solid rgba(236, 72, 153, 0.4)",
               color: "#fff",
+              backdropFilter: "blur(8px)",
+              boxShadow: "0 0 20px rgba(236, 72, 153, 0.3)",
+            },
+            classNames: {
+              success: "!bg-gradient-to-r !from-green-900/90 !to-emerald-900/90 !border-green-500/50",
+              error: "!bg-gradient-to-r !from-red-900/90 !to-rose-900/90 !border-red-500/50",
+              warning: "!bg-gradient-to-r !from-yellow-900/90 !to-amber-900/90 !border-yellow-500/50",
+              info: "!bg-gradient-to-r !from-blue-900/90 !to-cyan-900/90 !border-blue-500/50",
+              loading: "!bg-gradient-to-r !from-purple-900/90 !to-pink-900/90 !border-purple-500/50",
             },
           }}
         />
