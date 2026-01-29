@@ -437,8 +437,28 @@ export default function ProfilePage() {
             throw new Error(`WALLET_MISMATCH: expected ${epoch.claimer} got ${walletPubkey.toBase58()}`);
           }
 
-          // Convert proof hex to bytes using strict converter
-          const proofVec: number[][] = Array.isArray(epoch.proof) ? epoch.proof.map(hexToU8_32) : [];
+          // Convert proof hex to bytes using strict converter - force plain number[] arrays
+          const proofVec: number[][] = Array.isArray(epoch.proof)
+            ? epoch.proof.map((p: any) => Array.from(hexToU8_32(p)))
+            : [];
+          const salt32: number[] = Array.from(hexToU8_32(epoch.claimSaltHex));
+
+          // DEBUG: Check IDL signature and arg shapes
+          console.log(
+            "[idl claimV2 args]",
+            (program.idl as any).instructions?.find((i: any) => i.name === "claimV2")?.args?.map((a: any) => a.name)
+          );
+          console.log("[claim args shapes]", {
+            salt_isArray: Array.isArray(salt32),
+            salt_ctor: salt32?.constructor?.name,
+            salt_len: salt32?.length,
+            proof_isArray: Array.isArray(proofVec),
+            proof_ctor: proofVec?.constructor?.name,
+            proof_len: proofVec?.length,
+            proof0_isArray: Array.isArray(proofVec?.[0]),
+            proof0_ctor: proofVec?.[0]?.constructor?.name,
+            proof0_len: proofVec?.[0]?.length,
+          });
 
           const isV2 = epoch.version === 2;
           const claimIx = isV2
@@ -447,8 +467,7 @@ export default function ProfilePage() {
                   new anchor.BN(epoch.epoch),
                   new anchor.BN(epoch.amountAtomic),
                   epoch.index,
-                  hexToU8_32(epoch.userKeyHex),
-                  hexToU8_32(epoch.claimSaltHex),
+                  salt32,
                   proofVec
                 )
                 .accounts({
@@ -626,8 +645,28 @@ export default function ProfilePage() {
         throw new Error(`WALLET_MISMATCH: expected ${prep.claimer} got ${walletPubkey.toBase58()}`);
       }
 
-      // 7) Build claim instruction - use strict proof conversion
-      const proofVec: number[][] = Array.isArray(prep.proof) ? prep.proof.map(hexToU8_32) : [];
+      // 7) Build claim instruction - force plain number[] arrays to avoid Buffer/Uint8Array issues
+      const proofVec: number[][] = Array.isArray(prep.proof)
+        ? prep.proof.map((p: any) => Array.from(hexToU8_32(p)))
+        : [];
+      const salt32: number[] = Array.from(hexToU8_32(prep.claimSaltHex));
+
+      // DEBUG: Check IDL signature and arg shapes
+      console.log(
+        "[idl claimV2 args]",
+        (program.idl as any).instructions?.find((i: any) => i.name === "claimV2")?.args?.map((a: any) => a.name)
+      );
+      console.log("[claim args shapes]", {
+        salt_isArray: Array.isArray(salt32),
+        salt_ctor: salt32?.constructor?.name,
+        salt_len: salt32?.length,
+        proof_isArray: Array.isArray(proofVec),
+        proof_ctor: proofVec?.constructor?.name,
+        proof_len: proofVec?.length,
+        proof0_isArray: Array.isArray(proofVec?.[0]),
+        proof0_ctor: proofVec?.[0]?.constructor?.name,
+        proof0_len: proofVec?.[0]?.length,
+      });
 
       const claimIx = isV2
         ? await program.methods
@@ -635,8 +674,7 @@ export default function ProfilePage() {
               new anchor.BN(prep.epoch),
               new anchor.BN(prep.amountAtomic),
               prep.index,
-              hexToU8_32(prep.userKeyHex),
-              hexToU8_32(prep.claimSaltHex),
+              salt32,
               proofVec
             )
             .accounts({
