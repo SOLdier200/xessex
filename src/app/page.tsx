@@ -84,7 +84,24 @@ export default async function HomePage() {
       <div className="px-4 md:px-6 pb-10">
         <AdminManualPaymentNotice />
         {/* Quick actions */}
-        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5 mb-6">
+            <Link
+              href="/xessex-shop"
+              className="group flex h-full flex-col justify-between rounded-2xl border border-pink-400/30 bg-gradient-to-br from-pink-500/20 via-black/0 to-pink-500/5 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(236,72,153,0.18)] transition hover:-translate-y-0.5 hover:border-pink-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/70"
+            >
+              <div>
+                <h3 className="text-2xl md:text-3xl font-extrabold" style={{
+                  background: "linear-gradient(90deg, #fff, #ffe6fa, #ffffff)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent"
+                }}>XESSEX SHOP</h3>
+                <p className="mt-2 text-sm text-white/70">Luxury essentials & exotic collections.</p>
+              </div>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
+                Shop Now
+              </span>
+            </Link>
+
             <Link
               href="/collections"
               className="group flex h-full flex-col justify-between rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-500/20 via-black/0 to-emerald-500/5 px-3 py-3 md:px-5 md:py-4 text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:-translate-y-0.5 hover:border-emerald-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/70"

@@ -9,7 +9,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "all": "fuser -k 3001/tcp 2>/dev/null; next build --webpack && (wslview http://localhost:3001 >/dev/null 2>&1 &) && next start -p 3001"
+    "all": "fuser -k 3001/tcp 2>/dev/null; next build --webpack && (next start -p 3001 & sleep 3 && wslview http://localhost:3001)"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
