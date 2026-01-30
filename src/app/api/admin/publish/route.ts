@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { db } from "@/lib/prisma";
-import { getApprovedVideos } from "@/lib/db";
+import { getAllApprovedVideos } from "@/lib/db";
 import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
@@ -26,8 +26,8 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
-  // Step 1: Get approved videos from SQLite
-  const videos = getApprovedVideos();
+  // Step 1: Get approved videos from ALL SQLite databases (embeds + youporn)
+  const videos = getAllApprovedVideos();
 
   // Step 2: Export to approved.json (for homepage/collections)
   const outDir = path.join(process.cwd(), "data");
@@ -43,7 +43,10 @@ export async function POST() {
     if (!slug) continue;
 
     const title = String(v.title || "(untitled)");
-    const embedUrl = `https://www.pornhub.com/embed/${slug}`;
+    // Use correct embed URL based on source (youporn vs pornhub)
+    const embedUrl = v.source === "youporn"
+      ? `https://www.youporn.com/embed/${slug}`
+      : `https://www.pornhub.com/embed/${slug}`;
     const thumbnailUrl = v.primary_thumb ? String(v.primary_thumb) : null;
     const sourceViews = asNumber(v.views, 0); // PH views from source
     const tags = tagsToArray(v.tags);
