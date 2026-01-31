@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { getAuthCookieBaseOptions, getAuthCookieHostOnlyOptions } from "@/lib/authCookies";
+import { cookieOptionsForHost } from "@/lib/authCookies";
 
 export const runtime = "nodejs";
 
@@ -82,22 +82,14 @@ export async function POST(req: Request) {
       { headers: noCache }
     );
 
-    const base = getAuthCookieBaseOptions();
+    const host = req.headers.get("host") ?? "";
+    const base = cookieOptionsForHost(host);
     res.cookies.set({
       name: COOKIE_NAME,
       value: token,
       ...base,
       expires: new Date(exp),
     });
-    if ("domain" in base) {
-      const hostOnly = getAuthCookieHostOnlyOptions();
-      res.cookies.set({
-        name: COOKIE_NAME,
-        value: "",
-        ...hostOnly,
-        expires: new Date(0),
-      });
-    }
 
     return res;
   } catch (err) {

@@ -93,7 +93,7 @@ export async function POST(req: Request) {
 
     // Return response with cookie attached directly (critical for iOS)
     const res = NextResponse.json({ ok: true }, { headers: noCache });
-    setSessionCookieOnResponse(res, token, expiresAt);
+    setSessionCookieOnResponse(res, token, expiresAt, host);
     return res;
   } catch (err) {
     console.error("rehydrate error:", err);

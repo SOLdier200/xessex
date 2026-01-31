@@ -68,8 +68,16 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
     }
   }, [isOpen, initialRecipient]);
 
-  async function fetchMessages() {
-    setLoading(true);
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => {
+      fetchMessages({ silent: true });
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
+  async function fetchMessages(opts?: { silent?: boolean }) {
+    if (!opts?.silent) setLoading(true);
     try {
       const res = await fetch("/api/messages");
       const data = await res.json();
@@ -81,7 +89,7 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
     } catch (err) {
       console.error("Failed to fetch messages:", err);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }
 

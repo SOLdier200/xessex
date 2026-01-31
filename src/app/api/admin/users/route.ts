@@ -5,14 +5,28 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { requireAdminOrMod } from "@/lib/adminActions";
+import { getAccessContext } from "@/lib/access";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const user = await requireAdminOrMod();
-  if (!user) {
+  const access = await getAccessContext();
+  if (!access.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  const adminWallets = new Set(
+    (process.env.ADMIN_WALLETS || "")
+      .split(",")
+      .map((w) => w.trim())
+      .filter(Boolean)
+  );
+  const isAdminByRole = access.user.role === "ADMIN";
+  const isAdminByWallet =
+    !!(access.user.walletAddress && adminWallets.has(access.user.walletAddress));
+
+  if (!isAdminByRole && !isAdminByWallet) {
+    return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);

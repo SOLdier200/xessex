@@ -36,13 +36,6 @@ type ProfileData = {
   recoveryEmail: string | null;
   recoveryEmailVerified: boolean;
   memberId: string | null;
-  membership: "FREE" | "MEMBER" | "DIAMOND";
-  sub: {
-    tier: string;
-    status: string;
-    expiresAt: string | null;
-    cancelAtPeriodEnd: boolean;
-  } | null;
   stats: {
     videosWatched: number;
     accountCreated: string;
@@ -56,12 +49,6 @@ type ProfileData = {
   creditBalanceMicro: string;
   xessTier: number;
   xessBalance: string;
-  pendingManualPayment: {
-    id: string;
-    planCode: string;
-    requestedTier: string;
-    createdAt: string;
-  } | null;
 };
 
 type ReferralSummary = {
@@ -71,6 +58,12 @@ type ReferralSummary = {
     L3: Array<{ id: string; label: string | null; wallet: string | null; createdAt: string; earned: string; earnedAtomic: string }>;
   };
   totals: {
+    L1: string;
+    L2: string;
+    L3: string;
+    total: string;
+  };
+  pending?: {
     L1: string;
     L2: string;
     L3: string;
@@ -163,10 +156,6 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false);
   const [referralSummary, setReferralSummary] = useState<ReferralSummary | null>(null);
   const [referralLoading, setReferralLoading] = useState(false);
-
-  // Cancel subscription state
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
 
   // Change password state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -1031,7 +1020,7 @@ export default function ProfilePage() {
                     </div>
                     <p className="text-white/70 text-sm mb-4">
                       Members and Diamond members alike can earn Special Credits by holding XESS tokens in their linked wallet.
-                      Credits can be used for weekly drawing entries or redeemed for membership time.
+                      Credits can be used for weekly drawing entries or video unlocks.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Link
@@ -1082,7 +1071,13 @@ export default function ProfilePage() {
                             Pending XESS
                           </div>
                           <div className="text-2xl font-bold text-green-400 mt-1">
-                            {(analyticsData?.totals?.estimatedPendingXess ?? memberRewards?.pendingXess ?? 0).toLocaleString()} XESS
+                            {(
+                              livePending?.currentWeek?.estimatedPending ??
+                              (analyticsData?.totals?.estimatedPendingXess != null
+                                ? analyticsData.totals.estimatedPendingXess.toLocaleString()
+                                : memberRewards?.pendingXess?.toLocaleString() ?? "0")
+                            )}{" "}
+                            XESS
                           </div>
                         </div>
                         <Image
@@ -1096,7 +1091,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <p className="text-xs text-white/50 mt-4">
-                    Earn XESS rewards by voting on comments and engaging with the community.
+                    Pending Xess rewards are estimates and may not equal the exact amounts paid on payday.
                   </p>
                 </div>
               )}
@@ -1403,21 +1398,36 @@ export default function ProfilePage() {
 
                 {referralSummary ? (
                   <>
+                    {/* Pending vs Paid Summary */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-xl p-4 text-center">
+                        <div className="text-xs text-yellow-300/70">Pending XESS</div>
+                        <div className="text-xl font-bold text-yellow-400">{referralSummary.pending?.total || "0"} XESS</div>
+                        <div className="text-xs text-white/40 mt-1">Awaiting weekly distribution</div>
+                      </div>
+                      <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-xl p-4 text-center">
+                        <div className="text-xs text-emerald-300/70">Paid XESS</div>
+                        <div className="text-xl font-bold text-emerald-400">{referralSummary.totals.total} XESS</div>
+                        <div className="text-xs text-white/40 mt-1">Total earned from referrals</div>
+                      </div>
+                    </div>
+
+                    {/* Per-Level Breakdown */}
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
                       <div className="bg-black/40 rounded-xl p-4 text-center">
-                        <div className="text-xs text-white/50">L1 Total</div>
+                        <div className="text-xs text-white/50">L1 Paid</div>
                         <div className="text-lg font-bold text-purple-400">{referralSummary.totals.L1} XESS</div>
                       </div>
                       <div className="bg-black/40 rounded-xl p-4 text-center">
-                        <div className="text-xs text-white/50">L2 Total</div>
+                        <div className="text-xs text-white/50">L2 Paid</div>
                         <div className="text-lg font-bold text-pink-400">{referralSummary.totals.L2} XESS</div>
                       </div>
                       <div className="bg-black/40 rounded-xl p-4 text-center">
-                        <div className="text-xs text-white/50">L3 Total</div>
+                        <div className="text-xs text-white/50">L3 Paid</div>
                         <div className="text-lg font-bold text-yellow-400">{referralSummary.totals.L3} XESS</div>
                       </div>
                       <div className="bg-black/40 rounded-xl p-4 text-center">
-                        <div className="text-xs text-white/50">All Levels</div>
+                        <div className="text-xs text-white/50">All Levels Paid</div>
                         <div className="text-lg font-bold text-emerald-400">{referralSummary.totals.total} XESS</div>
                       </div>
                     </div>

@@ -33,6 +33,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [allowAdmin, setAllowAdmin] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -56,6 +57,7 @@ export default function UsersPage() {
   const pageSize = 20;
 
   const fetchUsers = useCallback(async () => {
+    if (!allowAdmin) return;
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -72,6 +74,10 @@ export default function UsersPage() {
           router.push("/login");
           return;
         }
+        if (res.status === 403) {
+          router.push("/mod");
+          return;
+        }
         throw new Error(data.error || "Failed to fetch users");
       }
 
@@ -82,11 +88,28 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, router]);
+  }, [page, search, router, allowAdmin]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data?.ok || !data?.authed || !data?.user) {
+          router.push("/login");
+          return;
+        }
+        if (data.user.role !== "ADMIN") {
+          router.push("/mod");
+          return;
+        }
+        setAllowAdmin(true);
+      })
+      .catch(() => router.push("/login"));
+  }, [router]);
+
+  useEffect(() => {
+    if (allowAdmin) fetchUsers();
+  }, [allowAdmin, fetchUsers]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

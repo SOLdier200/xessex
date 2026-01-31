@@ -62,6 +62,7 @@ function verifyChallengeCookie(token: string) {
 
 export async function POST(req: Request) {
   const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
+  const host = req.headers.get("host") ?? "";
 
   try {
     const { wallet, message, signature, refCode } = await req.json();
@@ -125,8 +126,8 @@ export async function POST(req: Request) {
         // Refresh session for the current user instead of creating a new wallet-native account
         const { token, expiresAt } = await createSession(currentUser.id);
         const res = NextResponse.json({ ok: true }, { headers: noCache });
-        setSessionCookieOnResponse(res, token, expiresAt);
-        if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
+        setSessionCookieOnResponse(res, token, expiresAt, host);
+        if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE, host);
         return res;
       }
 
@@ -141,8 +142,8 @@ export async function POST(req: Request) {
           },
           { headers: noCache }
         );
-        setSessionCookieOnResponse(res, token, expiresAt);
-        if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
+        setSessionCookieOnResponse(res, token, expiresAt, host);
+        if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE, host);
         return res;
       }
 
@@ -153,8 +154,8 @@ export async function POST(req: Request) {
     if (existingWalletUser) {
       const { token, expiresAt } = await createSession(existingWalletUser.id);
       const res = NextResponse.json({ ok: true }, { headers: noCache });
-      setSessionCookieOnResponse(res, token, expiresAt);
-      if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
+      setSessionCookieOnResponse(res, token, expiresAt, host);
+      if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE, host);
       return res;
     }
 
@@ -218,8 +219,8 @@ export async function POST(req: Request) {
 
     const { token, expiresAt } = await createSession(user.id);
     const res = NextResponse.json({ ok: true }, { headers: noCache });
-    setSessionCookieOnResponse(res, token, expiresAt);
-    if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
+    setSessionCookieOnResponse(res, token, expiresAt, host);
+    if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE, host);
     return res;
   } catch (err) {
     console.error("Verify error:", err);

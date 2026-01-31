@@ -29,7 +29,7 @@ pnpm prisma db push   # Push schema changes without migration (dev only)
 
 ### Dual Database Pattern
 This app uses two databases:
-1. **Prisma/PostgreSQL** (`src/lib/prisma.ts`): User accounts, sessions, subscriptions, comments, ratings
+1. **Prisma/PostgreSQL** (`src/lib/prisma.ts`): User accounts, sessions, comments, ratings, rewards
 2. **SQLite** (`src/lib/db.ts`): Video catalog and curation data from `embeds.db`
 
 Video metadata lives in SQLite; user-generated content and auth data live in PostgreSQL.
@@ -41,10 +41,9 @@ Video metadata lives in SQLite; user-generated content and auth data live in Pos
 - Sessions stored in Prisma `Session` table with configurable TTL
 
 ### Access Control (`src/lib/access.ts`)
-Three tiers: `free`, `member`, `diamond`
-- Free: Can view showcase videos only
-- Member: Can view all videos, vote on comments
-- Diamond: Full access including commenting and star ratings
+Wallet-native access model:
+- All authenticated users can view videos, vote on comments, and earn rewards
+- Video unlocks via Special Credits (earned by holding XESS tokens)
 - Admin/Mod roles determined by `ADMIN_WALLETS` env var
 
 ### Key Directories
@@ -70,29 +69,7 @@ Three tiers: `free`, `member`, `diamond`
 - Do not add logos to created content unless explicitly instructed
 - Always close div tags properly when editing JSX
 
-## Payment Systems
-
-### NOWPayments (Crypto)
-- Invoice IDs in `src/app/api/billing/nowpayments/start/route.ts` (PLAN_META)
-- IPN webhook at `/api/billing/nowpayments/ipn`
-- Success/failed/partial redirects at `/billing/nowpayments/{success,failed,partial}`
-- Plan codes: M90 (90 days $10), MY (yearly $40), D1 (monthly $9), D2 (60 days $30), DY (yearly $70)
-
-### Cash App (Manual Payments)
-- Plan selection: `/paywithcashapp` → `/paywithcashapp/[plan]`
-- Plans: member_monthly ($4), member_yearly ($40), diamond_monthly ($9), diamond_yearly ($70)
-- Cash App tag: `$vape200100` (Jose Valdez)
-- Creates `ManualPayment` records with verification codes
-- Admin approval at `/admin/controls` → ManualPaymentsPanel
-
-### Signup Page Payment Tabs
-- Three tabs: Crypto, Cash App, Credit Card (coming soon)
-- State: `paymentMethod: "crypto" | "cashapp" | "creditcard"`
-- Crypto shows NOWPayments options
-- Cash App shows $4/$40 Member, $9/$70 Diamond with links to `/paywithcashapp/[plan]`
-- Credit Card shows disabled "Coming soon..." buttons
-
-## Diamond Rewards Pipeline
+## Rewards Pipeline
 
 ### Weekly Distribution Flow
 1. **weekly-distribute** (`/api/cron/rewards/weekly-distribute`)
@@ -121,23 +98,7 @@ Three tiers: `free`, `member`, `diamond`
 - `/admin/payout-pipeline` - Step-by-step UI for running the full flow
 - `/api/admin/recompute-rewards-epoch` - Computes weekKey/weekIndex and calls weekly-distribute
 
-## Recent Session Changes (Jan 2026)
-
-### Signup Page 3-Tab Payment Selector
-- Added `paymentMethod` state with Crypto/Cash App/Credit Card tabs
-- Each tab shows appropriate membership options and pricing
-- Cash App links to `/paywithcashapp/[plan]` routes
-- Credit Card shows "Coming soon..." disabled buttons
-- Files: `src/app/signup/page.tsx`
-
-### Admin UI Updates
-- Changed "Manage Subscriptions" → "Manage NOWPayments Subscriptions"
-- File: `src/app/admin/controls/page.tsx`
-
-### Bug Fixes
-- Fixed `epoch.id` → `epoch.epoch` in rewards/summary/route.ts (ClaimEpoch uses epoch as @id)
-
-### Wallet/Auth UX Overhaul
+## Wallet/Auth UX
 Comprehensive fix for wallet connection issues across platforms.
 
 **Key Files:**
@@ -159,23 +120,12 @@ Comprehensive fix for wallet connection issues across platforms.
 **Mental Model - Three Separate States:**
 1. Account session (email/Google login)
 2. Wallet connection (browser extension or mobile)
-3. Wallet linked to account (for payments/identity)
+3. Wallet linked to account (for identity)
 
 **409 WALLET_NOT_LINKED Handling:**
 When wallet sign-in returns 409, WalletActions shows guided modal with:
 - "Link this wallet" button → /link-wallet
 - "Switch account (log out)" button
-
-**API Response Shape (`/api/auth/me`):**
-```typescript
-{
-  ok: true,
-  authed: true,
-  user: { id, email, role, solWallet, walletAddress },
-  // Legacy fields for backward compat
-  membership, walletAddress, hasEmail, needsSolWalletLink, sub
-}
-```
 
 **Test Page:**
 `/wallet-test` - Sanity check page with WalletMultiButton to verify provider chain works
@@ -183,153 +133,22 @@ When wallet sign-in returns 409, WalletActions shows guided modal with:
 ### Video Rank System
 `src/lib/videoRank.ts` - Recomputes video rankings using ROW_NUMBER() over avgStars, adminScore, starsCount, createdAt
 
-### Admin Subscriptions Page Enhancements (Jan 2026)
-Enhanced `/admin/subscriptions` with Expected vs Paid price tracking and grand totals.
-
-**Files Modified:**
-- `src/app/api/admin/subscriptions/list/route.ts` - API with plan catalog and totals
-- `src/app/admin/subscriptions/page.tsx` - UI with mismatch highlighting and footer totals
-
-**Plan Catalog (in API route):**
-```typescript
-// NOWPayments (parsed from orderId prefix like sx_M90_...)
-NOW_PLAN_USD_CENTS: { M90: 1000, MY: 4000, D1: 900, D2: 3000, DY: 7000 }
-
-// CashApp (from ManualPayment.planCode)
-member_monthly: 400, member_yearly: 4000, diamond_monthly: 900, diamond_yearly: 7000
-```
-
-**New API Response Fields:**
-- `expectedUsdCents` - Plan price from catalog (not recorded amount)
-- `paidDisplay` - Actual paid amount from provider (e.g., "$9.00" or "0.069 SOL")
-- `totalsAll` - Grand totals for entire filter: `{ count, expectedUsdCents, paidUsdCents, paidUsdCount, paidNonUsdCount }`
-
-**UI Features:**
-- Two columns: Expected | Paid (with mismatch detection)
-- Paid cell highlighting:
-  - Gray = normal (matches expected or crypto)
-  - Yellow = mismatch (paid differs from expected)
-  - Red = underpaid (paid < expected)
-- Tooltip on hover shows expected amount
-- Footer with two rows:
-  1. Page totals (current loaded rows)
-  2. Grand totals (all matching subscriptions for current filter)
-
-### 14-Day Free Trial System (Jan 2026)
-Implemented a complete free trial system with Diamond upsell teasers.
-
-**Schema Changes (`prisma/schema.prisma`):**
-- Added `trialUsed`, `trialStartedAt`, `trialEndsAt` fields to User model
-- Added `TRIAL` to SubscriptionStatus enum
-
-**Key Files:**
-- `src/lib/auth.ts` - Two subscription helpers:
-  - `isSubscriptionActive()` - Returns true only for ACTIVE/TRIAL (used for trial eligibility)
-  - `hasSubscriptionAccess()` - Returns true for ACTIVE/TRIAL/PENDING/PARTIAL (used for content gating)
-- `src/lib/access.ts` - Trial flags: `isOnTrial`, `trialUsed`, `trialDaysLeft`, `canStartTrial`, `trialDurationDays`
-- `src/app/api/trial/start/route.ts` - POST endpoint to start trial
-- `src/app/api/auth/me/route.ts` - Returns all trial fields from access context
-
-**UI Components:**
-- `src/app/components/TrialBanner.tsx` - Shows trial countdown with urgency styling when < 3 days left
-- `src/app/components/DiamondTeaser.tsx` - Diamond upsell banner for trial/member users
-- `src/app/signup/page.tsx` - "Start 14-Day Free Trial" button in trial banner and CC Member card
-
-**Trial Flow:**
-1. User signs up (no subscription created at registration)
-2. User clicks "Start Free Trial" → `/api/trial/start`
-3. Sets `user.trialUsed=true`, creates subscription with `status=TRIAL`, `tier=MEMBER`
-4. User gets Member access for 14 days
-5. TrialBanner shows countdown, DiamondTeaser prompts upgrade
-
-**Error Codes (`/api/trial/start`):**
-- `UNAUTHENTICATED` (401) - Not logged in
-- `TRIAL_ALREADY_USED` (409) - Already used trial
-- `ALREADY_SUBSCRIBED` (409) - Has ACTIVE/TRIAL subscription
-- `INTERNAL_ERROR` (500) - Server error
-
-**Critical Bug Fix - Placeholder Subscriptions:**
-Registration routes were creating PENDING subscriptions with `expiresAt: null`, which granted free access.
-
-Fixed by:
-1. `hasSubscriptionAccess()` now returns `false` for PENDING with null expiry
-2. Removed placeholder subscription creation from:
-   - `/api/auth/email/register-for-checkout/route.ts`
-   - `/api/auth/verify/route.ts`
-
-**Rule:** Subscriptions are only created when:
-- Payment is confirmed (ACTIVE)
-- Trial is started (TRIAL)
-- NOWPayments checkout starts (PENDING with real expiry)
-
-### Credit Card Tab Enhancements (Jan 2026)
-Updated Credit Card tab on signup page to match premium styling of other tabs.
-
-**Changes to CC Diamond Card:**
-- Added `id="diamond-card-cc"` for scroll targeting
-- Changed opacity from 0.70 to 0.90 (less dead, still signals not live)
-- Added "Exclusive Diamond badge" list item
-- Added luxury copy block with 4 benefit tiles
-- Added "Credit Card: Coming soon" notice
-
-**Changes to CC Member Card:**
-- Added 14-day trial button (works even though CC checkout is disabled)
-- Shows trial status if active
-
-**Diamond Card IDs for Scroll:**
-- `diamond-card-crypto` - Crypto tab
-- `diamond-card-cashapp` - Cash App tab
-- `diamond-card-cc` - Credit Card tab
-
-### Member XESS Rewards & Special Credits Expansion (Jan 2026)
-Extended the rewards system to include Members (not just Diamond) and expanded Special Credits to all tiers.
-
-**Member Voting Rewards:**
-- Members now earn XESS for voting (likes) on comments
-- Added Pending XESS and Paid XESS display to Member profiles
-- Added History tab to Member profiles showing reward history
-- Vote tracking now works for ALL members regardless of wallet status
-- Files: `src/app/profile/page.tsx`, `src/app/api/comments/vote/route.ts`
+### XESS Rewards & Special Credits
+Users earn XESS for voting (likes) on comments. All users can earn Special Credits by linking a wallet with XESS tokens.
 
 **V2 Claim System (userId-based):**
 - Rewards allocated by userId, not wallet address
 - Users can claim with ANY wallet at claim time (wallet checked at claim, not earn)
 - Merkle tree uses `userKey = keccak256(userId)` for leaves
-- Member rewards created with null wallet, V2 system handles claim routing
 - Files: `src/app/api/cron/rewards/weekly-distribute/route.ts`
 
-**Emission Schedule Update (200M Total):**
-Tokenomics changed from 300M to 200M for rewards (20% of 1B supply).
-```typescript
-// src/app/api/cron/rewards/weekly-distribute/route.ts
-function getWeeklyEmission(weekIndex: number): bigint {
-  if (weekIndex < 12) return 666_667n * EMISSION_MULTIPLIER;  // Phase 1: ~8M total
-  if (weekIndex < 39) return 500_000n * EMISSION_MULTIPLIER;  // Phase 2: ~13.5M total
-  if (weekIndex < 78) return 333_333n * EMISSION_MULTIPLIER;  // Phase 3: ~13M total
-  return 166_667n * EMISSION_MULTIPLIER;                      // Phase 4: ~165.5M remaining
-}
-```
-
 **Pool Splits:**
-- 70% Likes Pool (was 75%)
+- 70% Likes Pool
 - 20% MVM Pool
 - 5% Comments Pool
 - 5% Referrals Pool
 
-**Likes Sub-Pools:**
-- 85% Weekly Diamond Pool
-- 10% All-Time Pool
-- 5% Member Voter Pool (new)
-
-**Diamond Auto-Link Wallet:**
-When a user becomes Diamond via wallet login, their wallet is auto-linked as `solWallet`.
-Added to:
-- `src/app/api/billing/nowpayments/ipn/route.ts`
-- `src/app/api/admin/manual-payments/[id]/approve/route.ts`
-- `src/app/api/admin/subscriptions/activate/route.ts`
-
 **Special Credits Tier System:**
-Updated tier table with new monthly credit amounts and added 50k tier.
 ```typescript
 // src/lib/specialCredits.ts
 TIER_TABLE = [
@@ -344,28 +163,7 @@ TIER_TABLE = [
 ]
 ```
 
-**Membership Redemption Pricing:**
-Updated credit costs for redeeming membership time.
-```typescript
-// src/app/api/rewards-drawing/redeem/route.ts
-MEMBER_CREDITS_PER_MONTH = 1000n;  // was 100
-DIAMOND_CREDITS_PER_MONTH = 2000n; // was 200
-```
-
-**Special Credits for Members:**
-Members can now earn Special Credits by linking a wallet with XESS tokens.
-- Added conditional UI in profile Special Credits section
-- If `solWallet` is linked: Shows balance and "Enter Drawing" button
-- If no `solWallet`: Shows "Start Earning Special Credits" prompt with:
-  - "Link Wallet to Earn Credits" button → `/link-wallet`
-  - "View Earning Tiers" button to see credit formula
-- File: `src/app/profile/page.tsx`
-
-**Other Fixes:**
-- Member ID now shows full ID (was truncated with `slice(0,8)...`)
-- Fixed vote tracking to work without wallet (removed `if (voterHasWallet)` condition)
-
-### iOS Wallet Sign-In Loop Fix (Jan 2026)
+### iOS Wallet Sign-In Loop Fix
 Fixed infinite "sign again" loop on iOS where Phantom kept reopening after signing.
 
 **Root Cause:**

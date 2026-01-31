@@ -215,21 +215,6 @@ export default function RootLayout({
             </a>
           </p>
 
-          {/* Donate Button - Bottom Right */}
-          <div className="flex justify-end px-4 mt-4 mr-5">
-            <a
-              href="https://nowpayments.io/donation?api_key=MF8F5CP-PZZM46H-NKRW6NQ-682CJ2K"
-              target="_blank"
-              rel="noreferrer noopener"
-              className="opacity-80 hover:opacity-100 transition"
-            >
-              <img
-                src="https://nowpayments.io/images/embeds/donation-button-black.svg"
-                alt="Crypto donation button by NOWPayments"
-                className="h-16 w-auto"
-              />
-            </a>
-          </div>
         </footer>
       </body>
     </html>

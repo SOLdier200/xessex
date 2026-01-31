@@ -86,7 +86,7 @@ export async function GET() {
     earnedMap.set(key, amount);
   }
 
-  // Totals per level
+  // Totals per level (PAID)
   const totals = await db.rewardEvent.groupBy({
     by: ["type"],
     where: {
@@ -100,6 +100,22 @@ export async function GET() {
   const totalByType = new Map<string, bigint>();
   for (const row of totals) {
     totalByType.set(row.type, BigInt((row._sum.amount as bigint) ?? 0n));
+  }
+
+  // Pending totals per level
+  const pendingTotals = await db.rewardEvent.groupBy({
+    by: ["type"],
+    where: {
+      userId: user.id,
+      status: "PENDING",
+      type: { in: REF_TYPES },
+    },
+    _sum: { amount: true },
+  });
+
+  const pendingByType = new Map<string, bigint>();
+  for (const row of pendingTotals) {
+    pendingByType.set(row.type, BigInt((row._sum.amount as bigint) ?? 0n));
   }
 
   // Unattributed (old data without referralFromUserId)
@@ -141,6 +157,11 @@ export async function GET() {
   const t3 = totalByType.get("REF_L3") || 0n;
   const totalAll = t1 + t2 + t3;
 
+  const p1 = pendingByType.get("REF_L1") || 0n;
+  const p2 = pendingByType.get("REF_L2") || 0n;
+  const p3 = pendingByType.get("REF_L3") || 0n;
+  const pendingAll = p1 + p2 + p3;
+
   return NextResponse.json({
     ok: true,
     levels: {
@@ -157,6 +178,16 @@ export async function GET() {
       L2Atomic: t2.toString(),
       L3Atomic: t3.toString(),
       totalAtomic: totalAll.toString(),
+    },
+    pending: {
+      L1: format6(p1),
+      L2: format6(p2),
+      L3: format6(p3),
+      total: format6(pendingAll),
+      L1Atomic: p1.toString(),
+      L2Atomic: p2.toString(),
+      L3Atomic: p3.toString(),
+      totalAtomic: pendingAll.toString(),
     },
     unattributed: {
       L1: format6(unattributedByType.get("REF_L1") || 0n),

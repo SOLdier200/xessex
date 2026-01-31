@@ -68,6 +68,7 @@ function verifyChallengeCookie(token: string) {
 
 export async function POST(req: Request) {
   const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
+  const host = req.headers.get("host") ?? "";
 
   try {
     const { wallet, message, signature, refCode } = await req.json();
@@ -171,10 +172,10 @@ export async function POST(req: Request) {
       { headers: noCache }
     );
 
-    setSessionCookieOnResponse(res, token, expiresAt);
+    setSessionCookieOnResponse(res, token, expiresAt, host);
 
     if (clearChallengeCookie) {
-      clearCookieOnResponse(res, CHALLENGE_COOKIE);
+      clearCookieOnResponse(res, CHALLENGE_COOKIE, host);
     }
 
     return res;

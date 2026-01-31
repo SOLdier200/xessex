@@ -10,55 +10,74 @@ const COOKIE_NAME = process.env.XESSEX_SESSION_COOKIE || "xessex_session";
 
 type SameSite = "lax" | "strict" | "none";
 
-function parseSameSite(value: string | undefined, fallback: SameSite): SameSite {
-  const v = (value || "").toLowerCase().trim();
-  if (v === "lax" || v === "strict" || v === "none") return v;
-  return fallback;
+function isXessexHost(host: string): boolean {
+  const h = host.toLowerCase().split(":")[0]; // strip port
+  return h === "xessex.me" || h.endsWith(".xessex.me");
 }
 
-function parseBool(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback;
-  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+/**
+ * Returns cookie options based on the actual request host.
+ * - xessex.me / *.xessex.me → Domain=.xessex.me, SameSite=None, Secure=true
+ * - localhost / other → host-only cookie, SameSite=Lax, Secure=false
+ */
+export function cookieOptionsForHost(host: string) {
+  const prodHost = isXessexHost(host);
+
+  const secure = prodHost;
+  const sameSite: SameSite = prodHost ? "none" : "lax";
+  const domain = prodHost ? ".xessex.me" : undefined;
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: "/",
+    ...(domain ? { domain } : {}),
+  } as const;
 }
 
-// Determine if we're on a real production domain (not localhost)
-const IS_PROD = process.env.NODE_ENV === "production";
-
-// Defaults (override via env if needed)
-const DEFAULT_DOMAIN = IS_PROD ? ".xessex.me" : undefined;
-const DEFAULT_SAMESITE: SameSite = IS_PROD ? "none" : "lax";
-
-const COOKIE_DOMAIN = (process.env.AUTH_COOKIE_DOMAIN || DEFAULT_DOMAIN || "").trim() || undefined;
-const COOKIE_SAMESITE = parseSameSite(process.env.AUTH_COOKIE_SAMESITE, DEFAULT_SAMESITE);
-const COOKIE_SECURE = parseBool(process.env.AUTH_COOKIE_SECURE, IS_PROD);
-
-const BASE_HOST_ONLY = {
-  httpOnly: true,
-  secure: COOKIE_SECURE,
-  sameSite: COOKIE_SAMESITE,
-  path: "/",
-};
-
-const BASE = COOKIE_DOMAIN ? { ...BASE_HOST_ONLY, domain: COOKIE_DOMAIN } : BASE_HOST_ONLY;
-
+/**
+ * Legacy: Returns cookie options based on NODE_ENV (used when host is not available).
+ * Prefer cookieOptionsForHost() when you have access to the request host.
+ */
 export function getAuthCookieBaseOptions() {
-  return { ...BASE };
+  const isProd = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: (isProd ? "none" : "lax") as SameSite,
+    path: "/",
+    ...(isProd ? { domain: ".xessex.me" } : {}),
+  };
 }
 
+/**
+ * Host-only cookie options (no domain attribute).
+ */
 export function getAuthCookieHostOnlyOptions() {
-  return { ...BASE_HOST_ONLY };
+  const isProd = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: (isProd ? "none" : "lax") as SameSite,
+    path: "/",
+  };
 }
 
-export function clearCookieOnResponse(res: NextResponse, name: string) {
-  const base = getAuthCookieBaseOptions();
+export function clearCookieOnResponse(res: NextResponse, name: string, host?: string) {
+  const base = host ? cookieOptionsForHost(host) : getAuthCookieBaseOptions();
   res.cookies.set(name, "", { ...base, expires: new Date(0) });
+
+  // Also clear host-only variant if we set a domain cookie
   if ("domain" in base) {
-    const hostOnly = getAuthCookieHostOnlyOptions();
+    const hostOnly = host
+      ? { httpOnly: true, secure: base.secure, sameSite: base.sameSite, path: "/" }
+      : getAuthCookieHostOnlyOptions();
     res.cookies.set(name, "", { ...hostOnly, expires: new Date(0) });
   }
 }
 
-// For Server Actions / Server Components
+// For Server Actions / Server Components (no host available, uses NODE_ENV fallback)
 export async function setSessionCookie(token: string, expiresAt: Date) {
   const cookieStore = await cookies();
   const base = getAuthCookieBaseOptions();
@@ -73,11 +92,11 @@ export async function setSessionCookie(token: string, expiresAt: Date) {
 }
 
 // For Route Handlers - sets cookie directly on response object
-export function setSessionCookieOnResponse(res: NextResponse, token: string, expiresAt: Date) {
+export function setSessionCookieOnResponse(res: NextResponse, token: string, expiresAt: Date, host?: string) {
   // Clear both variants first to avoid stale cookie precedence issues
-  clearCookieOnResponse(res, COOKIE_NAME);
+  clearCookieOnResponse(res, COOKIE_NAME, host);
 
-  const base = getAuthCookieBaseOptions();
+  const base = host ? cookieOptionsForHost(host) : getAuthCookieBaseOptions();
   res.cookies.set(COOKIE_NAME, token, { ...base, expires: expiresAt });
 }
 

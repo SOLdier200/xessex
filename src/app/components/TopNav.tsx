@@ -73,6 +73,14 @@ export default function TopNav() {
     return () => window.removeEventListener("auth-changed", checkAuth);
   }, [fetchUnreadCount]);
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const interval = setInterval(() => {
+      fetchUnreadCount();
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn, fetchUnreadCount]);
+
   return (
     <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
       {/* Preload images so they're ready when needed - hidden but forces browser to load */}
