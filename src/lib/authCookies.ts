@@ -22,8 +22,7 @@ function parseBool(value: string | undefined, fallback: boolean): boolean {
 }
 
 // Determine if we're on a real production domain (not localhost)
-const SITE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "";
-const IS_PROD = process.env.NODE_ENV === "production" || SITE_URL.includes("xessex.me");
+const IS_PROD = process.env.NODE_ENV === "production";
 
 // Defaults (override via env if needed)
 const DEFAULT_DOMAIN = IS_PROD ? ".xessex.me" : undefined;
@@ -53,7 +52,7 @@ export function getAuthCookieHostOnlyOptions() {
 export function clearCookieOnResponse(res: NextResponse, name: string) {
   const base = getAuthCookieBaseOptions();
   res.cookies.set(name, "", { ...base, expires: new Date(0) });
-  if (base.domain) {
+  if ("domain" in base) {
     const hostOnly = getAuthCookieHostOnlyOptions();
     res.cookies.set(name, "", { ...hostOnly, expires: new Date(0) });
   }
@@ -63,28 +62,30 @@ export function clearCookieOnResponse(res: NextResponse, name: string) {
 export async function setSessionCookie(token: string, expiresAt: Date) {
   const cookieStore = await cookies();
   const base = getAuthCookieBaseOptions();
+  const hostOnly = getAuthCookieHostOnlyOptions();
+
+  // Clear both variants first to avoid stale cookie precedence issues
+  cookieStore.set(COOKIE_NAME, "", { ...base, expires: new Date(0) });
+  cookieStore.set(COOKIE_NAME, "", { ...hostOnly, expires: new Date(0) });
+
+  // Set only the chosen base cookie
   cookieStore.set(COOKIE_NAME, token, { ...base, expires: expiresAt });
-  if (base.domain) {
-    const hostOnly = getAuthCookieHostOnlyOptions();
-    cookieStore.set(COOKIE_NAME, "", { ...hostOnly, expires: new Date(0) });
-  }
 }
 
 // For Route Handlers - sets cookie directly on response object
 export function setSessionCookieOnResponse(res: NextResponse, token: string, expiresAt: Date) {
+  // Clear both variants first to avoid stale cookie precedence issues
+  clearCookieOnResponse(res, COOKIE_NAME);
+
   const base = getAuthCookieBaseOptions();
   res.cookies.set(COOKIE_NAME, token, { ...base, expires: expiresAt });
-  if (base.domain) {
-    const hostOnly = getAuthCookieHostOnlyOptions();
-    res.cookies.set(COOKIE_NAME, "", { ...hostOnly, expires: new Date(0) });
-  }
 }
 
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
   const base = getAuthCookieBaseOptions();
   cookieStore.set(COOKIE_NAME, "", { ...base, expires: new Date(0) });
-  if (base.domain) {
+  if ("domain" in base) {
     const hostOnly = getAuthCookieHostOnlyOptions();
     cookieStore.set(COOKIE_NAME, "", { ...hostOnly, expires: new Date(0) });
   }

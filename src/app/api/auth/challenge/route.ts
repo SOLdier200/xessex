@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       ...base,
       expires: new Date(exp),
     });
-    if (base.domain) {
+    if ("domain" in base) {
       const hostOnly = getAuthCookieHostOnlyOptions();
       res.cookies.set({
         name: COOKIE_NAME,
