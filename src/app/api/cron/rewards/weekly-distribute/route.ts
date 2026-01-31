@@ -667,6 +667,54 @@ export async function POST(req: NextRequest) {
     }
     console.log(`[weekly-distribute] Created ${refCreated} referral rewards (per earner)`);
 
+    // === ENHANCED REFERRAL LOGGING ===
+    // Aggregate referral stats by tier
+    const refStats = {
+      L1: { count: 0, total: 0n, recipients: new Set<string>() },
+      L2: { count: 0, total: 0n, recipients: new Set<string>() },
+      L3: { count: 0, total: 0n, recipients: new Set<string>() },
+    };
+    
+    for (const r of rewards.filter(r => r.type.startsWith("REF_"))) {
+      const tier = r.type.replace("REF_", "") as "L1" | "L2" | "L3";
+      if (refStats[tier]) {
+        refStats[tier].count++;
+        refStats[tier].total += r.amount;
+        refStats[tier].recipients.add(r.userId);
+      }
+    }
+
+    console.log(`\n[weekly-distribute] === REFERRAL SUMMARY ===`);
+    console.log(`  L1 (10%): ${refStats.L1.count} payouts to ${refStats.L1.recipients.size} unique referrers = ${formatXess(refStats.L1.total)} XESS`);
+    console.log(`  L2 (3%):  ${refStats.L2.count} payouts to ${refStats.L2.recipients.size} unique referrers = ${formatXess(refStats.L2.total)} XESS`);
+    console.log(`  L3 (1%):  ${refStats.L3.count} payouts to ${refStats.L3.recipients.size} unique referrers = ${formatXess(refStats.L3.total)} XESS`);
+    
+    const actualReferralPaid = refStats.L1.total + refStats.L2.total + refStats.L3.total;
+    const poolUtilization = referralsPool > 0n ? (actualReferralPaid * 10000n / referralsPool) : 0n;
+    console.log(`  Pool utilization: ${formatXess(actualReferralPaid)} / ${formatXess(referralsPool)} (${Number(poolUtilization) / 100}%)`);
+
+    // Log top referrers by earnings
+    const refEarningsByUser = new Map<string, bigint>();
+    for (const r of rewards.filter(r => r.type.startsWith("REF_"))) {
+      refEarningsByUser.set(r.userId, (refEarningsByUser.get(r.userId) || 0n) + r.amount);
+    }
+    const topReferrers = Array.from(refEarningsByUser.entries())
+      .sort((a, b) => Number(b[1] - a[1]))
+      .slice(0, 5);
+    
+    if (topReferrers.length > 0) {
+      console.log(`  Top 5 referrers:`);
+      for (const [userId, amount] of topReferrers) {
+        console.log(`    ${userId.slice(0, 8)}... = ${formatXess(amount)} XESS`);
+      }
+    }
+
+    // Log earners without referral chains
+    const earnersWithChains = new Set(referralOwed.map(r => r.earnerId));
+    const earnersWithoutChains = Array.from(earnedByUser.keys()).filter(id => !earnersWithChains.has(id));
+    console.log(`  Earners without referral chain: ${earnersWithoutChains.length} / ${earnedByUser.size}`);
+    console.log(`[weekly-distribute] === END REFERRAL SUMMARY ===\n`);
+
     // Aggregate rewards by user for summary
     const userRewards = new Map<string, { amount: bigint; wallet: string | null; types: Set<string> }>();
     for (const r of rewards) {
