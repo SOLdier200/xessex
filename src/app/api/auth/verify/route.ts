@@ -9,7 +9,7 @@ import nacl from "tweetnacl";
 import crypto from "crypto";
 import { db } from "@/lib/prisma";
 import { createSession, getCurrentUser } from "@/lib/auth";
-import { setSessionCookieOnResponse } from "@/lib/authCookies";
+import { setSessionCookieOnResponse, clearCookieOnResponse } from "@/lib/authCookies";
 import { generateReferralCode } from "@/lib/referral";
 
 export const runtime = "nodejs";
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
         const { token, expiresAt } = await createSession(currentUser.id);
         const res = NextResponse.json({ ok: true }, { headers: noCache });
         setSessionCookieOnResponse(res, token, expiresAt);
-        if (clearChallengeCookie) res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", expires: new Date(0) });
+        if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
         return res;
       }
 
@@ -142,7 +142,7 @@ export async function POST(req: Request) {
           { headers: noCache }
         );
         setSessionCookieOnResponse(res, token, expiresAt);
-        if (clearChallengeCookie) res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", expires: new Date(0) });
+        if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
         return res;
       }
 
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
       const { token, expiresAt } = await createSession(existingWalletUser.id);
       const res = NextResponse.json({ ok: true }, { headers: noCache });
       setSessionCookieOnResponse(res, token, expiresAt);
-      if (clearChallengeCookie) res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", expires: new Date(0) });
+      if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
       return res;
     }
 
@@ -219,7 +219,7 @@ export async function POST(req: Request) {
     const { token, expiresAt } = await createSession(user.id);
     const res = NextResponse.json({ ok: true }, { headers: noCache });
     setSessionCookieOnResponse(res, token, expiresAt);
-    if (clearChallengeCookie) res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", expires: new Date(0) });
+    if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE);
     return res;
   } catch (err) {
     console.error("Verify error:", err);

@@ -17,7 +17,7 @@ import nacl from "tweetnacl";
 import crypto from "crypto";
 import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
-import { setSessionCookieOnResponse } from "@/lib/authCookies";
+import { setSessionCookieOnResponse, clearCookieOnResponse } from "@/lib/authCookies";
 import { generateReferralCode } from "@/lib/referral";
 
 export const runtime = "nodejs";
@@ -174,7 +174,7 @@ export async function POST(req: Request) {
     setSessionCookieOnResponse(res, token, expiresAt);
 
     if (clearChallengeCookie) {
-      res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", expires: new Date(0) });
+      clearCookieOnResponse(res, CHALLENGE_COOKIE);
     }
 
     return res;
