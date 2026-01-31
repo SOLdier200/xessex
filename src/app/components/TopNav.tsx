@@ -167,7 +167,7 @@ export default function TopNav() {
 
       {/* Mobile Layout */}
       <div className="lg:hidden">
-        {/* Top row: Logo on left, hamburger on right */}
+        {/* Top row: Logo on left, actions on right */}
         <div className="flex items-start justify-between gap-3">
           <Link href="/" onClick={() => setMenuOpen(false)} title="Click for homepage">
             <Image
@@ -180,30 +180,56 @@ export default function TopNav() {
             />
           </Link>
 
-          {/* Hamburger menu button */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className={`mt-3 flex flex-col justify-center items-center w-10 h-10 rounded-lg border-2 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-300 ${
-              menuOpen ? "animate-none bg-pink-500/40" : "animate-pulse"
-            }`}
-            aria-label="Toggle menu"
-          >
-            <span
-              className={`block w-5 h-0.5 bg-pink-200 transition-all duration-300 ${
-                menuOpen ? "rotate-45 translate-y-1" : ""
+          <div className="flex items-start gap-2">
+            {isLoggedIn && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setMessagesModalOpen(true);
+                }}
+                className="relative mt-4 hover:opacity-80 transition"
+                aria-label="Open messages"
+              >
+                <Image
+                  src="/logos/textlogo/siteset3/messages110.png"
+                  alt="Messages"
+                  width={938}
+                  height={276}
+                  className="h-[30px] w-auto"
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-pink-500 text-white rounded-full animate-pulse">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Hamburger menu button */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={`mt-3 flex flex-col justify-center items-center w-10 h-10 rounded-lg border-2 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-300 ${
+                menuOpen ? "animate-none bg-pink-500/40" : "animate-pulse"
               }`}
-            />
-            <span
-              className={`block w-5 h-0.5 bg-pink-200 my-1 transition-all duration-300 ${
-                menuOpen ? "opacity-0" : ""
-              }`}
-            />
-            <span
-              className={`block w-5 h-0.5 bg-pink-200 transition-all duration-300 ${
-                menuOpen ? "-rotate-45 -translate-y-1" : ""
-              }`}
-            />
-          </button>
+              aria-label="Toggle menu"
+            >
+              <span
+                className={`block w-5 h-0.5 bg-pink-200 transition-all duration-300 ${
+                  menuOpen ? "rotate-45 translate-y-1" : ""
+                }`}
+              />
+              <span
+                className={`block w-5 h-0.5 bg-pink-200 my-1 transition-all duration-300 ${
+                  menuOpen ? "opacity-0" : ""
+                }`}
+              />
+              <span
+                className={`block w-5 h-0.5 bg-pink-200 transition-all duration-300 ${
+                  menuOpen ? "-rotate-45 -translate-y-1" : ""
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Mobile Dropdown Menu */}

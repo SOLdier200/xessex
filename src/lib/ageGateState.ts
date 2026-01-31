@@ -25,14 +25,19 @@ function readCookie(name: string) {
 function writeCookie(name: string, value: string, maxAgeDays: number) {
   if (typeof document === "undefined") return;
   const maxAge = maxAgeDays * 24 * 60 * 60;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+  const isHttps = window.location.protocol === "https:";
+  // Use SameSite=None for wallet in-app browsers (requires Secure)
+  const sameSite = isHttps ? "None" : "Lax";
+  const secure = isHttps ? "; Secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure}; Domain=.xessex.me`;
 }
 
 function clearCookie(name: string) {
   if (typeof document === "undefined") return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+  const isHttps = window.location.protocol === "https:";
+  const sameSite = isHttps ? "None" : "Lax";
+  const secure = isHttps ? "; Secure" : "";
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=${sameSite}${secure}; Domain=.xessex.me`;
 }
 
 function isTruthyCookie(value: string | null) {

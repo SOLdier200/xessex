@@ -268,7 +268,7 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
@@ -402,11 +402,17 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 pt-4 border-t border-white/10">
-                  {/* Reply button - show for DIRECT messages or MASS announcements with a sender */}
+                  {/* Reply button - show for messages with a sender, but disabled for MASS messages */}
                   {selectedMessage.sender && (
                     <button
-                      onClick={() => handleReply(selectedMessage)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-sm transition"
+                      onClick={() => selectedMessage.type !== "MASS" && handleReply(selectedMessage)}
+                      disabled={selectedMessage.type === "MASS"}
+                      title={selectedMessage.type === "MASS" ? "Cannot reply to announcements" : "Reply to this message"}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition ${
+                        selectedMessage.type === "MASS"
+                          ? "bg-gray-500/20 text-gray-500 cursor-not-allowed"
+                          : "bg-blue-500/20 hover:bg-blue-500/30 text-blue-300"
+                      }`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -426,17 +432,24 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
                     Delete
                   </button>
 
-                  {/* Block button - only for messages from other users */}
+                  {/* Block button - only for messages from other users, disabled for ADMIN */}
                   {selectedMessage.sender && (
                     <button
                       onClick={() =>
+                        selectedMessage.sender?.role !== "ADMIN" &&
                         setConfirmModal({
                           type: "block",
                           userId: selectedMessage.sender!.id,
                           userDisplay: selectedMessage.sender!.display,
                         })
                       }
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 text-sm transition"
+                      disabled={selectedMessage.sender?.role === "ADMIN"}
+                      title={selectedMessage.sender?.role === "ADMIN" ? "Cannot block admin messages" : "Block this user"}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition ${
+                        selectedMessage.sender?.role === "ADMIN"
+                          ? "bg-gray-500/20 text-gray-500 cursor-not-allowed"
+                          : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300"
+                      }`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
