@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
       id: true,
       email: true,
       walletAddress: true,
-      solWallet: true,
       role: true,
       commentBanStatus: true,
       commentBanUntil: true,
@@ -129,7 +128,7 @@ export async function GET(req: NextRequest) {
     user: {
       id: user.id,
       email: user.email,
-      wallet: user.solWallet || user.walletAddress,
+      wallet: user.walletAddress,
       role: user.role,
       // Comment ban info
       commentBanStatus: user.commentBanStatus,

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         .filter(Boolean)
     );
 
-    const userWallet = access.user?.solWallet || access.user?.walletAddress;
+    const userWallet = access.user?.walletAddress;
     const isAdminByWallet = userWallet && adminWallets.has(userWallet);
 
     if (!isAdminByWallet) {

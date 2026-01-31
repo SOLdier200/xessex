@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
         OR: [
           { email: { contains: search, mode: "insensitive" as const } },
           { walletAddress: { contains: search, mode: "insensitive" as const } },
-          { solWallet: { contains: search, mode: "insensitive" as const } },
           { id: { contains: search, mode: "insensitive" as const } },
         ],
       }
@@ -47,7 +46,6 @@ export async function GET(req: NextRequest) {
       id: true,
       email: true,
       walletAddress: true,
-      solWallet: true,
       role: true,
       createdAt: true,
     },
@@ -93,7 +91,6 @@ export async function GET(req: NextRequest) {
         id: u.id,
         email: u.email,
         walletAddress: u.walletAddress,
-        solWallet: u.solWallet,
         role: u.role,
         createdAt: u.createdAt.toISOString(),
         stats: {

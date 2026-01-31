@@ -22,7 +22,7 @@ export async function GET() {
     take: 100,
     include: {
       sender: {
-        select: { id: true, email: true, walletAddress: true, solWallet: true, role: true },
+        select: { id: true, email: true, walletAddress: true, role: true },
       },
     },
   });
@@ -40,7 +40,7 @@ export async function GET() {
       sender: m.sender
         ? {
             id: m.sender.id,
-            display: m.sender.email || m.sender.solWallet || m.sender.walletAddress,
+            display: m.sender.email || m.sender.walletAddress,
             role: m.sender.role,
           }
         : null,

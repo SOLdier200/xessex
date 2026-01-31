@@ -22,7 +22,7 @@ export async function GET() {
     users: users.map((u) => ({
       id: u.id,
       email: u.email,
-      wallet: u.solWallet || u.walletAddress,
+      wallet: u.walletAddress,
       status: u.commentBanStatus,
       banUntil: u.commentBanUntil?.toISOString() || null,
       banReason: u.commentBanReason,

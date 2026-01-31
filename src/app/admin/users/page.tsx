@@ -8,7 +8,6 @@ interface UserData {
   id: string;
   email: string | null;
   walletAddress: string | null;
-  solWallet: string | null;
   role: string;
   createdAt: string;
   stats: {
@@ -344,7 +343,7 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-400 font-mono text-sm">
-                        {formatWallet(user.solWallet || user.walletAddress)}
+                        {formatWallet(user.walletAddress)}
                       </td>
                       <td className="px-4 py-3">
                         <span

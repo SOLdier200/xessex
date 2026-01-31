@@ -59,7 +59,6 @@ export async function GET() {
           id: true,
           email: true,
           walletAddress: true,
-          solWallet: true,
           commentBanStatus: true,
           createdAt: true,
         },
@@ -71,7 +70,7 @@ export async function GET() {
     return {
       id: u.id,
       email: u.email,
-      wallet: u.solWallet || u.walletAddress,
+      wallet: u.walletAddress,
       status: u.commentBanStatus,
       totalVotes: stats.totalVotes,
       dislikes: stats.dislikes,
@@ -97,7 +96,6 @@ export async function GET() {
           id: true,
           email: true,
           walletAddress: true,
-          solWallet: true,
           ratingBanStatus: true,
           createdAt: true,
           starAbuseWarnings: {
@@ -113,7 +111,7 @@ export async function GET() {
   const starAbusers = starAbuserUsers.map((u) => ({
     id: u.id,
     email: u.email,
-    wallet: u.solWallet || u.walletAddress,
+    wallet: u.walletAddress,
     status: u.ratingBanStatus,
     oneStarCount: starCountMap.get(u.id) || 0,
     lastWarning: u.starAbuseWarnings[0]
@@ -130,7 +128,7 @@ export async function GET() {
     commentSpammers: commentSpammers.map((u) => ({
       id: u.id,
       email: u.email,
-      wallet: u.solWallet || u.walletAddress,
+      wallet: u.walletAddress,
       status: u.commentBanStatus,
       removedCount: u.removedCommentCount,
       lastWarning: u.lastWarning

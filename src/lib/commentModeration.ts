@@ -289,7 +289,6 @@ export async function getUnrulyUsers() {
       id: true,
       email: true,
       walletAddress: true,
-      solWallet: true,
       commentBanStatus: true,
       createdAt: true,
       commentWarnings: {
@@ -322,7 +321,6 @@ export async function getCommentBannedUsers() {
       id: true,
       email: true,
       walletAddress: true,
-      solWallet: true,
       commentBanStatus: true,
       commentBanUntil: true,
       commentBanReason: true,

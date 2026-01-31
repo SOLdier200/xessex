@@ -87,7 +87,7 @@ export async function GET() {
     where: { blockerId: access.user.id },
     include: {
       blocked: {
-        select: { id: true, email: true, walletAddress: true, solWallet: true },
+        select: { id: true, email: true, walletAddress: true },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -97,7 +97,7 @@ export async function GET() {
     ok: true,
     blockedUsers: blocks.map((b) => ({
       id: b.blocked.id,
-      display: b.blocked.email || b.blocked.solWallet || b.blocked.walletAddress || "Unknown",
+      display: b.blocked.email || b.blocked.walletAddress || "Unknown",
       blockedAt: b.createdAt.toISOString(),
     })),
   });
