@@ -1218,13 +1218,33 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <p className="text-sm text-white/60">
-                        Latest epoch pending:{" "}
-                        <span className="text-white font-semibold">
-                          {claimSummary?.pendingAmount ?? "..."}
-                        </span>
-                        {claimSummary?.epoch ? (
-                          <span className="text-white/40"> (Epoch {claimSummary.epoch.epochNo})</span>
-                        ) : null}
+                        {claimSummary?.claim?.status === "CLAIMED" ? (
+                          <>
+                            Last claimed epoch:{" "}
+                            <span className="text-green-400 font-semibold">
+                              {claimSummary?.pendingAmount ?? "0"} XESS
+                            </span>
+                            {claimSummary?.epoch ? (
+                              <span className="text-white/40"> (Epoch {claimSummary.epoch.epochNo})</span>
+                            ) : null}
+                            <span className="text-green-400/70 ml-2">✓ Claimed</span>
+                          </>
+                        ) : claimSummary?.hasPending ? (
+                          <>
+                            Claimable now:{" "}
+                            <span className="text-yellow-400 font-semibold">
+                              {claimSummary?.pendingAmount ?? "0"} XESS
+                            </span>
+                            {claimSummary?.epoch ? (
+                              <span className="text-white/40"> (Epoch {claimSummary.epoch.epochNo})</span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <>
+                            Latest epoch:{" "}
+                            <span className="text-white/50">No unclaimed rewards</span>
+                          </>
+                        )}
                       </p>
                     </div>
 
@@ -1283,10 +1303,12 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {/* status */}
-                  <div className="mt-2 text-xs text-white/40">
-                    Status: {claimSummary?.claim?.status ?? (claimSummary?.hasPending ? "READY" : "—")}
-                  </div>
+                  {/* status - only show if not already displayed above */}
+                  {claimSummary?.claim?.status !== "CLAIMED" && (
+                    <div className="mt-2 text-xs text-white/40">
+                      Status: {claimSummary?.claim?.status ?? (claimSummary?.hasPending ? "READY" : "Waiting for next epoch")}
+                    </div>
+                  )}
                 </div>
               )}
 

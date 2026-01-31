@@ -61,6 +61,15 @@ export default function WalletStatus() {
     return () => window.removeEventListener("auth-changed", handleAuthChange);
   }, [fetchAuth]);
 
+  // Listen for credits-changed event (dispatched after earning credits)
+  useEffect(() => {
+    const handleCreditsChange = () => {
+      fetchAuth(0);
+    };
+    window.addEventListener("credits-changed", handleCreditsChange);
+    return () => window.removeEventListener("credits-changed", handleCreditsChange);
+  }, [fetchAuth]);
+
   // iOS Session Auto-Fix
   const authLite = auth ? { authed: true, tier: "diamond" as const } : null;
   useWalletSessionAutoFix(authLite);
@@ -74,8 +83,11 @@ export default function WalletStatus() {
     router.refresh();
   };
 
-  // Use auth wallet or connected wallet's publicKey - show full address
-  const walletAddress = auth?.walletAddress || publicKey?.toBase58();
+  // Use auth wallet or connected wallet's publicKey - truncate for display
+  const fullWalletAddress = auth?.walletAddress || publicKey?.toBase58();
+  const walletAddress = fullWalletAddress
+    ? `${fullWalletAddress.slice(0, 4)}...${fullWalletAddress.slice(-4)}`
+    : null;
 
   if (loading) return null;
 
@@ -175,7 +187,7 @@ export default function WalletStatus() {
         onClose={() => setShowLogoutModal(false)}
         onLogoutComplete={handleLogoutComplete}
         email={null}
-        walletAddress={auth?.walletAddress ?? null}
+        walletAddress={fullWalletAddress ?? null}
         tier="diamond"
       />
     </>

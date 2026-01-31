@@ -59,7 +59,8 @@ export async function POST() {
         embedUrl,
         thumbnailUrl,
         tags,
-        sourceViews, // PH views - not viewsCount (which tracks Xessex local views)
+        sourceViews,
+        unlockCost: 10, // Default cost for new videos (10 credits)
       },
       update: {
         title,
@@ -67,6 +68,7 @@ export async function POST() {
         thumbnailUrl,
         tags,
         sourceViews,
+        // Don't update unlockCost - preserve existing value
       },
     });
 

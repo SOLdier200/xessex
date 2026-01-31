@@ -97,7 +97,7 @@ export default function LockedVideoCard({
             ) : (
               <Link
                 href="/login/diamond"
-                className="mt-2 px-3 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-400 text-white text-xs font-bold transition"
+                className="mt-2 px-3 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-400 text-black text-xs font-bold transition"
               >
                 Login to Unlock
               </Link>

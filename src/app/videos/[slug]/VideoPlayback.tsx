@@ -207,6 +207,15 @@ export default function VideoPlayback({
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+  // Listen for credits-changed event to refresh credit balance
+  useEffect(() => {
+    const handleCreditsChange = () => {
+      refreshAccess(currentVideo.id);
+    };
+    window.addEventListener("credits-changed", handleCreditsChange);
+    return () => window.removeEventListener("credits-changed", handleCreditsChange);
+  }, [currentVideo.id, refreshAccess]);
+
   async function handleUnlock(): Promise<boolean> {
     setUnlockError(null);
     setIsUnlocking(true);

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { weekKeyUTC } from "@/lib/weekKey";
+import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+
+// Special credits reward for voting
+const VOTE_CREDIT_REWARD = 1n; // 1 credit per vote (once per comment, no extra on flip)
 
 const FLIP_WINDOW_MS = 60_000;
 
@@ -171,7 +175,46 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return c;
+      // Award special credits for voting (1 credit, once per comment)
+      // Use ledger refId to track uniqueness: "vote_credit_{voterId}_{commentId}"
+      const creditRefId = `vote_credit_${voterId}_${commentId}`;
+      const existingCredit = await tx.specialCreditLedger.findFirst({
+        where: { refId: creditRefId },
+      });
+
+      let creditsAwarded = 0n;
+      if (!existingCredit) {
+        // Ensure user has a credit account
+        await tx.specialCreditAccount.upsert({
+          where: { userId: voterId },
+          create: { userId: voterId, balanceMicro: 0n },
+          update: {},
+        });
+
+        // Award credits
+        const rewardMicro = VOTE_CREDIT_REWARD * CREDIT_MICRO;
+        await tx.specialCreditAccount.update({
+          where: { userId: voterId },
+          data: { balanceMicro: { increment: rewardMicro } },
+        });
+
+        // Record in ledger
+        await tx.specialCreditLedger.create({
+          data: {
+            userId: voterId,
+            weekKey: wk,
+            amountMicro: rewardMicro,
+            reason: "Vote reward",
+            refType: "VOTE_CREDIT",
+            refId: creditRefId,
+          },
+        });
+
+        creditsAwarded = VOTE_CREDIT_REWARD;
+        console.log("[vote] Awarded", creditsAwarded.toString(), "special credit for voting");
+      }
+
+      return { ...c, creditsAwarded: Number(creditsAwarded) };
     });
 
     return NextResponse.json({
@@ -183,6 +226,7 @@ export async function POST(req: NextRequest) {
       modDislikes: updated.modDislikes,
       voteLocked: false,
       secondsLeftToFlip: 60,
+      creditsEarned: updated.creditsAwarded,
     });
   }
 

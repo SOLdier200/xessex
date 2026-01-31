@@ -13,13 +13,23 @@ interface LoginModalProps {
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMod, setIsMod] = useState(false);
+  const [isAdminRole, setIsAdminRole] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       fetch("/api/me/is-admin")
         .then((res) => res.json())
-        .then((data) => setIsAdmin(data.isAdmin))
-        .catch(() => setIsAdmin(false));
+        .then((data) => {
+          setIsAdmin(data.isAdmin);
+          setIsMod(data.isMod);
+          setIsAdminRole(data.isAdminRole);
+        })
+        .catch(() => {
+          setIsAdmin(false);
+          setIsMod(false);
+          setIsAdminRole(false);
+        });
     }
   }, [isOpen]);
 
@@ -80,13 +90,46 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </button>
           </div>
 
-          {/* Admin - Only visible for admin wallets */}
-          {isAdmin && (
+          {/* Moderator Dashboard - Only visible for MOD role */}
+          {isMod && (
+            <div className="pt-4 border-t border-white/10">
+              <Link
+                href="/mod"
+                onClick={onClose}
+                className="w-full py-3 px-6 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Moderator Dashboard
+              </Link>
+            </div>
+          )}
+
+          {/* Admin Panel - Only visible for ADMIN role */}
+          {isAdminRole && (
             <div className="pt-4 border-t border-white/10">
               <Link
                 href="/admin"
                 onClick={onClose}
-                className="w-full py-3 px-6 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition flex items-center justify-center gap-2"
+                className="w-full py-3 px-6 rounded-xl bg-pink-500/20 border border-pink-400/50 text-pink-300 font-semibold hover:bg-pink-500/30 transition flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                Admin Panel
+              </Link>
+            </div>
+          )}
+
+          {/* Admin Panel (by wallet allowlist) - fallback for admins not in DB */}
+          {isAdmin && !isAdminRole && !isMod && (
+            <div className="pt-4 border-t border-white/10">
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="w-full py-3 px-6 rounded-xl bg-pink-500/20 border border-pink-400/50 text-pink-300 font-semibold hover:bg-pink-500/30 transition flex items-center justify-center gap-2"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>

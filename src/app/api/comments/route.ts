@@ -8,6 +8,10 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { truncWallet } from "@/lib/scoring";
 import { weekKeyUTC } from "@/lib/weekKey";
+import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+
+// Special credits reward for commenting
+const COMMENT_CREDIT_REWARD = 2n; // 2 credits per comment (once per video)
 
 const FLIP_WINDOW_MS = 60_000;
 
@@ -200,21 +204,61 @@ export async function POST(req: NextRequest) {
       console.log("[comments] NOT eligible -> too short");
     }
 
-    return newComment;
+    // Award special credits for commenting (2 credits, once per video)
+    // Use ledger refId to track uniqueness: "comment_credit_{userId}_{videoId}"
+    const creditRefId = `comment_credit_${access.user!.id}_${videoId}`;
+    const existingCredit = await tx.specialCreditLedger.findFirst({
+      where: { refId: creditRefId },
+    });
+
+    let creditsAwarded = 0n;
+    if (!existingCredit) {
+      // Ensure user has a credit account
+      await tx.specialCreditAccount.upsert({
+        where: { userId: access.user!.id },
+        create: { userId: access.user!.id, balanceMicro: 0n },
+        update: {},
+      });
+
+      // Award credits
+      const rewardMicro = COMMENT_CREDIT_REWARD * CREDIT_MICRO;
+      await tx.specialCreditAccount.update({
+        where: { userId: access.user!.id },
+        data: { balanceMicro: { increment: rewardMicro } },
+      });
+
+      // Record in ledger
+      await tx.specialCreditLedger.create({
+        data: {
+          userId: access.user!.id,
+          weekKey: wk,
+          amountMicro: rewardMicro,
+          reason: "Comment reward",
+          refType: "COMMENT_CREDIT",
+          refId: creditRefId,
+        },
+      });
+
+      creditsAwarded = COMMENT_CREDIT_REWARD;
+      console.log("[comments] Awarded", creditsAwarded.toString(), "special credits for commenting");
+    }
+
+    return { comment: newComment, creditsAwarded: Number(creditsAwarded) };
   });
 
   return NextResponse.json({
     ok: true,
     comment: {
-      id: comment.id,
-      body: comment.body,
-      createdAt: comment.createdAt.toISOString(),
-      authorWallet: truncWallet(comment.author.walletAddress, comment.author.email),
+      id: comment.comment.id,
+      body: comment.comment.body,
+      createdAt: comment.comment.createdAt.toISOString(),
+      authorWallet: truncWallet(comment.comment.author.walletAddress, comment.comment.author.email),
       memberLikes: 0,
       memberDislikes: 0,
       userVote: null,
       voteLocked: false,
       secondsLeftToFlip: 0,
     },
+    creditsEarned: comment.creditsAwarded,
   });
 }

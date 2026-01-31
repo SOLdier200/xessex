@@ -62,7 +62,40 @@ model User {
   // Video unlock system
   videoUnlocks         VideoUnlock[]
 
+  // Comment moderation
+  commentBanStatus     CommentBanStatus     @default(ALLOWED)
+  commentBanUntil      DateTime?            // For temporary bans
+  commentBanReason     String?
+  commentWarnings      CommentWarning[]
+  commentBans          CommentBan[]
+
+  // Vote moderation (likes/dislikes)
+  voteBanStatus        CommentBanStatus     @default(ALLOWED)
+  voteBanUntil         DateTime?
+  voteBanReason        String?
+
+  // Rating moderation (star ratings)
+  ratingBanStatus      CommentBanStatus     @default(ALLOWED)
+  ratingBanUntil       DateTime?
+  ratingBanReason      String?
+
+  // Mod action tracking
+  modActionsReceived   ModAction[]          @relation("ModActionTarget")
+  modActionsPerformed  ModAction[]          @relation("ModActionPerformer")
+
+  // Messages system
+  messagesReceived     UserMessage[]        @relation("MessageRecipient")
+  messagesSent         UserMessage[]        @relation("MessageSender")
+  starAbuseWarnings    StarAbuseWarning[]
+
+  // User blocking
+  blockedUsers         UserBlock[]          @relation("UserBlocker")
+  blockedByUsers       UserBlock[]          @relation("UserBlocked")
+
   @@index([referredById])
+  @@index([commentBanStatus])
+  @@index([voteBanStatus])
+  @@index([ratingBanStatus])
 }
 
 model Session {
@@ -530,6 +563,113 @@ enum UserRole {
   ADMIN
 }
 
+enum CommentBanStatus {
+  ALLOWED           // Can comment freely
+  WARNED            // Has received warnings
+  TEMP_BANNED       // Temporarily banned
+  PERM_BANNED       // Permanently banned
+  UNBANNED          // Was banned, now unbanned (shown greyed out in mod panel)
+}
+
+// Tracks warnings issued to users for removed comments
+model CommentWarning {
+  id             String   @id @default(cuid())
+  userId         String
+  warningType    String   // "spam_warning_3", "suspension_warning_5", "permanent_ban_10"
+  removedCount   Int      // Number of removed comments at time of warning
+  message        String   // Warning message shown to user
+  acknowledgedAt DateTime?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Tracks ban history for users
+model CommentBan {
+  id          String    @id @default(cuid())
+  userId      String
+  banType     String    // "temp_1_week", "permanent"
+  reason      String
+  bannedAt    DateTime  @default(now())
+  expiresAt   DateTime? // null for permanent bans
+  unbannedAt  DateTime?
+  unbannedBy  String?   // mod/admin who unbanned
+  rebannedAt  DateTime? // if user was rebanned after unban
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([banType])
+}
+
+// Tracks all moderator actions for admin review
+model ModAction {
+  id            String   @id @default(cuid())
+  modId         String   // Moderator who performed the action
+  targetUserId  String   // User affected by the action
+  actionType    String   // e.g., "COMMENT_BAN", "COMMENT_UNBAN", "VOTE_BAN", "RATING_BAN", etc.
+  actionSubtype String?  // e.g., "temp_1_week", "temp_2_week", "temp_4_week", "permanent"
+  reason        String?  // Reason for the action
+  details       String?  // Additional details (JSON string if needed)
+  createdAt     DateTime @default(now())
+
+  mod           User     @relation("ModActionPerformer", fields: [modId], references: [id], onDelete: Cascade)
+  targetUser    User     @relation("ModActionTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([modId])
+  @@index([targetUserId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+// User messages system (warnings, admin/mod messages)
+model UserMessage {
+  id          String    @id @default(cuid())
+  userId      String    // Recipient
+  senderId    String?   // Sender (null for system messages)
+  type        String    // "WARNING", "DIRECT", "MASS", "SYSTEM"
+  subject     String
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation("MessageRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  sender      User?     @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@index([senderId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Track star rating abuse warnings sent to users
+model StarAbuseWarning {
+  id              String   @id @default(cuid())
+  userId          String
+  oneStarCount    Int      // Count of 1-star ratings at time of warning
+  createdAt       DateTime @default(now())
+  acknowledgedAt  DateTime?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// User blocking for messaging
+model UserBlock {
+  id          String   @id @default(cuid())
+  blockerId   String   // User who is blocking
+  blockedId   String   // User who is blocked
+  createdAt   DateTime @default(now())
+
+  blocker     User     @relation("UserBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked     User     @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
 
 enum CommentStatus {
   ACTIVE

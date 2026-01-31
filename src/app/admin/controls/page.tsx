@@ -75,6 +75,25 @@ export default function AdminControlsPage() {
           </button>
         </div>
 
+        {/* User Management Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/50 flex items-center justify-center">
+              <span className="text-2xl">👥</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">User Management</h2>
+              <p className="text-sm text-white/60">View users, stats, manage roles</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/users"
+            className="block w-full px-4 py-3 rounded-xl border border-blue-400/50 bg-blue-500/20 text-blue-300 font-semibold hover:bg-blue-500/30 transition text-center"
+          >
+            Manage Users
+          </Link>
+        </div>
+
         {/* Source Grades Audit Card */}
         <div className="neon-border rounded-2xl p-6 bg-black/30">
           <div className="flex items-center gap-3 mb-4">
@@ -186,6 +205,44 @@ export default function AdminControlsPage() {
             className="block w-full px-4 py-3 rounded-xl border border-emerald-400/50 bg-emerald-500/20 text-emerald-200 font-semibold hover:bg-emerald-500/30 transition text-center"
           >
             View Analytics
+          </Link>
+        </div>
+
+        {/* Unruly Users Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-400/50 flex items-center justify-center">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Unruly Users</h2>
+              <p className="text-sm text-white/60">Comment/dislike spammers, banned users</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/unruly-users"
+            className="block w-full px-4 py-3 rounded-xl border border-orange-400/50 bg-orange-500/20 text-orange-200 font-semibold hover:bg-orange-500/30 transition text-center"
+          >
+            Review Users
+          </Link>
+        </div>
+
+        {/* Mod Actions Audit Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-400/50 flex items-center justify-center">
+              <span className="text-2xl">📋</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Mod Actions Audit</h2>
+              <p className="text-sm text-white/60">Review all moderator actions</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/mod-actions"
+            className="block w-full px-4 py-3 rounded-xl border border-indigo-400/50 bg-indigo-500/20 text-indigo-200 font-semibold hover:bg-indigo-500/30 transition text-center"
+          >
+            View Actions
           </Link>
         </div>
       </div>

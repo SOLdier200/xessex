@@ -63,6 +63,15 @@ type DeleteState = {
   busy: boolean;
 };
 
+type MessageModalState = {
+  open: boolean;
+  recipientId: string | null;
+  recipientDisplay: string | null;
+  subject: string;
+  body: string;
+  sending: boolean;
+};
+
 export default function Comments({
   videoId,
   canPost,
@@ -86,6 +95,15 @@ export default function Comments({
     open: false,
     commentId: null,
     busy: false,
+  });
+
+  const [messageModal, setMessageModal] = useState<MessageModalState>({
+    open: false,
+    recipientId: null,
+    recipientDisplay: null,
+    subject: "",
+    body: "",
+    sending: false,
   });
 
   // Use props directly - no auth fetch needed since server provides all permissions
@@ -137,6 +155,14 @@ export default function Comments({
         setText("");
         setHasPostedComment(true);
         toast.success("Comment posted!");
+        // Show credits earned toast and update UI
+        if (data.creditsEarned && data.creditsEarned > 0) {
+          toast.success(`You earned ${data.creditsEarned} Special Credits!`, {
+            icon: <img src="/logos/diamond3.png" alt="" className="w-5 h-5" />,
+          });
+          // Dispatch event to update credit display in nav
+          window.dispatchEvent(new CustomEvent("credits-changed"));
+        }
       } else if (data.error === "ALREADY_COMMENTED") {
         setHasPostedComment(true);
         toast.error("Only 1 comment per Member per Video!");
@@ -190,6 +216,14 @@ export default function Comments({
               : c
           )
         );
+        // Show credits earned toast and update UI
+        if (data.creditsEarned && data.creditsEarned > 0) {
+          toast.success(`You earned ${data.creditsEarned} Special Credit!`, {
+            icon: <img src="/logos/diamond3.png" alt="" className="w-5 h-5" />,
+          });
+          // Dispatch event to update credit display in nav
+          window.dispatchEvent(new CustomEvent("credits-changed"));
+        }
       } else if (data.error === "VOTE_LOCKED_WINDOW_EXPIRED") {
         toast.error("Vote locked: you can only change it within 60 seconds.");
       } else if (data.error === "VOTE_LOCKED_FLIP_ALREADY_USED") {
@@ -313,6 +347,75 @@ export default function Comments({
     }
   };
 
+  const openMessageModal = (authorId: string, authorWallet: string) => {
+    if (!currentUserId) {
+      toast.error("Please log in to send messages");
+      return;
+    }
+    if (authorId === currentUserId) {
+      return; // Can't message yourself
+    }
+    setMessageModal({
+      open: true,
+      recipientId: authorId,
+      recipientDisplay: authorWallet,
+      subject: "",
+      body: "",
+      sending: false,
+    });
+  };
+
+  const closeMessageModal = () => {
+    if (messageModal.sending) return;
+    setMessageModal({
+      open: false,
+      recipientId: null,
+      recipientDisplay: null,
+      subject: "",
+      body: "",
+      sending: false,
+    });
+  };
+
+  const sendMessage = async () => {
+    if (!messageModal.recipientId || !messageModal.subject.trim() || !messageModal.body.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setMessageModal({ ...messageModal, sending: true });
+
+    try {
+      const res = await fetch("/api/messages/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientId: messageModal.recipientId,
+          subject: messageModal.subject.trim(),
+          message: messageModal.body.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Message sent!");
+        closeMessageModal();
+      } else if (data.error === "USER_BLOCKED_YOU") {
+        toast.error("This user has blocked you");
+        setMessageModal({ ...messageModal, sending: false });
+      } else if (data.error === "YOU_BLOCKED_USER") {
+        toast.error("You have blocked this user");
+        setMessageModal({ ...messageModal, sending: false });
+      } else {
+        toast.error(data.error || "Failed to send message");
+        setMessageModal({ ...messageModal, sending: false });
+      }
+    } catch {
+      toast.error("Failed to send message");
+      setMessageModal({ ...messageModal, sending: false });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Commented badge for Diamond members who have commented */}
@@ -394,7 +497,18 @@ export default function Comments({
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2 pr-8">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-pink-300 text-sm">{comment.authorWallet}</span>
+                    {isOwnComment ? (
+                      <span className="font-medium text-pink-300 text-sm">{comment.authorWallet}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openMessageModal(comment.authorId, comment.authorWallet)}
+                        className="font-medium text-pink-300 text-sm hover:text-pink-200 hover:underline transition cursor-pointer"
+                        title="Send message to this user"
+                      >
+                        {comment.authorWallet}
+                      </button>
+                    )}
                     <span className="text-[10px] text-white/30 font-mono">#{comment.id.slice(-6)}</span>
                   </div>
                   <span className="text-xs text-white/40">{formatDate(comment.createdAt)}</span>
@@ -612,6 +726,78 @@ export default function Comments({
                 className="flex-1 px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
               >
                 {deleteModal.busy ? "Removing..." : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Message Modal */}
+      {messageModal.open && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+          <div className="w-full max-w-md rounded-2xl border border-pink-500/30 bg-black/90 p-4">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <div className="text-white font-semibold">Send Message</div>
+                <div className="text-xs text-white/50 mt-0.5">
+                  To: {messageModal.recipientDisplay}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeMessageModal}
+                disabled={messageModal.sending}
+                className="text-white/60 hover:text-white disabled:opacity-40"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={messageModal.subject}
+                  onChange={(e) => setMessageModal({ ...messageModal, subject: e.target.value })}
+                  maxLength={200}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none text-sm"
+                  placeholder="Subject..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Message</label>
+                <textarea
+                  value={messageModal.body}
+                  onChange={(e) => setMessageModal({ ...messageModal, body: e.target.value })}
+                  maxLength={2000}
+                  rows={5}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none resize-none text-sm"
+                  placeholder="Write your message..."
+                />
+                <div className="text-right text-xs text-white/40 mt-1">
+                  {messageModal.body.length}/2000
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={closeMessageModal}
+                disabled={messageModal.sending}
+                className="flex-1 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={sendMessage}
+                disabled={messageModal.sending || !messageModal.subject.trim() || !messageModal.body.trim()}
+                className="flex-1 px-4 py-2 rounded-xl bg-pink-500/80 hover:bg-pink-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
+              >
+                {messageModal.sending ? "Sending..." : "Send"}
               </button>
             </div>
           </div>

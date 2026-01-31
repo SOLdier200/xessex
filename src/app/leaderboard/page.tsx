@@ -78,13 +78,6 @@ export default function LeaderboardPage() {
           ← Back to Home
         </Link>
 
-        {/* Status Notice */}
-        <div className="mb-6 p-4 rounded-xl bg-yellow-500/20 border border-yellow-400/50 animate-pulse">
-          <p className="text-yellow-300 text-sm md:text-base text-center font-medium">
-            Leaderboard and Diamond Membership features + Xess Payments are still being implemented, but Regular Membership is already available.
-          </p>
-        </div>
-
         {/* Header */}
         <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 mb-6">
           <div className="flex items-center gap-4">

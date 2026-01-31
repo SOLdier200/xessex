@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
 import TopNav from "../components/TopNav";
 
 type DrawingStatusResp = {
@@ -113,6 +114,10 @@ function EnterDrawingWithCredits({ onSuccess }: { onSuccess: () => void }) {
     }
 
     setBusy(true);
+    const loadingToast = toast.loading("Submitting Credits....", {
+      icon: <img src="/logos/diamond3.png" alt="" className="w-5 h-5" />,
+    });
+
     try {
       const res = await fetch("/api/rewards-drawing/enter", {
         method: "POST",
@@ -121,11 +126,19 @@ function EnterDrawingWithCredits({ onSuccess }: { onSuccess: () => void }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) throw new Error(json?.error || "entry_failed");
+
+      toast.dismiss(loadingToast);
+      toast.success("Successfully entered Drawing!", {
+        icon: <img src="/logos/diamond3.png" alt="" className="w-5 h-5" />,
+      });
+
       onSuccess();
       setQty("1");
     } catch (e: unknown) {
+      toast.dismiss(loadingToast);
       const msg = e instanceof Error ? e.message : String(e);
       setErr(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

@@ -9,6 +9,8 @@ import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 import { recomputeVideoRanks } from "@/lib/videoRank";
 
+const STAR_ABUSE_THRESHOLD = 10; // Number of 1-star ratings before warning
+
 // Rate limit: 20 seconds between rating changes per user+video
 const RATE_LIMIT_MS = 20 * 1000;
 const ratingCooldowns = new Map<string, number>();
@@ -26,6 +28,30 @@ export async function POST(req: NextRequest) {
 
   if (!access.canRateStars) {
     return NextResponse.json({ ok: false, error: "DIAMOND_ONLY" }, { status: 403 });
+  }
+
+  // Check if user is banned from rating
+  const userRecord = await db.user.findUnique({
+    where: { id: access.user.id },
+    select: { ratingBanStatus: true, ratingBanUntil: true },
+  });
+
+  if (userRecord?.ratingBanStatus === "PERM_BANNED") {
+    return NextResponse.json(
+      { ok: false, error: "RATING_BANNED", reason: "You are permanently banned from rating videos." },
+      { status: 403 }
+    );
+  }
+
+  if (userRecord?.ratingBanStatus === "TEMP_BANNED") {
+    const banUntil = userRecord.ratingBanUntil;
+    if (banUntil && banUntil > new Date()) {
+      return NextResponse.json(
+        { ok: false, error: "RATING_SUSPENDED", until: banUntil.toISOString() },
+        { status: 403 }
+      );
+    }
+    // Suspension has expired, allow rating (status will be cleaned up later)
   }
 
   const body = (await req.json().catch(() => null)) as
@@ -106,7 +132,50 @@ export async function POST(req: NextRequest) {
     console.error("[ratings] recomputeVideoRanks failed:", e);
   }
 
-  return NextResponse.json({ ok: true, avgStars, starsCount });
+  // Check for star abuse (only if this was a 1-star rating)
+  let starAbuseWarning = false;
+  if (s === 1) {
+    try {
+      // Count how many 1-star ratings this user has given
+      const oneStarCount = await db.videoStarRating.count({
+        where: { userId, stars: 1 },
+      });
+
+      // If they've hit the threshold, check if they already have a warning
+      if (oneStarCount >= STAR_ABUSE_THRESHOLD) {
+        const existingWarning = await db.starAbuseWarning.findFirst({
+          where: { userId },
+        });
+
+        if (!existingWarning) {
+          // Create warning record and send message
+          await db.$transaction([
+            db.starAbuseWarning.create({
+              data: {
+                userId,
+                oneStarCount,
+              },
+            }),
+            db.userMessage.create({
+              data: {
+                userId,
+                type: "WARNING",
+                subject: "Star Rating Warning",
+                body: `You have given ${oneStarCount} videos a 1-star rating. Systematic low ratings that appear to be spam or abuse may result in your rating privileges being suspended. Please ensure your ratings reflect genuine assessments of video quality.`,
+              },
+            }),
+          ]);
+
+          console.log(`[ratings] Star abuse warning sent to user ${userId} (${oneStarCount} 1-star ratings)`);
+          starAbuseWarning = true;
+        }
+      }
+    } catch (e) {
+      console.error("[ratings] Star abuse check failed:", e);
+    }
+  }
+
+  return NextResponse.json({ ok: true, avgStars, starsCount, starAbuseWarning });
 }
 
 /**

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WalletStatus from "./WalletStatus";
+import MessagesModal from "./MessagesModal";
 
 const tokenLinks = [
   { label: "Tokenomics", href: "/tokenomics" },
@@ -16,7 +17,22 @@ export default function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [tokenDropdownOpen, setTokenDropdownOpen] = useState(false);
+  const [messagesModalOpen, setMessagesModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const tokenDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch unread message count
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/messages/unread-count");
+      const data = await res.json();
+      if (data.ok) {
+        setUnreadCount(data.count);
+      }
+    } catch {
+      // Silently fail
+    }
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,8 +51,19 @@ export default function TopNav() {
     function checkAuth() {
       fetch("/api/auth/me", { cache: "no-store" })
         .then((res) => res.json())
-        .then((data) => setIsLoggedIn(data.ok && data.authed))
-        .catch(() => setIsLoggedIn(false));
+        .then((data) => {
+          const loggedIn = data.ok && data.authed;
+          setIsLoggedIn(loggedIn);
+          if (loggedIn) {
+            fetchUnreadCount();
+          } else {
+            setUnreadCount(0);
+          }
+        })
+        .catch(() => {
+          setIsLoggedIn(false);
+          setUnreadCount(0);
+        });
     }
 
     checkAuth();
@@ -44,7 +71,7 @@ export default function TopNav() {
     // Listen for auth changes (login/logout events)
     window.addEventListener("auth-changed", checkAuth);
     return () => window.removeEventListener("auth-changed", checkAuth);
-  }, []);
+  }, [fetchUnreadCount]);
 
   return (
     <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
@@ -82,14 +109,14 @@ export default function TopNav() {
               <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority className="h-[33px] w-auto" />
             </Link>
             <Link href="/leaderboard" className="hover:opacity-80 transition shrink-0">
-              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority className="h-[40px] w-auto" />
+              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority className="h-[44px] w-auto" />
             </Link>
             <div className="relative shrink-0" ref={tokenDropdownRef}>
               <button
                 onClick={() => setTokenDropdownOpen(!tokenDropdownOpen)}
                 className="hover:opacity-80 transition flex items-center gap-1"
               >
-                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[35px] w-auto" />
+                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[37px] w-auto" />
                 <svg
                   className={`w-4 h-4 text-white/70 transition-transform ${tokenDropdownOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -115,9 +142,22 @@ export default function TopNav() {
               )}
             </div>
             {isLoggedIn && (
-              <Link href="/profile" className="hover:opacity-80 transition shrink-0">
-                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[33px] w-auto" />
-              </Link>
+              <>
+                <button
+                  onClick={() => setMessagesModalOpen(true)}
+                  className="relative hover:opacity-80 transition shrink-0"
+                >
+                  <Image src="/logos/textlogo/siteset3/messages110.png" alt="Messages" width={938} height={276} className="h-[42px] w-auto" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-pink-500 text-white rounded-full animate-pulse">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <Link href="/profile" className="hover:opacity-80 transition shrink-0">
+                  <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[36px] w-auto" />
+                </Link>
+              </>
             )}
           </div>
 
@@ -184,14 +224,14 @@ export default function TopNav() {
               <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} className="h-[30px] w-auto" />
             </Link>
             <Link href="/leaderboard" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} className="h-[36px] w-auto" />
+              <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} className="h-[40px] w-auto" />
             </Link>
             <div className="flex flex-col items-center">
               <button
                 onClick={() => setTokenDropdownOpen(!tokenDropdownOpen)}
                 className="hover:opacity-80 transition flex items-center gap-1"
               >
-                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[31px] w-auto" />
+                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[33px] w-auto" />
                 <svg
                   className={`w-4 h-4 text-white/70 transition-transform ${tokenDropdownOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -220,14 +260,36 @@ export default function TopNav() {
               )}
             </div>
             {isLoggedIn && (
-              <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-                <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[30px] w-auto" />
-              </Link>
+              <>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setMessagesModalOpen(true);
+                  }}
+                  className="relative hover:opacity-80 transition"
+                >
+                  <Image src="/logos/textlogo/siteset3/messages110.png" alt="Messages" width={938} height={276} className="h-[39px] w-auto" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-pink-500 text-white rounded-full animate-pulse">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
+                  <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[33px] w-auto" />
+                </Link>
+              </>
             )}
           </div>
         </nav>
       </div>
 
+      {/* Messages Modal */}
+      <MessagesModal
+        isOpen={messagesModalOpen}
+        onClose={() => setMessagesModalOpen(false)}
+        onUnreadCountChange={setUnreadCount}
+      />
     </header>
   );
 }

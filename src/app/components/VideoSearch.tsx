@@ -110,6 +110,23 @@ export default function VideoSearch({
       .catch(() => {});
   }, [isAuthed]);
 
+  // Listen for credits-changed event to refresh credit balance
+  useEffect(() => {
+    if (!isAuthed) return;
+    const handleCreditsChange = () => {
+      fetch("/api/videos/unlocks/summary")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.ok) {
+            setLocalCredits(d.creditBalance);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("credits-changed", handleCreditsChange);
+    return () => window.removeEventListener("credits-changed", handleCreditsChange);
+  }, [isAuthed]);
+
   const canAfford = localCredits >= nextCost;
 
   async function handleUnlock(videoKey: string) {
@@ -454,7 +471,7 @@ export default function VideoSearch({
             No videos found matching your search.
           </div>
         ) : (
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
             {paginatedVideos.map((v) => {
               const isFree = freeSlugs.includes(v.viewkey);
               const hasUnlocked = localUnlockedSlugs.includes(v.viewkey);
