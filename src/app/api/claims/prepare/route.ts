@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     }
 
     // V2 wallet-based: verify user has a linked wallet that matches the leaf
-    const userWallet = (user.solWallet || user.walletAddress || "").trim();
+    const userWallet = (user.walletAddress || "").trim();
     const expectedUserKeyHex = userWallet ? toHex32(userKey32FromWallet(userWallet)) : null;
     const walletMismatch = !expectedUserKeyHex || leaf.userKeyHex !== expectedUserKeyHex;
 

@@ -26,9 +26,7 @@ export async function getAccessContext() {
 
   // Check user role from database OR env allowlist
   const hasAdminRole = user?.role === "ADMIN" || user?.role === "MOD";
-  const walletInAllowlist =
-    !!(user?.walletAddress && ADMIN_WALLETS.has(user.walletAddress)) ||
-    !!(user?.solWallet && ADMIN_WALLETS.has(user.solWallet));
+  const walletInAllowlist = !!(user?.walletAddress && ADMIN_WALLETS.has(user.walletAddress));
   const isAdminOrMod = hasAdminRole || walletInAllowlist;
 
   // Wallet status - walletAddress is the primary auth wallet
@@ -93,14 +91,12 @@ export async function canAccessVideo(
   // Check for admin/mod status
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { role: true, walletAddress: true, solWallet: true },
+    select: { role: true, walletAddress: true },
   });
 
   if (user) {
     const hasAdminRole = user.role === "ADMIN" || user.role === "MOD";
-    const walletInAllowlist =
-      !!(user.walletAddress && ADMIN_WALLETS.has(user.walletAddress)) ||
-      !!(user.solWallet && ADMIN_WALLETS.has(user.solWallet));
+    const walletInAllowlist = !!(user.walletAddress && ADMIN_WALLETS.has(user.walletAddress));
 
     if (hasAdminRole || walletInAllowlist) {
       return { canAccess: true, unlockCost: video.unlockCost, isUnlocked: true };

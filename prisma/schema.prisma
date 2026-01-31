@@ -17,8 +17,6 @@ model User {
   createdAt                DateTime                 @default(now())
   email                    String?                  @unique
   passHash                 String?
-  solWallet                String?                  @unique
-  solWalletLinkedAt        DateTime?
   welcomeEmailSentAt       DateTime?
   supabaseId               String?                  @unique
   mvmPoints                Int                      @default(0)
@@ -80,7 +78,6 @@ model Session {
 }
 
 enum WalletLinkPurpose {
-  PAYOUT_LINK
   AUTH_LINK
 }
 
@@ -92,7 +89,7 @@ model WalletLinkChallenge {
   createdAt DateTime          @default(now())
   expiresAt DateTime
   usedAt    DateTime?
-  purpose   WalletLinkPurpose @default(PAYOUT_LINK)
+  purpose   WalletLinkPurpose @default(AUTH_LINK)
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])

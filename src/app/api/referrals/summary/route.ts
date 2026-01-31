@@ -18,10 +18,10 @@ function truncateWallet(address: string | null): string | null {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
-function displayLabel(user: { id: string; email: string | null; solWallet: string | null; walletAddress: string | null }) {
+function displayLabel(user: { id: string; email: string | null; walletAddress: string | null }) {
   return (
     maskEmail(user.email) ||
-    truncateWallet(user.solWallet || user.walletAddress) ||
+    truncateWallet(user.walletAddress) ||
     `${user.id.slice(0, 8)}...`
   );
 }
@@ -43,7 +43,7 @@ export async function GET() {
   // L1 referrals
   const l1 = await db.user.findMany({
     where: { referredById: user.id },
-    select: { id: true, email: true, solWallet: true, walletAddress: true, createdAt: true },
+    select: { id: true, email: true, walletAddress: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   });
   const l1Ids = l1.map((u) => u.id);
@@ -52,7 +52,7 @@ export async function GET() {
   const l2 = l1Ids.length
     ? await db.user.findMany({
         where: { referredById: { in: l1Ids } },
-        select: { id: true, email: true, solWallet: true, walletAddress: true, createdAt: true },
+        select: { id: true, email: true, walletAddress: true, createdAt: true },
         orderBy: { createdAt: "desc" },
       })
     : [];
@@ -62,7 +62,7 @@ export async function GET() {
   const l3 = l2Ids.length
     ? await db.user.findMany({
         where: { referredById: { in: l2Ids } },
-        select: { id: true, email: true, solWallet: true, walletAddress: true, createdAt: true },
+        select: { id: true, email: true, walletAddress: true, createdAt: true },
         orderBy: { createdAt: "desc" },
       })
     : [];
@@ -124,7 +124,7 @@ export async function GET() {
       return {
         id: u.id,
         label: displayLabel(u),
-        wallet: u.solWallet || u.walletAddress || null,
+        wallet: u.walletAddress || null,
         createdAt: u.createdAt.toISOString(),
         earnedAtomic: earned.toString(),
         earned: format6(earned),

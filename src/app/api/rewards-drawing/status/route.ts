@@ -112,7 +112,7 @@ export async function GET() {
     },
     include: {
       raffle: { select: { weekKey: true } },
-      user: { select: { id: true, email: true, solWallet: true, walletAddress: true } },
+      user: { select: { id: true, email: true, walletAddress: true } },
     },
     orderBy: [{ raffle: { weekKey: "desc" } }, { place: "asc" }],
     take: 18, // 6 weeks * 3 places
@@ -129,7 +129,7 @@ export async function GET() {
     const week = w.raffle.weekKey;
     const label =
       maskEmail(w.user.email) ||
-      truncateWallet(w.user.solWallet || w.user.walletAddress) ||
+      truncateWallet(w.user.walletAddress) ||
       `${w.user.id.slice(0, 8)}...`;
 
     const arr = winnersByWeek.get(week) || [];

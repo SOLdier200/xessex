@@ -32,7 +32,7 @@ type ProfileData = {
   authed: boolean;
   email: string | null;
   walletAddress: string | null;
-  solWallet: string | null;
+  
   recoveryEmail: string | null;
   recoveryEmailVerified: boolean;
   memberId: string | null;
@@ -930,26 +930,6 @@ export default function ProfilePage() {
                     </div>
                   )}
 
-                  {data.solWallet && (
-                    <div className="flex justify-between items-center py-2 border-b border-white/10">
-                      <span className="text-white/60">Payout Wallet</span>
-                      <span className="text-green-400 font-mono text-sm">
-                        {truncateWallet(data.solWallet)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Warning when signed-in wallet differs from payout wallet */}
-                  {data.walletAddress && data.solWallet && data.walletAddress !== data.solWallet && (
-                    <div className="py-2 border-b border-white/10">
-                      <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3">
-                        <p className="text-yellow-400 text-xs">
-                          You&apos;re signed in with a different wallet than your payout wallet. XESS claims will go to your payout wallet.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="flex justify-between items-center py-2 border-b border-white/10">
                     <span className="text-white/60">Member Since</span>
                     <span className="text-white">{formatDate(data.stats.accountCreated)}</span>
@@ -1007,7 +987,7 @@ export default function ProfilePage() {
                 <h2 className="text-lg font-semibold text-white mb-4">Special Credits</h2>
 
                 {/* Show balance and drawing link if wallet is linked */}
-                {data.solWallet ? (
+                {data.walletAddress ? (
                   <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                       <div>

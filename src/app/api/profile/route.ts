@@ -50,7 +50,7 @@ export async function GET() {
   // Get latest wallet snapshot to determine XESS tier
   let xessTier = 0;
   let xessBalance = "0";
-  const xessWallet = user.solWallet || user.walletAddress;
+  const xessWallet = user.walletAddress;
   if (xessWallet) {
     const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
       where: { wallet: xessWallet },
@@ -67,7 +67,6 @@ export async function GET() {
     ok: true,
     authed: true,
     walletAddress: user.walletAddress ?? null,
-    solWallet: user.solWallet ?? null,
     memberId: user.memberId ?? null,
     stats: {
       videosWatched,

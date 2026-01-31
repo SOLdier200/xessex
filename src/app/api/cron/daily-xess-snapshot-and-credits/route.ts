@@ -51,12 +51,12 @@ export async function POST(req: NextRequest) {
 
     console.log(`[DAILY_SNAPSHOT] Running for dateKey=${dateKey}, weekKey=${weekKey}`);
 
-    // Find all users with a wallet (use solWallet if set, else walletAddress)
+    // Find all users with a wallet
     const usersWithWallets = await db.user.findMany({
       where: {
-        OR: [{ solWallet: { not: null } }, { walletAddress: { not: null } }],
+        walletAddress: { not: null },
       },
-      select: { id: true, solWallet: true, walletAddress: true },
+      select: { id: true, walletAddress: true },
     });
 
     console.log(`[DAILY_SNAPSHOT] Found ${usersWithWallets.length} users with wallets`);
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const walletToUser = new Map<string, string>();
     const wallets: string[] = [];
     for (const user of usersWithWallets) {
-      const wallet = user.solWallet || user.walletAddress;
+      const wallet = user.walletAddress;
       if (wallet) {
         walletToUser.set(wallet, user.id);
         wallets.push(wallet);

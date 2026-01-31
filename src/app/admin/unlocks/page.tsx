@@ -11,7 +11,7 @@ type Row = {
   user: {
     memberId: string;
     walletAddress: string | null;
-    solWallet: string | null;
+    
     role: "USER" | "MOD" | "ADMIN";
     createdAt: string;
   };
@@ -167,7 +167,7 @@ export default function AdminUnlocksPage() {
                   </td>
                   <td className="p-3 text-xs opacity-80">
                     <div>auth: {r.user.walletAddress ?? "-"}</div>
-                    <div>payout: {r.user.solWallet ?? "-"}</div>
+                    
                   </td>
                   <td className="p-3">{r.user.role}</td>
                 </tr>

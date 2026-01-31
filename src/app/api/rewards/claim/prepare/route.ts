@@ -122,7 +122,7 @@ export async function POST(req: Request) {
   // V2 epoch: wallet-based identity (userKeyHex is wallet pubkey bytes)
   if (epochVersion === 2) {
     // V2 requires a linked wallet
-    const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+    const wallet = ctx.user.walletAddress || "".trim();
     if (!wallet) {
       return NextResponse.json({
         ok: true,
@@ -234,7 +234,7 @@ export async function POST(req: Request) {
   }
 
   // V1 epoch: wallet-based (requires linked wallet)
-  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  const wallet = ctx.user.walletAddress || "".trim();
   if (!wallet) return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
 
   const claimerPk = new PublicKey(wallet);

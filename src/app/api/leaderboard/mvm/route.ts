@@ -30,7 +30,6 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       walletAddress: true,
-      solWallet: true,
       email: true,
       mvmPoints: true,
       createdAt: true,
@@ -39,7 +38,7 @@ export async function GET(req: NextRequest) {
   });
 
   const leaderboard = top.map((u, idx) => {
-    const primaryWallet = u.walletAddress || u.solWallet || null;
+    const primaryWallet = u.walletAddress || null;
 
     return {
       rank: idx + 1,
@@ -57,7 +56,7 @@ export async function GET(req: NextRequest) {
   if (meId) {
     const mine = await db.user.findUnique({
       where: { id: meId },
-      select: { id: true, mvmPoints: true, walletAddress: true, solWallet: true, email: true, createdAt: true },
+      select: { id: true, mvmPoints: true, walletAddress: true, email: true, createdAt: true },
     });
 
     if (mine) {
@@ -77,7 +76,7 @@ export async function GET(req: NextRequest) {
         },
       });
 
-      const primaryWallet = mine.walletAddress || mine.solWallet || null;
+      const primaryWallet = mine.walletAddress || null;
 
       me = {
         rank: ahead + 1,

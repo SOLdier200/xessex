@@ -21,7 +21,7 @@ type UserRow = {
   userId: string;
   email: string | null;
   role: string | null;
-  solWallet: string | null;
+  
   walletAddress: string | null;
   claimableAtomic: string;
   claimedAtomic: string;
@@ -111,7 +111,7 @@ export default function UnclaimedXessAdminPage() {
         return (
           u.userId.toLowerCase().includes(q) ||
           (u.email ?? "").toLowerCase().includes(q) ||
-          (u.solWallet ?? "").toLowerCase().includes(q) ||
+          
           (u.walletAddress ?? "").toLowerCase().includes(q)
         );
       })
@@ -202,9 +202,8 @@ export default function UnclaimedXessAdminPage() {
                     {u.userId} {u.role ? `- ${u.role}` : ""}
                   </div>
                   <div style={{ fontFamily: "monospace", opacity: 0.85, marginTop: 6 }}>
-                    {u.solWallet ? `solWallet ${shortWallet(u.solWallet)}` : ""}
+                    {u.walletAddress ? shortWallet(u.walletAddress) : "-"}
                     {u.walletAddress ? `  walletAddress ${shortWallet(u.walletAddress)}` : ""}
-                    {!u.solWallet && !u.walletAddress ? "-" : ""}
                   </div>
                 </div>
 

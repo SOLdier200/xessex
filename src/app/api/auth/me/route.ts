@@ -56,8 +56,6 @@ export async function GET() {
         createdAt: u.createdAt.toISOString(),
 
         walletAddress: u.walletAddress,
-        solWallet: u.solWallet,
-        solWalletLinkedAt: u.solWalletLinkedAt ? u.solWalletLinkedAt.toISOString() : null,
       },
 
       // Wallet status

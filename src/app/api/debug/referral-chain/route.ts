@@ -22,17 +22,17 @@ export async function GET(req: NextRequest) {
   if (userId) {
     user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, memberId: true, walletAddress: true, solWallet: true, referredById: true, referralCode: true },
+      select: { id: true, memberId: true, walletAddress: true, referredById: true, referralCode: true },
     });
   } else if (walletAddress) {
     user = await db.user.findUnique({
       where: { walletAddress },
-      select: { id: true, memberId: true, walletAddress: true, solWallet: true, referredById: true, referralCode: true },
+      select: { id: true, memberId: true, walletAddress: true, referredById: true, referralCode: true },
     });
   } else if (memberId) {
     user = await db.user.findUnique({
       where: { memberId },
-      select: { id: true, memberId: true, walletAddress: true, solWallet: true, referredById: true, referralCode: true },
+      select: { id: true, memberId: true, walletAddress: true, referredById: true, referralCode: true },
     });
   } else {
     return NextResponse.json({ 
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
       select: { 
         id: true, 
         memberId: true,
-        solWallet: true, 
+        
         walletAddress: true, 
         referredById: true,
         referralCode: true,
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 
     if (!referrer) break;
 
-    const wallet = referrer.solWallet || referrer.walletAddress;
+    const wallet = referrer.walletAddress;
     chain.push({
       level: levels[i],
       userId: referrer.id,
@@ -128,10 +128,10 @@ export async function GET(req: NextRequest) {
     user: {
       id: user.id,
       memberId: user.memberId,
-      wallet: (user.solWallet || user.walletAddress) 
-        ? `${(user.solWallet || user.walletAddress)!.slice(0, 4)}...${(user.solWallet || user.walletAddress)!.slice(-4)}`
+      wallet: (user.walletAddress) 
+        ? `${(user.walletAddress)!.slice(0, 4)}...${(user.walletAddress)!.slice(-4)}`
         : null,
-      hasWallet: !!(user.solWallet || user.walletAddress),
+      hasWallet: !!(user.walletAddress),
       referralCode: user.referralCode,
       referralCount,
     },

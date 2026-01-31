@@ -78,11 +78,11 @@ export async function computeClaimablesForWeek(
   const userIds = grouped.map(g => g.userId);
   const users = await db.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, solWallet: true, walletAddress: true },
+    select: { id: true, walletAddress: true },
   });
 
   const walletByUser = new Map(
-    users.map(u => [u.id, (u.solWallet || u.walletAddress || "").trim()])
+    users.map(u => [u.id, (u.walletAddress || "").trim()])
   );
 
   // Convert to leaf rows with 6->9 decimal conversion
@@ -157,11 +157,11 @@ export async function computeClaimablesForWeekV2(
   const userIds = grouped.map(g => g.userId);
   const users = await db.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, solWallet: true, walletAddress: true },
+    select: { id: true, walletAddress: true },
   });
 
   const walletByUser = new Map(
-    users.map(u => [u.id, (u.solWallet || u.walletAddress || "").trim()])
+    users.map(u => [u.id, (u.walletAddress || "").trim()])
   );
 
   // Convert to rows with 6->9 decimal conversion

@@ -97,14 +97,14 @@ export async function GET(req: NextRequest) {
     include: {
       video: { select: { id: true, slug: true, title: true } },
       comment: { select: { id: true, body: true, createdAt: true } },
-      mod: { select: { id: true, walletAddress: true, solWallet: true, email: true, role: true } },
-      author: { select: { id: true, walletAddress: true, solWallet: true, email: true } },
+      mod: { select: { id: true, walletAddress: true, email: true, role: true } },
+      author: { select: { id: true, walletAddress: true, email: true } },
     },
   });
 
   const shaped = rows.map((r) => {
-    const modWallet = r.mod.walletAddress || r.mod.solWallet || null;
-    const authorWallet = r.author.walletAddress || r.author.solWallet || null;
+    const modWallet = r.mod.walletAddress || null;
+    const authorWallet = r.author.walletAddress || null;
 
     return {
       id: r.id,

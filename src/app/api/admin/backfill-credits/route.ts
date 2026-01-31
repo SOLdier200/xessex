@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     // Find user by wallet
     const dbUser = await db.user.findFirst({
       where: {
-        OR: [{ walletAddress: wallet }, { solWallet: wallet }],
+        walletAddress: wallet,
       },
       include: {
         specialCreditAccount: true,

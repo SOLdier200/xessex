@@ -258,7 +258,7 @@ export async function GET(req: NextRequest) {
   const userIds = [...perUser.keys()];
   const users = await db.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, email: true, role: true, solWallet: true, walletAddress: true },
+    select: { id: true, email: true, role: true, walletAddress: true },
   });
   const userMap = new Map(users.map((u) => [u.id, u]));
 
@@ -270,7 +270,6 @@ export async function GET(req: NextRequest) {
         userId,
         email: u?.email ?? null,
         role: u?.role ?? null,
-        solWallet: u?.solWallet ?? null,
         walletAddress: u?.walletAddress ?? null,
         claimableAtomic: agg.claimable.toString(),
         claimedAtomic: agg.claimed.toString(),

@@ -7,11 +7,11 @@
  * This is the ONLY file that should contain wallet auth endpoint URLs.
  * All UI components should import from here, never use raw fetch("/api/auth/...").
  *
- * Four flows:
- * 1) Wallet Login - existing Diamond users logging in with walletAddress
- * 2) Diamond Signup - new wallet-native Diamond users
- * 3) Payout Link - Members linking solWallet for rewards
- * 4) Diamond Upgrade - Members converting to Diamond (sets walletAddress)
+ * Flows:
+ * 1) Wallet Login - existing users logging in with walletAddress
+ * 2) Wallet Signup - new wallet-native users
+ *
+ * Note: Wallet is used for both authentication AND payouts (single wallet model).
  */
 
 // ============================================================================
@@ -58,12 +58,11 @@ export function isAndroid(): boolean {
 }
 
 // ============================================================================
-// 1) WALLET LOGIN - For existing Diamond users with walletAddress
+// 1) WALLET LOGIN - For existing users with walletAddress
 // ============================================================================
 
 /**
  * Get a challenge for wallet login (cookie-based challenge)
- * Only for users who already have walletAddress set (Diamond auth)
  */
 export async function walletLoginChallenge(wallet: string): Promise<ChallengeResponse> {
   return postJSON<ChallengeResponse>("/api/auth/challenge", { wallet, purpose: "LOGIN" });
@@ -71,7 +70,6 @@ export async function walletLoginChallenge(wallet: string): Promise<ChallengeRes
 
 /**
  * Verify wallet signature for login
- * Will only succeed if wallet matches a user's walletAddress (not solWallet)
  */
 export async function walletLoginVerify(
   wallet: string,
@@ -82,19 +80,18 @@ export async function walletLoginVerify(
 }
 
 // ============================================================================
-// 2) DIAMOND SIGNUP - For new wallet-native Diamond users
+// 2) WALLET SIGNUP - For new wallet-native users
 // ============================================================================
 
 /**
- * Get a challenge for Diamond signup (cookie-based challenge)
- * This purpose allows account creation in /api/auth/verify
+ * Get a challenge for wallet signup (cookie-based challenge)
  */
 export async function diamondSignupChallenge(wallet: string): Promise<ChallengeResponse> {
   return postJSON<ChallengeResponse>("/api/auth/challenge", { wallet, purpose: "DIAMOND_SIGNUP" });
 }
 
 /**
- * Verify signature for Diamond signup (desktop web flow)
+ * Verify signature for wallet signup (desktop web flow)
  * Creates user if purpose cookie is DIAMOND_SIGNUP
  */
 export async function diamondSignupVerify(
@@ -107,8 +104,7 @@ export async function diamondSignupVerify(
 }
 
 /**
- * Start Diamond subscription (after verify on desktop)
- * Sets subscription to DIAMOND + PENDING
+ * Start session (after verify on desktop)
  */
 export async function diamondStart(): Promise<SimpleResponse> {
   return postJSON<SimpleResponse>("/api/auth/diamond/start", {});
@@ -128,7 +124,7 @@ export async function diamondVerifyAndStartIOS(
 }
 
 /**
- * Complete Diamond signup flow with automatic iOS detection
+ * Complete wallet signup flow with automatic iOS detection
  */
 export async function completeDiamondSignup(
   wallet: string,
@@ -148,58 +144,6 @@ export async function completeDiamondSignup(
 }
 
 // ============================================================================
-// 3) PAYOUT LINK - For Members linking solWallet for rewards
-// ============================================================================
-
-/**
- * Get a challenge for payout wallet linking (DB-based challenge)
- * Requires authenticated Member session
- * This is for solWallet only - NOT for auth
- */
-export async function payoutLinkChallenge(): Promise<ChallengeResponse> {
-  return postJSON<ChallengeResponse>("/api/auth/wallet-link/challenge", {});
-}
-
-/**
- * Verify signature and link payout wallet
- * Only sets solWallet, NOT walletAddress
- * Requires active Member subscription
- */
-export async function payoutLinkVerify(
-  wallet: string,
-  signature: string,
-  nonce: string
-): Promise<SimpleResponse & { wallet?: string }> {
-  return postJSON("/api/auth/wallet-link/verify", { wallet, signature, nonce });
-}
-
-// ============================================================================
-// 4) DIAMOND UPGRADE - For Members converting to Diamond
-// ============================================================================
-
-/**
- * Get a challenge for Member → Diamond upgrade (DB-based challenge)
- * Requires authenticated Member session with eligible subscription
- */
-export async function diamondUpgradeChallenge(): Promise<ChallengeResponse> {
-  return postJSON<ChallengeResponse>("/api/auth/diamond/upgrade-challenge", {});
-}
-
-/**
- * Verify signature and upgrade to Diamond
- * Sets walletAddress (auth identity) on existing user
- * Sets subscription to DIAMOND + PENDING
- * User then proceeds to payment
- */
-export async function diamondUpgradeVerify(
-  wallet: string,
-  signature: string,
-  nonce: string
-): Promise<SimpleResponse> {
-  return postJSON<SimpleResponse>("/api/auth/diamond/upgrade", { wallet, signature, nonce });
-}
-
-// ============================================================================
 // Session utilities
 // ============================================================================
 
@@ -213,7 +157,6 @@ export async function fetchMe(): Promise<{
     id: string;
     email?: string;
     walletAddress?: string;
-    solWallet?: string;
     role: string;
   };
   membership?: string;
@@ -267,21 +210,21 @@ export const WalletAuthErrors = {
 } as const;
 
 /**
- * Check if error indicates wallet is not registered (needs Diamond signup)
+ * Check if error indicates wallet is not registered (needs signup)
  */
 export function isWalletNotRegistered(error: string): boolean {
   return error === WalletAuthErrors.WALLET_NOT_REGISTERED;
 }
 
 /**
- * Check if error indicates wallet is only linked as payout (needs Diamond upgrade)
+ * Check if error indicates wallet is not linked
  */
 export function isWalletNotLinkedForAuth(error: string): boolean {
   return error === WalletAuthErrors.WALLET_NOT_LINKED;
 }
 
 /**
- * Check if error indicates user needs Member subscription
+ * Check if error indicates user needs membership
  */
 export function isMembershipRequired(error: string): boolean {
   return error === WalletAuthErrors.MEMBERSHIP_REQUIRED;

@@ -32,10 +32,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "wallet parameter required" }, { status: 400 });
     }
 
-    // Find user by wallet (either walletAddress or solWallet)
+    // Find user by wallet
     const dbUser = await db.user.findFirst({
       where: {
-        OR: [{ walletAddress: wallet }, { solWallet: wallet }],
+        walletAddress: wallet,
       },
       include: {
         specialCreditAccount: true,
@@ -82,7 +82,6 @@ export async function GET(req: NextRequest) {
         ? {
             id: dbUser.id,
             walletAddress: dbUser.walletAddress,
-            solWallet: dbUser.solWallet,
             role: dbUser.role,
             createdAt: dbUser.createdAt,
           }
@@ -137,7 +136,7 @@ export async function POST(req: NextRequest) {
     // Find user by wallet
     const dbUser = await db.user.findFirst({
       where: {
-        OR: [{ walletAddress: wallet }, { solWallet: wallet }],
+        walletAddress: wallet,
       },
       include: {
         specialCreditAccount: true,

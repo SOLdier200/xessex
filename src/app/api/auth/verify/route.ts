@@ -110,8 +110,7 @@ export async function POST(req: Request) {
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
 
-    // Check if this wallet is an auth wallet (walletAddress) for any user
-    // IMPORTANT: solWallet is payout-only, NOT for authentication
+    // Check if this wallet is already registered
     const existingWalletUser = await db.user.findUnique({
       where: { walletAddress: w },
       select: { id: true },
@@ -120,7 +119,7 @@ export async function POST(req: Request) {
     // Check if user is already logged in with a different account
     const currentUser = await getCurrentUser();
     if (currentUser) {
-      const alreadyKnown = currentUser.walletAddress === w || currentUser.solWallet === w;
+      const alreadyKnown = currentUser.walletAddress === w;
 
       if (alreadyKnown) {
         // Refresh session for the current user instead of creating a new wallet-native account
@@ -173,7 +172,7 @@ export async function POST(req: Request) {
     }
 
     // Create or fetch wallet user (email fields stay null)
-    let user: { id: string; email: string | null; solWallet: string | null; referralCode: string | null } | null = null;
+    let user: { id: string; email: string | null; referralCode: string | null } | null = null;
     for (let attempt = 0; attempt < 8; attempt++) {
       try {
         user = await db.user.upsert({
@@ -185,7 +184,7 @@ export async function POST(req: Request) {
             referredById,
             referredAt: referredById ? new Date() : null,
           },
-          select: { id: true, email: true, solWallet: true, referralCode: true },
+          select: { id: true, email: true, referralCode: true },
         });
         break;
       } catch (e: unknown) {
@@ -198,15 +197,6 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ ok: false, error: "Failed to create user" }, { status: 500, headers: noCache });
-    }
-
-    if (!user.email && !user.solWallet) {
-      await db.user
-        .update({
-          where: { id: user.id },
-          data: { solWallet: w, solWalletLinkedAt: new Date() },
-        })
-        .catch(() => {});
     }
 
     if (!user.referralCode) {

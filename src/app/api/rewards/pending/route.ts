@@ -70,7 +70,7 @@ export async function GET() {
   }
 
   const userId = ctx.user.id;
-  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  const wallet = ctx.user.walletAddress || "".trim();
   const desiredVersion = 2; // V2 uses wallet-based rewards
   const now = new Date();
   const currentWeekKey = weekKeyUTC(now);

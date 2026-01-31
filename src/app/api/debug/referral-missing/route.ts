@@ -70,7 +70,6 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           memberId: true,
-          solWallet: true,
           walletAddress: true,
         },
       },
@@ -135,7 +134,7 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    const referrerWallet = referrer.solWallet || referrer.walletAddress;
+    const referrerWallet = referrer.walletAddress;
     if (!referrerWallet) {
       // Track referrers missing wallets
       const existing = walletMissingMap.get(referrer.id);

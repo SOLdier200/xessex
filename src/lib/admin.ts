@@ -6,7 +6,6 @@
 export function isAdminOrMod(user: {
   role: "USER" | "MOD" | "ADMIN";
   walletAddress: string | null;
-  solWallet: string | null;
 } | null | undefined): boolean {
   if (!user) return false;
 
@@ -17,9 +16,7 @@ export function isAdminOrMod(user: {
     raw.split(",").map((s) => s.trim()).filter(Boolean)
   );
 
-  const walletInAllowlist =
-    !!(user.walletAddress && ADMIN_WALLETS.has(user.walletAddress)) ||
-    !!(user.solWallet && ADMIN_WALLETS.has(user.solWallet));
+  const walletInAllowlist = !!(user.walletAddress && ADMIN_WALLETS.has(user.walletAddress));
 
   return hasAdminRole || walletInAllowlist;
 }

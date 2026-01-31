@@ -60,7 +60,6 @@ export async function GET() {
   result.authed = true;
   result.userId = user.id;
   result.walletAddress = user.walletAddress ?? null;
-  result.solWallet = user.solWallet ?? null;
   result.role = user.role;
 
   // Credit balance

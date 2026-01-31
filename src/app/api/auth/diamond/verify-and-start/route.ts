@@ -4,11 +4,11 @@
  *
  * POST /api/auth/diamond/verify-and-start
  *
- * Combined endpoint for iOS reliability: verifies wallet signature AND starts Diamond subscription
+ * Combined endpoint for iOS reliability: verifies wallet signature AND starts session
  * in one request. This avoids the cookie-drop issue on iOS in-app browsers where the session
- * cookie from /api/auth/verify doesn't stick before /api/auth/diamond/start is called.
+ * cookie from /api/auth/verify doesn't stick before other calls are made.
  *
- * Flow: challenge → sign → verify-and-start (one response sets cookie + subscription)
+ * Flow: challenge → sign → verify-and-start (one response sets cookie)
  */
 
 import { NextResponse } from "next/server";
@@ -118,15 +118,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
     }
 
-    // Find or create user by walletAddress ONLY (auth identity)
-    // solWallet is for payouts only, NOT for authentication
+    // Find or create user by walletAddress
     let user = await db.user.findUnique({
       where: { walletAddress: w },
-      select: {
-        id: true,
-        walletAddress: true,
-        solWallet: true,
-      },
+      select: { id: true, walletAddress: true },
     });
 
     if (!user) {
@@ -148,17 +143,11 @@ export async function POST(req: Request) {
           user = await db.user.create({
             data: {
               walletAddress: w,
-              solWallet: w,
-              solWalletLinkedAt: new Date(),
               referralCode: generateReferralCode(),
               referredById,
               referredAt: referredById ? new Date() : null,
             },
-            select: {
-              id: true,
-              walletAddress: true,
-              solWallet: true,
-            },
+            select: { id: true, walletAddress: true },
           });
           break;
         } catch (e: unknown) {
@@ -172,14 +161,6 @@ export async function POST(req: Request) {
 
     if (!user) {
       return NextResponse.json({ ok: false, error: "Failed to create user" }, { status: 500, headers: noCache });
-    }
-
-    // Ensure solWallet is set for payout eligibility
-    if (user.walletAddress && !user.solWallet) {
-      await db.user.update({
-        where: { id: user.id },
-        data: { solWallet: user.walletAddress, solWalletLinkedAt: new Date() },
-      }).catch(() => {});
     }
 
     // Create session

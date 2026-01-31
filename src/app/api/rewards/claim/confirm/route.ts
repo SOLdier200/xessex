@@ -230,7 +230,7 @@ export async function POST(req: Request) {
   }
 
   // V1: wallet-based receipt PDA
-  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  const wallet = ctx.user.walletAddress || "".trim();
   if (!wallet) return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
   const claimerPk = new PublicKey(wallet);
 

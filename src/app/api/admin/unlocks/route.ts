@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
           { videoId: { contains: q } },
           { user: { memberId: { contains: q } } },
           { user: { walletAddress: { contains: q } } },
-          { user: { solWallet: { contains: q } } },
+          
           { video: { title: { contains: q, mode: "insensitive" } } },
           { video: { slug: { contains: q, mode: "insensitive" } } },
         ],
@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
           select: {
             memberId: true,
             walletAddress: true,
-            solWallet: true,
             role: true,
             createdAt: true,
           },

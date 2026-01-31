@@ -19,7 +19,7 @@ type MeResp =
         id: string;
         email: string | null;
         role: "DIAMOND" | "MEMBER" | "FREE";
-        solWallet: string | null;
+        
         walletAddress: string | null;
       };
     };

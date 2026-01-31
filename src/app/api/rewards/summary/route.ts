@@ -35,7 +35,7 @@ export async function GET() {
   }
 
   const userId = ctx.user.id;
-  const wallet = (ctx.user.solWallet || ctx.user.walletAddress || "").trim();
+  const wallet = ctx.user.walletAddress || "".trim();
   const desiredVersion = 2; // V2 uses wallet-based rewards
 
   console.log("[rewards/summary] userId:", userId, "wallet:", wallet || "NONE");

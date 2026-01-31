@@ -12,13 +12,13 @@ export async function POST() {
 
   const userId = user.id;
 
-  // Check wallet is linked for payout
+  // Check wallet is linked
   const userRecord = await db.user.findUnique({
     where: { id: userId },
-    select: { solWallet: true },
+    select: { walletAddress: true },
   });
 
-  if (!userRecord?.solWallet) {
+  if (!userRecord?.walletAddress) {
     return NextResponse.json(
       { ok: false, error: "WALLET_NOT_LINKED" },
       { status: 400 }
@@ -106,6 +106,6 @@ export async function POST() {
       leafIndex: leaf.leafIndex,
       proof,
     },
-    payoutWallet: userRecord.solWallet,
+    payoutWallet: userRecord.walletAddress,
   });
 }

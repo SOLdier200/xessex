@@ -81,7 +81,7 @@ type MeData = {
     id: string;
     email?: string | null;
     role: string;
-    solWallet?: string | null;
+    
     walletAddress?: string | null;
   } | null;
   authWallet: string | null;
@@ -126,7 +126,7 @@ type WalletActionsProps = {
  *
  * Modes:
  * - WALLET_LOGIN: Sign in with wallet (uses walletAddress for auth)
- * - PAYOUT_LINK: Link payout wallet for rewards (sets solWallet, MEMBER/DIAMOND only)
+
  * - DIAMOND_UPGRADE: Upgrade Member to Diamond (sets walletAddress, MEMBER only)
  *
  * This design prevents wrong-endpoint bugs by choosing endpoints internally based on mode.
@@ -169,7 +169,7 @@ export default function WalletActions({
         setMeData({
           user: d.user,
           authWallet: d.user?.walletAddress ?? null,
-          payoutWallet: d.user?.solWallet ?? null,
+          payoutWallet: d.user?.walletAddress ?? null,
           membership: d.membership ?? null,
         });
       } else {
