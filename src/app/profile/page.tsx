@@ -297,11 +297,11 @@ export default function ProfilePage() {
           if (json.ok && json.allTime) {
             // Amounts are stored with 6 decimals
             const DECIMALS = 1_000_000;
-            const total = Number(BigInt(json.allTime.total || "0") / BigInt(DECIMALS));
             const paid = Number(BigInt(json.allTime.paid || "0") / BigInt(DECIMALS));
+            const pending = Number(BigInt(json.allTime.pending || "0") / BigInt(DECIMALS));
             setMemberRewards({
-              totalPaid: paid,
-              pendingXess: total - paid,
+              totalPaid: paid,      // Actually claimed rewards
+              pendingXess: pending, // Ready to claim but not yet claimed
             });
           }
         })
@@ -328,6 +328,25 @@ export default function ProfilePage() {
       });
     } catch {
       // Silent fail - claim summary is optional
+    }
+  }
+
+  // Refresh member rewards totals (Total XESS Paid / Pending XESS)
+  async function refreshMemberRewards() {
+    try {
+      const res = await fetch("/api/rewards/weeks", { cache: "no-store" });
+      const json = await res.json();
+      if (json.ok && json.allTime) {
+        const DECIMALS = 1_000_000;
+        const paid = Number(BigInt(json.allTime.paid || "0") / BigInt(DECIMALS));
+        const pending = Number(BigInt(json.allTime.pending || "0") / BigInt(DECIMALS));
+        setMemberRewards({
+          totalPaid: paid,
+          pendingXess: pending,
+        });
+      }
+    } catch {
+      // Silent fail
     }
   }
 
@@ -576,6 +595,7 @@ export default function ProfilePage() {
         refreshClaimSummary(),
         refreshLivePending(),
         refreshAnalytics(),
+        refreshMemberRewards(),
       ]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "CLAIM_ALL_FAILED";
@@ -786,12 +806,13 @@ export default function ProfilePage() {
         refreshClaimSummary(),
         refreshLivePending(),
         refreshAnalytics(),
+        refreshMemberRewards(),
       ]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "CLAIM_FAILED";
       setClaimErr(msg);
       toast.error(`Claim failed: ${msg}`);
-      await refreshClaimSummary();
+      await Promise.all([refreshClaimSummary(), refreshMemberRewards()]);
     } finally {
       setClaimBusy(false);
     }
@@ -1229,16 +1250,10 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xs text-green-400/80 uppercase tracking-wide">
-                            Pending XESS
+                            Ready to Claim
                           </div>
                           <div className="text-2xl font-bold text-green-400 mt-1">
-                            {(
-                              livePending?.currentWeek?.estimatedPending ??
-                              (analyticsData?.totals?.estimatedPendingXess != null
-                                ? analyticsData.totals.estimatedPendingXess.toLocaleString()
-                                : memberRewards?.pendingXess?.toLocaleString() ?? "0")
-                            )}{" "}
-                            XESS
+                            {livePending?.totalUnclaimed ?? memberRewards?.pendingXess?.toLocaleString() ?? "0"} XESS
                           </div>
                         </div>
                         <Image
@@ -1252,7 +1267,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <p className="text-xs text-white/50 mt-4">
-                    Pending Xess rewards are estimates and may not equal the exact amounts paid on payday.
+                    This Week&apos;s Estimate: ~{livePending?.currentWeek?.estimatedPending ?? "0"} XESS (distributed next Monday)
                   </p>
                 </div>
               )}

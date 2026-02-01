@@ -348,13 +348,22 @@ export default function Comments({
   };
 
   const openMessageModal = (authorId: string, authorWallet: string) => {
+    console.log("[Comments] openMessageModal called", { authorId, authorWallet, currentUserId });
+
     if (!currentUserId) {
       toast.error("Please log in to send messages");
       return;
     }
     if (authorId === currentUserId) {
-      return; // Can't message yourself
+      toast.info("You can't message yourself");
+      return;
     }
+    if (!authorId) {
+      toast.error("Unable to identify user");
+      return;
+    }
+
+    console.log("[Comments] Opening message modal for", authorWallet);
     setMessageModal({
       open: true,
       recipientId: authorId,
@@ -503,10 +512,18 @@ export default function Comments({
                       <button
                         type="button"
                         onClick={() => openMessageModal(comment.authorId, comment.authorWallet)}
-                        className="font-medium text-pink-300 text-sm hover:text-pink-200 hover:underline transition cursor-pointer"
-                        title="Send message to this user"
+                        className="inline-flex items-center gap-1.5 font-medium text-pink-300 text-sm hover:text-pink-200 transition cursor-pointer group"
+                        title="Click to send message"
                       >
-                        {comment.authorWallet}
+                        <span className="group-hover:underline">{comment.authorWallet}</span>
+                        <svg
+                          className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
                       </button>
                     )}
                     <span className="text-[10px] text-white/30 font-mono">#{comment.id.slice(-6)}</span>

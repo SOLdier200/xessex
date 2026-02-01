@@ -114,7 +114,7 @@ export default async function HomePage() {
       <div className="px-4 md:px-6 pb-10">
 
         {/* Top 20 Videos */}
-        <section className="neon-border rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>
+        <section className="rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>
           <div className="mb-4">
             <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[32px] w-auto" />
           </div>
@@ -137,7 +137,7 @@ export default async function HomePage() {
                     rank={v.rank}
                     isAuthed={isAuthed}
                     size="small"
-                    className="w-full max-w-full sm:max-w-[87.5%] sm:mx-auto"
+                    className="w-full max-w-full sm:max-w-[98%] sm:mx-auto"
                     viewsCount={v.xessViews ?? 0}
                     showMetaBelow
                   />
@@ -148,7 +148,7 @@ export default async function HomePage() {
                 <Link
                   key={v.viewkey}
                   href={`/videos/${v.viewkey}`}
-                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group w-full max-w-full sm:max-w-[87.5%] sm:mx-auto"
+                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group w-full max-w-full sm:max-w-[98%] sm:mx-auto"
                 >
                   <div className="relative aspect-video bg-black/60">
                     {v.primary_thumb ? (
@@ -195,12 +195,15 @@ export default async function HomePage() {
           <div className="mt-6 text-center">
             <Link
               href="/videos"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-pink-500/20 border border-pink-400/40 text-pink-300 font-semibold hover:bg-pink-500/30 transition"
+              className="inline-block hover:opacity-80 transition"
             >
-              View All Videos
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
+              <Image
+                src="/logos/textlogo/siteset3/videos.png"
+                alt="View All Videos"
+                width={938}
+                height={276}
+                className="h-[48px] w-auto"
+              />
             </Link>
           </div>
         )}
@@ -233,7 +236,7 @@ export default async function HomePage() {
         </section>
 
         {/* Featured & Top Ranked Videos */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-full md:max-w-[80%] mx-auto">
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 max-w-full md:max-w-[95%] mx-auto">
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (() => {
             const featured = videos[0];
@@ -299,51 +302,77 @@ export default async function HomePage() {
             const isTopLocked = !isTopFree && !isTopUnlocked;
             const topRankedViews = viewCountMap.get(topRanked.viewkey) ?? 0;
 
-            const card = isTopLocked ? (
-              <LockedFeaturedCard
-                viewkey={topRanked.viewkey}
-                title={topRanked.title}
-                thumb={topRanked.primary_thumb}
-                duration={formatDuration(topRanked.duration)}
-                performers={topRanked.performers || "Unknown"}
-                isAuthed={isAuthed}
-                variant="topRanked"
-                className="w-full max-w-full md:max-w-[70%] md:mx-auto"
-                viewsCount={topRankedViews}
-                showMetaBelow
-              />
-            ) : (
-              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30 w-full max-w-full md:max-w-[70%] md:mx-auto">
+            return (
+              <div className="w-full max-w-full md:max-w-[70%]">
                 <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
-                <Link href={`/videos/${topRanked.viewkey}`} className="block w-full">
-                  <div className="relative aspect-video rounded-xl overflow-hidden">
-                    {topRanked.primary_thumb && (
-                      <img
-                        src={topRanked.primary_thumb}
-                        alt={`Top ranked video: ${topRanked.title}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform"
-                      />
-                    )}
-                    <div className="absolute bottom-2 left-2 bg-yellow-500/80 px-2 py-1 rounded text-sm text-black font-semibold">
-                      #1 Ranked
+                {isTopLocked ? (
+                  <LockedVideoCard
+                    viewkey={topRanked.viewkey}
+                    title={topRanked.title}
+                    thumb={topRanked.primary_thumb}
+                    duration={formatDuration(topRanked.duration)}
+                    rank={1}
+                    isAuthed={isAuthed}
+                    size="small"
+                    className="w-full"
+                    viewsCount={topRankedViews}
+                    showMetaBelow
+                    borderVariant="blue"
+                  />
+                ) : (
+                  <Link
+                    href={`/videos/${topRanked.viewkey}`}
+                    className="neon-border-blue rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group block"
+                  >
+                    <div className="relative aspect-video bg-black/60">
+                      {topRanked.primary_thumb ? (
+                        <img
+                          src={topRanked.primary_thumb}
+                          alt={topRanked.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/30">
+                          No Thumbnail
+                        </div>
+                      )}
+                      <div
+                        className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                        style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                      >
+                        #1
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
-                    <span>{formatDuration(topRanked.duration)}</span>
-                    <span>{formatViews(topRankedViews)} XESS Views</span>
-                  </div>
-                  <h3 className="mt-3 text-lg font-semibold text-white hover:text-yellow-300 transition">
-                    {topRanked.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-white/60">
-                    {topRanked.performers || "Unknown"}
-                  </p>
-                </Link>
-              </section>
+                    <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+                      <span>{formatDuration(topRanked.duration)}</span>
+                      <span>{formatViews(topRankedViews)} XESS Views</span>
+                    </div>
+                  </Link>
+                )}
+              </div>
             );
-
-            return card;
           })()}
+
+          {/* Xessex Preview Video */}
+          <div className="w-full max-w-full md:max-w-[70%]">
+            <h2 className="text-lg font-semibold text-pink-400 mb-4">Xessex Preview</h2>
+            <div className="neon-border rounded-2xl bg-black/30 overflow-hidden">
+              <div className="relative aspect-video bg-black/60">
+                <video
+                  src="https://pub-77b523433fb04971ba656a572f298a11.r2.dev/pinkhairgirlfirst.mp4"
+                  className="w-full h-full object-cover"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster="https://pub-77b523433fb04971ba656a572f298a11.r2.dev/pinkhairgirlfirst.mp4#t=0.5"
+                />
+              </div>
+              <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+                <span className="text-pink-400 font-medium">Coming Soon</span>
+                <span>Xessex Original</span>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

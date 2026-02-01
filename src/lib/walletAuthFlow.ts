@@ -71,7 +71,7 @@ async function tryRehydrate(wallet: any, pub: string) {
   return !!(reh.ok && reh.data?.ok);
 }
 
-async function tryVerify(wallet: any, pub: string) {
+async function tryVerify(wallet: any, pub: string): Promise<{ ok: boolean; isNewUser?: boolean }> {
   const msg = `Sign in to Xessex\nHost: ${window.location.host}\nWallet: ${pub}\nTS: ${Date.now()}`;
   const signature = await signBase58(wallet, msg);
 
@@ -81,7 +81,10 @@ async function tryVerify(wallet: any, pub: string) {
     body: JSON.stringify({ wallet: pub, message: msg, signature }),
   });
 
-  return !!(v.ok && v.data?.ok);
+  if (v.ok && v.data?.ok) {
+    return { ok: true, isNewUser: v.data?.isNewUser === true };
+  }
+  return { ok: false };
 }
 
 async function pollMe(maxMs: number) {
@@ -154,13 +157,17 @@ export async function syncWalletSession(
   const attempts = isIOS() ? 2 : 1;
 
   for (let i = 0; i < attempts; i++) {
-    // Preferred: rehydrate (nonce-based)
+    // Preferred: rehydrate (nonce-based) - existing users only
     const rehOk = await tryRehydrate(wallet, pub);
-    if (rehOk && (await pollMe(isIOS() ? 3000 : 1500))) return { ok: true, didAuth: true as const };
+    if (rehOk && (await pollMe(isIOS() ? 3000 : 1500))) {
+      return { ok: true, didAuth: true as const, isNewUser: false };
+    }
 
-    // Fallback: verify (your existing)
-    const vOk = await tryVerify(wallet, pub);
-    if (vOk && (await pollMe(isIOS() ? 3000 : 1500))) return { ok: true, didAuth: true as const };
+    // Fallback: verify (can create new users)
+    const verifyResult = await tryVerify(wallet, pub);
+    if (verifyResult.ok && (await pollMe(isIOS() ? 3000 : 1500))) {
+      return { ok: true, didAuth: true as const, isNewUser: verifyResult.isNewUser ?? false };
+    }
   }
 
   return { ok: false, reason: "still_free" as const };

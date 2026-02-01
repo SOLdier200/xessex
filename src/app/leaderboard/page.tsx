@@ -5,10 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import TopNav from "../components/TopNav";
 
+type RewardEntry = { user: string; xessEarned: string | number };
+
 type LeaderboardData = {
   mvm: { user: string; utilizedComments: number }[];
   karat: { user: string; totalScore: number }[];
-  rewards: { user: string; xessEarned: number }[];
+  rewards: RewardEntry[];
+  xessexRewards: RewardEntry[];
+  embedRewards: RewardEntry[];
   referrals: { user: string; referralCount: number }[];
 };
 
@@ -34,7 +38,7 @@ export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "mvm" | "karat" | "rewards" | "referrals"
+    "mvm" | "karat" | "rewards" | "xessex" | "embeds" | "referrals"
   >("karat");
   const [isDiamond, setIsDiamond] = useState(false);
 
@@ -62,7 +66,9 @@ export default function LeaderboardPage() {
   const tabs = [
     { id: "karat", label: "Karat Kruncher", desc: "Highest Score" },
     { id: "mvm", label: "MVM", desc: "Most Valuable Member" },
-    { id: "rewards", label: "Rewards", desc: "XESS Earned" },
+    { id: "xessex", label: "Xessex", desc: "XESS Earned from Xessex Content" },
+    { id: "embeds", label: "Embeds", desc: "XESS Earned from Embedded Videos" },
+    { id: "rewards", label: "All Rewards", desc: "Total XESS Earned (All Pools)" },
     { id: "referrals", label: "Referrals", desc: "Members Referred" },
   ] as const;
 
@@ -208,6 +214,77 @@ export default function LeaderboardPage() {
                 </>
               )}
 
+              {activeTab === "xessex" && (
+                <>
+                  {(data.xessexRewards?.length ?? 0) === 0 ? (
+                    <div className="p-8 text-center text-white/50">
+                      <p>No Xessex rewards data yet</p>
+                      <p className="mt-2 text-xs text-white/30">
+                        Once Xessex premium content is available and unlocked by users, these rewards will populate.
+                      </p>
+                    </div>
+                  ) : (
+                    data.xessexRewards.map((entry, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-4 p-4 ${getRankStyle(
+                          idx
+                        )} border-l-4 transition hover:bg-white/5`}
+                      >
+                        <div className={`w-10 text-xl md:text-2xl font-bold text-center ${getRankNumberStyle(idx)}`}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-white font-mono text-sm">
+                            {entry.user}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-cyan-400">
+                            {entry.xessEarned.toLocaleString()} XESS
+                          </div>
+                          <div className="text-xs text-white/50">from Xessex</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {activeTab === "embeds" && (
+                <>
+                  {(data.embedRewards?.length ?? 0) === 0 ? (
+                    <div className="p-8 text-center text-white/50">
+                      No embed rewards data yet
+                    </div>
+                  ) : (
+                    data.embedRewards.map((entry, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-4 p-4 ${getRankStyle(
+                          idx
+                        )} border-l-4 transition hover:bg-white/5`}
+                      >
+                        <div className={`w-10 text-xl md:text-2xl font-bold text-center ${getRankNumberStyle(idx)}`}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-white font-mono text-sm">
+                            {entry.user}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-orange-400">
+                            {entry.xessEarned.toLocaleString()} XESS
+                          </div>
+                          <div className="text-xs text-white/50">from Embeds</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
               {activeTab === "rewards" && (
                 <>
                   {data.rewards.length === 0 ? (
@@ -234,7 +311,7 @@ export default function LeaderboardPage() {
                           <div className="font-bold text-yellow-400">
                             {entry.xessEarned.toLocaleString()} XESS
                           </div>
-                          <div className="text-xs text-white/50">earned</div>
+                          <div className="text-xs text-white/50">total earned</div>
                         </div>
                       </div>
                     ))

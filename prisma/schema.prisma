@@ -518,6 +518,22 @@ model RewardBatch {
   createdAt   DateTime    @default(now())
 }
 
+// Track burned tokens (unused emissions, manual burns, etc.)
+model BurnRecord {
+  id          String   @id @default(cuid())
+  weekKey     String?  // Null for manual burns
+  pool        StatPool // XESSEX or EMBED
+  reason      String   // "unused_emission", "manual", etc.
+  amount      BigInt   // Amount in 6 decimals
+  description String?  // Optional human-readable description
+  txSig       String?  // Optional on-chain burn tx signature
+  createdAt   DateTime @default(now())
+
+  @@index([weekKey])
+  @@index([pool])
+  @@index([createdAt])
+}
+
 model RewardEpoch {
   id         String            @id @default(cuid())
   epochNo    Int               @unique

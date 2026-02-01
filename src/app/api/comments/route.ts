@@ -292,6 +292,7 @@ export async function POST(req: NextRequest) {
       id: comment.comment.id,
       body: comment.comment.body,
       createdAt: comment.comment.createdAt.toISOString(),
+      authorId: comment.comment.authorId,
       authorWallet: truncWallet(comment.comment.author.walletAddress, comment.comment.author.email),
       memberLikes: 0,
       memberDislikes: 0,

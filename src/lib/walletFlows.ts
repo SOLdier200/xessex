@@ -23,7 +23,7 @@ export type ChallengeResponse =
   | { ok: false; error: string };
 
 export type VerifyResponse =
-  | { ok: true; switched?: boolean; switchedToDiamond?: boolean; alreadyActive?: boolean }
+  | { ok: true; switched?: boolean; switchedToDiamond?: boolean; alreadyActive?: boolean; isNewUser?: boolean }
   | { ok: false; error: string; wallet?: string };
 
 export type SimpleResponse = { ok: true } | { ok: false; error: string };

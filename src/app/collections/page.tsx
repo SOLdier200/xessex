@@ -48,7 +48,7 @@ const CATEGORIES = [
   { slug: "threesome", name: "Threesome", image: `${R2_BASE}/threesome2.png` },
   { slug: "anal", name: "Anal", image: `${R2_BASE}/anal23.png` },
   { slug: "asian", name: "Asian", image: `${R2_BASE}/asian.jpg` },
-  { slug: "2d", name: "2D Animated", image: `${R2_BASE}/anime.png` },
+  { slug: "2d", name: "2D Animated", image: `${R2_BASE}/2dpic.webp` },
 ];
 
 export default function CategoriesPage() {

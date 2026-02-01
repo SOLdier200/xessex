@@ -15,6 +15,7 @@ type LockedVideoCardProps = {
   size?: "normal" | "small";
   showMetaBelow?: boolean;
   className?: string;
+  borderVariant?: "pink" | "blue";
 };
 
 export default function LockedVideoCard({
@@ -28,6 +29,7 @@ export default function LockedVideoCard({
   size = "normal",
   showMetaBelow = false,
   className,
+  borderVariant = "pink",
 }: LockedVideoCardProps) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -83,7 +85,7 @@ export default function LockedVideoCard({
   return (
     <>
       <div
-        className={`neon-border rounded-2xl bg-black/30 overflow-hidden relative group ${className || ""}`}
+        className={`${borderVariant === "blue" ? "neon-border-blue" : "neon-border"} rounded-2xl bg-black/30 overflow-hidden relative group ${className || ""}`}
       >
         <div className="relative aspect-video bg-black/60">
           {thumb ? (

@@ -180,7 +180,37 @@ export default function RootLayout({
             </Link>
           </div>
 
-          {/* RTA + Logo Row */}
+          {/* RTA + Site Logo - Centered */}
+          <div className="flex flex-col items-center gap-1 my-4">
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.rtalabel.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-80 hover:opacity-100 transition"
+              >
+                <img
+                  src="/logos/rta.gif"
+                  alt="RTA Verified"
+                  className="h-10 w-auto"
+                  loading="lazy"
+                />
+              </a>
+              <Link href="/" className="opacity-80 hover:opacity-100 transition">
+                <img
+                  src="/logos/mainsitelogo.png"
+                  alt="Xessex"
+                  className="h-10 w-auto"
+                  loading="lazy"
+                />
+              </Link>
+            </div>
+            <span className="text-xs text-white/40 tracking-wide">
+              18+ Only
+            </span>
+          </div>
+
+          {/* Logo + Copyright Row */}
           <div className="mt-4 w-full px-4">
             <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-between">
               {/* Logo - 50% smaller */}
@@ -194,26 +224,6 @@ export default function RootLayout({
                 />
               </Link>
 
-              {/* RTA + Age */}
-              <div className="flex flex-col items-center gap-1">
-                <a
-                  href="https://www.rtalabel.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="opacity-80 hover:opacity-100 transition"
-                >
-                  <img
-                    src="/logos/rta.gif"
-                    alt="RTA Verified"
-                    className="h-10 w-auto"
-                    loading="lazy"
-                  />
-                </a>
-                <span className="text-xs text-white/40 tracking-wide">
-                  18+ Only
-                </span>
-              </div>
-
               {/* Copyright */}
               <div className="text-center md:text-right">
                 <p>© {new Date().getFullYear()} Xessex. All rights reserved.</p>
@@ -225,6 +235,22 @@ export default function RootLayout({
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Donate Button */}
+          <div className="flex justify-end px-4 mt-4 mr-5">
+            <a
+              href="https://nowpayments.io/donation?api_key=MF8F5CP-PZZM46H-NKRW6NQ-682CJ2K"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="opacity-80 hover:opacity-100 transition"
+            >
+              <img
+                src="https://nowpayments.io/images/embeds/donation-button-black.svg"
+                alt="Crypto donation button by NOWPayments"
+                className="h-16 w-auto"
+              />
+            </a>
           </div>
 
         </footer>

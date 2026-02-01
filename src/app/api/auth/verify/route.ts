@@ -218,7 +218,7 @@ export async function POST(req: Request) {
     }
 
     const { token, expiresAt } = await createSession(user.id);
-    const res = NextResponse.json({ ok: true }, { headers: noCache });
+    const res = NextResponse.json({ ok: true, isNewUser: true }, { headers: noCache });
     setSessionCookieOnResponse(res, token, expiresAt, host);
     if (clearChallengeCookie) clearCookieOnResponse(res, CHALLENGE_COOKIE, host);
     return res;

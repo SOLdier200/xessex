@@ -36,6 +36,8 @@ type CreateEpochResult = {
   error?: string;
   message?: string;
   sourceWeekKey?: string;
+  sourceWeekKeys?: string[];
+  filterApplied?: string;
   testWeekKey?: string;
   copiedRewards?: boolean;
   epoch?: number;
@@ -44,6 +46,25 @@ type CreateEpochResult = {
   rewardCount?: number;
   totalXess?: string;
   nextStep?: string;
+};
+
+type CleanupResult = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  deleted?: {
+    testCopyRewards: number;
+    testRefTypeRewards: number;
+    testEpochRefTypeRewards: number;
+    testWeekRewards: number;
+    testEpochs: number;
+    testLeaves: number;
+    testSalts: number;
+    weekKeyRewards: number;
+    allOldRewards: number;
+    affectedWeekKeys: string[];
+  };
+  realRewardsRemaining?: { weekKey: string; count: number; totalXess: string }[];
 };
 
 type MarkOnChainResult = {
@@ -63,12 +84,15 @@ export default function PayoutPipelinePage() {
   const [markTxSig, setMarkTxSig] = useState("");
   const [markResult, setMarkResult] = useState<MarkOnChainResult | null>(null);
   const [running, setRunning] = useState<string | null>(null);
+  const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null);
+  const [epochWeekKeyFilter, setEpochWeekKeyFilter] = useState("");
+  const [nuclearConfirm, setNuclearConfirm] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       const [statsRes, epochRes] = await Promise.all([
-        fetch("/api/admin/reward-stats"),
-        fetch("/api/admin/build-claim-epoch-v2", { method: "GET" }),
+        fetch("/api/admin/reward-stats", { credentials: "include" }),
+        fetch("/api/admin/build-claim-epoch-v2", { method: "GET", credentials: "include" }),
       ]);
 
       const statsJson = await statsRes.json();
@@ -105,6 +129,7 @@ export default function PayoutPipelinePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force: true }),
+        credentials: "include",
       });
       const j = await r.json();
       setDistributeResult(j);
@@ -127,16 +152,99 @@ export default function PayoutPipelinePage() {
     loadData();
   }
 
+  async function runCleanupOldRewards() {
+    setRunning("cleanup");
+    setCleanupResult(null);
+
+    const toastId = toast.loading("Deleting old rewards...", {
+      description: "This will delete ALL PAID unclaimed rewards",
+    });
+
+    try {
+      const r = await fetch("/api/admin/cleanup-test-rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleteAllOldRewards: true }),
+        credentials: "include",
+      });
+      const j = await r.json();
+      setCleanupResult(j);
+
+      if (j.ok) {
+        toast.success("Cleaned up!", {
+          id: toastId,
+          description: j.message,
+        });
+      } else {
+        toast.error("Failed", { id: toastId, description: j.error });
+      }
+    } catch (e) {
+      setCleanupResult({ ok: false, error: String(e) });
+      toast.error("Failed", { id: toastId, description: String(e) });
+    }
+    setRunning(null);
+    loadData();
+  }
+
+  async function runNuclearReset() {
+    if (!nuclearConfirm) {
+      setNuclearConfirm(true);
+      return;
+    }
+
+    setRunning("nuclear");
+    setCleanupResult(null);
+    setNuclearConfirm(false);
+
+    const toastId = toast.loading("NUCLEAR RESET...", {
+      description: "Deleting ALL rewards, epochs, and batches",
+    });
+
+    try {
+      const r = await fetch("/api/admin/cleanup-test-rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nuclearReset: true }),
+        credentials: "include",
+      });
+      const j = await r.json();
+      setCleanupResult(j);
+
+      if (j.ok) {
+        toast.success("Nuclear reset complete!", {
+          id: toastId,
+          description: j.message,
+        });
+      } else {
+        toast.error("Failed", { id: toastId, description: j.error });
+      }
+    } catch (e) {
+      setCleanupResult({ ok: false, error: String(e) });
+      toast.error("Failed", { id: toastId, description: String(e) });
+    }
+    setRunning(null);
+    loadData();
+  }
+
   async function runCreateEpoch() {
     setRunning("create");
     setCreateResult(null);
 
+    const filterDesc = epochWeekKeyFilter
+      ? `Building merkle tree for ${epochWeekKeyFilter}`
+      : "Building merkle tree from ALL weekKeys";
+
     const toastId = toast.loading("Creating new epoch...", {
-      description: "Building merkle tree from real rewards",
+      description: filterDesc,
     });
 
     try {
-      const r = await fetch("/api/admin/create-test-epoch", { method: "POST" });
+      const r = await fetch("/api/admin/create-test-epoch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(epochWeekKeyFilter ? { weekKey: epochWeekKeyFilter } : {}),
+        credentials: "include",
+      });
       const j = await r.json();
       setCreateResult(j);
 
@@ -175,6 +283,7 @@ export default function PayoutPipelinePage() {
           epoch: parseInt(markEpoch, 10),
           txSig: markTxSig || undefined,
         }),
+        credentials: "include",
       });
       const j = await r.json();
       setMarkResult(j);
@@ -265,6 +374,61 @@ export default function PayoutPipelinePage() {
             )}
           </div>
         )}
+
+        {/* Cleanup Old Rewards Option */}
+        {(rewardStats?.paidUnclaimed ?? 0) > 0 && (
+          <div className="mt-4 p-4 rounded-lg bg-red-900/20 border border-red-500/20">
+            <div className="text-red-400 text-sm mb-3">
+              <span className="font-semibold">Old Rewards Detected:</span> You have unclaimed rewards from previous weeks.
+              If these are from the OLD payout system, delete them before running the new system.
+            </div>
+            <button
+              onClick={runCleanupOldRewards}
+              disabled={running !== null}
+              className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-400 disabled:opacity-50 transition-colors text-sm font-medium text-white"
+            >
+              {running === "cleanup" ? "Deleting..." : "Delete All Old Rewards"}
+            </button>
+            {cleanupResult && (
+              <div className={`mt-3 text-sm ${cleanupResult.ok ? "text-green-400" : "text-red-400"}`}>
+                {cleanupResult.ok
+                  ? cleanupResult.message
+                  : cleanupResult.error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Nuclear Reset Option - for stuck states */}
+        <div className="mt-4 p-4 rounded-lg bg-purple-900/20 border border-purple-500/20">
+          <div className="text-purple-400 text-sm mb-3">
+            <span className="font-semibold">Stuck?</span> Nuclear reset deletes ALL rewards, epochs, batches, and resets everything.
+            Use this if weekly-distribute says EPOCH_ONCHAIN or you&apos;re stuck in a loop.
+          </div>
+          <button
+            onClick={runNuclearReset}
+            disabled={running !== null}
+            className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium text-white ${
+              nuclearConfirm
+                ? "bg-purple-600 hover:bg-purple-500 animate-pulse"
+                : "bg-purple-800 hover:bg-purple-700"
+            } disabled:opacity-50`}
+          >
+            {running === "nuclear"
+              ? "Resetting..."
+              : nuclearConfirm
+              ? "Click Again to Confirm Nuclear Reset"
+              : "Nuclear Reset (Testing Only)"}
+          </button>
+          {nuclearConfirm && (
+            <button
+              onClick={() => setNuclearConfirm(false)}
+              className="ml-2 px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm text-white"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Latest Epoch Info */}
@@ -316,13 +480,43 @@ export default function PayoutPipelinePage() {
           </div>
         </div>
 
+        {/* WeekKey Filter */}
+        {rewardStats && rewardStats.weekKeys.length > 0 && (
+          <div className="mb-4">
+            <label className="text-xs text-white/50 block mb-1">Filter by WeekKey (optional)</label>
+            <select
+              value={epochWeekKeyFilter}
+              onChange={(e) => setEpochWeekKeyFilter(e.target.value)}
+              className="rounded-lg bg-black/60 border border-white/10 px-3 py-2 text-white text-sm w-full max-w-xs"
+            >
+              <option value="">All WeekKeys (aggregate all)</option>
+              {rewardStats.weekKeys.map((wk) => (
+                <option key={wk} value={wk}>
+                  {wk}
+                </option>
+              ))}
+            </select>
+            {epochWeekKeyFilter && (
+              <div className="text-xs text-yellow-400 mt-1">
+                Only rewards from {epochWeekKeyFilter} will be included
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={runCreateEpoch}
-          disabled={running !== null || rewardStats?.paidUnclaimed === 0}
+          disabled={running !== null}
           className="px-6 py-3 rounded-lg bg-green-500 hover:bg-green-400 disabled:opacity-50 transition-colors text-sm font-bold text-black"
         >
           {running === "create" ? "Creating..." : "Create New Epoch"}
         </button>
+
+        {rewardStats?.paidUnclaimed === 0 && (
+          <div className="text-yellow-400 text-xs mt-2">
+            No pending rewards. Run Weekly Distribute first.
+          </div>
+        )}
 
         {createResult && (
           <div
@@ -340,6 +534,16 @@ export default function PayoutPipelinePage() {
                     <span className="text-yellow-400 ml-2">(copied to new weekKey)</span>
                   )}
                 </div>
+                {createResult.filterApplied && (
+                  <div className="text-xs text-cyan-400">
+                    Filter: {createResult.filterApplied}
+                  </div>
+                )}
+                {createResult.sourceWeekKeys && createResult.sourceWeekKeys.length > 1 && (
+                  <div className="text-xs text-white/50">
+                    Source weeks: {createResult.sourceWeekKeys.join(", ")}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2 text-white/70">
                   <div>Users: <span className="text-white">{createResult.leafCount}</span></div>
                   <div>Rewards: <span className="text-white">{createResult.rewardCount}</span></div>

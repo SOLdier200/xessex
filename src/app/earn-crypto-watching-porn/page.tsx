@@ -59,6 +59,15 @@ export default function EarnCryptoWatchingPornPage() {
             &ldquo;You used to think a porn addiction was unhealthy, but here at Xessex it&apos;ll make you wealthy!&rdquo;
           </p>
 
+          <p className="mt-4 text-white/80">
+            If you&apos;re tired of trying to watch adult content and having to go through a dozen videos
+            to find one decent one, you&apos;ve found your new source for porn! We are literally made to
+            solve that problem. All our videos are great quality, and on top of that we have a{" "}
+            <span className="text-pink-400 font-semibold">Ranking system that pays YOU</span> for your
+            valuable opinions. Unlock more videos with the credits you earn and help us build a legendary
+            organized porn list where we aim to discover the hottest video on the web!
+          </p>
+
           <p className="mt-4 text-white/70">
             Xessex is a next-generation adult platform where you can earn crypto by watching porn.
             Instead of just consuming content, users earn real digital rewards for watching

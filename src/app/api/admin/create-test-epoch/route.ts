@@ -1,9 +1,12 @@
 /**
  * Admin endpoint to create a fresh test epoch using REAL user rewards.
  *
+ * POST /api/admin/create-test-epoch
+ * Body: { weekKey?: string }  // Optional: filter to a specific weekKey
+ *
  * This:
- * 1. Finds ALL PAID, unclaimed RewardEvents from ALL real weekKeys
- * 2. Aggregates totals per user (across all weeks)
+ * 1. Finds ALL PAID, unclaimed RewardEvents (or from specific weekKey if provided)
+ * 2. Aggregates totals per user (across selected weeks)
  * 3. Creates a new ClaimEpoch with fresh epoch number (V2 format)
  * 4. Creates ClaimLeaf records with merkle proofs and V2 fields
  *
@@ -11,7 +14,7 @@
  * Ready for on-chain publishing and claim testing with real amounts.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrMod } from "@/lib/adminActions";
 import { db } from "@/lib/prisma";
 import { getNextEpochNumber } from "@/lib/epochRoot";
@@ -27,19 +30,28 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const user = await requireAdminOrMod();
   if (!user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 
+  // Parse optional weekKey filter from body
+  const body = await req.json().catch(() => ({}));
+  const filterWeekKey = body.weekKey as string | undefined;
+
   try {
-    // Find ALL PAID, unclaimed rewards from ALL real weekKeys (not test weekKeys)
+    // Build weekKey filter - either specific weekKey or all non-test weekKeys
+    const weekKeyFilter = filterWeekKey
+      ? { weekKey: filterWeekKey }
+      : { weekKey: { not: { startsWith: "test" } } };
+
+    // Find PAID, unclaimed rewards (optionally filtered by weekKey)
     const paidRewards = await db.rewardEvent.findMany({
       where: {
         status: "PAID",
         claimedAt: null,
-        weekKey: { not: { startsWith: "test" } }, // Only real weekKeys
+        ...weekKeyFilter,
         type: { in: ALL_REWARD_TYPES },
       },
       include: {
@@ -215,6 +227,7 @@ export async function POST() {
 
     return NextResponse.json({
       ok: true,
+      filterApplied: filterWeekKey ? `Single weekKey: ${filterWeekKey}` : "All non-test weekKeys",
       sourceWeekKeys: weekKeys,
       testWeekKey,
       epoch: epochNumber,

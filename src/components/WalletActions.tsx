@@ -150,6 +150,7 @@ export default function WalletActions({
   const [successNavTo, setSuccessNavTo] = useState<string | null>(null);
 
   const [showNotRegisteredModal, setShowNotRegisteredModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const pk = wallet.publicKey?.toBase58() ?? null;
 
@@ -309,6 +310,11 @@ export default function WalletActions({
         endInflight();
         setBusy(null);
         return;
+      }
+
+      // Show welcome modal for new users
+      if (v.isNewUser) {
+        setShowWelcomeModal(true);
       }
 
       triggerSuccess(successHref, "Logged in!");
@@ -564,6 +570,35 @@ export default function WalletActions({
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome Modal for New Users */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-gradient-to-b from-black via-black/95 to-pink-950/30 border border-pink-500/40 rounded-2xl p-6 max-w-lg mx-auto shadow-[0_0_40px_rgba(236,72,153,0.3)]">
+            <div className="text-center mb-4">
+              <span className="text-4xl">🎉</span>
+            </div>
+            <h3 className="text-2xl font-bold text-white text-center mb-4">
+              Welcome to Xessex!
+            </h3>
+            <p className="text-white/80 text-sm leading-relaxed mb-4">
+              If you&apos;re tired of trying to watch adult content and having to go through a dozen videos to find one decent one, you&apos;ve found your new source for porn!
+            </p>
+            <p className="text-white/80 text-sm leading-relaxed mb-4">
+              We are literally made to solve that problem. All our videos are great quality, and on top of that we have a <span className="text-pink-400 font-semibold">Ranking system that pays YOU</span> for your valuable opinions.
+            </p>
+            <p className="text-white/80 text-sm leading-relaxed mb-6">
+              Unlock more videos with the credits you earn and help us build a legendary organized porn list where we aim to discover the hottest video on the web!
+            </p>
+            <button
+              onClick={() => setShowWelcomeModal(false)}
+              className="w-full py-3 px-6 rounded-xl font-semibold text-white transition bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400"
+            >
+              Let&apos;s Go!
+            </button>
           </div>
         </div>
       )}

@@ -96,76 +96,85 @@ export async function GET() {
   // =========================
   // Rewards: total + breakdown by RewardType (PAID only)
   // =========================
-  const rewardTotals = await db.rewardEvent.groupBy({
-    by: ["userId"],
-    where: { status: RewardStatus.PAID },
-    _sum: { amount: true },
-    orderBy: { _sum: { amount: "desc" } },
-    take: 50,
-  });
 
-  const rewardUserIds = rewardTotals.map((r) => r.userId);
+  // Helper to build rewards leaderboard for a specific pool (or all)
+  async function buildRewardsLeaderboard(poolFilter?: "xessex" | "embed") {
+    const refTypeFilter = poolFilter
+      ? { refType: { startsWith: `${poolFilter}:` } }
+      : {};
 
-  // per-type sums for the top users only
-  const rewardByTypeRows = rewardUserIds.length
-    ? await db.rewardEvent.groupBy({
-        by: ["userId", "type"],
-        where: {
-          status: RewardStatus.PAID,
-          userId: { in: rewardUserIds },
-        },
-        _sum: { amount: true },
-      })
-    : [];
+    const totals = await db.rewardEvent.groupBy({
+      by: ["userId"],
+      where: { status: RewardStatus.PAID, ...refTypeFilter },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: "desc" } },
+      take: 50,
+    });
 
-  const rewardUsers = rewardUserIds.length
-    ? await db.user.findMany({
-        where: { id: { in: rewardUserIds } },
-        select: { id: true, walletAddress: true, email: true },
-      })
-    : [];
+    const userIds = totals.map((r) => r.userId);
+    if (userIds.length === 0) return [];
 
-  const rewardUserMap = new Map(rewardUsers.map((u) => [u.id, u]));
+    // per-type sums for the top users only
+    const byTypeRows = await db.rewardEvent.groupBy({
+      by: ["userId", "type"],
+      where: {
+        status: RewardStatus.PAID,
+        userId: { in: userIds },
+        ...refTypeFilter,
+      },
+      _sum: { amount: true },
+    });
 
-  // build userId -> (type -> amount)
-  const breakdownMap = new Map<string, Map<string, bigint>>();
-  for (const row of rewardByTypeRows) {
-    const uid = row.userId;
-    const type = String(row.type);
-    const amt = (row._sum.amount ?? 0n) as bigint;
+    const users = await db.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, walletAddress: true, email: true },
+    });
 
-    if (!breakdownMap.has(uid)) breakdownMap.set(uid, new Map());
-    breakdownMap.get(uid)!.set(type, amt);
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    // build userId -> (type -> amount)
+    const breakdownMap = new Map<string, Map<string, bigint>>();
+    for (const row of byTypeRows) {
+      const uid = row.userId;
+      const type = String(row.type);
+      const amt = (row._sum.amount ?? 0n) as bigint;
+
+      if (!breakdownMap.has(uid)) breakdownMap.set(uid, new Map());
+      breakdownMap.get(uid)!.set(type, amt);
+    }
+
+    return totals.map((r) => {
+      const user = userMap.get(r.userId);
+      const totalAtomic = (r._sum.amount ?? 0n) as bigint;
+
+      const typeMap = breakdownMap.get(r.userId) ?? new Map<string, bigint>();
+      const breakdown = Array.from(typeMap.entries())
+        .map(([type, atomic]) => ({
+          type,
+          amountAtomic: atomic.toString(),
+          amount: formatXess(atomic),
+        }))
+        .sort((a, b) => {
+          const A = BigInt(a.amountAtomic);
+          const B = BigInt(b.amountAtomic);
+          return A === B ? 0 : A > B ? -1 : 1;
+        });
+
+      return {
+        user: user ? truncWallet(user.walletAddress, user.email) : "Anonymous",
+        xessEarnedAtomic: totalAtomic.toString(),
+        xessEarned: formatXess(totalAtomic),
+        breakdown,
+      };
+    });
   }
 
-  const rewards = rewardTotals.map((r) => {
-    const user = rewardUserMap.get(r.userId);
-    const totalAtomic = (r._sum.amount ?? 0n) as bigint;
-
-    const typeMap = breakdownMap.get(r.userId) ?? new Map<string, bigint>();
-    const breakdown = Array.from(typeMap.entries())
-      .map(([type, atomic]) => ({
-        type, // RewardType
-        amountAtomic: atomic.toString(), // JSON-safe
-        amount: formatXess(atomic), // string amount
-      }))
-      .sort((a, b) => {
-        const A = BigInt(a.amountAtomic);
-        const B = BigInt(b.amountAtomic);
-        return A === B ? 0 : A > B ? -1 : 1;
-      });
-
-    return {
-      user: user ? truncWallet(user.walletAddress, user.email) : "Anonymous",
-
-      // keep the old field name for compatibility
-      xessEarnedAtomic: totalAtomic.toString(),
-      xessEarned: formatXess(totalAtomic), // now string (no float issues)
-
-      // ✅ new transparency data
-      breakdown,
-    };
-  });
+  // Build all three reward leaderboards
+  const [rewards, xessexRewards, embedRewards] = await Promise.all([
+    buildRewardsLeaderboard(),        // All rewards combined
+    buildRewardsLeaderboard("xessex"), // Xessex pool only
+    buildRewardsLeaderboard("embed"),  // Embed pool only
+  ]);
 
   // Referrals: count users where referredById = user.id
   const referralsRaw = await db.user.groupBy({
@@ -203,7 +212,9 @@ export async function GET() {
     ok: true,
     mvm,
     karat,
-    rewards,
+    rewards,        // All rewards combined
+    xessexRewards,  // Xessex pool only (premium content)
+    embedRewards,   // Embed pool only (embedded videos)
     referrals,
   });
 }

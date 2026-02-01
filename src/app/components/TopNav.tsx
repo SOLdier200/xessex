@@ -13,6 +13,7 @@ const tokenLinks = [
   { label: "Rewards", href: "/rewards" },
   { label: "Win Free Credits!", href: "/rewards-drawing" },
   { label: "Swap", href: "/swap" },
+  { label: "Burned", href: "/burned" },
   { label: "Xess News", href: "/xess-news" },
   { label: "FAQ", href: "/faq" },
 ];

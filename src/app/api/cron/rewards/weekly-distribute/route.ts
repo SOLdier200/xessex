@@ -411,6 +411,7 @@ export async function POST(req: NextRequest) {
 
     const allRewards: UserReward[] = [];
     const poolSummary: Record<string, Record<string, string | number>> = {};
+    const burnsByPool = new Map<Pool, bigint>(); // Track burned amounts per pool
 
     // Build rewards pool-by-pool
     for (const pr of pools) {
@@ -717,6 +718,11 @@ export async function POST(req: NextRequest) {
 
       const burned = poolBudget - (cfg.rewardMode === "LEADERBOARD_ONLY" ? 0n : flatPaid) - leaderboardPaid;
 
+      // Track burned amount for this pool (only if positive)
+      if (burned > 0n) {
+        burnsByPool.set(pool, burned);
+      }
+
       poolSummary[pfx] = {
         mode: cfg.rewardMode,
         budget: formatXess(poolBudget),
@@ -828,7 +834,26 @@ export async function POST(req: NextRequest) {
           finishedAt: new Date(),
         },
       });
+
+      // Record burn amounts for unused emissions
+      for (const [pool, burnAmount] of burnsByPool.entries()) {
+        if (burnAmount > 0n) {
+          await tx.burnRecord.create({
+            data: {
+              weekKey,
+              pool,
+              reason: "unused_emission",
+              amount: burnAmount,
+              description: `Unused ${pool} pool emission for week ${weekKey}`,
+            },
+          });
+          console.log(`[weekly-distribute] Burned ${formatXess(burnAmount)} XESS from ${pool} pool`);
+        }
+      }
     });
+
+    // Calculate total burned
+    const totalBurned = Array.from(burnsByPool.values()).reduce((a, b) => a + b, 0n);
 
     return NextResponse.json({
       ok: true,
@@ -844,6 +869,11 @@ export async function POST(req: NextRequest) {
       totalUsers: userRewards.size,
       totalRewards: allRewards.length,
       totalAmount: formatXess(totalAmount),
+      totalBurned: formatXess(totalBurned),
+      burnsByPool: {
+        xessex: formatXess(burnsByPool.get("XESSEX") ?? 0n),
+        embed: formatXess(burnsByPool.get("EMBED") ?? 0n),
+      },
       batchId: batch.id,
       nextStep: "Run build-week cron to create merkle tree for on-chain claims",
     });
