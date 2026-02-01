@@ -180,7 +180,7 @@ export default function RootLayout({
             </Link>
           </div>
 
-          {/* RTA + Site Logo - Centered */}
+          {/* RTA - Centered */}
           <div className="flex flex-col items-center gap-2 my-4">
             <a
               href="https://www.rtalabel.org/"
@@ -198,14 +198,6 @@ export default function RootLayout({
             <span className="text-xs text-white/40 tracking-wide">
               18+ Only
             </span>
-            <Link href="/" className="opacity-80 hover:opacity-100 transition">
-              <img
-                src="/logos/mainsitelogo.png"
-                alt="Xessex"
-                className="h-[45px] w-auto"
-                loading="lazy"
-              />
-            </Link>
           </div>
 
           {/* Copyright Row */}
@@ -219,6 +211,18 @@ export default function RootLayout({
                 </a>
               </p>
             </div>
+          </div>
+
+          {/* Site Logo */}
+          <div className="flex justify-center mt-4">
+            <Link href="/" className="opacity-80 hover:opacity-100 transition">
+              <img
+                src="/logos/mainsitelogo.png"
+                alt="Xessex"
+                className="h-[45px] w-auto"
+                loading="lazy"
+              />
+            </Link>
           </div>
 
           {/* Donate Button */}

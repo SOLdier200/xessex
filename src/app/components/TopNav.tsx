@@ -129,7 +129,7 @@ export default function TopNav() {
                 onClick={() => setTokenDropdownOpen(!tokenDropdownOpen)}
                 className="hover:opacity-80 transition flex items-center gap-1"
               >
-                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[37px] w-auto" />
+                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[38px] w-auto mt-[1px]" />
                 <svg
                   className={`w-4 h-4 text-white/70 transition-transform ${tokenDropdownOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -160,7 +160,7 @@ export default function TopNav() {
                   onClick={() => setMessagesModalOpen(true)}
                   className="relative hover:opacity-80 transition shrink-0"
                 >
-                  <Image src="/logos/textlogo/siteset3/messages110.png" alt="Messages" width={938} height={276} className="h-[42px] w-auto mt-[4px]" />
+                  <Image src="/logos/textlogo/siteset3/messages110.png" alt="Messages" width={938} height={276} className="h-[42px] w-auto mt-[6px]" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-pink-500 text-white rounded-full animate-pulse">
                       {unreadCount > 99 ? "99+" : unreadCount}
@@ -168,7 +168,7 @@ export default function TopNav() {
                   )}
                 </button>
                 <Link href="/profile" className="hover:opacity-80 transition shrink-0">
-                  <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[39px] w-auto mt-[7px]" />
+                  <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[37px] w-auto mt-[5px]" />
                 </Link>
               </>
             )}
@@ -208,7 +208,7 @@ export default function TopNav() {
                   alt="Messages"
                   width={938}
                   height={276}
-                  className="h-[30px] w-auto mt-[4px]"
+                  className="h-[30px] w-auto mt-[6px]"
                 />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-pink-500 text-white rounded-full animate-pulse">
@@ -270,7 +270,7 @@ export default function TopNav() {
                 onClick={() => setTokenDropdownOpen(!tokenDropdownOpen)}
                 className="hover:opacity-80 transition flex items-center gap-1"
               >
-                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[33px] w-auto" />
+                <Image src="/logos/textlogo/siteset3/token100.png" alt="Xess Token" width={938} height={276} className="h-[34px] w-auto mt-[1px]" />
                 <svg
                   className={`w-4 h-4 text-white/70 transition-transform ${tokenDropdownOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -307,7 +307,7 @@ export default function TopNav() {
                   }}
                   className="relative hover:opacity-80 transition"
                 >
-                  <Image src="/logos/textlogo/siteset3/messages110.png" alt="Messages" width={938} height={276} className="h-[39px] w-auto mt-[4px]" />
+                  <Image src="/logos/textlogo/siteset3/messages110.png" alt="Messages" width={938} height={276} className="h-[39px] w-auto mt-[6px]" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-xs font-bold bg-pink-500 text-white rounded-full animate-pulse">
                       {unreadCount > 99 ? "99+" : unreadCount}
@@ -315,7 +315,7 @@ export default function TopNav() {
                   )}
                 </button>
                 <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-                  <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[35px] w-auto mt-[7px]" />
+                  <Image src="/logos/textlogo/siteset3/profile100.png" alt="Profile" width={938} height={276} priority className="h-[33px] w-auto mt-[5px]" />
                 </Link>
               </>
             )}

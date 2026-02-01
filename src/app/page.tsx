@@ -203,7 +203,7 @@ export default async function HomePage() {
                 alt="Videos"
                 width={938}
                 height={276}
-                className="h-[48px] w-auto -mt-[9px]"
+                className="h-[48px] w-auto -mt-[13px]"
               />
             </Link>
           </div>
