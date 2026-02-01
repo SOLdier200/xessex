@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { weekKeyUTC } from "@/lib/weekKey";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+import { poolFromVideoKind, startOfDayUTC, FLAT_RATES } from "@/lib/rewardPool";
 
 // Special credits reward for voting
 const VOTE_CREDIT_REWARD = 1n; // 1 credit per vote (once per comment, no extra on flip)
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   const comment = await db.comment.findUnique({
     where: { id: commentId },
-    select: { id: true, authorId: true, status: true, memberLikes: true, memberDislikes: true, score: true },
+    select: { id: true, authorId: true, videoId: true, status: true, memberLikes: true, memberDislikes: true, score: true },
   });
 
   if (!comment || comment.status !== "ACTIVE") {
@@ -101,6 +102,14 @@ export async function POST(req: NextRequest) {
     const isModVote = access.isAdminOrMod;
 
     const updated = await db.$transaction(async (tx) => {
+      // Fetch video kind to determine pool
+      const video = await tx.video.findUnique({
+        where: { id: comment.videoId },
+        select: { kind: true },
+      });
+      const pool = poolFromVideoKind(video?.kind);
+      const dayUTC = startOfDayUTC(new Date());
+
       // Use CommentModVote for admin/mod, CommentMemberVote for regular users
       if (isModVote) {
         await tx.commentModVote.create({
@@ -141,16 +150,19 @@ export async function POST(req: NextRequest) {
         select: { memberLikes: true, memberDislikes: true, modLikes: true, modDislikes: true, authorId: true, score: true },
       });
 
-      // Track score for author (positive deltas only for weekly)
+      // Track score for author (positive deltas only for weekly) - pool-aware
       if (scoreDelta > 0) {
         await tx.weeklyUserStat.upsert({
-          where: { weekKey_userId: { weekKey: wk, userId: c.authorId } },
+          where: { weekKey_userId_pool: { weekKey: wk, userId: c.authorId, pool } },
           create: {
             weekKey: wk,
             userId: c.authorId,
+            pool,
             scoreReceived: scoreDelta,
             diamondComments: 0,
             mvmPoints: 0,
+            pendingAtomic: 0n,
+            paidAtomic: 0n,
           },
           update: {
             scoreReceived: { increment: scoreDelta },
@@ -158,20 +170,48 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Update all-time stats for author (always track score)
-      await tx.allTimeUserStat.upsert({
-        where: { userId: c.authorId },
-        create: { userId: c.authorId, scoreReceived: scoreDelta > 0 ? scoreDelta : 0 },
-        update: { scoreReceived: { increment: scoreDelta > 0 ? scoreDelta : 0 } },
-      });
+      // Update all-time stats for author - pool-aware
+      if (scoreDelta > 0) {
+        await tx.allTimeUserStat.upsert({
+          where: { userId_pool: { userId: c.authorId, pool } },
+          create: { userId: c.authorId, pool, scoreReceived: scoreDelta },
+          update: { scoreReceived: { increment: scoreDelta } },
+        });
+      }
 
-      // Track voter stats for all members (wallet checked at distribution time)
+      // Track voter stats for all members - pool-aware
       // Mod votes don't count toward voter rewards
       if (!isModVote) {
         await tx.weeklyVoterStat.upsert({
-          where: { weekKey_userId: { weekKey: wk, userId: voterId } },
-          create: { weekKey: wk, userId: voterId, votesCast: 1 },
+          where: { weekKey_userId_pool: { weekKey: wk, userId: voterId, pool } },
+          create: { weekKey: wk, userId: voterId, pool, votesCast: 1 },
           update: { votesCast: { increment: 1 } },
+        });
+
+        // Mark daily active for the voter (for "active every day" weekly bonus)
+        await tx.userDailyActive.upsert({
+          where: { userId_day_pool: { userId: voterId, day: dayUTC, pool } },
+          create: { userId: voterId, day: dayUTC, pool },
+          update: {},
+        });
+      }
+
+      // Log flat-rate "like received" for comment author (if positive vote)
+      if (value === 1) {
+        const likeRefId = `like_rcvd:${wk}:${c.authorId}:${commentId}:${voterId}`;
+        const likeAmount = FLAT_RATES[pool].LIKE_RECEIVED;
+        await tx.flatActionLedger.upsert({
+          where: { refId: likeRefId },
+          create: {
+            refId: likeRefId,
+            weekKey: wk,
+            userId: c.authorId,
+            pool,
+            action: "LIKE_RECEIVED",
+            units: 1,
+            amount: likeAmount,
+          },
+          update: {}, // no-op if already exists
         });
       }
 
@@ -270,6 +310,14 @@ export async function POST(req: NextRequest) {
   const netScoreDelta = newScoreDelta - oldScoreDelta;
 
   const updated = await db.$transaction(async (tx) => {
+    // Fetch video kind to determine pool
+    const video = await tx.video.findUnique({
+      where: { id: comment.videoId },
+      select: { kind: true },
+    });
+    const pool = poolFromVideoKind(video?.kind);
+    const dayUTC = startOfDayUTC(new Date());
+
     // Update vote row - use appropriate table based on voter type
     if (isModVoter) {
       await tx.commentModVote.update({
@@ -311,18 +359,21 @@ export async function POST(req: NextRequest) {
       select: { memberLikes: true, memberDislikes: true, modLikes: true, modDislikes: true, authorId: true, score: true },
     });
 
-    // Update weekly stats for author (only positive deltas)
+    // Update weekly stats for author (only positive deltas) - pool-aware
     // For flip: if going from dislike to like, we add the positive delta
     // if going from like to dislike, we don't subtract from weekly (keep earned score)
     if (netScoreDelta > 0) {
       await tx.weeklyUserStat.upsert({
-        where: { weekKey_userId: { weekKey: wk, userId: afterFlip.authorId } },
+        where: { weekKey_userId_pool: { weekKey: wk, userId: afterFlip.authorId, pool } },
         create: {
           weekKey: wk,
           userId: afterFlip.authorId,
+          pool,
           scoreReceived: netScoreDelta,
           diamondComments: 0,
           mvmPoints: 0,
+          pendingAtomic: 0n,
+          paidAtomic: 0n,
         },
         update: {
           scoreReceived: { increment: netScoreDelta },
@@ -330,12 +381,40 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Update all-time stats for author (only track positive deltas)
+    // Update all-time stats for author (only track positive deltas) - pool-aware
     if (netScoreDelta > 0) {
       await tx.allTimeUserStat.upsert({
-        where: { userId: afterFlip.authorId },
-        create: { userId: afterFlip.authorId, scoreReceived: netScoreDelta },
+        where: { userId_pool: { userId: afterFlip.authorId, pool } },
+        create: { userId: afterFlip.authorId, pool, scoreReceived: netScoreDelta },
         update: { scoreReceived: { increment: netScoreDelta } },
+      });
+    }
+
+    // Mark daily active for the voter on flip as well (if not mod)
+    if (!isModVoter) {
+      await tx.userDailyActive.upsert({
+        where: { userId_day_pool: { userId: voterId, day: dayUTC, pool } },
+        create: { userId: voterId, day: dayUTC, pool },
+        update: {},
+      });
+    }
+
+    // Log flat-rate "like received" for comment author (if flipping TO like)
+    if (value === 1 && existing.value === -1) {
+      const likeRefId = `like_rcvd:${wk}:${afterFlip.authorId}:${commentId}:${voterId}`;
+      const likeAmount = FLAT_RATES[pool].LIKE_RECEIVED;
+      await tx.flatActionLedger.upsert({
+        where: { refId: likeRefId },
+        create: {
+          refId: likeRefId,
+          weekKey: wk,
+          userId: afterFlip.authorId,
+          pool,
+          action: "LIKE_RECEIVED",
+          units: 1,
+          amount: likeAmount,
+        },
+        update: {}, // no-op if already exists
       });
     }
 

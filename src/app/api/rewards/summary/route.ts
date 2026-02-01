@@ -58,19 +58,10 @@ export async function GET() {
     });
   }
 
-  const epochVersion = epoch?.version ?? 1;
-
-  // Get user's leaf for this epoch
-  const leaf =
-    epochVersion === 2
-      ? await db.claimLeaf.findFirst({
-          where: { epoch: epoch.epoch, userId: userId },
-        })
-      : wallet
-        ? await db.claimLeaf.findUnique({
-            where: { epoch_wallet: { epoch: epoch.epoch, wallet } },
-          })
-        : null;
+  // V2 only - find leaf by userId
+  const leaf = await db.claimLeaf.findFirst({
+    where: { epoch: epoch.epoch, userId: userId },
+  });
 
   console.log("[rewards/summary] Leaf for wallet:", leaf ? `amount=${leaf.amountAtomic}` : "NOT FOUND");
 
@@ -80,19 +71,28 @@ export async function GET() {
     console.log("[rewards/summary] Sample leaves in epoch:", allLeaves.map(l => l.wallet?.slice(0, 12) ?? l.userKeyHex?.slice(0, 12) ?? "no-id"));
   }
 
-  // Check if user has already claimed this epoch's rewards
-  // First check DB (RewardEvent.claimedAt)
+  // Check if user has already claimed rewards
+  // Check for ANY claimed rewards (not weekKey-specific, since test epochs aggregate all)
   const claimedRewards = await db.rewardEvent.findFirst({
     where: {
       userId,
-      weekKey: epoch.weekKey,
       status: "PAID",
       claimedAt: { not: null },
       type: { in: ALL_REWARD_TYPES },
     },
   });
 
-  console.log("[rewards/summary] DB claimed check for weekKey", epoch.weekKey, "found:", claimedRewards ? `id=${claimedRewards.id}, claimedAt=${claimedRewards.claimedAt}` : "NONE");
+  // Also check for any unclaimed rewards
+  const unclaimedRewards = await db.rewardEvent.findFirst({
+    where: {
+      userId,
+      status: "PAID",
+      claimedAt: null,
+      type: { in: ALL_REWARD_TYPES },
+    },
+  });
+
+  console.log("[rewards/summary] DB check - claimed:", claimedRewards ? "YES" : "NO", "unclaimed:", unclaimedRewards ? "YES" : "NO");
 
   // Also check on-chain receipt (in case DB wasn't updated after claim)
   let claimedOnChain = false;
@@ -110,14 +110,14 @@ export async function GET() {
       const receiptInfo = await connection.getAccountInfo(receiptV2Pda);
       if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
         claimedOnChain = true;
-        console.log("[rewards/summary] On-chain receipt found for epoch", epoch.epoch, "- marking as claimed");
+        console.log("[rewards/summary] On-chain receipt found for epoch", epoch.epoch, "- marking ALL unclaimed rewards as claimed");
 
-        // Sync DB: mark rewards as claimed since on-chain receipt exists
+        // Sync DB: mark ALL unclaimed rewards as claimed since on-chain receipt exists
         await db.rewardEvent.updateMany({
           where: {
             userId,
-            weekKey: epoch.weekKey,
             claimedAt: null,
+            status: "PAID",
             type: { in: ALL_REWARD_TYPES },
           },
           data: { claimedAt: new Date() },
@@ -129,16 +129,17 @@ export async function GET() {
   }
 
   const pendingAmount = leaf?.amountAtomic ?? 0n;
-  const alreadyClaimed = !!claimedRewards || claimedOnChain;
+  // alreadyClaimed = has claimed rewards AND no unclaimed rewards remaining
+  const alreadyClaimed = (!!claimedRewards || claimedOnChain) && !unclaimedRewards;
 
-  console.log("[rewards/summary] pendingAmount:", pendingAmount.toString(), "alreadyClaimed:", alreadyClaimed, "(db:", !!claimedRewards, "onchain:", claimedOnChain, ") hasPending:", pendingAmount > 0n && !alreadyClaimed);
+  console.log("[rewards/summary] pendingAmount:", pendingAmount.toString(), "alreadyClaimed:", alreadyClaimed, "(db:", !!claimedRewards, "onchain:", claimedOnChain, "unclaimed:", !!unclaimedRewards, ") hasPending:", pendingAmount > 0n && !alreadyClaimed);
 
-  // hasPending = has leaf amount AND not already claimed
-  const hasPending = pendingAmount > 0n && !alreadyClaimed;
+  // hasPending = has leaf in epoch AND has unclaimed rewards in DB
+  const hasPending = pendingAmount > 0n && !!unclaimedRewards;
 
   return NextResponse.json({
     ok: true,
-    epoch: { id: epoch.epoch, epochNo: epoch.epoch, merkleRoot: epoch.rootHex, version: epochVersion },
+    epoch: { id: epoch.epoch, epochNo: epoch.epoch, merkleRoot: epoch.rootHex, version: 2 },
     pendingAmount: formatAtomic(pendingAmount),
     hasPending,
     claim: alreadyClaimed

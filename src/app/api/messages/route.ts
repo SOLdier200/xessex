@@ -9,6 +9,12 @@ import { db } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
+// Extract winner ID from message body if present
+function extractWinnerId(body: string): string | null {
+  const match = body.match(/\[WINNER_ID:([^\]]+)\]/);
+  return match ? match[1] : null;
+}
+
 export async function GET() {
   const access = await getAccessContext();
 
@@ -27,23 +33,42 @@ export async function GET() {
     },
   });
 
+  // Get all pending raffle wins for this user to check claim status
+  const pendingWins = await db.raffleWinner.findMany({
+    where: {
+      userId: access.user.id,
+      status: "PENDING",
+    },
+    select: { id: true },
+  });
+  const pendingWinIds = new Set(pendingWins.map((w) => w.id));
+
   return NextResponse.json({
     ok: true,
-    messages: messages.map((m) => ({
-      id: m.id,
-      type: m.type,
-      subject: m.subject,
-      body: m.body,
-      read: !!m.readAt,
-      createdAt: m.createdAt.toISOString(),
-      senderId: m.senderId,
-      sender: m.sender
-        ? {
-            id: m.sender.id,
-            display: m.sender.email || m.sender.walletAddress,
-            role: m.sender.role,
-          }
-        : null,
-    })),
+    messages: messages.map((m) => {
+      const winnerId = extractWinnerId(m.body);
+      // Check if this message has a winner that's still claimable
+      const canClaim = winnerId ? pendingWinIds.has(winnerId) : false;
+
+      return {
+        id: m.id,
+        type: m.type,
+        subject: m.subject,
+        body: m.body.replace(/\[WINNER_ID:[^\]]+\]/, "").trim(), // Remove winner ID from display
+        read: !!m.readAt,
+        createdAt: m.createdAt.toISOString(),
+        senderId: m.senderId,
+        sender: m.sender
+          ? {
+              id: m.sender.id,
+              display: m.sender.email || m.sender.walletAddress,
+              role: m.sender.role,
+            }
+          : null,
+        // Raffle win info
+        winnerId: winnerId,
+        canClaim: canClaim,
+      };
+    }),
   });
 }

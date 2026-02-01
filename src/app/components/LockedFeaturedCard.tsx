@@ -12,6 +12,9 @@ type LockedFeaturedCardProps = {
   performers: string;
   isAuthed: boolean;
   variant: "featured" | "topRanked";
+  viewsCount?: number | null;
+  showMetaBelow?: boolean;
+  className?: string;
 };
 
 export default function LockedFeaturedCard({
@@ -22,6 +25,9 @@ export default function LockedFeaturedCard({
   performers,
   isAuthed,
   variant,
+  viewsCount,
+  showMetaBelow = false,
+  className,
 }: LockedFeaturedCardProps) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -70,9 +76,17 @@ export default function LockedFeaturedCard({
   const headerClass = isFeatured ? "neon-text" : "text-yellow-400";
   const headerText = isFeatured ? "Featured Video" : "Top Ranked Video";
 
+  const formatViews = (views: number | null | undefined) => {
+    const v = Number(views ?? 0);
+    if (!Number.isFinite(v) || v <= 0) return "0";
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+    return `${Math.floor(v)}`;
+  };
+
   return (
     <>
-      <section className={`neon-border rounded-2xl p-4 md:p-6 bg-black/30 ${borderClass}`}>
+      <section className={`neon-border rounded-2xl p-4 md:p-6 bg-black/30 ${borderClass} ${className || ""}`}>
         <h2 className={`text-lg font-semibold ${headerClass} mb-4`}>{headerText}</h2>
         <div className="block w-full">
           <div className="relative aspect-video rounded-xl overflow-hidden">
@@ -103,13 +117,28 @@ export default function LockedFeaturedCard({
                 </Link>
               )}
             </div>
+            {!showMetaBelow && viewsCount != null && (
+              <div className="absolute top-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                {formatViews(viewsCount)} XESS Views
+              </div>
+            )}
           </div>
+          {showMetaBelow && (
+            <div className="mt-2 flex items-center justify-between text-xs text-white/60">
+              <span>{duration}</span>
+              {viewsCount != null && (
+                <span>{formatViews(viewsCount)} XESS Views</span>
+              )}
+            </div>
+          )}
           <h3 className="mt-3 text-lg font-semibold text-white/40 italic">
             Locked Video
           </h3>
-          <p className="mt-1 text-sm text-white/30">
-            {duration}
-          </p>
+          {!showMetaBelow && (
+            <p className="mt-1 text-sm text-white/30">
+              {duration}
+            </p>
+          )}
         </div>
       </section>
 

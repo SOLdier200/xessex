@@ -9,6 +9,7 @@ import { getAccessContext } from "@/lib/access";
 import { truncWallet } from "@/lib/scoring";
 import { weekKeyUTC } from "@/lib/weekKey";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+import { poolFromVideoKind, startOfDayUTC, FLAT_RATES } from "@/lib/rewardPool";
 
 // Special credits reward for commenting
 const COMMENT_CREDIT_REWARD = 2n; // 2 credits per comment (once per video)
@@ -154,13 +155,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const video = await db.video.findUnique({ where: { id: videoId } });
+  const video = await db.video.findUnique({
+    where: { id: videoId },
+    select: { id: true, kind: true },
+  });
   if (!video) {
     return NextResponse.json(
       { ok: false, error: "VIDEO_NOT_FOUND" },
       { status: 404 }
     );
   }
+
+  const pool = poolFromVideoKind(video.kind);
 
   // Check if user already has a comment on this video (1 per member per video)
   const existingComment = await db.comment.findFirst({
@@ -176,6 +182,7 @@ export async function POST(req: NextRequest) {
   const wk = weekKeyUTC(new Date());
 
   // Create comment and track stats in a transaction
+  const dayUTC = startOfDayUTC(new Date());
   const comment = await db.$transaction(async (tx) => {
     const newComment = await tx.comment.create({
       data: {
@@ -191,14 +198,47 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Track Diamond comment activity for weekly rewards (min 7 chars quality gate)
-    console.log("[comments] wk", wk, "len", text.length, "user", access.user!.id);
+    // Mark daily active for commenter (for "active every day" weekly bonus)
+    await tx.userDailyActive.upsert({
+      where: { userId_day_pool: { userId: access.user!.id, day: dayUTC, pool } },
+      create: { userId: access.user!.id, day: dayUTC, pool },
+      update: {},
+    });
+
+    // Track Diamond comment activity for weekly rewards (min 7 chars quality gate) - pool-aware
+    console.log("[comments] wk", wk, "len", text.length, "user", access.user!.id, "pool", pool);
     if (text.length >= 7) {
       console.log("[comments] eligible -> increment diamondComments");
       await tx.weeklyUserStat.upsert({
-        where: { weekKey_userId: { weekKey: wk, userId: access.user!.id } },
-        create: { weekKey: wk, userId: access.user!.id, diamondComments: 1, mvmPoints: 0, scoreReceived: 0 },
+        where: { weekKey_userId_pool: { weekKey: wk, userId: access.user!.id, pool } },
+        create: {
+          weekKey: wk,
+          userId: access.user!.id,
+          pool,
+          diamondComments: 1,
+          mvmPoints: 0,
+          scoreReceived: 0,
+          pendingAtomic: 0n,
+          paidAtomic: 0n,
+        },
         update: { diamondComments: { increment: 1 } },
+      });
+
+      // Log flat-rate "comment" action (once per video per week)
+      const commentRefId = `comment:${wk}:${access.user!.id}:${videoId}`;
+      const commentAmount = FLAT_RATES[pool].COMMENT;
+      await tx.flatActionLedger.upsert({
+        where: { refId: commentRefId },
+        create: {
+          refId: commentRefId,
+          weekKey: wk,
+          userId: access.user!.id,
+          pool,
+          action: "COMMENT",
+          units: 1,
+          amount: commentAmount,
+        },
+        update: {}, // no-op if already exists
       });
     } else {
       console.log("[comments] NOT eligible -> too short");

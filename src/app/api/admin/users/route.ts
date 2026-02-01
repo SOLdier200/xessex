@@ -68,12 +68,10 @@ export async function GET(req: NextRequest) {
   // Get stats for each user in parallel
   const usersWithStats = await Promise.all(
     users.map(async (u) => {
-      // Get all-time stats if available
-      const allTimeStat = await db.allTimeUserStat.findUnique({
+      // Get all-time stats if available (sum across all pools)
+      const allTimeStats = await db.allTimeUserStat.aggregate({
         where: { userId: u.id },
-        select: {
-          scoreReceived: true,
-        },
+        _sum: { scoreReceived: true },
       });
 
       // Get total votes cast
@@ -108,7 +106,7 @@ export async function GET(req: NextRequest) {
         role: u.role,
         createdAt: u.createdAt.toISOString(),
         stats: {
-          totalLikesReceived: allTimeStat?.scoreReceived || 0,
+          totalLikesReceived: allTimeStats._sum.scoreReceived || 0,
           totalVotesCast: totalVotesCast._sum.votesCast || 0,
           totalCommentsMade,
           totalXessEarned: xessFormatted,

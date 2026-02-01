@@ -202,13 +202,29 @@ export async function POST(req: Request) {
         // Prize is Special Credits only (no cash value)
         const prizeCredits = (totalCredits * BigInt(p.pct)) / 100n;
 
-        await tx.raffleWinner.create({
+        const winner = await tx.raffleWinner.create({
           data: {
             raffleId: closed.id,
             userId,
             place: p.place,
             prizeCreditsMicro: prizeCredits,
             expiresAt,
+          },
+        });
+
+        // Format prize amount for display (1 credit = 1000 microcredits)
+        const prizeCreditsDisplay = Number(prizeCredits / 1000n);
+        const placeLabel = p.place === 1 ? "1st" : p.place === 2 ? "2nd" : "3rd";
+        const expiryDate = expiresAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+        // Send system message to winner
+        await tx.userMessage.create({
+          data: {
+            userId,
+            senderId: null, // System message
+            type: "SYSTEM",
+            subject: `Congratulations! You won ${placeLabel} place in the Weekly Drawing!`,
+            body: `You've won ${placeLabel} place in the Weekly Rewards Drawing for week ${weekKey}!\n\nYour prize: ${prizeCreditsDisplay.toLocaleString()} Special Credits\n\nClaim your prize before ${expiryDate} or it will be forfeited and rolled over to the next drawing.\n\n[WINNER_ID:${winner.id}]`,
           },
         });
       }

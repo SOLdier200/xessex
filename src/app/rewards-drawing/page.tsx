@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -179,26 +179,47 @@ export default function RewardsDrawingPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [claimBusy, setClaimBusy] = useState<string | null>(null);
+  const pollInFlight = useRef(false);
 
-  const refetch = useCallback(async () => {
-    setErr(null);
-    setLoading(true);
+  const refetch = useCallback(async (silent = false) => {
+    if (!silent) {
+      setErr(null);
+      setLoading(true);
+    }
     try {
       const res = await fetch("/api/rewards-drawing/status", { cache: "no-store" });
       const json = (await res.json().catch(() => null)) as DrawingStatusResp | null;
       if (!res.ok || !json?.ok) throw new Error(json?.error || "failed_to_load");
       setData(json);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setErr(msg);
-      setData(null);
+      if (!silent) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setErr(msg);
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     refetch();
+  }, [refetch]);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (pollInFlight.current) return;
+      if (document.visibilityState !== "visible") return;
+      pollInFlight.current = true;
+      try {
+        await refetch(true);
+      } finally {
+        pollInFlight.current = false;
+      }
+    }, 20000);
+    return () => clearInterval(interval);
   }, [refetch]);
 
   const creditsBalance = useMemo(() => microToCreditsStr(data?.creditsBalanceMicro ?? "0"), [data]);
@@ -232,7 +253,7 @@ export default function RewardsDrawingPage() {
         <div className="mb-6">
         <Image src="/logos/textlogo/siteset3/weeklyrew100.png" alt="Weekly Rewards Drawing" width={938} height={276} className="h-[133px] w-auto" />
         <div className="mt-2 text-white/60">
-          Drawings close every <span className="text-white">Sunday 11:59pm PT</span>. Unclaimed
+          Drawings close every <span className="text-white">Monday at 7:59 AM PT</span>. Unclaimed
           prizes roll into the next week&apos;s pool.
         </div>
       </div>
@@ -399,20 +420,6 @@ export default function RewardsDrawingPage() {
             )}
           </div>
 
-          {/* Redeem for Membership */}
-          <div className="rounded-2xl border border-purple-500/30 bg-black/40 p-6">
-            <div className="text-white font-bold text-xl mb-2">Redeem Credits for Membership</div>
-            <div className="text-white/60 text-sm mb-4">
-              Use your Special Credits to get free membership time.
-            </div>
-            <a
-              href="/rewards-drawing/redeem"
-              className="inline-block px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 hover:bg-purple-500/30 text-purple-400 font-semibold transition"
-            >
-              Redeem Credits
-            </a>
-          </div>
-
           {/* Rules / Compliance Notice */}
           <div className="mt-6 rounded-2xl border border-yellow-500/30 bg-yellow-900/10 p-4">
             <div className="text-yellow-400 font-semibold mb-2">Special Credits Rules</div>
@@ -421,14 +428,14 @@ export default function RewardsDrawingPage() {
               <li>Credits have <span className="text-white">no cash value</span> and cannot be purchased</li>
               <li>Credits are <span className="text-white">not transferable</span> or sellable</li>
               <li>Credits cannot be converted to XESS or withdrawn</li>
-              <li>Use credits for: <span className="text-white">drawing entries</span> + <span className="text-white">redeeming membership months</span></li>
+              <li>Use credits for: <span className="text-white">drawing entries</span> + <span className="text-white">video unlocks</span></li>
             </ul>
           </div>
 
           {/* Refresh */}
           <div className="mt-6 flex justify-end">
             <button
-              onClick={refetch}
+              onClick={() => refetch()}
               className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-semibold transition"
             >
               Refresh

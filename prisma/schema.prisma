@@ -25,7 +25,7 @@ model User {
   referredById             String?
   recoveryEmail            String?                  @unique
   recoveryEmailVerifiedAt  DateTime?
-  allTimeStat          AllTimeUserStat?
+  allTimeStats         AllTimeUserStat[]
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
   memberVotes          CommentMemberVote[]
@@ -91,6 +91,10 @@ model User {
   // User blocking
   blockedUsers         UserBlock[]          @relation("UserBlocker")
   blockedByUsers       UserBlock[]          @relation("UserBlocked")
+
+  // Pool-aware rewards tracking
+  dailyActive          UserDailyActive[]
+  flatActionLedger     FlatActionLedger[]
 
   @@index([referredById])
   @@index([commentBanStatus])
@@ -394,6 +398,7 @@ model WeeklyUserStat {
   id              String   @id @default(cuid())
   weekKey         String
   userId          String
+  pool            StatPool @default(EMBED)
   diamondComments Int      @default(0)
   mvmPoints       Int      @default(0)
   createdAt       DateTime @default(now())
@@ -403,19 +408,48 @@ model WeeklyUserStat {
   paidAtomic      BigInt   @default(0) // Finalized/paid XESS for this week (9 decimals)
   user            User     @relation(fields: [userId], references: [id])
 
-  @@unique([weekKey, userId])
-  @@index([weekKey])
+  @@unique([weekKey, userId, pool])
+  @@index([weekKey, pool])
+  @@index([userId, pool])
+}
+
+// Reward distribution mode
+enum RewardMode {
+  FLAT_ONLY          // Only flat-rate rewards, no leaderboard
+  LEADERBOARD_ONLY   // Only leaderboard rewards, no flat
+  FLAT_THEN_LEADERBOARD // Flat first (capped), remainder to leaderboards
 }
 
 model AdminConfig {
-  id                       String   @id @default(cuid())
-  minWeeklyScoreThreshold  Int      @default(10)
-  minMvmThreshold          Int      @default(1)
-  allTimeLikesBpsOfLikes   Int      @default(1000)
-  memberVoterBpsOfLikes    Int      @default(500)
-  voterRewardPerVoteAtomic BigInt   @default(0)
-  updatedAt                DateTime @updatedAt
-  createdAt                DateTime @default(now())
+  id                       String     @id @default(cuid())
+  minWeeklyScoreThreshold  Int        @default(10)
+  minMvmThreshold          Int        @default(1)
+  allTimeLikesBpsOfLikes   Int        @default(1000)
+  memberVoterBpsOfLikes    Int        @default(500)
+  voterRewardPerVoteAtomic BigInt     @default(0)
+
+  // Pool budget splits (basis points, must sum to 10000)
+  xessexPoolBps            Int        @default(6900)  // 69%
+  embedPoolBps             Int        @default(3100)  // 31%
+
+  // Flat-rate caps per user per pool (6-decimal XESS)
+  flatCapXessexAtomic      BigInt     @default(5000000000)  // 5,000 XESS
+  flatCapEmbedAtomic       BigInt     @default(2000000000)  // 2,000 XESS
+
+  // Weekly active bonus (6-decimal XESS) for users active all 7 days
+  weeklyActiveBonusAtomic  BigInt     @default(100000000)   // 100 XESS
+
+  // Optional emission override (null = use schedule)
+  weeklyEmissionOverride   BigInt?
+
+  // Whether flat payouts can scale down if over budget
+  allowFlatScaling         Boolean    @default(true)
+
+  // Reward distribution mode
+  rewardMode               RewardMode @default(FLAT_THEN_LEADERBOARD)
+
+  updatedAt                DateTime   @updatedAt
+  createdAt                DateTime   @default(now())
 }
 
 model AdminActionRun {
@@ -428,37 +462,47 @@ model AdminActionRun {
 }
 
 model AllTimeUserStat {
-  userId        String   @id
+  id            String   @id @default(cuid())
+  userId        String
+  pool          StatPool @default(EMBED)
   scoreReceived Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, pool])
+  @@index([pool])
+  @@index([userId, pool])
 }
 
 model MonthlyUserStat {
   id        String   @id @default(cuid())
   monthKey  String
   userId    String
+  pool      StatPool @default(EMBED)
   mvmPoints Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id])
 
-  @@unique([monthKey, userId])
-  @@index([monthKey])
+  @@unique([monthKey, userId, pool])
+  @@index([monthKey, pool])
+  @@index([userId, pool])
 }
 
 model WeeklyVoterStat {
   id        String   @id @default(cuid())
   weekKey   String
   userId    String
+  pool      StatPool @default(EMBED)
   votesCast Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id])
 
-  @@unique([weekKey, userId])
-  @@index([weekKey])
+  @@unique([weekKey, userId, pool])
+  @@index([weekKey, pool])
+  @@index([userId, pool])
 }
 
 model RewardBatch {
@@ -682,6 +726,56 @@ enum ClaimStatus {
 enum VideoKind {
   EMBED  // External embed (PornHub, XVideos, etc.)
   XESSEX // Xessex-owned content
+}
+
+// Pool enum for stat tables (rewards split by content type)
+enum StatPool {
+  EMBED   // Stats from EMBED video interactions
+  XESSEX  // Stats from XESSEX video interactions
+}
+
+// Flat-rate action types for reward tracking
+enum FlatActionType {
+  RATING
+  COMMENT
+  LIKE_RECEIVED
+  COMMENT_SOURCED
+  DAILY_ACTIVE
+}
+
+// Track daily activity per user per pool (for weekly active bonus)
+model UserDailyActive {
+  id        String   @id @default(cuid())
+  userId    String
+  day       DateTime // Start-of-day UTC
+  pool      StatPool
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day, pool], name: "userId_day_pool")
+  @@index([day])
+  @@index([userId])
+  @@index([pool])
+}
+
+// Flat-rate action ledger for deterministic weekly payouts
+model FlatActionLedger {
+  id        String         @id @default(cuid())
+  weekKey   String
+  userId    String
+  pool      StatPool
+  action    FlatActionType
+  units     Int            @default(1)
+  amount    BigInt         // 6-decimal XESS (same as RewardEvent.amount)
+  refId     String         @unique
+  createdAt DateTime       @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([weekKey, pool])
+  @@index([userId, weekKey])
+  @@index([pool, action])
 }
 
 
@@ -957,4 +1051,67 @@ model UnlockAnalyticsEvent {
   @@index([event, createdAt])
   @@index([userId, createdAt])
   @@index([videoId, createdAt])
+}
+
+// ========== Token Sale System ==========
+
+model SaleConfig {
+  id                    String    @id @default(cuid())
+  activePhase           String    @default("private") // "private" | "public" | "closed"
+  totalSupplyXess       BigInt    @default(1000000000)
+  saleAllocationXess    BigInt    @default(350000000)
+  privateAllocation     BigInt    @default(35000000)
+  publicAllocation      BigInt    @default(315000000)
+  walletCapXess         BigInt    @default(5000000)
+
+  // Pricing in USD micros (e.g. 2500 = $0.002500)
+  privatePriceUsdMicros BigInt @default(2500)
+  publicPriceUsdMicros  BigInt @default(3000)
+
+  // SOL pricing (lamports per XESS)
+  privateLamportsPerXess BigInt @default(500)
+  publicLamportsPerXess  BigInt @default(650)
+
+  // Whitelist for private sale (Merkle root hex)
+  privateMerkleRootHex  String?
+
+  // Optional time gates
+  privateStartsAt       DateTime?
+  privateEndsAt         DateTime?
+  publicStartsAt        DateTime?
+  publicEndsAt          DateTime?
+
+  // Accounting
+  soldPrivateXess       BigInt    @default(0)
+  soldPublicXess        BigInt    @default(0)
+
+  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now())
+}
+
+model SaleContribution {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+
+  phase          String   // "private" | "public"
+  wallet         String   // lowercased base58 string
+  asset          String   // "SOL" | "USDC"
+
+  // How much the buyer is purchasing
+  xessAmount     BigInt   // amount of XESS allocated to this wallet
+
+  // What they paid
+  paidLamports   BigInt?  // SOL in lamports
+  paidUsdcAtomic BigInt?  // USDC in atomic (6 decimals)
+
+  // On-chain verification
+  txSig          String?  @unique
+
+  // Status
+  status         String   @default("PENDING") // "PENDING" | "CONFIRMED" | "FAILED"
+  confirmedAt    DateTime?
+
+  @@index([wallet])
+  @@index([phase])
+  @@index([status])
 }

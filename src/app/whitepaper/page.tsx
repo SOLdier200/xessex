@@ -434,7 +434,7 @@ export default function WhitepaperPage() {
 
               <h3 className="text-lg font-semibold text-white mt-6 mb-2">8.2 Vesting & Locks</h3>
               <ul className="list-disc pl-6 space-y-1">
-                <li><strong>Private Presale:</strong> 20% TGE, 6-month linear</li>
+                <li><strong>Private Presale:</strong> 100% immediate (no vesting)</li>
                 <li><strong>Team / Creators:</strong> 25% at month 3, 25% at month 12, 25% at month 14, 25% at month 15.</li>
                 <li><strong>Treasury:</strong> staged unlock</li>
                 <li><strong>Liquidity:</strong> locked 6–12 months</li>

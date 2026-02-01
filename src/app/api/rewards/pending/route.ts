@@ -84,14 +84,16 @@ export async function GET() {
   const daysUntil = Math.floor(hoursUntil / 24);
   const remainingHours = hoursUntil % 24;
 
-  // Get current week stats
-  const currentStats = await db.weeklyUserStat.findUnique({
-    where: { weekKey_userId: { weekKey: currentWeekKey, userId } },
+  // Get current week stats (aggregate across pools)
+  const currentStats = await db.weeklyUserStat.findFirst({
+    where: { weekKey: currentWeekKey, userId },
+    orderBy: { scoreReceived: "desc" },
   });
 
-  // Get current week voter stats
-  const currentVoterStats = await db.weeklyVoterStat.findUnique({
-    where: { weekKey_userId: { weekKey: currentWeekKey, userId } },
+  // Get current week voter stats (aggregate across pools)
+  const currentVoterStats = await db.weeklyVoterStat.findFirst({
+    where: { weekKey: currentWeekKey, userId },
+    orderBy: { votesCast: "desc" },
   });
 
   // Estimate current week pending (rough estimate based on activity)
@@ -156,18 +158,18 @@ export async function GET() {
     const leaf = epochRow.leaves[0];
     if (!leaf) continue;
 
-    // First check DB for claimed status
-    const claimedReward = await db.rewardEvent.findFirst({
+    // Check if user has ANY unclaimed rewards (not weekKey specific since test epochs aggregate all)
+    const unclaimedReward = await db.rewardEvent.findFirst({
       where: {
         userId,
-        weekKey: epochRow.weekKey,
-        claimedAt: { not: null },
+        status: "PAID",
+        claimedAt: null,
         type: { in: ALL_REWARD_TYPES },
       },
     });
 
-    if (claimedReward) {
-      // Already claimed in DB - skip
+    if (!unclaimedReward) {
+      // All rewards already claimed - skip this epoch
       continue;
     }
 
@@ -182,12 +184,12 @@ export async function GET() {
 
         const receiptInfo = await connection.getAccountInfo(receiptV2Pda);
         if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-          console.log(`[rewards/pending] Epoch ${epochRow.epoch} already claimed on-chain, syncing DB`);
-          // Sync DB: mark rewards as claimed since on-chain receipt exists
+          console.log(`[rewards/pending] Epoch ${epochRow.epoch} already claimed on-chain, syncing DB (marking ALL unclaimed)`);
+          // Sync DB: mark ALL unclaimed rewards as claimed since on-chain receipt exists
           await db.rewardEvent.updateMany({
             where: {
               userId,
-              weekKey: epochRow.weekKey,
+              status: "PAID",
               claimedAt: null,
               type: { in: ALL_REWARD_TYPES },
             },

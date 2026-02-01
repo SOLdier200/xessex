@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import "./globals.css";
 import Providers from "./providers";
 import { AgeGateEnforcer } from "./components/AgeGateEnforcer";
@@ -146,6 +147,10 @@ export default function RootLayout({
         {/* Global Footer */}
         <footer className="mt-12 pt-6 border-t border-white/10 text-center text-sm text-white/50">
           <div className="flex flex-wrap justify-center items-center gap-4 mb-4 px-4">
+            <Link href="/launch" className="text-cyan-400 hover:text-cyan-300 transition">
+              Token Launch
+            </Link>
+            <span>•</span>
             <Link href="/tokenomics" className="hover:text-white transition">
               Tokenomics
             </Link>
@@ -154,66 +159,73 @@ export default function RootLayout({
               Rewards Drawing
             </Link>
             <span>•</span>
-            <Link href="/earn-crypto-watching-porn" className="hover:text-white transition">
-              Earn Crypto Watching Porn
+            <Link href="/faq" className="hover:text-white transition">
+              FAQ
             </Link>
             <span>•</span>
             <Link href="/terms" className="hover:text-white transition">
-              Terms & Conditions
+              Terms
             </Link>
             <span>•</span>
             <Link href="/privacy" className="hover:text-white transition">
-              Privacy Policy
-            </Link>
-            <span>•</span>
-            <Link href="/parental-controls" className="hover:text-white transition">
-              Parental Controls & Safety
+              Privacy
             </Link>
             <span>•</span>
             <Link href="/2257" className="hover:text-white transition">
               18 U.S.C. §2257
             </Link>
             <span>•</span>
-            <Link href="/refund-policy" className="hover:text-white transition">
-              Refund & Cancellation Policy
-            </Link>
-            <span>•</span>
             <Link href="/contact" className="hover:text-white transition">
-              Contact Us
-            </Link>
-            <span>•</span>
-            <Link href="/leave" className="hover:text-white transition">
-              Leave Site
+              Contact
             </Link>
           </div>
 
-          {/* RTA + Age */}
-          <div className="flex flex-col items-center mb-4 gap-1">
-            <a
-              href="https://www.rtalabel.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="opacity-80 hover:opacity-100 transition"
-            >
-              <img
-                src="/logos/rta.gif"
-                alt="RTA Verified"
-                className="h-10 w-auto"
-                loading="lazy"
-              />
-            </a>
-            <span className="text-xs text-white/40 tracking-wide">
-              18+ Only
-            </span>
-          </div>
+          {/* RTA + Logo Row */}
+          <div className="mt-4 w-full px-4">
+            <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-between">
+              {/* Logo - 50% smaller */}
+              <Link href="/" className="opacity-80 hover:opacity-100 transition">
+                <Image
+                  src="/logos/mainsitelogo.png"
+                  alt="Xessex"
+                  width={143}
+                  height={48}
+                  className="h-7 md:h-[52px] w-auto"
+                />
+              </Link>
 
-          <p className="text-center">© {new Date().getFullYear()} Xessex. All rights reserved.</p>
-          <p className="text-center mt-2 text-white/40">
-            For any issues at all please email{" "}
-            <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-              support@xessex.me
-            </a>
-          </p>
+              {/* RTA + Age */}
+              <div className="flex flex-col items-center gap-1">
+                <a
+                  href="https://www.rtalabel.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="opacity-80 hover:opacity-100 transition"
+                >
+                  <img
+                    src="/logos/rta.gif"
+                    alt="RTA Verified"
+                    className="h-10 w-auto"
+                    loading="lazy"
+                  />
+                </a>
+                <span className="text-xs text-white/40 tracking-wide">
+                  18+ Only
+                </span>
+              </div>
+
+              {/* Copyright */}
+              <div className="text-center md:text-right">
+                <p>© {new Date().getFullYear()} Xessex. All rights reserved.</p>
+                <p className="mt-2 text-white/40">
+                  For any issues at all please email{" "}
+                  <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                    support@xessex.me
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
 
         </footer>
       </body>

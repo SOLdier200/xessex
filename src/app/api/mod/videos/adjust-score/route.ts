@@ -5,6 +5,7 @@ import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 import { weekKeyUTC, monthKeyUTC } from "@/lib/weekKey";
 import { recomputeVideoRanks } from "@/lib/videoRank";
+import { poolFromVideoKind, startOfDayUTC, FLAT_RATES } from "@/lib/rewardPool";
 
 /**
  * POST /api/mod/videos/adjust-score
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   const video = await db.video.findUnique({
     where: { id: comment.videoId },
-    select: { id: true, adminScore: true },
+    select: { id: true, adminScore: true, kind: true },
   });
 
   if (!video) {
@@ -67,6 +68,11 @@ export async function POST(req: NextRequest) {
   const nextScore = clampInt((video.adminScore ?? 75) + direction, 0, 100);
 
   try {
+    const pool = poolFromVideoKind(video.kind);
+    const wk = weekKeyUTC(new Date());
+    const mk = monthKeyUTC(new Date());
+    const dayUTC = startOfDayUTC(new Date());
+
     const result = await db.$transaction(async (tx) => {
       // Enforce "each mod can source this comment only once"
       // Create the source-grade event first; if it already exists, Prisma throws P2002.
@@ -116,20 +122,51 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       });
 
-      // Track weekly MVM points for rewards
-      const wk = weekKeyUTC(new Date());
+      // Track weekly MVM points for rewards - pool-aware
       await tx.weeklyUserStat.upsert({
-        where: { weekKey_userId: { weekKey: wk, userId: comment.authorId } },
-        create: { weekKey: wk, userId: comment.authorId, mvmPoints: 1, diamondComments: 0, scoreReceived: 0 },
+        where: { weekKey_userId_pool: { weekKey: wk, userId: comment.authorId, pool } },
+        create: {
+          weekKey: wk,
+          userId: comment.authorId,
+          pool,
+          mvmPoints: 1,
+          diamondComments: 0,
+          scoreReceived: 0,
+          pendingAtomic: 0n,
+          paidAtomic: 0n,
+        },
         update: { mvmPoints: { increment: 1 } },
       });
 
-      // Track monthly MVM points for monthly leaderboard
-      const mk = monthKeyUTC(new Date());
+      // Track monthly MVM points for monthly leaderboard - pool-aware
       await tx.monthlyUserStat.upsert({
-        where: { monthKey_userId: { monthKey: mk, userId: comment.authorId } },
-        create: { monthKey: mk, userId: comment.authorId, mvmPoints: 1 },
+        where: { monthKey_userId_pool: { monthKey: mk, userId: comment.authorId, pool } },
+        create: { monthKey: mk, userId: comment.authorId, pool, mvmPoints: 1 },
         update: { mvmPoints: { increment: 1 } },
+      });
+
+      // Mark daily active for mod (for "active every day" weekly bonus)
+      await tx.userDailyActive.upsert({
+        where: { userId_day_pool: { userId: access.user!.id, day: dayUTC, pool } },
+        create: { userId: access.user!.id, day: dayUTC, pool },
+        update: {},
+      });
+
+      // Log flat-rate "comment sourced" for comment author
+      const sourcedRefId = `comment_sourced:${wk}:${comment.authorId}:${comment.id}:${access.user!.id}`;
+      const sourcedAmount = FLAT_RATES[pool].COMMENT_SOURCED;
+      await tx.flatActionLedger.upsert({
+        where: { refId: sourcedRefId },
+        create: {
+          refId: sourcedRefId,
+          weekKey: wk,
+          userId: comment.authorId,
+          pool,
+          action: "COMMENT_SOURCED",
+          units: 1,
+          amount: sourcedAmount,
+        },
+        update: {},
       });
 
       await recomputeVideoRanks(tx);
@@ -140,6 +177,7 @@ export async function POST(req: NextRequest) {
         sourceEventId,
         videoId: updatedVideo.id,
         adminScore: updatedVideo.adminScore,
+        pool,
       };
     });
 

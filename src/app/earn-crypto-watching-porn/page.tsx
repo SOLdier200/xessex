@@ -61,12 +61,12 @@ export default function EarnCryptoWatchingPornPage() {
 
           <p className="mt-4 text-white/70">
             Xessex is a next-generation adult platform where you can earn crypto by watching porn.
-            Instead of just consuming content, members earn real digital rewards for watching
+            Instead of just consuming content, users earn real digital rewards for watching
             premium HD adult videos, engaging with creators, and participating in the community.
           </p>
           <p className="mt-4 text-white/70">
             This is not a gimmick. Xessex is built on Solana, one of the fastest blockchains in the
-            world, allowing instant, low-fee payouts in XESS tokens and Diamond rewards simply for
+            world, allowing instant, low-fee payouts in XESS tokens simply for
             watching videos and interacting with content.
           </p>
 
@@ -78,13 +78,13 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
           <p className="mt-4 text-white/70">
             When you watch premium content on Xessex, your activity contributes to a reward system
-            that distributes tokens to active members. The more you engage - watching, voting,
+            that distributes tokens to active users. The more you engage - watching, voting,
             ranking, and supporting creators - the more you earn.
           </p>
           <ul className="mt-4 space-y-2 text-white/70 list-disc list-inside">
             <li>Earn crypto watching adult videos</li>
-            <li>Receive Diamond rewards (XESS Tokens) for engagement on the site from ranking videos, liking comments, making comments, referrals, liquidity pools, rewards for holding XESS tokens, and more</li>
-            <li>Hold XESS tokens to earn Special Credit rewards which can be redeemed for free membership month(s)</li>
+            <li>Receive XESS token rewards for engagement on the site from ranking videos, liking comments, making comments, referrals, liquidity pools, rewards for holding XESS tokens, and more</li>
+            <li>Hold XESS tokens to earn Special Credit rewards which can be used for video unlocks and weekly drawings</li>
             <li>Get paid for time spent watching content</li>
           </ul>
 
@@ -98,13 +98,13 @@ export default function EarnCryptoWatchingPornPage() {
           <ul className="mt-4 space-y-2 text-white/70 list-disc list-inside">
             <li>HD or higher resolution</li>
             <li>Verified and curated content</li>
-            <li>Ranked by real members</li>
+            <li>Ranked by real users</li>
             <li>Optimized for fast, private streaming</li>
-            <li>Available only to members</li>
+            <li>Available only to registered users</li>
           </ul>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">
-            Earn XESS Tokens and Diamond Rewards
+            Earn XESS Tokens
           </h2>
           <p className="mt-4 text-white/70">
             Xessex runs on its own crypto reward system. When you watch videos or engage on the
@@ -150,10 +150,10 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">
-            Safe, Private, and Members-Only
+            Safe, Private, and Secure
           </h2>
           <p className="mt-4 text-white/70">
-            Xessex is members-only and age-restricted along with being RTA compliant. Wallet-based access options and encrypted sessions help you stay in control
+            Xessex is age-restricted and RTA compliant. Wallet-based access options and encrypted sessions help you stay in control
             while earning rewards and accessing premium content.
           </p>
 
@@ -184,9 +184,9 @@ export default function EarnCryptoWatchingPornPage() {
             into the next week&apos;s pot!
           </p>
           <p className="mt-4 text-white/70">
-            Special Credit rewards are based on your average daily XESS holdings — hold at least
-            100,000 XESS to start earning. Higher tiers unlock more daily credits, up to 500 credits
-            per day for holders of 10 million+ XESS.
+            Special Credit rewards are based on your XESS holdings — hold at least
+            10,000 XESS to start earning. Higher tiers unlock more monthly credits, up to 4,000 credits
+            per month for holders of 5 million+ XESS.
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold text-white">
@@ -194,7 +194,7 @@ export default function EarnCryptoWatchingPornPage() {
           </h2>
           <p className="mt-4 text-white/70">
             Joining Xessex takes minutes. Watching videos earns rewards immediately. No complicated
-            setup. Just create your account, watch premium content, and earn XESS and Diamond
+            setup. Just create your account, watch premium content, and earn XESS token
             rewards.
           </p>
 

@@ -68,9 +68,9 @@ export async function GET() {
     orderBy: { epoch: "asc" },
   });
 
-  // Filter to only on-chain epochs
+  // Filter to only on-chain V2 epochs
   const onChainLeaves = leaves.filter(
-    (l) => l.epochRel.setOnChain && (l.epochRel.version ?? 1) === desiredVersion
+    (l) => l.epochRel.setOnChain && l.epochRel.version === 2
   );
 
   if (onChainLeaves.length === 0) {

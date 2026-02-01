@@ -5,6 +5,7 @@ import path from "path";
 import TopNav from "./components/TopNav";
 import LockedVideoCard from "./components/LockedVideoCard";
 import LockedFeaturedCard from "./components/LockedFeaturedCard";
+import RoadmapMarquee from "./components/RoadmapMarquee";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -22,6 +23,7 @@ type ApprovedVideo = {
   note: string | null;
   favorite: number;
   rank?: number | null;
+  xessViews?: number;
 };
 
 function getApprovedVideos(): ApprovedVideo[] {
@@ -59,12 +61,13 @@ export default async function HomePage() {
 
   // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, unlockCost: true },
+    select: { slug: true, rank: true, unlockCost: true, viewsCount: true },
     orderBy: { rank: "asc" },
   });
 
   // Create a map of slug -> rank
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
+  const viewCountMap = new Map(dbVideos.map((v) => [v.slug, v.viewsCount ?? 0]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
 
   // Get user's unlocked videos if authenticated
@@ -83,7 +86,11 @@ export default async function HomePage() {
 
   // Merge rank into approved videos and sort: unlocked first (by rank), then locked (by rank)
   const videos = approvedVideos
-    .map((v) => ({ ...v, rank: rankMap.get(v.viewkey) ?? null }))
+    .map((v) => ({
+      ...v,
+      rank: rankMap.get(v.viewkey) ?? null,
+      xessViews: viewCountMap.get(v.viewkey) ?? 0,
+    }))
     .sort((a, b) => {
       // Determine if each video is unlocked (free or user-unlocked)
       const aUnlocked = freeSet.has(a.viewkey) || unlockedSet.has(a.viewkey);
@@ -112,8 +119,8 @@ export default async function HomePage() {
             <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[32px] w-auto" />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-            {videos.slice(0, 20).map((v) => {
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-y-1.5 md:gap-y-2 gap-x-1 md:gap-x-1.5">
+            {videos.slice(0, 21).map((v) => {
               const isFree = freeSet.has(v.viewkey);
               const hasUnlocked = unlockedSet.has(v.viewkey);
               // Video is locked unless it's free OR user has unlocked it
@@ -130,6 +137,9 @@ export default async function HomePage() {
                     rank={v.rank}
                     isAuthed={isAuthed}
                     size="small"
+                    className="w-full max-w-full sm:max-w-[87.5%] sm:mx-auto"
+                    viewsCount={v.xessViews ?? 0}
+                    showMetaBelow
                   />
                 );
               }
@@ -138,7 +148,7 @@ export default async function HomePage() {
                 <Link
                   key={v.viewkey}
                   href={`/videos/${v.viewkey}`}
-                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
+                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group w-full max-w-full sm:max-w-[87.5%] sm:mx-auto"
                 >
                   <div className="relative aspect-video bg-black/60">
                     {v.primary_thumb ? (
@@ -160,9 +170,6 @@ export default async function HomePage() {
                         #{v.rank}
                       </div>
                     )}
-                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
-                      {formatDuration(v.duration)}
-                    </div>
                     {v.favorite === 1 && (
                       <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
                         ★
@@ -174,18 +181,9 @@ export default async function HomePage() {
                       </div>
                     )}
                   </div>
-
-                  <div className="p-2 md:p-3">
-                    <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
-                      {v.title}
-                    </div>
-                    <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
-                      {v.performers || "Unknown"}
-                    </div>
-                    <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
-                      <span>{formatViews(v.views)} views</span>
-                      <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
-                    </div>
+                  <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+                    <span>{formatDuration(v.duration)}</span>
+                    <span>{formatViews(v.xessViews ?? 0)} XESS Views</span>
                   </div>
                 </Link>
               );
@@ -235,7 +233,7 @@ export default async function HomePage() {
         </section>
 
         {/* Featured & Top Ranked Videos */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-[80%] mx-auto">
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-full md:max-w-[80%] mx-auto">
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (() => {
             const featured = videos[0];
@@ -243,23 +241,23 @@ export default async function HomePage() {
             const isFeaturedUnlocked = unlockedSet.has(featured.viewkey);
             // Locked unless free OR user has unlocked it
             const isFeaturedLocked = !isFeaturedFree && !isFeaturedUnlocked;
+            const featuredViews = viewCountMap.get(featured.viewkey) ?? 0;
 
-            if (isFeaturedLocked) {
-              return (
-                <LockedFeaturedCard
-                  viewkey={featured.viewkey}
-                  title={featured.title}
-                  thumb={featured.primary_thumb}
-                  duration={formatDuration(featured.duration)}
-                  performers={featured.performers || "Unknown"}
-                  isAuthed={isAuthed}
-                  variant="featured"
-                />
-              );
-            }
-
-            return (
-              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">
+            const card = isFeaturedLocked ? (
+              <LockedFeaturedCard
+                viewkey={featured.viewkey}
+                title={featured.title}
+                thumb={featured.primary_thumb}
+                duration={formatDuration(featured.duration)}
+                performers={featured.performers || "Unknown"}
+                isAuthed={isAuthed}
+                variant="featured"
+                className="w-full max-w-full md:max-w-[70%] md:mx-auto"
+                viewsCount={featuredViews}
+                showMetaBelow
+              />
+            ) : (
+              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 w-full max-w-full md:max-w-[70%] md:mx-auto">
                 <h2 className="text-lg font-semibold neon-text mb-4">Featured Video</h2>
                 <Link href={`/videos/${featured.viewkey}`} className="block w-full">
                   <div className="relative aspect-video rounded-xl overflow-hidden">
@@ -270,22 +268,25 @@ export default async function HomePage() {
                         className="w-full h-full object-cover hover:scale-105 transition-transform"
                       />
                     )}
-                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-sm text-white">
-                      {formatDuration(featured.duration)}
-                    </div>
                     <div className="absolute bottom-2 left-2 bg-pink-500/80 px-2 py-1 rounded text-sm text-white font-semibold">
                       Featured
                     </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
+                    <span>{formatDuration(featured.duration)}</span>
+                    <span>{formatViews(featuredViews)} XESS Views</span>
                   </div>
                   <h3 className="mt-3 text-lg font-semibold text-white hover:text-pink-300 transition">
                     {featured.title}
                   </h3>
                   <p className="mt-1 text-sm text-white/60">
-                    {featured.performers || "Unknown"} • {formatViews(featured.views)} views
+                    {featured.performers || "Unknown"}
                   </p>
                 </Link>
               </section>
             );
+
+            return card;
           })()}
 
           {/* Top Ranked Video */}
@@ -296,23 +297,23 @@ export default async function HomePage() {
             const isTopUnlocked = unlockedSet.has(topRanked.viewkey);
             // Locked unless free OR user has unlocked it
             const isTopLocked = !isTopFree && !isTopUnlocked;
+            const topRankedViews = viewCountMap.get(topRanked.viewkey) ?? 0;
 
-            if (isTopLocked) {
-              return (
-                <LockedFeaturedCard
-                  viewkey={topRanked.viewkey}
-                  title={topRanked.title}
-                  thumb={topRanked.primary_thumb}
-                  duration={formatDuration(topRanked.duration)}
-                  performers={topRanked.performers || "Unknown"}
-                  isAuthed={isAuthed}
-                  variant="topRanked"
-                />
-              );
-            }
-
-            return (
-              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30">
+            const card = isTopLocked ? (
+              <LockedFeaturedCard
+                viewkey={topRanked.viewkey}
+                title={topRanked.title}
+                thumb={topRanked.primary_thumb}
+                duration={formatDuration(topRanked.duration)}
+                performers={topRanked.performers || "Unknown"}
+                isAuthed={isAuthed}
+                variant="topRanked"
+                className="w-full max-w-full md:max-w-[70%] md:mx-auto"
+                viewsCount={topRankedViews}
+                showMetaBelow
+              />
+            ) : (
+              <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 border-yellow-400/30 w-full max-w-full md:max-w-[70%] md:mx-auto">
                 <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
                 <Link href={`/videos/${topRanked.viewkey}`} className="block w-full">
                   <div className="relative aspect-video rounded-xl overflow-hidden">
@@ -323,25 +324,33 @@ export default async function HomePage() {
                         className="w-full h-full object-cover hover:scale-105 transition-transform"
                       />
                     )}
-                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-sm text-white">
-                      {formatDuration(topRanked.duration)}
-                    </div>
                     <div className="absolute bottom-2 left-2 bg-yellow-500/80 px-2 py-1 rounded text-sm text-black font-semibold">
                       #1 Ranked
                     </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/70">
+                    <span>{formatDuration(topRanked.duration)}</span>
+                    <span>{formatViews(topRankedViews)} XESS Views</span>
                   </div>
                   <h3 className="mt-3 text-lg font-semibold text-white hover:text-yellow-300 transition">
                     {topRanked.title}
                   </h3>
                   <p className="mt-1 text-sm text-white/60">
-                    {topRanked.performers || "Unknown"} • {formatViews(topRanked.views)} views
+                    {topRanked.performers || "Unknown"}
                   </p>
                 </Link>
               </section>
             );
+
+            return card;
           })()}
         </div>
 
+      </div>
+
+      {/* Roadmap Section */}
+      <div className="mt-16">
+        <RoadmapMarquee />
       </div>
     </main>
   );

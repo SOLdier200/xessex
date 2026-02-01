@@ -57,12 +57,12 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "Where can I buy XESS?",
-        a: "Presale is available now. After presale, XESS will be available on Raydium and other Solana DEXs.",
+        a: "Presale is coming February 2026. After presale, XESS will be available on Raydium and other Solana DEXs.",
       },
       {
         q: "What is XESS used for?",
         a: [
-          "1. Qualifying for Special Credit tiers (hold to earn monthly credits)",
+          "1. Qualifying for Special Credit tiers (hold to earn Daily* Credits)",
           "2. Receiving weekly reward distributions",
           "3. Participating in weekly prize drawings",
           "4. Future governance voting",
@@ -78,7 +78,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "Is XESS a security?",
-        a: "No. XESS is a utility token. It grants access to reward tiers and platform features. It does not represent ownership, equity, or profit-sharing.",
+        a: "No. XESS is a utility token. It grants access to reward tiers and platform features.",
       },
     ],
   },
@@ -183,7 +183,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "What if I lose access to my wallet?",
-        a: "Your account is tied to your wallet. If you lose access, you lose your account, unlocks, and unclaimed rewards. Use proper wallet backup.",
+        a: "Your account is tied to your wallet. However, we offer an Email Account Recovery option. Go to your Profile and save a recovery email. If you lose wallet access, contact support and we can transfer your account stats (unlocked videos, rewards history) to a new wallet. Note: XESS tokens in your lost wallet cannot be recovered, but your platform progress is preserved.",
       },
       {
         q: "Is the content moderated?",
@@ -198,15 +198,15 @@ const FAQ_SECTIONS: FAQSection[] = [
     items: [
       {
         q: "What is the presale?",
-        a: "The private presale offers XESS at a discounted rate before public listing. 200M tokens (20% of supply) are allocated.",
+        a: "The private presale offers XESS at a discounted rate before public listing. 200M tokens (20% of supply) are allocated for private presale, and 150M tokens (15% of supply) are reserved for public sale.",
       },
       {
         q: "What are the presale terms?",
-        a: "20% unlocks at TGE (Token Generation Event). Remaining 80% vests linearly over 6 months.",
+        a: "100% of tokens are delivered immediately upon purchase. No vesting, no lockups.",
       },
       {
         q: "When is the public sale?",
-        a: "After presale completion. 150M tokens (15%) will be available at public sale with 100% TGE unlock.",
+        a: "After presale completion. 150M tokens (15%) will be available at public sale with immediate delivery.",
       },
       {
         q: "Is there a minimum investment?",

@@ -66,8 +66,11 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     authed: true,
+    email: user.email ?? null,
     walletAddress: user.walletAddress ?? null,
     memberId: user.memberId ?? null,
+    recoveryEmail: user.recoveryEmail ?? null,
+    recoveryEmailVerified: !!user.recoveryEmailVerifiedAt,
     stats: {
       videosWatched,
       videosUnlocked,

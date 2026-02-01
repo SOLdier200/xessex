@@ -148,19 +148,20 @@ export async function sendDiamondRecoveryEmail(to: string, recoverLink: string) 
   return { id };
 }
 
-export async function sendDiamondRecoveryEmailVerify(to: string, verifyLink: string) {
+export async function sendRecoveryEmailVerify(to: string, verifyLink: string) {
   const from = process.env.EMAIL_FROM || "Xessex <no-reply@xessex.me>";
 
   const result = await resend.emails.send({
     from,
     to,
-    subject: "Verify your Diamond recovery email",
+    subject: "Verify your recovery email",
     html: `
       <div style="font-family:Arial,sans-serif;background:#0b0b0f;padding:30px">
         <div style="max-width:520px;margin:auto;background:#111;border-radius:16px;padding:28px;color:#fff">
           <h2 style="color:#ff4fd8;margin-top:0">Verify Recovery Email</h2>
 
-          <p>This email will be used only to restore your Diamond membership if you lose access to your wallet.</p>
+          <p>This email will be used to help recover your account if you lose access to your wallet.</p>
+          <p>Recovery preserves unlocked progress and history. Tokens are not recoverable.</p>
           <p>This link is valid for <b>30 minutes</b>.</p>
 
           <a href="${verifyLink}" style="
@@ -191,3 +192,6 @@ export async function sendDiamondRecoveryEmailVerify(to: string, verifyLink: str
 
   return { id };
 }
+
+// Backwards compatibility (legacy name)
+export const sendDiamondRecoveryEmailVerify = sendRecoveryEmailVerify;

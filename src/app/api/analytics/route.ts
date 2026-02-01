@@ -133,9 +133,10 @@ export async function GET() {
   const weekIndex = getWeekIndex(currentWeekKey);
   const emission = getWeeklyEmission(weekIndex);
 
-  // Get current week stats for this user
-  const currentStats = await db.weeklyUserStat.findUnique({
-    where: { weekKey_userId: { weekKey: currentWeekKey, userId } },
+  // Get current week stats for this user (aggregate across pools)
+  const currentStats = await db.weeklyUserStat.findFirst({
+    where: { weekKey: currentWeekKey, userId },
+    orderBy: { scoreReceived: "desc" },
   });
 
   let estimatedPending6 = 0n;

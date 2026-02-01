@@ -54,6 +54,9 @@ export async function POST(req: Request) {
 
   const costMicro = qty * DRAWING_TICKET_MICRO;
 
+  let userTotalTickets = 0n;
+  let poolTotalTickets = 0n;
+
   try {
     await db.$transaction(async (tx) => {
       const acct = await tx.specialCreditAccount.upsert({
@@ -86,13 +89,22 @@ export async function POST(req: Request) {
         data: { raffleId: raffle.id, userId, quantity: qty },
       });
 
-      await tx.raffle.update({
+      const updatedRaffle = await tx.raffle.update({
         where: { id: raffle.id },
         data: {
           userPoolCreditsMicro: { increment: costMicro },
           totalTickets: { increment: qty },
         },
       });
+
+      // Get user's total tickets for this drawing
+      const userTickets = await tx.raffleTicket.aggregate({
+        where: { raffleId: raffle.id, userId },
+        _sum: { quantity: true },
+      });
+
+      userTotalTickets = userTickets._sum.quantity ?? 0n;
+      poolTotalTickets = updatedRaffle.totalTickets;
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -101,6 +113,23 @@ export async function POST(req: Request) {
     }
     throw e;
   }
+
+  // Calculate win percentage
+  const winPct = poolTotalTickets > 0n
+    ? (Number(userTotalTickets) / Number(poolTotalTickets) * 100).toFixed(2)
+    : "100.00";
+
+  // Send system message confirming entry
+  const creditsSpent = Number(costMicro / 1000n); // Convert microcredits to credits
+  await db.userMessage.create({
+    data: {
+      userId,
+      senderId: null,
+      type: "SYSTEM",
+      subject: "Drawing Entry Confirmed",
+      body: `You've entered the Weekly Rewards Drawing!\n\nCredits spent: ${creditsSpent.toLocaleString()}\nYour total entries: ${userTotalTickets.toString()}\nCurrent win chance: ${winPct}%\n\nGood luck! Winners will be announced when the drawing closes.`,
+    },
+  });
 
   return NextResponse.json({ ok: true });
 }

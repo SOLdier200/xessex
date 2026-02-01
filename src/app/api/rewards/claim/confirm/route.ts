@@ -103,16 +103,19 @@ export async function POST(req: Request) {
     const weekKey = leaf.weekKey;
 
     // Helper function to mark as claimed
+    // Mark ALL unclaimed rewards for the user (from all weekKeys, since test epochs aggregate all)
     async function markClaimedInDbV2(txSig: string) {
       const updated = await db.rewardEvent.updateMany({
         where: {
           userId: ctx.user!.id,
-          weekKey,
           claimedAt: null,
+          status: "PAID",
           type: { in: ALL_REWARD_TYPES },
         },
         data: { claimedAt: new Date(), txSig },
       });
+
+      console.log(`[claim/confirm] Marked ${updated.count} rewards as claimed for user ${ctx.user!.id}`);
 
       if (updated.count === 0) {
         const syntheticRefId = `claim-v2-${ctx.user!.id}-${weekKey}`;
@@ -229,158 +232,6 @@ export async function POST(req: Request) {
     });
   }
 
-  // V1: wallet-based receipt PDA
-  const wallet = ctx.user.walletAddress || "".trim();
-  if (!wallet) return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
-  const claimerPk = new PublicKey(wallet);
-
-  // Receipt PDA
-  const [receiptPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-    getProgramId()
-  );
-
-  // Get the leaf to find the weekKey - REQUIRED for history tracking
-  const leaf = await db.claimLeaf.findUnique({
-    where: { epoch_wallet: { epoch: Number(epoch), wallet } },
-  });
-
-  // Hard-fail if no ClaimLeaf exists - cannot record history without it
-  if (!leaf) {
-    return NextResponse.json({ error: "no_claim_leaf" }, { status: 400 });
-  }
-
-  const weekKey = leaf.weekKey;
-
-  // Helper function to ensure RewardEvent exists and is marked claimed
-  async function markClaimedInDb(txSig: string) {
-    // First, try to update existing RewardEvent rows (remove status constraint)
-    const updated = await db.rewardEvent.updateMany({
-      where: {
-        userId: ctx.user!.id,
-        weekKey,
-        claimedAt: null,
-        type: { in: ALL_REWARD_TYPES },
-      },
-      data: { claimedAt: new Date(), txSig },
-    });
-
-    // If no rows were updated, create a synthetic RewardEvent so history is preserved
-    if (updated.count === 0) {
-      const syntheticRefId = `claim-${ctx.user!.id}-${weekKey}`;
-      // Convert from 9 decimals (on-chain) to 6 decimals (RewardEvent.amount)
-      const amount6Decimals = leaf!.amountAtomic / 1000n;
-      await db.rewardEvent.upsert({
-        where: {
-          refType_refId: {
-            refType: "CLAIM",
-            refId: syntheticRefId,
-          },
-        },
-        create: {
-          userId: ctx.user!.id,
-          weekKey,
-          type: "WEEKLY_LIKES",
-          amount: amount6Decimals,
-          status: "PAID",
-          refType: "CLAIM",
-          refId: syntheticRefId,
-          claimedAt: new Date(),
-          txSig,
-        },
-        update: {
-          claimedAt: new Date(),
-          txSig,
-        },
-      });
-    }
-  }
-
-  // IDEMPOTENT: If receipt already exists, return success
-  const receiptInfo = await connection.getAccountInfo(receiptPda, "confirmed");
-  if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-    // Already claimed - ensure DB is updated and return ok
-    await markClaimedInDb(signature);
-
-    const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
-    return NextResponse.json({
-      ok: true,
-      alreadyClaimed: true,
-      receipt: receiptPda.toBase58(),
-      userAta: userAta.toBase58(),
-    });
-  }
-
-  // Verify the transaction
-  const tx = await connection.getTransaction(signature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
-
-  if (!tx) return NextResponse.json({ error: "tx_not_found" }, { status: 404 });
-  if (tx.meta?.err) return NextResponse.json({ error: "tx_failed", metaErr: tx.meta.err }, { status: 400 });
-
-  const msg = tx.transaction.message;
-  const keys = msg.getAccountKeys().staticAccountKeys;
-
-  // Ensure our program is in the transaction account keys
-  if (!keys.some((k) => k.equals(getProgramId()))) {
-    return NextResponse.json({ error: "wrong_program" }, { status: 400 });
-  }
-
-  // Re-check receipt after tx verification (it should exist now)
-  const receiptInfoAfter = await connection.getAccountInfo(receiptPda, "confirmed");
-  if (!receiptInfoAfter) return NextResponse.json({ error: "receipt_missing" }, { status: 400 });
-  if (!receiptInfoAfter.owner.equals(getProgramId())) {
-    return NextResponse.json({ error: "receipt_wrong_owner" }, { status: 400 });
-  }
-
-  // Get expected amount from leaf (guaranteed to exist from earlier check)
-  const expected = leaf.amountAtomic;
-
-  // Validate the SPL transfer: vault ATA -> user ATA
-  const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
-
-  const inner = tx.meta?.innerInstructions ?? [];
-  let transferred = 0n;
-
-  for (const group of inner) {
-    for (const ix of group.instructions) {
-      const prog = keys[ix.programIdIndex];
-      if (!prog?.equals(TOKEN_PROGRAM_ID)) continue;
-
-      const data = Buffer.from(ix.data, "base64");
-      if (data.length < 9) continue;
-      if (data[0] !== 3) continue; // SPL Token Transfer
-
-      const amount = data.readBigUInt64LE(1);
-
-      const acctIdx = ix.accounts;
-      if (acctIdx.length < 2) continue;
-
-      const src = keys[acctIdx[0]];
-      const dst = keys[acctIdx[1]];
-
-      if (src?.equals(getVaultAta()) && dst?.equals(userAta)) {
-        transferred += amount;
-      }
-    }
-  }
-
-  if (transferred < expected) {
-    return NextResponse.json(
-      { error: "transfer_too_small", expected: expected.toString(), transferred: transferred.toString() },
-      { status: 400 }
-    );
-  }
-
-  // Mark rewards as claimed using weekKey
-  await markClaimedInDb(signature);
-
-  return NextResponse.json({
-    ok: true,
-    receipt: receiptPda.toBase58(),
-    userAta: userAta.toBase58(),
-    transferred: transferred.toString(),
-  });
+  // V1 is no longer supported
+  return NextResponse.json({ error: "v1_not_supported", message: "V1 claims are no longer supported. Use V2." }, { status: 400 });
 }

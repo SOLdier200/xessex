@@ -16,6 +16,9 @@ interface Message {
     display: string;
     role: string;
   } | null;
+  // Raffle win info
+  winnerId: string | null;
+  canClaim: boolean;
 }
 
 interface MessagesModalProps {
@@ -47,6 +50,9 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({ type: null });
   const [confirmBusy, setConfirmBusy] = useState(false);
+
+  // Claim prize state
+  const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -236,6 +242,35 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
     }
   }
 
+  async function handleClaimPrize(winnerId: string) {
+    setClaiming(true);
+    try {
+      const res = await fetch("/api/rewards-drawing/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ winnerId }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Prize claimed! Credits have been added to your account.");
+        // Update local state to hide claim button
+        setMessages((prev) =>
+          prev.map((m) => (m.winnerId === winnerId ? { ...m, canClaim: false } : m))
+        );
+        if (selectedMessage?.winnerId === winnerId) {
+          setSelectedMessage({ ...selectedMessage, canClaim: false });
+        }
+      } else {
+        toast.error(data.error || "Failed to claim prize");
+      }
+    } catch {
+      toast.error("Failed to claim prize");
+    } finally {
+      setClaiming(false);
+    }
+  }
+
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -285,7 +320,11 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-white">Messages</h2>
+            <img
+              src="/logos/textlogo/siteset3/messages100.png"
+              alt="Messages"
+              className="h-7"
+            />
             {unreadCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium bg-pink-500 text-white rounded-full">
                 {unreadCount} unread
@@ -407,6 +446,25 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
                 <div className="mt-4 p-4 bg-white/5 rounded-lg text-white/90 whitespace-pre-wrap">
                   {selectedMessage.body}
                 </div>
+
+                {/* Claim Prize Button - show prominently if canClaim */}
+                {selectedMessage.canClaim && selectedMessage.winnerId && (
+                  <div className="mt-4 p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-green-400 font-semibold">Prize Ready to Claim!</div>
+                        <div className="text-white/60 text-sm">Click to add credits to your account</div>
+                      </div>
+                      <button
+                        onClick={() => handleClaimPrize(selectedMessage.winnerId!)}
+                        disabled={claiming}
+                        className="px-6 py-2 rounded-lg bg-green-500 hover:bg-green-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold transition shadow-lg shadow-green-500/25"
+                      >
+                        {claiming ? "Claiming..." : "Claim Prize"}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 pt-4 border-t border-white/10">

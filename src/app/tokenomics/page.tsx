@@ -16,7 +16,7 @@ const ALLOCATIONS: Allocation[] = [
     name: "Private Presale",
     pct: 20,
     amount: 200_000_000,
-    vesting: "20% TGE, 6-month linear",
+    vesting: "100% immediate",
     purpose: "Strategic capital + early liquidity",
   },
   {
@@ -217,11 +217,11 @@ export default function TokenomicsPage() {
               <tbody className="text-white/80">
                 <tr className="border-b border-white/5">
                   <td className="py-3 pr-4 text-yellow-400">Private</td>
-                  <td className="text-center py-3 px-2">20%</td>
-                  <td className="text-center py-3 px-2">40%</td>
-                  <td className="text-center py-3 px-2">60%</td>
-                  <td className="text-center py-3 px-2">80%</td>
-                  <td className="text-center py-3 px-2">100%</td>
+                  <td className="text-center py-3 px-2 text-emerald-400">100%</td>
+                  <td className="text-center py-3 px-2">-</td>
+                  <td className="text-center py-3 px-2">-</td>
+                  <td className="text-center py-3 px-2">-</td>
+                  <td className="text-center py-3 px-2">-</td>
                   <td className="text-center py-3 px-2">-</td>
                 </tr>
                 <tr className="border-b border-white/5">

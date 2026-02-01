@@ -41,7 +41,7 @@ const tokenLinks = [
     hoverGradient: "hover:from-pink-500/30 hover:to-rose-500/30",
   },
   {
-    label: "Drawing",
+    label: "Win Free Credits!",
     href: "/rewards-drawing",
     description: "Weekly XESS rewards drawing",
     gradient: "from-yellow-500/20 to-amber-500/20",

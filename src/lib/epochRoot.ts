@@ -33,7 +33,7 @@ async function epochExists(connection: Connection, epoch: number): Promise<boole
 
 /**
  * Find the highest epoch that exists on-chain, or 0 if none.
- * Uses exponential + binary search to minimize RPC calls.
+ * Scans linearly to handle gaps in epoch numbers (e.g., 1-15, 17, 18).
  */
 export async function getMaxEpochOnChain(maxScan = DEFAULT_MAX_SCAN): Promise<number> {
   const connection = new Connection(RPC_URL, "confirmed");
@@ -42,29 +42,19 @@ export async function getMaxEpochOnChain(maxScan = DEFAULT_MAX_SCAN): Promise<nu
     return 0;
   }
 
-  let lo = 1;
-  let hi = 2;
+  let maxFound = 1;
+  let consecutiveGaps = 0;
+  const MAX_GAPS = 10; // Stop after 10 consecutive missing epochs
 
-  while (hi <= maxScan && (await epochExists(connection, hi))) {
-    lo = hi;
-    hi *= 2;
-  }
-
-  if (hi > maxScan) {
-    hi = maxScan + 1;
-  }
-
-  let left = lo + 1;
-  let right = Math.min(hi - 1, maxScan);
-  let maxFound = lo;
-
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    if (await epochExists(connection, mid)) {
-      maxFound = mid;
-      left = mid + 1;
+  for (let i = 2; i <= maxScan; i++) {
+    if (await epochExists(connection, i)) {
+      maxFound = i;
+      consecutiveGaps = 0;
     } else {
-      right = mid - 1;
+      consecutiveGaps++;
+      if (consecutiveGaps >= MAX_GAPS) {
+        break; // Stop scanning after 10 consecutive gaps
+      }
     }
   }
 

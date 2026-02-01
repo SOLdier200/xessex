@@ -117,10 +117,21 @@ export async function POST(req: Request) {
   }
 
   const epoch = BigInt(epochRow.epoch);
-  const epochVersion = epochRow.version ?? 1;
+
+  // V2 only - require version 2 epoch
+  if (epochRow.version !== 2) {
+    return NextResponse.json({
+      ok: true,
+      claimable: false,
+      reason: "legacy_epoch",
+      version: epochRow.version,
+      epoch: epochRow.epoch,
+      message: "This epoch uses legacy V1 format which is no longer supported.",
+    });
+  }
 
   // V2 epoch: wallet-based identity (userKeyHex is wallet pubkey bytes)
-  if (epochVersion === 2) {
+  {
     // V2 requires a linked wallet
     const wallet = ctx.user.walletAddress || "".trim();
     if (!wallet) {
@@ -232,97 +243,4 @@ export async function POST(req: Request) {
       },
     });
   }
-
-  // V1 epoch: wallet-based (requires linked wallet)
-  const wallet = ctx.user.walletAddress || "".trim();
-  if (!wallet) return NextResponse.json({ error: "no_wallet_linked" }, { status: 400 });
-
-  const claimerPk = new PublicKey(wallet);
-
-  console.log("[claim/prepare] V1 Wallet:", wallet);
-
-  // Get user's leaf for this epoch by wallet
-  const leaf = await db.claimLeaf.findUnique({
-    where: { epoch_wallet: { epoch: epochRow.epoch, wallet } },
-  });
-
-  console.log("[claim/prepare] V1 Leaf for wallet in epoch", epochRow.epoch, ":", leaf ? `index=${leaf.index}, amount=${leaf.amountAtomic}` : "NOT FOUND");
-
-  if (!leaf) {
-    const allLeaves = await db.claimLeaf.findMany({ where: { epoch: epochRow.epoch }, take: 10 });
-    console.log("[claim/prepare] All leaves in epoch:", allLeaves.map(l => ({ wallet: l.wallet?.slice(0, 8) + "...", amount: l.amountAtomic.toString() })));
-    return NextResponse.json({
-      ok: true,
-      claimable: false,
-      reason: "no_allocation",
-      version: 1,
-      epoch: epochRow.epoch,
-    });
-  }
-
-  // Compute PDAs
-  const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], getProgramId());
-  const [vaultAuthority] = PublicKey.findProgramAddressSync(
-    [Buffer.from("vault_authority"), configPda.toBuffer()],
-    getProgramId()
-  );
-  const [epochRootPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("epoch_root"), u64LE(epoch)],
-    getProgramId()
-  );
-  const [receiptPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("receipt"), u64LE(epoch), claimerPk.toBuffer()],
-    getProgramId()
-  );
-
-  // Check if already claimed on-chain
-  const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
-  const connection = new Connection(rpc, "confirmed");
-
-  console.log("[claim/prepare] V1 Checking on-chain receipt PDA:", receiptPda.toBase58());
-  console.log("[claim/prepare] Using RPC:", rpc);
-
-  const receiptInfo = await connection.getAccountInfo(receiptPda);
-
-  console.log("[claim/prepare] V1 Receipt account exists:", !!receiptInfo);
-  if (receiptInfo) {
-    console.log("[claim/prepare] V1 Receipt owner:", receiptInfo.owner.toBase58());
-    console.log("[claim/prepare] V1 Program ID:", getProgramId().toBase58());
-    console.log("[claim/prepare] V1 Owner matches program:", receiptInfo.owner.equals(getProgramId()));
-  }
-
-  if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-    console.log("[claim/prepare] V1 ALREADY CLAIMED - returning early");
-    return NextResponse.json({
-      ok: true,
-      claimable: false,
-      reason: "already_claimed",
-      version: 1,
-      epoch: epoch.toString(),
-      receipt: receiptPda.toBase58(),
-    });
-  }
-
-  console.log("[claim/prepare] V1 NOT claimed yet - proceeding with claim data");
-
-  // Return V1 claim data with proof
-  return NextResponse.json({
-    ok: true,
-    claimable: true,
-    version: 1,
-    epoch: epoch.toString(),
-    amountAtomic: leaf.amountAtomic.toString(),
-    index: leaf.index,
-    proof: leaf.proofHex,
-    programId: getProgramId().toBase58(),
-    xessMint: getXessMint().toBase58(),
-    vaultAta: getVaultAta().toBase58(),
-    claimer: claimerPk.toBase58(),
-    pdas: {
-      config: configPda.toBase58(),
-      vaultAuthority: vaultAuthority.toBase58(),
-      epochRoot: epochRootPda.toBase58(),
-      receipt: receiptPda.toBase58(),
-    },
-  });
 }

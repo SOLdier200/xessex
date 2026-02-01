@@ -10,8 +10,11 @@ type LockedVideoCardProps = {
   thumb: string | null;
   duration: string;
   rank?: number | null;
+  viewsCount?: number | null;
   isAuthed: boolean;
   size?: "normal" | "small";
+  showMetaBelow?: boolean;
+  className?: string;
 };
 
 export default function LockedVideoCard({
@@ -20,8 +23,11 @@ export default function LockedVideoCard({
   thumb,
   duration,
   rank,
+  viewsCount,
   isAuthed,
   size = "normal",
+  showMetaBelow = false,
+  className,
 }: LockedVideoCardProps) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -46,6 +52,14 @@ export default function LockedVideoCard({
 
   const canAfford = creditBalance >= nextCost;
 
+  const formatViews = (views: number | null | undefined) => {
+    const v = Number(views ?? 0);
+    if (!Number.isFinite(v) || v <= 0) return "0";
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+    return `${Math.floor(v)}`;
+  };
+
   async function handleUnlock() {
     setUnlockError(null);
     setIsUnlocking(true);
@@ -69,7 +83,7 @@ export default function LockedVideoCard({
   return (
     <>
       <div
-        className="neon-border rounded-2xl bg-black/30 overflow-hidden relative group"
+        className={`neon-border rounded-2xl bg-black/30 overflow-hidden relative group ${className || ""}`}
       >
         <div className="relative aspect-video bg-black/60">
           {thumb ? (
@@ -112,18 +126,35 @@ export default function LockedVideoCard({
               #{rank}
             </div>
           )}
-          <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
-            {duration}
-          </div>
+          {!showMetaBelow && (
+            <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+              {duration}
+            </div>
+          )}
+          {!showMetaBelow && viewsCount != null && (
+            <div className="absolute bottom-2 left-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+              {formatViews(viewsCount)} XESS Views
+            </div>
+          )}
         </div>
-        <div className={size === "small" ? "p-2" : "p-2 md:p-3"}>
-          <div className="font-semibold text-white/40 text-xs md:text-sm italic">
-            Locked Video
+        {showMetaBelow && (
+          <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+            <span>{duration}</span>
+            {viewsCount != null && (
+              <span>{formatViews(viewsCount)} XESS Views</span>
+            )}
           </div>
-          <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-yellow-400">
-            <span>Credits to unlock</span>
+        )}
+        {size !== "small" && (
+          <div className="p-2 md:p-3">
+            <div className="font-semibold text-white/40 text-xs md:text-sm italic">
+              Locked Video
+            </div>
+            <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-yellow-400">
+              <span>Credits to unlock</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Unlock Confirmation Modal */}

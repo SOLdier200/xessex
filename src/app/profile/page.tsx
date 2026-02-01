@@ -204,6 +204,12 @@ export default function ProfilePage() {
   // Logout state
   const [logoutBusy, setLogoutBusy] = useState(false);
 
+  // Recovery email state
+  const [recoveryEmailInput, setRecoveryEmailInput] = useState("");
+  const [recoveryEmailLoading, setRecoveryEmailLoading] = useState(false);
+  const [recoveryEmailError, setRecoveryEmailError] = useState<string | null>(null);
+  const [showRecoveryEmailForm, setShowRecoveryEmailForm] = useState(false);
+
   async function handleLogout() {
     if (logoutBusy) return;
     setLogoutBusy(true);
@@ -954,6 +960,161 @@ export default function ProfilePage() {
                       </span>
                     </div>
                   )}
+
+                  {/* Recovery Email */}
+                  <div className="py-2 border-t border-white/10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white/60">Recovery Email</span>
+                      {data.recoveryEmail ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-white text-sm">{data.recoveryEmail}</span>
+                          {data.recoveryEmailVerified && (
+                            <span className="text-xs text-green-400">Verified</span>
+                          )}
+                          {!data.recoveryEmailVerified && (
+                            <span className="text-xs text-yellow-300">Unverified</span>
+                          )}
+                          {!data.recoveryEmailVerified && (
+                            <button
+                              onClick={async () => {
+                                setRecoveryEmailLoading(true);
+                                try {
+                                  const res = await fetch("/api/auth/recovery-email", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ email: data.recoveryEmail }),
+                                  });
+                                  const json = await res.json();
+                                  if (json.ok) {
+                                    toast.success("Verification email sent");
+                                  } else {
+                                    toast.error(json.error || "Failed to send");
+                                  }
+                                } catch {
+                                  toast.error("Failed to send");
+                                } finally {
+                                  setRecoveryEmailLoading(false);
+                                }
+                              }}
+                              disabled={recoveryEmailLoading}
+                              className="px-2 py-1 text-xs rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30 transition disabled:opacity-50"
+                            >
+                              Resend
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setRecoveryEmailInput(data.recoveryEmail || "");
+                              setRecoveryEmailError(null);
+                              setShowRecoveryEmailForm(true);
+                            }}
+                            className="px-2 py-1 text-xs rounded-lg bg-white/10 border border-white/20 text-white/70 hover:bg-white/20 transition"
+                          >
+                            Change
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Remove recovery email?")) return;
+                              setRecoveryEmailLoading(true);
+                              try {
+                                const res = await fetch("/api/auth/recovery-email", { method: "DELETE" });
+                                const json = await res.json();
+                                if (json.ok) {
+                                  setData((prev) => prev ? { ...prev, recoveryEmail: null, recoveryEmailVerified: false } : null);
+                                  toast.success("Recovery email removed");
+                                } else {
+                                  toast.error(json.error || "Failed to remove");
+                                }
+                              } catch {
+                                toast.error("Failed to remove");
+                              } finally {
+                                setRecoveryEmailLoading(false);
+                              }
+                            }}
+                            disabled={recoveryEmailLoading}
+                            className="px-2 py-1 text-xs rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setRecoveryEmailInput("");
+                            setRecoveryEmailError(null);
+                            setShowRecoveryEmailForm(true);
+                          }}
+                          className="px-3 py-1 text-sm rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30 transition"
+                        >
+                          Add Recovery Email
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-white/40 mt-2">
+                      If you lose access to your wallet, we can transfer your account stats (unlocked videos, rewards history) to a new wallet using this email.
+                    </p>
+
+                    {/* Recovery Email Form */}
+                    {showRecoveryEmailForm && (
+                      <div className="mt-4 p-4 bg-black/40 rounded-xl border border-white/10">
+                        <div className="flex gap-2">
+                          <input
+                            type="email"
+                            value={recoveryEmailInput}
+                            onChange={(e) => setRecoveryEmailInput(e.target.value)}
+                            placeholder="Enter recovery email"
+                            className="flex-1 px-3 py-2 bg-black/60 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-cyan-500/50"
+                          />
+                          <button
+                            onClick={async () => {
+                              if (!recoveryEmailInput.trim()) {
+                                setRecoveryEmailError("Email is required");
+                                return;
+                              }
+                              setRecoveryEmailLoading(true);
+                              setRecoveryEmailError(null);
+                              try {
+                                const res = await fetch("/api/auth/recovery-email", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ email: recoveryEmailInput.trim() }),
+                                });
+                                const json = await res.json();
+                                if (json.ok) {
+                                  setData((prev) => prev ? { ...prev, recoveryEmail: recoveryEmailInput.trim().toLowerCase(), recoveryEmailVerified: false } : null);
+                                  setShowRecoveryEmailForm(false);
+                                  toast.success("Recovery email saved. Check your inbox to verify.");
+                                } else {
+                                  setRecoveryEmailError(
+                                    json.error === "EMAIL_ALREADY_USED" ? "This email is already used by another account" :
+                                    json.error === "INVALID_EMAIL" ? "Invalid email address" :
+                                    json.error || "Failed to save"
+                                  );
+                                }
+                              } catch {
+                                setRecoveryEmailError("Failed to save");
+                              } finally {
+                                setRecoveryEmailLoading(false);
+                              }
+                            }}
+                            disabled={recoveryEmailLoading}
+                            className="px-4 py-2 bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 rounded-lg hover:bg-cyan-500/40 transition disabled:opacity-50"
+                          >
+                            {recoveryEmailLoading ? "..." : "Save"}
+                          </button>
+                          <button
+                            onClick={() => setShowRecoveryEmailForm(false)}
+                            className="px-4 py-2 bg-white/10 border border-white/20 text-white/70 rounded-lg hover:bg-white/20 transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {recoveryEmailError && (
+                          <p className="text-red-400 text-sm mt-2">{recoveryEmailError}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
               </div>

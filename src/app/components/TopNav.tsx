@@ -7,10 +7,14 @@ import WalletStatus from "./WalletStatus";
 import MessagesModal from "./MessagesModal";
 
 const tokenLinks = [
+  { label: "Token Launch", href: "/launch" },
   { label: "Tokenomics", href: "/tokenomics" },
   { label: "Whitepaper", href: "/whitepaper" },
+  { label: "Rewards", href: "/rewards" },
+  { label: "Win Free Credits!", href: "/rewards-drawing" },
   { label: "Swap", href: "/swap" },
   { label: "Xess News", href: "/xess-news" },
+  { label: "FAQ", href: "/faq" },
 ];
 
 export default function TopNav() {

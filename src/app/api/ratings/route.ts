@@ -8,6 +8,8 @@ import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { clampInt } from "@/lib/scoring";
 import { recomputeVideoRanks } from "@/lib/videoRank";
+import { weekKeyUTC } from "@/lib/weekKey";
+import { poolFromVideoKind, startOfDayUTC, FLAT_RATES } from "@/lib/rewardPool";
 
 const STAR_ABUSE_THRESHOLD = 10; // Number of 1-star ratings before warning
 
@@ -90,16 +92,47 @@ export async function POST(req: NextRequest) {
 
   const s = clampInt(stars, 1, 5);
 
-  const video = await db.video.findUnique({ where: { id: videoId } });
+  const video = await db.video.findUnique({
+    where: { id: videoId },
+    select: { id: true, kind: true },
+  });
   if (!video) {
     return NextResponse.json({ ok: false, error: "VIDEO_NOT_FOUND" }, { status: 404 });
   }
+
+  const pool = poolFromVideoKind(video.kind);
+  const wk = weekKeyUTC(new Date());
+  const dayUTC = startOfDayUTC(new Date());
 
   // Update cooldown timestamp
   ratingCooldowns.set(cooldownKey, now);
 
   // Do the rating + aggregates in a transaction
   const { avgStars, starsCount } = await db.$transaction(async (tx) => {
+    // Mark daily active for rater (for "active every day" weekly bonus)
+    await tx.userDailyActive.upsert({
+      where: { userId_day_pool: { userId, day: dayUTC, pool } },
+      create: { userId, day: dayUTC, pool },
+      update: {},
+    });
+
+    // Log flat-rate "rating" action (once per video per week)
+    const ratingRefId = `rating:${wk}:${userId}:${videoId}`;
+    const ratingAmount = FLAT_RATES[pool].RATING;
+    await tx.flatActionLedger.upsert({
+      where: { refId: ratingRefId },
+      create: {
+        refId: ratingRefId,
+        weekKey: wk,
+        userId,
+        pool,
+        action: "RATING",
+        units: 1,
+        amount: ratingAmount,
+      },
+      update: {}, // no-op if already exists (re-rating same video same week)
+    });
+
     await tx.videoStarRating.upsert({
       where: { videoId_userId: { videoId, userId } },
       create: { videoId, userId, stars: s },
