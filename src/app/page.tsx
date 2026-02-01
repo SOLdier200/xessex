@@ -116,7 +116,7 @@ export default async function HomePage() {
         {/* Top 20 Videos */}
         <section className="rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>
           <div className="mb-4">
-            <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[32px] w-auto" />
+            <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[51px] w-auto" />
           </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-y-1.5 md:gap-y-2 gap-x-1 md:gap-x-1.5">
@@ -195,14 +195,15 @@ export default async function HomePage() {
           <div className="mt-6 text-center">
             <Link
               href="/videos"
-              className="inline-block hover:opacity-80 transition"
+              className="inline-flex items-center gap-2 text-pink-300 font-semibold hover:opacity-80 transition"
             >
+              View All
               <Image
                 src="/logos/textlogo/siteset3/videos.png"
-                alt="View All Videos"
+                alt="Videos"
                 width={938}
                 height={276}
-                className="h-[48px] w-auto"
+                className="h-[48px] w-auto -mt-[9px]"
               />
             </Link>
           </div>
@@ -359,13 +360,17 @@ export default async function HomePage() {
             <div className="neon-border rounded-2xl bg-black/30 overflow-hidden">
               <div className="relative aspect-video bg-black/60">
                 <video
-                  src="https://pub-77b523433fb04971ba656a572f298a11.r2.dev/pinkhairgirlfirst.mp4"
                   className="w-full h-full object-cover"
                   controls
                   playsInline
                   preload="metadata"
-                  poster="https://pub-77b523433fb04971ba656a572f298a11.r2.dev/pinkhairgirlfirst.mp4#t=0.5"
-                />
+                >
+                  <source
+                    src="https://pub-77b523433fb04971ba656a572f298a11.r2.dev/pinkhairgirlfirst.mp4"
+                    type="video/mp4"
+                  />
+                  Your browser does not support the video tag.
+                </video>
               </div>
               <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
                 <span className="text-pink-400 font-medium">Coming Soon</span>

@@ -181,64 +181,48 @@ export default function RootLayout({
           </div>
 
           {/* RTA + Site Logo - Centered */}
-          <div className="flex flex-col items-center gap-1 my-4">
-            <div className="flex items-center gap-4">
-              <a
-                href="https://www.rtalabel.org/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="opacity-80 hover:opacity-100 transition"
-              >
-                <img
-                  src="/logos/rta.gif"
-                  alt="RTA Verified"
-                  className="h-10 w-auto"
-                  loading="lazy"
-                />
-              </a>
-              <Link href="/" className="opacity-80 hover:opacity-100 transition">
-                <img
-                  src="/logos/mainsitelogo.png"
-                  alt="Xessex"
-                  className="h-10 w-auto"
-                  loading="lazy"
-                />
-              </Link>
-            </div>
+          <div className="flex flex-col items-center gap-2 my-4">
+            <a
+              href="https://www.rtalabel.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-80 hover:opacity-100 transition"
+            >
+              <img
+                src="/logos/rta.gif"
+                alt="RTA Verified"
+                className="h-10 w-auto"
+                loading="lazy"
+              />
+            </a>
             <span className="text-xs text-white/40 tracking-wide">
               18+ Only
             </span>
+            <Link href="/" className="opacity-80 hover:opacity-100 transition">
+              <img
+                src="/logos/mainsitelogo.png"
+                alt="Xessex"
+                className="h-[45px] w-auto"
+                loading="lazy"
+              />
+            </Link>
           </div>
 
-          {/* Logo + Copyright Row */}
+          {/* Copyright Row */}
           <div className="mt-4 w-full px-4">
-            <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-between">
-              {/* Logo - 50% smaller */}
-              <Link href="/" className="opacity-80 hover:opacity-100 transition">
-                <Image
-                  src="/logos/mainsitelogo.png"
-                  alt="Xessex"
-                  width={143}
-                  height={48}
-                  className="h-7 md:h-[52px] w-auto"
-                />
-              </Link>
-
-              {/* Copyright */}
-              <div className="text-center md:text-right">
-                <p>© {new Date().getFullYear()} Xessex. All rights reserved.</p>
-                <p className="mt-2 text-white/40">
-                  For any issues at all please email{" "}
-                  <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-                    support@xessex.me
-                  </a>
-                </p>
-              </div>
+            <div className="text-center">
+              <p>© {new Date().getFullYear()} Xessex. All rights reserved.</p>
+              <p className="mt-2 text-white/40">
+                For any issues at all please email{" "}
+                <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                  support@xessex.me
+                </a>
+              </p>
             </div>
           </div>
 
           {/* Donate Button */}
-          <div className="flex justify-end px-4 mt-4 mr-5">
+          <div className="flex justify-center px-4 mt-4">
             <a
               href="https://nowpayments.io/donation?api_key=MF8F5CP-PZZM46H-NKRW6NQ-682CJ2K"
               target="_blank"
