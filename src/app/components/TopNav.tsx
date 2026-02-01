@@ -105,7 +105,7 @@ export default function TopNav() {
               alt="Xessex"
               width={285}
               height={95}
-              className="h-[155px] w-auto"
+              className="h-[132px] w-auto"
               priority
             />
           </Link>
@@ -116,7 +116,7 @@ export default function TopNav() {
           <div className="flex flex-nowrap items-center justify-end gap-3">
             <WalletStatus />
             <Link href="/login/diamond" className="hover:opacity-80 transition">
-              <Image src="/logos/textlogo/siteset3/login100.png" alt="Connect Wallet" width={982} height={247} priority className="h-[36px] w-auto" />
+              <Image src="/logos/textlogo/siteset3/login100.png" alt="Connect Wallet" width={982} height={247} priority className="h-[37px] w-auto" />
             </Link>
             <Link href="/collections" className="hover:opacity-80 transition shrink-0">
               <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} priority className="h-[33px] w-auto" />
@@ -188,7 +188,7 @@ export default function TopNav() {
               alt="Xessex"
               width={285}
               height={95}
-              className="h-[90px] w-auto"
+              className="h-[77px] w-auto"
               priority
             />
           </Link>
@@ -257,7 +257,7 @@ export default function TopNav() {
 
             {/* Nav items stacked and centered below WalletStatus */}
             <Link href="/login/diamond" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
-              <Image src="/logos/textlogo/siteset3/login100.png" alt="Connect Wallet" width={982} height={247} className="h-[32px] w-auto" />
+              <Image src="/logos/textlogo/siteset3/login100.png" alt="Connect Wallet" width={982} height={247} className="h-[33px] w-auto" />
             </Link>
             <Link href="/collections" onClick={() => setMenuOpen(false)} className="hover:opacity-80 transition">
               <Image src="/logos/textlogo/siteset3/collect1001.png" alt="Collections" width={938} height={276} className="h-[30px] w-auto" />

@@ -251,7 +251,7 @@ export default function RewardsDrawingPage() {
       <TopNav />
       <div className="max-w-4xl mx-auto px-4 py-10">
         <div className="mb-6">
-        <Image src="/logos/textlogo/siteset3/weeklyrew100.png" alt="Weekly Rewards Drawing" width={938} height={276} className="h-[133px] w-auto" />
+        <Image src="/logos/textlogo/siteset3/weeklyrew100.png" alt="Weekly Rewards Drawing" width={938} height={276} className="h-[133px] w-auto -mt-[25px]" />
         <div className="mt-2 text-white/60">
           Drawings close every <span className="text-white">Monday at 7:59 AM PT</span>. Unclaimed
           prizes roll into the next week&apos;s pool.

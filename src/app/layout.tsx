@@ -219,7 +219,7 @@ export default function RootLayout({
               <img
                 src="/logos/mainsitelogo.png"
                 alt="Xessex"
-                className="h-[45px] w-auto"
+                className="h-[49px] w-auto"
                 loading="lazy"
               />
             </Link>

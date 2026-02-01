@@ -1266,9 +1266,11 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-xs text-white/50 mt-4">
-                    This Week&apos;s Estimate: ~{livePending?.currentWeek?.estimatedPending ?? "0"} XESS (distributed next Monday)
-                  </p>
+                  <div className="mt-4 p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/40 rounded-xl">
+                    <div className="text-xs text-yellow-300/80 uppercase tracking-wide mb-1">This Week&apos;s Estimate</div>
+                    <div className="text-xl font-bold text-yellow-400">~{livePending?.currentWeek?.estimatedPending ?? "0"} XESS</div>
+                    <div className="text-xs text-white/50 mt-1">Distributed next Monday</div>
+                  </div>
                 </div>
               )}
 
@@ -1304,8 +1306,9 @@ export default function ProfilePage() {
                           <div className="text-white/40">Votes</div>
                         </div>
                       </div>
-                      <div className="mt-3 text-xs text-white/50">
-                        Estimated payout: ~{livePending.currentWeek.estimatedPending} XESS
+                      <div className="mt-3 p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-lg">
+                        <span className="text-xs text-green-300/80">Estimated payout: </span>
+                        <span className="text-sm font-bold text-green-400">~{livePending.currentWeek.estimatedPending} XESS</span>
                       </div>
                     </div>
                   )}

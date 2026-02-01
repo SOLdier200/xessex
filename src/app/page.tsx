@@ -203,7 +203,7 @@ export default async function HomePage() {
                 alt="Videos"
                 width={938}
                 height={276}
-                className="h-[48px] w-auto -mt-[13px]"
+                className="h-[48px] w-auto -mt-[22px]"
               />
             </Link>
           </div>
@@ -218,7 +218,7 @@ export default async function HomePage() {
             videos. Every release is curated, verified, and ranked by the community.
           </p>
           <p className="mt-4 text-white/70">
-            Members can earn crypto rewards for watching videos, engaging with content, and
+            Users can earn crypto rewards for watching videos, engaging with content, and
             supporting creators. Xessex runs on Solana, enabling fast rewards with XESS tokens and
             Diamond tiers for premium access.
           </p>
@@ -357,7 +357,7 @@ export default async function HomePage() {
           {/* Xessex Preview Video */}
           <div className="w-full max-w-full md:max-w-[70%]">
             <h2 className="text-lg font-semibold text-pink-400 mb-4">Xessex Preview</h2>
-            <div className="neon-border rounded-2xl bg-black/30 overflow-hidden">
+            <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden">
               <div className="relative aspect-video bg-black/60">
                 <video
                   className="w-full h-full object-cover"

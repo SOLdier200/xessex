@@ -12,16 +12,6 @@ export default function RewardsPage() {
       <div className="mx-auto max-w-4xl px-5 py-10">
         {/* Header */}
         <div className="text-center mb-10">
-          <Link href="/" className="inline-block mb-6">
-            <Image
-              src="/logos/mainsitelogo.png"
-              alt="Xessex"
-              width={285}
-              height={95}
-              className="h-[60px] md:h-[80px] w-auto mx-auto"
-              priority
-            />
-          </Link>
           <h1 className="text-4xl md:text-5xl font-bold neon-text mb-4">
             Earn XESS Rewards
           </h1>
@@ -205,9 +195,34 @@ export default function RewardsPage() {
           </div>
         </div>
 
+        {/* Dual Pool System */}
+        <div className="mb-12 rounded-2xl border border-gold-400/30 bg-gradient-to-r from-cyan-500/10 via-black/30 to-orange-500/10 p-6">
+          <h2 className="text-xl font-semibold text-white mb-4">Dual Reward Pool System</h2>
+          <p className="text-white/70 text-sm mb-4">
+            Xessex rewards are distributed across two separate content pools. Each pool has its own reward allocation based on the type of content being graded.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
+              <div className="text-2xl font-bold text-cyan-400">69%</div>
+              <div className="text-lg font-semibold text-cyan-300">Xessex Pool</div>
+              <div className="text-xs text-white/50 mt-1">Premium Xessex original content</div>
+              <div className="text-xs text-white/40 mt-2">Coming soon - rewards activate when Xessex content launches</div>
+            </div>
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+              <div className="text-2xl font-bold text-orange-400">31%</div>
+              <div className="text-lg font-semibold text-orange-300">Embeds Pool</div>
+              <div className="text-xs text-white/50 mt-1">Embedded video content</div>
+              <div className="text-xs text-green-400 mt-2">Active now - earn by grading embed videos</div>
+            </div>
+          </div>
+          <p className="text-xs text-white/40 text-center">
+            Unused Xessex pool emissions are burned until premium content launches
+          </p>
+        </div>
+
         {/* Pool Distribution */}
         <div className="mb-12 rounded-2xl border border-white/10 bg-black/30 p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Weekly Pool Distribution</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Weekly Pool Distribution (Per Content Pool)</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div className="bg-white/5 rounded-xl p-4">
               <div className="text-2xl font-bold text-purple-400">70%</div>
@@ -434,7 +449,7 @@ export default function RewardsPage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="/login/diamond"
-              className="rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 px-8 py-4 font-semibold text-white hover:from-pink-400 hover:to-purple-400 transition text-lg"
+              className="rounded-xl bg-green-500 px-8 py-4 font-bold text-black hover:bg-green-400 transition text-lg shadow-lg shadow-green-500/30"
             >
               Start Earning Now
             </Link>

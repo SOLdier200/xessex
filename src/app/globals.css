@@ -48,6 +48,20 @@ a {
   overflow: hidden;
 }
 
+.neon-border-gold {
+  border: 2px solid #fbbf24;
+  outline: 2px solid var(--neon-pink);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 5px #fbbf24,
+    0 0 10px #fcd34d,
+    0 0 15px rgba(251, 191, 36, 0.4),
+    0 0 20px var(--neon-pink),
+    0 0 30px rgba(255, 43, 214, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
 /* Tablet: reduced motion (subtle glow only) */
 @media (min-width: 768px) and (max-width: 1023px) {
   .neon-border {
