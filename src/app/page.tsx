@@ -6,6 +6,7 @@ import TopNav from "./components/TopNav";
 import LockedVideoCard from "./components/LockedVideoCard";
 import LockedFeaturedCard from "./components/LockedFeaturedCard";
 import RoadmapMarquee from "./components/RoadmapMarquee";
+import HoverPreviewVideo from "./components/HoverPreviewVideo";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -209,7 +210,7 @@ export default async function HomePage() {
           </div>
         )}
 
-        <section className="mt-10 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8">
+        <section className="mt-10 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8 text-center">
           <h1 className="text-2xl md:text-3xl font-semibold text-white">
             HD Porn Videos, Premium Sex Content & Crypto Rewards
           </h1>
@@ -357,21 +358,17 @@ export default async function HomePage() {
           {/* Xessex Preview Video */}
           <div className="w-full max-w-full md:max-w-[70%]">
             <h2 className="text-lg font-semibold text-pink-400 mb-4">Xessex Preview</h2>
-            <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden">
-              <div className="relative aspect-video bg-black/60">
-                <video
-                  className="w-full h-full object-cover"
-                  controls
-                  playsInline
-                  preload="metadata"
-                >
-                  <source
-                    src="https://pub-77b523433fb04971ba656a572f298a11.r2.dev/pinkhairgirlfirst.mp4"
-                    type="video/mp4"
-                  />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
+            <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden cursor-pointer">
+              <HoverPreviewVideo
+                src="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.mp4"
+                poster="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.jpg"
+                alt="Xessex Preview"
+                segmentLen={2}
+                segments={8}
+                startAt={5}
+                className="relative aspect-video bg-black/60"
+                videoClassName="w-full h-full object-cover rounded-xl"
+              />
               <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
                 <span className="text-pink-400 font-medium">Coming Soon</span>
                 <span>Xessex Original</span>

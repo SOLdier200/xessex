@@ -28,10 +28,10 @@ const ALLOCATIONS: Allocation[] = [
   },
   {
     name: "Liquidity Pools",
-    pct: 15,
-    amount: 150_000_000,
+    pct: 20,
+    amount: 200_000_000,
     vesting: "Locked 6–12 months",
-    purpose: "Market stability",
+    purpose: "Market stability + DEX liquidity",
   },
   {
     name: "Rewards Emissions (Weekly)",
@@ -39,13 +39,6 @@ const ALLOCATIONS: Allocation[] = [
     amount: 200_000_000,
     vesting: "Weekly distribution",
     purpose: "Core user incentives",
-  },
-  {
-    name: "Rewards Drawings Pool",
-    pct: 5,
-    amount: 50_000_000,
-    vesting: "Weekly drawings",
-    purpose: "Retention + hype",
   },
   {
     name: "Team / Creators",
@@ -62,11 +55,11 @@ const ALLOCATIONS: Allocation[] = [
     purpose: "Partnerships + ops",
   },
   {
-    name: "Burn Reserve",
+    name: "A.I. Content",
     pct: 5,
     amount: 50_000_000,
-    vesting: "Burned per policy",
-    purpose: "Deflationary pressure",
+    vesting: "Content production",
+    purpose: "AI-generated content creation",
   },
 ];
 
@@ -251,13 +244,9 @@ export default function TokenomicsPage() {
                   <td className="text-center py-3 px-2 text-emerald-400">UNLOCK</td>
                   <td className="text-center py-3 px-2">-</td>
                 </tr>
-                <tr className="border-b border-white/5">
-                  <td className="py-3 pr-4 text-red-400">Burn Pool</td>
-                  <td colSpan={6} className="text-center py-3 px-2 text-white/60">Policy-based burns over time (1% per year for 5 years)</td>
-                </tr>
                 <tr>
                   <td className="py-3 pr-4 text-green-400">Rewards</td>
-                  <td colSpan={6} className="text-center py-3 px-2 text-white/60">Weekly emissions (linear over years)</td>
+                  <td colSpan={6} className="text-center py-3 px-2 text-white/60">Weekly emissions (linear over years) — unused tokens burned</td>
                 </tr>
               </tbody>
             </table>
@@ -267,9 +256,10 @@ export default function TokenomicsPage() {
             <div className="text-emerald-400 font-semibold mb-2">This schedule is investor-safe:</div>
             <ul className="text-sm text-white/70 space-y-1 list-disc pl-5">
               <li>No early insider dump risk</li>
-              <li>LP locked</li>
+              <li>LP locked for 6-12 months</li>
               <li>Emissions predictable</li>
-              <li>Burn reduces long-term supply</li>
+              <li>Fixed supply, no inflation</li>
+              <li>Unused rewards burned (deflationary)</li>
             </ul>
           </div>
         </div>
@@ -338,7 +328,11 @@ export default function TokenomicsPage() {
               &quot;Rewards Emissions&quot; refers to distribution from the fixed rewards bucket (not inflation).
             </p>
             <p>
-              Burn Reserve: 1% of supply burned per year for 5 years (from burn reserve).
+              <span className="text-red-400 font-semibold">Token Burns:</span> Unused weekly reward emissions are permanently burned.
+              This creates significant deflationary pressure as unclaimed and unallocated rewards are removed from circulation forever.
+            </p>
+            <p>
+              A.I. Content allocation funds AI-generated content creation for the platform.
             </p>
             <p className="text-xs text-white/50 pt-4 border-t border-white/10">
               This page is informational and does not constitute financial advice.

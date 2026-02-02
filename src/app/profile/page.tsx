@@ -1826,15 +1826,15 @@ export default function ProfilePage() {
                 {/* Tier table - compact for mobile */}
                 <div className="space-y-1.5 mb-3 max-h-[40vh] sm:max-h-none overflow-y-auto">
                   {[
-                    { tier: 1, min: "10,000", credits: "10" },
-                    { tier: 2, min: "25,000", credits: "30" },
-                    { tier: 3, min: "50,000", credits: "60" },
-                    { tier: 4, min: "100,000", credits: "200" },
-                    { tier: 5, min: "250,000", credits: "500" },
-                    { tier: 6, min: "500,000", credits: "1,000" },
-                    { tier: 7, min: "1,000,000", credits: "2,000" },
-                    { tier: 8, min: "2,500,000", credits: "3,000" },
-                    { tier: 9, min: "5,000,000", credits: "4,000" },
+                    { tier: 1, min: "10,000", credits: "20" },
+                    { tier: 2, min: "25,000", credits: "60" },
+                    { tier: 3, min: "50,000", credits: "120" },
+                    { tier: 4, min: "100,000", credits: "400" },
+                    { tier: 5, min: "250,000", credits: "1,000" },
+                    { tier: 6, min: "500,000", credits: "2,000" },
+                    { tier: 7, min: "1,000,000", credits: "4,000" },
+                    { tier: 8, min: "2,500,000", credits: "6,000" },
+                    { tier: 9, min: "5,000,000", credits: "8,000" },
                   ].map((t) => {
                     const isCurrentTier = data?.xessTier === t.tier;
                     return (
