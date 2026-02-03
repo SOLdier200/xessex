@@ -11,6 +11,10 @@ import { weekKeyUTC } from "@/lib/weekKey";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
 import { poolFromVideoKind, startOfDayUTC, FLAT_RATES } from "@/lib/rewardPool";
 import { canUserComment } from "@/lib/commentModeration";
+import { signR2GetUrl } from "@/lib/r2";
+
+// Force Node.js runtime (required for Prisma transactions)
+export const runtime = "nodejs";
 
 // Special credits reward for commenting
 const COMMENT_CREDIT_REWARD = 2n; // 2 credits per comment (once per video)
@@ -77,7 +81,7 @@ export async function GET(req: NextRequest) {
     },
     orderBy: { createdAt: "desc" },
     include: {
-      author: { select: { walletAddress: true, email: true } },
+      author: { select: { walletAddress: true, email: true, profilePictureKey: true, username: true } },
       memberVotes: {
         select: {
           value: true,
@@ -103,7 +107,7 @@ export async function GET(req: NextRequest) {
 
   const now = Date.now();
 
-  const shaped = comments.map((c) => {
+  const shaped = await Promise.all(comments.map(async (c) => {
     // Use cached counters from Comment model
     const { memberLikes, memberDislikes } = c;
 
@@ -133,12 +137,26 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Generate signed avatar URL if author has profile picture
+    let authorAvatarUrl: string | null = null;
+    if (c.author.profilePictureKey) {
+      try {
+        authorAvatarUrl = await signR2GetUrl(c.author.profilePictureKey, 3600);
+      } catch {
+        // Silent fail - avatar won't display
+      }
+    }
+
+    // Use username if available, otherwise truncated wallet/email
+    const authorDisplay = c.author.username || truncWallet(c.author.walletAddress, c.author.email);
+
     return {
       id: c.id,
       body: c.body,
       createdAt: c.createdAt.toISOString(),
       authorId: c.authorId,
-      authorWallet: truncWallet(c.author.walletAddress, c.author.email),
+      authorWallet: authorDisplay,
+      authorAvatarUrl,
       status: c.status,
       memberLikes,
       memberDislikes,
@@ -147,7 +165,7 @@ export async function GET(req: NextRequest) {
       secondsLeftToFlip,
       reportedByMe: reportedSet.has(c.id),
     };
-  });
+  }));
 
   // Check if user already has a comment on this video
   const hasUserComment = userId
@@ -261,14 +279,16 @@ export async function POST(req: NextRequest) {
   }
 
   const wk = weekKeyUTC(new Date());
-
-  // Create comment and track stats in a transaction
   const dayUTC = startOfDayUTC(new Date());
-  const comment = await db.$transaction(async (tx) => {
-    const newComment = await tx.comment.create({
+  const userId = access.user!.id;
+
+  // Step 1: Create comment (small, fast transaction)
+  let newComment;
+  try {
+    newComment = await db.comment.create({
       data: {
         videoId,
-        authorId: access.user!.id,
+        authorId: userId,
         body: text,
         bodyNormalized,
         status,
@@ -278,29 +298,39 @@ export async function POST(req: NextRequest) {
         score: 0,
       },
       include: {
-        author: { select: { walletAddress: true, email: true } },
+        author: { select: { walletAddress: true, email: true, profilePictureKey: true, username: true } },
       },
     });
+  } catch (err) {
+    console.error("[POST /api/comments] Comment creation failed:", err);
+    return NextResponse.json(
+      { ok: false, error: "INTERNAL_ERROR", details: String(err) },
+      { status: 500 }
+    );
+  }
 
-    let creditsAwarded = 0n;
+  // Step 2: Track stats and credits (non-critical, done outside main transaction)
+  // These are idempotent operations that won't break if they fail
+  let creditsAwarded = 0;
 
-    if (status === "ACTIVE") {
-      // Mark daily active for commenter (for "active every day" weekly bonus)
-      await tx.userDailyActive.upsert({
-        where: { userId_day_pool: { userId: access.user!.id, day: dayUTC, pool } },
-        create: { userId: access.user!.id, day: dayUTC, pool },
+  if (status === "ACTIVE") {
+    try {
+      // Mark daily active (idempotent upsert)
+      await db.userDailyActive.upsert({
+        where: { userId_day_pool: { userId, day: dayUTC, pool } },
+        create: { userId, day: dayUTC, pool },
         update: {},
       });
 
-      // Track Diamond comment activity for weekly rewards (min 7 chars quality gate) - pool-aware
-      console.log("[comments] wk", wk, "len", text.length, "user", access.user!.id, "pool", pool);
+      // Track weekly stats if comment is long enough
+      console.log("[comments] wk", wk, "len", text.length, "user", userId, "pool", pool);
       if (text.length >= 7) {
         console.log("[comments] eligible -> increment diamondComments");
-        await tx.weeklyUserStat.upsert({
-          where: { weekKey_userId_pool: { weekKey: wk, userId: access.user!.id, pool } },
+        await db.weeklyUserStat.upsert({
+          where: { weekKey_userId_pool: { weekKey: wk, userId, pool } },
           create: {
             weekKey: wk,
-            userId: access.user!.id,
+            userId,
             pool,
             diamondComments: 1,
             mvmPoints: 0,
@@ -311,67 +341,87 @@ export async function POST(req: NextRequest) {
           update: { diamondComments: { increment: 1 } },
         });
 
-        // Log flat-rate "comment" action (once per video per week)
-        const commentRefId = `comment:${wk}:${access.user!.id}:${videoId}`;
+        // Log flat-rate action (idempotent upsert)
+        const commentRefId = `comment:${wk}:${userId}:${videoId}`;
         const commentAmount = FLAT_RATES[pool].COMMENT;
-        await tx.flatActionLedger.upsert({
+        await db.flatActionLedger.upsert({
           where: { refId: commentRefId },
           create: {
             refId: commentRefId,
             weekKey: wk,
-            userId: access.user!.id,
+            userId,
             pool,
             action: "COMMENT",
             units: 1,
             amount: commentAmount,
           },
-          update: {}, // no-op if already exists
+          update: {},
         });
       } else {
         console.log("[comments] NOT eligible -> too short");
       }
+    } catch (err) {
+      // Non-critical - log but don't fail the request
+      console.error("[comments] Stats tracking failed (non-critical):", err);
+    }
 
-      // Award special credits for commenting (2 credits, once per video)
-      // Use ledger refId to track uniqueness: "comment_credit_{userId}_{videoId}"
-      const creditRefId = `comment_credit_${access.user!.id}_${videoId}`;
-      const existingCredit = await tx.specialCreditLedger.findFirst({
+    // Step 3: Award special credits (separate small transaction for atomicity)
+    try {
+      const creditRefId = `comment_credit_${userId}_${videoId}`;
+      const existingCredit = await db.specialCreditLedger.findFirst({
         where: { refId: creditRefId },
       });
 
       if (!existingCredit) {
-        // Ensure user has a credit account
-        await tx.specialCreditAccount.upsert({
-          where: { userId: access.user!.id },
-          create: { userId: access.user!.id, balanceMicro: 0n },
-          update: {},
-        });
+        // Use a small transaction for credits atomicity
+        await db.$transaction(async (tx) => {
+          await tx.specialCreditAccount.upsert({
+            where: { userId },
+            create: { userId, balanceMicro: 0n },
+            update: {},
+          });
 
-        // Award credits
-        const rewardMicro = COMMENT_CREDIT_REWARD * CREDIT_MICRO;
-        await tx.specialCreditAccount.update({
-          where: { userId: access.user!.id },
-          data: { balanceMicro: { increment: rewardMicro } },
-        });
+          const rewardMicro = COMMENT_CREDIT_REWARD * CREDIT_MICRO;
+          await tx.specialCreditAccount.update({
+            where: { userId },
+            data: { balanceMicro: { increment: rewardMicro } },
+          });
 
-        // Record in ledger
-        await tx.specialCreditLedger.create({
-          data: {
-            userId: access.user!.id,
-            weekKey: wk,
-            amountMicro: rewardMicro,
-            reason: "Comment reward",
-            refType: "COMMENT_CREDIT",
-            refId: creditRefId,
-          },
-        });
+          await tx.specialCreditLedger.create({
+            data: {
+              userId,
+              weekKey: wk,
+              amountMicro: rewardMicro,
+              reason: "Comment reward",
+              refType: "COMMENT_CREDIT",
+              refId: creditRefId,
+            },
+          });
+        }, { timeout: 10000 });
 
-        creditsAwarded = COMMENT_CREDIT_REWARD;
-        console.log("[comments] Awarded", creditsAwarded.toString(), "special credits for commenting");
+        creditsAwarded = Number(COMMENT_CREDIT_REWARD);
+        console.log("[comments] Awarded", creditsAwarded, "special credits for commenting");
       }
+    } catch (err) {
+      // Non-critical - log but don't fail the request
+      console.error("[comments] Credits award failed (non-critical):", err);
     }
+  }
 
-    return { comment: newComment, creditsAwarded: Number(creditsAwarded) };
-  });
+  const comment = { comment: newComment, creditsAwarded };
+
+  // Generate avatar URL for the newly created comment
+  let authorAvatarUrl: string | null = null;
+  if (comment.comment.author.profilePictureKey) {
+    try {
+      authorAvatarUrl = await signR2GetUrl(comment.comment.author.profilePictureKey, 3600);
+    } catch {
+      // Silent fail
+    }
+  }
+
+  // Use username if available, otherwise truncated wallet/email
+  const authorDisplay = comment.comment.author.username || truncWallet(comment.comment.author.walletAddress, comment.comment.author.email);
 
   return NextResponse.json({
     ok: true,
@@ -380,7 +430,8 @@ export async function POST(req: NextRequest) {
       body: comment.comment.body,
       createdAt: comment.comment.createdAt.toISOString(),
       authorId: comment.comment.authorId,
-      authorWallet: truncWallet(comment.comment.author.walletAddress, comment.comment.author.email),
+      authorWallet: authorDisplay,
+      authorAvatarUrl,
       memberLikes: 0,
       memberDislikes: 0,
       userVote: null,

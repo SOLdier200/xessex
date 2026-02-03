@@ -115,10 +115,24 @@ export default function TokenomicsPage() {
         <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
             <div>
-              <h1 className="text-2xl font-bold text-white">XESSEX TOKENOMICS (FINAL — LOCKED)</h1>
-              <p className="text-white/60 mt-2">
-                Total Supply: 1,000,000,000 XESS (1B)
-              </p>
+              <h1>
+                <Image
+                  src="/logos/tokenomics100.png"
+                  alt="XESSEX TOKENOMICS (FINAL — LOCKED)"
+                  width={800}
+                  height={200}
+                  className="h-[40px] w-auto"
+                />
+              </h1>
+              <div className="mt-2">
+                <Image
+                  src="/logos/1,000,000,000Xess100.png"
+                  alt="Total Supply: 1,000,000,000 XESS"
+                  width={938}
+                  height={276}
+                  className="h-[36px] w-auto"
+                />
+              </div>
               <p className="text-emerald-400 text-sm font-semibold mt-1">
                 Status: Already minted on mainnet (fixed, immutable, no future minting)
               </p>
@@ -130,7 +144,15 @@ export default function TokenomicsPage() {
             {/* Fixed supply badge */}
             <div className="bg-black/40 rounded-xl p-5 border border-emerald-400/30 min-w-[280px]">
               <div className="text-xs text-white/50 mb-1">XESS Fixed Supply</div>
-              <div className="text-2xl font-bold text-white">{formatInt(TOTAL_SUPPLY)} XESS</div>
+              <div className="mt-1">
+                <Image
+                  src="/logos/1,000,000,000Xess100.png"
+                  alt="1,000,000,000 XESS"
+                  width={938}
+                  height={276}
+                  className="h-[32px] w-auto"
+                />
+              </div>
               <div className="text-sm text-emerald-400 font-semibold mt-1">NO MINTING EVER</div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -180,10 +202,15 @@ export default function TokenomicsPage() {
                 <tr className="border-t border-white/20 bg-black/40">
                   <td className="py-4 pr-4 text-white font-bold">TOTAL</td>
                   <td className="py-4 px-4 text-right font-bold text-emerald-400">{pctTotal}%</td>
-                  <td className="py-4 px-4 text-right font-bold text-emerald-400 font-mono">
-                    {formatInt(amtTotal)}
+                  <td colSpan={3} className="py-4 px-4">
+                    <Image
+                      src="/logos/1,000,000,000Xess100.png"
+                      alt="1,000,000,000 XESS"
+                      width={938}
+                      height={276}
+                      className="h-[24px] w-auto"
+                    />
                   </td>
-                  <td colSpan={2} className="py-4 pl-4 text-white/50">SUPPLY = 1,000,000,000 XESS</td>
                 </tr>
               </tbody>
             </table>
@@ -303,15 +330,23 @@ export default function TokenomicsPage() {
             </div>
             <div className="bg-black/40 rounded-xl p-4 border border-white/10">
               <div className="text-white/50 text-xs mb-1">Network</div>
-              <div className="text-white font-semibold">Solana Mainnet</div>
+              <div className="text-white font-semibold text-sm">Solana Mainnet</div>
             </div>
             <div className="bg-black/40 rounded-xl p-4 border border-white/10">
               <div className="text-white/50 text-xs mb-1">Supply</div>
-              <div className="text-white font-semibold">1,000,000,000 XESS (fixed)</div>
+              <div>
+                <Image
+                  src="/logos/1,000,000,000Xess100.png"
+                  alt="1,000,000,000 XESS"
+                  width={938}
+                  height={276}
+                  className="h-[23px] w-auto"
+                />
+              </div>
             </div>
             <div className="bg-black/40 rounded-xl p-4 border border-white/10">
               <div className="text-white/50 text-xs mb-1">Minting</div>
-              <div className="text-emerald-400 font-semibold">Mint Authority/Freeze authority revoked</div>
+              <div className="text-emerald-400 font-semibold text-sm">Mint Authority/Freeze authority revoked</div>
             </div>
           </div>
         </div>

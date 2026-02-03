@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+import { signR2GetUrl } from "@/lib/r2";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,16 @@ export async function GET() {
     }
   }
 
+  // Get avatar URL if user has a profile picture
+  let avatarUrl: string | null = null;
+  if (user.profilePictureKey) {
+    try {
+      avatarUrl = await signR2GetUrl(user.profilePictureKey, 3600);
+    } catch {
+      // Silent fail - avatar just won't display
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     authed: true,
@@ -71,6 +82,8 @@ export async function GET() {
     memberId: user.memberId ?? null,
     recoveryEmail: user.recoveryEmail ?? null,
     recoveryEmailVerified: !!user.recoveryEmailVerifiedAt,
+    avatarUrl,
+    username: user.username ?? null,
     stats: {
       videosWatched,
       videosUnlocked,

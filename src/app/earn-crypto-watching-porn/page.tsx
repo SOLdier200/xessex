@@ -194,7 +194,7 @@ export default function EarnCryptoWatchingPornPage() {
           </p>
           <p className="mt-4 text-white/70">
             Special Credit rewards are based on your XESS holdings — hold at least
-            10,000 XESS to start earning. Higher tiers unlock more monthly credits, up to 4,000 credits
+            10,000 XESS to start earning. Higher tiers unlock more monthly credits, up to 16,000 credits
             per month for holders of 5 million+ XESS.
           </p>
 

@@ -32,7 +32,8 @@ type ProfileData = {
   authed: boolean;
   email: string | null;
   walletAddress: string | null;
-  
+  avatarUrl: string | null;
+  username: string | null;
   recoveryEmail: string | null;
   recoveryEmailVerified: boolean;
   memberId: string | null;
@@ -209,6 +210,126 @@ export default function ProfilePage() {
   const [recoveryEmailLoading, setRecoveryEmailLoading] = useState(false);
   const [recoveryEmailError, setRecoveryEmailError] = useState<string | null>(null);
   const [showRecoveryEmailForm, setShowRecoveryEmailForm] = useState(false);
+
+  // Avatar state
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Username state
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [usernameLoading, setUsernameLoading] = useState(false);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Please upload a JPEG, PNG, or WebP image");
+      return;
+    }
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      // 1. Get presigned upload URL
+      const uploadRes = await fetch("/api/profile/avatar/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: file.type }),
+      });
+      const uploadJson = await uploadRes.json();
+      if (!uploadJson.ok) {
+        throw new Error(uploadJson.error || "Failed to get upload URL");
+      }
+
+      // 2. Upload directly to R2
+      await fetch(uploadJson.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      // 3. Confirm upload
+      const confirmRes = await fetch("/api/profile/avatar/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: uploadJson.key }),
+      });
+      const confirmJson = await confirmRes.json();
+      if (!confirmJson.ok) {
+        throw new Error(confirmJson.error || "Failed to confirm upload");
+      }
+
+      // Update local data
+      setData((prev) => prev ? { ...prev, avatarUrl: confirmJson.avatarUrl } : prev);
+      toast.success("Profile picture updated!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload image");
+    } finally {
+      setAvatarUploading(false);
+      // Reset the input
+      e.target.value = "";
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarUploading(true);
+    try {
+      const res = await fetch("/api/profile/avatar", { method: "DELETE" });
+      const json = await res.json();
+      if (!json.ok) {
+        throw new Error(json.error || "Failed to remove avatar");
+      }
+      setData((prev) => prev ? { ...prev, avatarUrl: null } : prev);
+      toast.success("Profile picture removed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove avatar");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  async function handleUsernameSubmit() {
+    const trimmed = usernameInput.trim();
+    if (trimmed.length < 2 || trimmed.length > 20) {
+      setUsernameError("Username must be 2-20 characters");
+      return;
+    }
+
+    setUsernameLoading(true);
+    setUsernameError(null);
+    try {
+      const res = await fetch("/api/profile/username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: trimmed }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        if (json.error === "username_taken") {
+          setUsernameError("Username is already taken");
+        } else if (json.error === "invalid_characters") {
+          setUsernameError("Invalid characters in username");
+        } else {
+          setUsernameError(json.error || "Failed to update username");
+        }
+        return;
+      }
+      setData((prev) => prev ? { ...prev, username: json.username } : prev);
+      setShowUsernameModal(false);
+      toast.success("Username updated!");
+    } catch {
+      setUsernameError("Failed to update username");
+    } finally {
+      setUsernameLoading(false);
+    }
+  }
 
   async function handleLogout() {
     if (logoutBusy) return;
@@ -981,6 +1102,65 @@ export default function ProfilePage() {
                       </span>
                     </div>
                   )}
+
+                  {/* Profile Picture */}
+                  <div className="flex justify-between items-center py-4 border-t border-white/10">
+                    <span className="text-white/60">Profile Picture</span>
+                    <div className="flex items-center gap-3">
+                      {data.avatarUrl ? (
+                        <img
+                          src={data.avatarUrl}
+                          alt="Profile"
+                          className="w-12 h-12 rounded-full object-cover border-2 border-pink-500/50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-white/60 text-lg font-semibold border-2 border-white/20">
+                          {(data.username || data.walletAddress || "?").slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <label className="px-3 py-1 text-sm rounded-lg bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                          disabled={avatarUploading}
+                        />
+                        {avatarUploading ? "Uploading..." : data.avatarUrl ? "Change" : "Upload"}
+                      </label>
+                      {data.avatarUrl && (
+                        <button
+                          onClick={handleAvatarRemove}
+                          disabled={avatarUploading}
+                          className="px-3 py-1 text-sm rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 transition disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Username */}
+                  <div className="flex justify-between items-center py-4 border-t border-white/10">
+                    <span className="text-white/60">Username</span>
+                    <div className="flex items-center gap-3">
+                      {data.username ? (
+                        <span className="text-white font-semibold">{data.username}</span>
+                      ) : (
+                        <span className="text-white/40 italic">Not set</span>
+                      )}
+                      <button
+                        onClick={() => {
+                          setUsernameInput(data.username || "");
+                          setUsernameError(null);
+                          setShowUsernameModal(true);
+                        }}
+                        className="px-3 py-1 text-sm rounded-lg bg-white/10 border border-white/20 text-white/80 hover:bg-white/20 transition"
+                      >
+                        {data.username ? "Change" : "Set Username"}
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Recovery Email */}
                   <div className="py-2 border-t border-white/10">
@@ -1826,15 +2006,15 @@ export default function ProfilePage() {
                 {/* Tier table - compact for mobile */}
                 <div className="space-y-1.5 mb-3 max-h-[40vh] sm:max-h-none overflow-y-auto">
                   {[
-                    { tier: 1, min: "10,000", credits: "20" },
-                    { tier: 2, min: "25,000", credits: "60" },
-                    { tier: 3, min: "50,000", credits: "120" },
-                    { tier: 4, min: "100,000", credits: "400" },
-                    { tier: 5, min: "250,000", credits: "1,000" },
-                    { tier: 6, min: "500,000", credits: "2,000" },
-                    { tier: 7, min: "1,000,000", credits: "4,000" },
-                    { tier: 8, min: "2,500,000", credits: "6,000" },
-                    { tier: 9, min: "5,000,000", credits: "8,000" },
+                    { tier: 1, min: "10,000", credits: "40" },
+                    { tier: 2, min: "25,000", credits: "120" },
+                    { tier: 3, min: "50,000", credits: "240" },
+                    { tier: 4, min: "100,000", credits: "800" },
+                    { tier: 5, min: "250,000", credits: "2,000" },
+                    { tier: 6, min: "500,000", credits: "4,000" },
+                    { tier: 7, min: "1,000,000", credits: "8,000" },
+                    { tier: 8, min: "2,500,000", credits: "12,000" },
+                    { tier: 9, min: "5,000,000", credits: "16,000" },
                   ].map((t) => {
                     const isCurrentTier = data?.xessTier === t.tier;
                     return (

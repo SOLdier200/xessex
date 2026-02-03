@@ -273,7 +273,10 @@ export default function RewardsPage() {
         </div>
 
         {/* Special Credits Section */}
-        <div className="mb-12 rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/10 via-black/30 to-blue-500/10 p-6">
+        <div
+          id="credit-earning-tiers"
+          className="mb-12 rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/10 via-black/30 to-blue-500/10 p-6"
+        >
           <h2 className="text-xl font-semibold text-cyan-400 mb-4">Special Credits</h2>
           <p className="text-white/70 text-sm mb-4">
             Hold XESS tokens in your wallet and earn Special Credits monthly. Use credits to enter
@@ -373,40 +376,6 @@ export default function RewardsPage() {
                     </span>
                     <span className="px-2 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 text-xs">
                       Bonus XESS
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* XESS Donations */}
-            <div className="rounded-2xl border border-dashed border-amber-400/40 bg-gradient-to-r from-amber-500/5 via-black/20 to-yellow-500/5 p-6 relative overflow-hidden">
-              <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-semibold">
-                Coming Soon
-              </div>
-              <div className="flex items-start">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mr-4 flex-shrink-0">
-                  <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-amber-400 mb-2">
-                    XESS Donations
-                  </h3>
-                  <p className="text-white/70 text-sm mb-3">
-                    Donate XESS tokens to support the platform and receive weekly rewards for a set period.
-                    After your donation period ends, Xessex matches your generous contribution with bonus rewards.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400 text-xs">
-                      Weekly Rewards
-                    </span>
-                    <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400 text-xs">
-                      Donation Matching
-                    </span>
-                    <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400 text-xs">
-                      Support the Platform
                     </span>
                   </div>
                 </div>

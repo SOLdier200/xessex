@@ -56,6 +56,7 @@ export async function GET() {
         createdAt: u.createdAt.toISOString(),
 
         walletAddress: u.walletAddress,
+        username: u.username ?? null,
       },
 
       // Wallet status

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type QueueItem = {
   id: string;
@@ -63,6 +64,22 @@ async function removeComment(commentId: string, reason?: string) {
   const json = await res.json().catch(() => ({}));
   if (!res.ok || !json.ok) throw new Error(json.error || "Remove failed");
   return json as { ok: true; alreadyRemoved: boolean };
+}
+
+// Detect severe content for auto-ban reason
+function isSevereComment(c: QueueItem) {
+  const reasons = c.reports.reasonCounts || {};
+  const hasSevereReport = Boolean(reasons.THREAT || reasons.SEXUAL_VIOLENCE);
+
+  const auto = (c.autoReason || "").toLowerCase();
+  const hasSevereAuto =
+    auto.includes("severe") ||
+    auto.includes("threat") ||
+    auto.includes("sexual") ||
+    auto.includes("ai: blocked") ||
+    auto.includes("keyword: severe");
+
+  return hasSevereReport || hasSevereAuto;
 }
 
 export default function ReviewClient() {
@@ -201,6 +218,94 @@ export default function ReviewClient() {
       setErr(e?.message ?? "Remove failed");
     } finally {
       setActionBusyId(null);
+    }
+  }
+
+  // Ban user from commenting for 24h
+  async function banUser24h(userId: string, reason: string) {
+    try {
+      const res = await fetch("/api/mod/users/ban-commenting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, hours: 24, reason }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error || "Failed to ban user");
+        return false;
+      }
+
+      if (data?.skipped) {
+        toast.success("User is already permanently banned");
+        return true;
+      }
+
+      toast.success("User banned from commenting for 24h");
+      // Clear this user's comments from queue
+      setItems((prev) => prev.filter((c) => c.author.id !== userId));
+      if (selected?.author.id === userId) setSelectedId(null);
+      return true;
+    } catch {
+      toast.error("Failed to ban user");
+      return false;
+    }
+  }
+
+  // Unban user from commenting
+  async function unbanUser(userId: string) {
+    try {
+      const res = await fetch("/api/mod/users/unban-commenting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error || "Failed to unban user");
+        return;
+      }
+
+      if (data?.skipped) {
+        toast.success("User is permanently banned (not changed)");
+        return;
+      }
+
+      toast.success("User unbanned for commenting");
+    } catch {
+      toast.error("Failed to unban user");
+    }
+  }
+
+  // Permanently ban user from commenting
+  async function permBanUser(userId: string, reason: string) {
+    try {
+      const res = await fetch("/api/mod/users/perm-ban-commenting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, reason }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error || "Failed to permanently ban user");
+        return false;
+      }
+
+      if (data?.already) {
+        toast.success("User is already permanently banned");
+      } else {
+        toast.success("User permanently banned from commenting");
+      }
+
+      // Clear this user's comments from queue
+      setItems((prev) => prev.filter((c) => c.author.id !== userId));
+      if (selected?.author.id === userId) setSelectedId(null);
+      return true;
+    } catch {
+      toast.error("Failed to permanently ban user");
+      return false;
     }
   }
 
@@ -353,6 +458,49 @@ export default function ReviewClient() {
                   Remove & Next
                 </button>
               </div>
+            </div>
+
+            {/* User ban actions */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs opacity-60 mr-1">User actions:</span>
+              <button
+                onClick={() =>
+                  banUser24h(
+                    selected.author.id,
+                    isSevereComment(selected)
+                      ? "Auto-ban 24h: severe content (threat/sexual violence)"
+                      : "Temp ban 24h: abusive behavior"
+                  )
+                }
+                className="px-3 py-1 rounded-lg bg-purple-500/15 text-purple-200 border border-purple-400/30 text-xs font-semibold hover:bg-purple-500/25 transition"
+                title="Ban this user from commenting for 24 hours"
+              >
+                Ban 24h
+              </button>
+              <button
+                onClick={() => unbanUser(selected.author.id)}
+                className="px-3 py-1 rounded-lg bg-sky-500/15 text-sky-200 border border-sky-400/30 text-xs font-semibold hover:bg-sky-500/25 transition"
+                title="Unban this user from commenting (does not undo permanent bans)"
+              >
+                Unban
+              </button>
+              <button
+                onClick={async () => {
+                  const label = selected.author.authorWallet || selected.author.id.slice(0, 8) + "...";
+                  const confirmed = window.confirm(
+                    `PERMANENT BAN from commenting?\n\nUser: ${label}\n\nThis cannot be undone by the Unban button. Continue?`
+                  );
+                  if (!confirmed) return;
+                  await permBanUser(
+                    selected.author.id,
+                    "Permanent ban: severe abuse (threats/hate/sexual violence)"
+                  );
+                }}
+                className="px-3 py-1 rounded-lg bg-fuchsia-500/15 text-fuchsia-200 border border-fuchsia-400/30 text-xs font-semibold hover:bg-fuchsia-500/25 transition"
+                title="Permanent commenting ban (requires confirmation)"
+              >
+                Perm ban
+              </button>
             </div>
 
             <div className="mt-4 rounded-xl border border-white/10 bg-black/10 p-3">

@@ -152,14 +152,16 @@ Users earn XESS for voting (likes) on comments. All users can earn Special Credi
 ```typescript
 // src/lib/specialCredits.ts
 TIER_TABLE = [
-  { minBalance: 0n, monthlyCredits: 0n },        // Tier 0: Below 50k
-  { minBalance: 50_000n, monthlyCredits: 30n },  // Tier 1: 50k XESS
-  { minBalance: 100_000n, monthlyCredits: 100n }, // Tier 2: 100k XESS
-  { minBalance: 250_000n, monthlyCredits: 250n }, // Tier 3: 250k XESS
-  { minBalance: 500_000n, monthlyCredits: 500n }, // Tier 4: 500k XESS
-  { minBalance: 1_000_000n, monthlyCredits: 1_000n }, // Tier 5: 1M XESS
-  { minBalance: 2_500_000n, monthlyCredits: 1_500n }, // Tier 6: 2.5M XESS
-  { minBalance: 5_000_000n, monthlyCredits: 2_000n }, // Tier 7: 5M XESS
+  { minBalance: 0n, monthlyCredits: 0n },          // Tier 0: Below 10k
+  { minBalance: 10_000n, monthlyCredits: 40n },    // Tier 1: 10k XESS
+  { minBalance: 25_000n, monthlyCredits: 120n },   // Tier 2: 25k XESS
+  { minBalance: 50_000n, monthlyCredits: 240n },   // Tier 3: 50k XESS
+  { minBalance: 100_000n, monthlyCredits: 800n },  // Tier 4: 100k XESS
+  { minBalance: 250_000n, monthlyCredits: 2_000n }, // Tier 5: 250k XESS
+  { minBalance: 500_000n, monthlyCredits: 4_000n }, // Tier 6: 500k XESS
+  { minBalance: 1_000_000n, monthlyCredits: 8_000n }, // Tier 7: 1M XESS
+  { minBalance: 2_500_000n, monthlyCredits: 12_000n }, // Tier 8: 2.5M XESS
+  { minBalance: 5_000_000n, monthlyCredits: 16_000n }, // Tier 9: 5M XESS
 ]
 ```
 

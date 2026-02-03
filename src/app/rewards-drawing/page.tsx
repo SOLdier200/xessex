@@ -287,6 +287,14 @@ export default function RewardsDrawingPage() {
               <div className="mt-2 text-white/50 text-xs">
                 Earned daily based on eligibility
               </div>
+              <div className="mt-1 text-xs">
+                <Link
+                  href="/rewards#credit-earning-tiers"
+                  className="text-cyan-300/80 hover:text-cyan-200 underline"
+                >
+                  View credit earning tiers
+                </Link>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-black/40 p-5">

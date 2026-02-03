@@ -18,7 +18,7 @@ export default function WhitepaperPage() {
               alt="Xessex"
               width={285}
               height={95}
-              className="h-[240px] w-auto"
+              className="h-[168px] w-auto"
               priority
             />
           </Link>
@@ -33,9 +33,16 @@ export default function WhitepaperPage() {
           </Link>
         </div>
 
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-          XESSEX WHITEPAPER v1.0
-        </h1>
+        <div className="mb-2">
+          <Image
+            src="/logos/Whitepaper100.png"
+            alt="XESSEX WHITEPAPER v1.0"
+            width={938}
+            height={276}
+            className="h-[65px] w-auto"
+            priority
+          />
+        </div>
         <p className="text-xl text-white/70 mb-8">A Wallet-Native Curation Network for Video Content</p>
 
         <nav className="bg-gray-900/50 border border-white/10 rounded-2xl p-6 mb-8">

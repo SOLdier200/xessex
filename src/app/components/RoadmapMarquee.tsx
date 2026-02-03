@@ -8,6 +8,18 @@ import {
   useSpring,
 } from "framer-motion";
 
+// Hook to detect mobile for performance optimizations
+function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 type PhaseStatus = "done" | "now" | "next";
 
 type RoadmapPhase = {
@@ -116,11 +128,36 @@ function statusStyles(status: PhaseStatus) {
 /**
  * Small starfield with parallax drift. All white-on-black; subtle opacity.
  * We generate deterministic stars (client side) so it doesn't look repetitive.
+ * Optimized: fewer stars and simpler animations on mobile.
  */
-function StarfieldParallax() {
-  const layer1 = React.useMemo(() => makeStars(70, 1), []);
-  const layer2 = React.useMemo(() => makeStars(45, 2), []);
-  const layer3 = React.useMemo(() => makeStars(28, 3), []);
+function StarfieldParallax({ isMobile }: { isMobile: boolean }) {
+  // Fewer stars on mobile for performance
+  const layer1 = React.useMemo(() => makeStars(isMobile ? 20 : 70, 1), [isMobile]);
+  const layer2 = React.useMemo(() => makeStars(isMobile ? 12 : 45, 2), [isMobile]);
+  const layer3 = React.useMemo(() => makeStars(isMobile ? 8 : 28, 3), [isMobile]);
+
+  // Skip animations entirely on mobile - just show static stars
+  if (isMobile) {
+    return (
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.08]">
+          {layer1.map((st, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                left: `${st.x}%`,
+                top: `${st.y}%`,
+                width: `${st.r}px`,
+                height: `${st.r}px`,
+              }}
+            />
+          ))}
+        </div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),rgba(0,0,0,0)_45%,rgba(0,0,0,0.85)_85%)]" />
+      </div>
+    );
+  }
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -188,6 +225,7 @@ function clamp(n: number, min: number, max: number) {
 }
 
 export default function RoadmapMarquee() {
+  const isMobile = useIsMobile();
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
   const trackRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -284,8 +322,11 @@ export default function RoadmapMarquee() {
     };
   }, [computeBounds, centerNow]);
 
-  // Auto-scroll drift (slow = premium on black)
+  // Auto-scroll drift (slow = premium on black) - disabled on mobile for performance
   React.useEffect(() => {
+    // Skip auto-scroll on mobile - let users swipe manually
+    if (isMobile) return;
+
     const step = (ts: number) => {
       if (!lastTsRef.current) lastTsRef.current = ts;
       const dt = (ts - lastTsRef.current) / 1000;
@@ -313,7 +354,7 @@ export default function RoadmapMarquee() {
       rafRef.current = null;
       lastTsRef.current = 0;
     };
-  }, [rawX]);
+  }, [rawX, isMobile]);
 
   // Wheel → horizontal scroll (desktop)
   React.useEffect(() => {
@@ -331,35 +372,75 @@ export default function RoadmapMarquee() {
     return () => viewport.removeEventListener("wheel", onWheel);
   }, [rawX]);
 
+  // Touch/drag support for mobile
+  const touchStartRef = React.useRef<{ x: number; rawXStart: number } | null>(null);
+  React.useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        rawXStart: rawX.get(),
+      };
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+      rawX.set(touchStartRef.current.rawXStart + deltaX);
+    };
+
+    const onTouchEnd = () => {
+      touchStartRef.current = null;
+    };
+
+    viewport.addEventListener("touchstart", onTouchStart, { passive: true });
+    viewport.addEventListener("touchmove", onTouchMove, { passive: true });
+    viewport.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      viewport.removeEventListener("touchstart", onTouchStart);
+      viewport.removeEventListener("touchmove", onTouchMove);
+      viewport.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [rawX]);
 
   return (
     <section className="relative w-full overflow-hidden bg-black">
-      {/* starfield parallax (subtle) */}
-      <StarfieldParallax />
+      {/* starfield parallax (subtle) - simplified on mobile */}
+      <StarfieldParallax isMobile={isMobile} />
 
-      {/* background polish for pure black */}
+      {/* background polish for pure black - simplified on mobile */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/[0.08] to-transparent" />
-        <div className="absolute top-1/2 left-1/2 h-80 w-[80rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.03] blur-[120px]" />
-        {/* subtle grain illusion */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"160\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.8\" numOctaves=\"4\" stitchTiles=\"stitch\"/></filter><rect width=\"160\" height=\"160\" filter=\"url(%23n)\" opacity=\"0.25\"/></svg>')",
-          }}
-        />
+        {/* Skip heavy blur on mobile */}
+        {!isMobile && (
+          <div className="absolute top-1/2 left-1/2 h-80 w-[80rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.03] blur-[120px]" />
+        )}
+        {/* subtle grain illusion - skip on mobile */}
+        {!isMobile && (
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"160\"><filter id=\"n\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.8\" numOctaves=\"4\" stitchTiles=\"stitch\"/></filter><rect width=\"160\" height=\"160\" filter=\"url(%23n)\" opacity=\"0.25\"/></svg>')",
+            }}
+          />
+        )}
       </div>
 
-      {/* Ambient breathing pulse */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        animate={{ opacity: [0.9, 1, 0.9] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <div className="absolute top-1/2 left-1/2 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.02] blur-[180px]" />
-      </motion.div>
+      {/* Ambient breathing pulse - skip on mobile for performance */}
+      {!isMobile && (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          animate={{ opacity: [0.9, 1, 0.9] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <div className="absolute top-1/2 left-1/2 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.02] blur-[180px]" />
+        </motion.div>
+      )}
 
       <div className="relative mx-auto max-w-6xl px-4 py-12">
         <div className="flex items-end justify-between gap-4">
@@ -388,11 +469,11 @@ export default function RoadmapMarquee() {
               "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 7%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 100%)",
           }}
         >
-          {/* Completed trail behind us (subtle, fades out) */}
-          <div className="pointer-events-none absolute left-0 right-0 top-3 flex items-center justify-start">
+          {/* Completed trail behind us (subtle, fades out) - hidden on mobile for perf */}
+          <div className="pointer-events-none absolute left-0 right-0 top-3 hidden md:flex items-center justify-start">
             <motion.div
               className="flex items-center gap-6 pr-24 text-[11px] tracking-wide text-white/40"
-              style={{ x }}
+              style={{ x, willChange: "transform" }}
               aria-hidden
             >
               {trail.map((t, i) => (
@@ -422,30 +503,30 @@ export default function RoadmapMarquee() {
             </motion.div>
           </div>
 
-          {/* track */}
+          {/* track - GPU accelerated */}
           <motion.div
             ref={trackRef}
             className="mt-8 flex w-max items-stretch gap-4 pr-16"
-            style={{ x }}
+            style={{ x, willChange: "transform" }}
           >
             {trackPhases.map((p, idx) => (
               <PhaseCard key={`${p.id}-${idx}`} phase={p} index={idx} />
             ))}
           </motion.div>
 
-          {/* Past depth stack (left trailing blur) */}
+          {/* Past depth stack (left trailing blur) - simplified on mobile */}
           <div className="pointer-events-none absolute inset-y-0 left-0 w-[220px]">
             {/* Deep black falloff */}
             <div className="absolute inset-y-0 left-0 w-[220px] bg-gradient-to-r from-black via-black/80 to-transparent" />
 
-            {/* Blur veil (makes past feel farther away) */}
-            <div className="absolute inset-y-0 left-0 w-[180px] backdrop-blur-2xl" />
+            {/* Blur veil (makes past feel farther away) - skip on mobile */}
+            <div className="absolute inset-y-0 left-0 w-[180px] hidden md:block backdrop-blur-2xl" />
 
             {/* Inner soft shadow line for depth */}
             <div className="absolute inset-y-0 left-[140px] w-px bg-white/10 opacity-40" />
 
-            {/* Extra haze near the extreme left edge */}
-            <div className="absolute inset-y-0 left-0 w-[120px] bg-white/[0.02] blur-xl" />
+            {/* Extra haze near the extreme left edge - skip on mobile */}
+            <div className="absolute inset-y-0 left-0 w-[120px] hidden md:block bg-white/[0.02] blur-xl" />
           </div>
 
           {/* subtle fade edges */}
@@ -519,11 +600,11 @@ function PhaseCard({ phase, index }: { phase: RoadmapPhase; index: number }) {
         ))}
       </ul>
 
-      {/* NOW pulse */}
+      {/* NOW pulse - hidden on mobile for performance */}
       {isNow && (
         <motion.div
           aria-hidden
-          className="pointer-events-none absolute -inset-1 rounded-[26px]"
+          className="pointer-events-none absolute -inset-1 rounded-[26px] hidden md:block"
           animate={{ opacity: [0.14, 0.32, 0.14] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
           style={{

@@ -10,6 +10,8 @@ export default function LogoutModal({
   onLogoutComplete,
   email,
   walletAddress,
+  creditBalance,
+  username,
 }: {
   open: boolean;
   onClose: () => void;
@@ -17,6 +19,8 @@ export default function LogoutModal({
   email?: string | null;
   walletAddress?: string | null;
   tier?: "member" | "diamond" | "free" | null;
+  creditBalance?: number;
+  username?: string | null;
 }) {
   const [loading, setLoading] = useState(false);
   const { disconnect, connected } = useWallet();
@@ -70,6 +74,12 @@ export default function LogoutModal({
         {walletAddress && (
           <div className="mb-4 pb-4 border-b border-white/10">
             <div className="text-xs text-white/50 uppercase tracking-wide mb-2">Logged in as</div>
+            {/* Show username if available */}
+            {username && (
+              <div className="text-lg font-semibold text-pink-400 mb-2">
+                {username}
+              </div>
+            )}
             <button
               onClick={handleCopyWallet}
               className="w-full text-left text-sm text-cyan-400 hover:text-cyan-300 font-mono break-all transition cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2"
@@ -81,6 +91,13 @@ export default function LogoutModal({
             {email && (
               <div className="text-xs text-white/50 mt-2 truncate">
                 {email}
+              </div>
+            )}
+            {/* Show credit balance */}
+            {creditBalance !== undefined && (
+              <div className="mt-3 flex items-center justify-between bg-yellow-500/10 rounded-lg p-3">
+                <span className="text-xs text-white/70">Special Credits</span>
+                <span className="text-lg font-bold text-yellow-400">{creditBalance}</span>
               </div>
             )}
           </div>

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
-import { getVideoAccessForContext } from "@/lib/videoAccess";
+import { getVideoAccessWithData } from "@/lib/videoAccess";
 import TopNav from "../../components/TopNav";
 import VideoPlayback from "./VideoPlayback";
 
@@ -69,36 +69,57 @@ export async function generateMetadata(
 
 export default async function VideoPage({ params }: VideoPageProps) {
   const { slug } = await params;
-  const ctx = await getAccessContext();
 
-  const video = await db.video.findFirst({
-    where: { slug },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      embedUrl: true,
-      thumbnailUrl: true,
-      viewsCount: true,
-      sourceViews: true,
-      avgStars: true,
-      starsCount: true,
-      unlockCost: true,
-      kind: true,
-      createdAt: true,
-      rank: true,
-    },
-  });
+  // Run access context and video fetch in parallel
+  const [ctx, video] = await Promise.all([
+    getAccessContext(),
+    db.video.findFirst({
+      where: { slug },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        embedUrl: true,
+        thumbnailUrl: true,
+        viewsCount: true,
+        sourceViews: true,
+        avgStars: true,
+        starsCount: true,
+        unlockCost: true,
+        kind: true,
+        createdAt: true,
+        rank: true,
+      },
+    }),
+  ]);
 
   if (!video) notFound();
 
-  // Get video access status
-  const access = await getVideoAccessForContext({
-    videoId: video.id,
-    userId: ctx.user?.id ?? null,
-    isAdminOrMod: ctx.isAdminOrMod,
-    creditBalance: ctx.creditBalance,
-  });
+  // Run access check and related videos in parallel
+  const [access, allRelated] = await Promise.all([
+    getVideoAccessWithData({
+      videoId: video.id,
+      userId: ctx.user?.id ?? null,
+      isAdminOrMod: ctx.isAdminOrMod,
+      creditBalance: ctx.creditBalance,
+      videoKind: video.kind,
+      videoUnlockCost: video.unlockCost,
+    }),
+    db.video.findMany({
+      where: {
+        id: { not: video.id },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        thumbnailUrl: true,
+        avgStars: true,
+      },
+      take: 20,
+    }),
+  ]);
 
   // SECURITY: Only expose embedUrl if user has access (unlocked or free video)
   const canEmbed = !!(access?.ok && access?.unlocked);
@@ -108,22 +129,6 @@ export default async function VideoPage({ params }: VideoPageProps) {
   const canRateStars = !!ctx.user && ctx.canRateStars;
   const canPostComment = !!ctx.user && ctx.canComment;
   const canVoteComments = !!ctx.user && ctx.canVoteComments;
-
-  // Get related videos for sidebar - fetch more and randomize
-  const allRelated = await db.video.findMany({
-    where: {
-      id: { not: video.id },
-      isActive: true,
-    },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      thumbnailUrl: true,
-      avgStars: true,
-    },
-    take: 20,
-  });
 
   // Shuffle and take 4 random videos
   const shuffled = allRelated.sort(() => Math.random() - 0.5);

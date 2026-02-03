@@ -433,6 +433,15 @@ export default function LaunchClient() {
             <h1 className="text-4xl font-semibold tracking-tight">
               XESS Token Launch
             </h1>
+            <div className="mt-2">
+              <Image
+                src="/logos/1,000,000,000Xess100.png"
+                alt="1,000,000,000 XESS Total Supply"
+                width={938}
+                height={276}
+                className="h-[40px] w-auto"
+              />
+            </div>
             <p className="max-w-2xl text-sm text-white/70">
               XESS is a transferable utility token used for rewards and progression qualification.
               It is not required for platform access or use. Tokens are delivered immediately upon purchase with no vesting.

@@ -5,8 +5,12 @@ import { weekKeyUTC } from "@/lib/weekKey";
 import { CREDIT_MICRO } from "@/lib/rewardsConstants";
 import { poolFromVideoKind, startOfDayUTC, FLAT_RATES } from "@/lib/rewardPool";
 
+// Force Node.js runtime (required for Prisma transactions)
+export const runtime = "nodejs";
+
 // Special credits reward for voting
-const VOTE_CREDIT_REWARD = 1n; // 1 credit per vote (once per comment, no extra on flip)
+const VOTE_CREDIT_REWARD_EMBED = 1n; // 1 credit per vote on embed videos
+const VOTE_CREDIT_REWARD_XESSEX = 50n; // 50 credits per vote on Xessex Original videos
 
 const FLIP_WINDOW_MS = 60_000;
 
@@ -101,18 +105,20 @@ export async function POST(req: NextRequest) {
     const scoreDelta = getScoreDelta(value, access.isAdminOrMod);
     const isModVote = access.isAdminOrMod;
 
-    const updated = await db.$transaction(async (tx) => {
-      // Fetch video kind to determine pool
-      const video = await tx.video.findUnique({
-        where: { id: comment.videoId },
-        select: { kind: true },
-      });
-      const pool = poolFromVideoKind(video?.kind);
-      const dayUTC = startOfDayUTC(new Date());
+    // Fetch video kind to determine pool
+    const video = await db.video.findUnique({
+      where: { id: comment.videoId },
+      select: { kind: true },
+    });
+    const pool = poolFromVideoKind(video?.kind);
+    const dayUTC = startOfDayUTC(new Date());
 
+    // Step 1: Create vote and update comment (core operation)
+    let updated;
+    try {
       // Use CommentModVote for admin/mod, CommentMemberVote for regular users
       if (isModVote) {
-        await tx.commentModVote.create({
+        await db.commentModVote.create({
           data: {
             commentId,
             modId: voterId,
@@ -122,7 +128,7 @@ export async function POST(req: NextRequest) {
           },
         });
       } else {
-        await tx.commentMemberVote.create({
+        await db.commentMemberVote.create({
           data: {
             commentId,
             voterId,
@@ -134,7 +140,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Update different fields based on voter type
-      const c = await tx.comment.update({
+      updated = await db.comment.update({
         where: { id: commentId },
         data: isModVote
           ? {
@@ -149,14 +155,20 @@ export async function POST(req: NextRequest) {
             },
         select: { memberLikes: true, memberDislikes: true, modLikes: true, modDislikes: true, authorId: true, score: true },
       });
+    } catch (err) {
+      console.error("[vote] Vote creation failed:", err);
+      return NextResponse.json({ ok: false, error: "INTERNAL_ERROR" }, { status: 500 });
+    }
 
+    // Step 2: Track stats (non-critical, done separately)
+    try {
       // Track score for author (positive deltas only for weekly) - pool-aware
       if (scoreDelta > 0) {
-        await tx.weeklyUserStat.upsert({
-          where: { weekKey_userId_pool: { weekKey: wk, userId: c.authorId, pool } },
+        await db.weeklyUserStat.upsert({
+          where: { weekKey_userId_pool: { weekKey: wk, userId: updated.authorId, pool } },
           create: {
             weekKey: wk,
-            userId: c.authorId,
+            userId: updated.authorId,
             pool,
             scoreReceived: scoreDelta,
             diamondComments: 0,
@@ -168,13 +180,11 @@ export async function POST(req: NextRequest) {
             scoreReceived: { increment: scoreDelta },
           },
         });
-      }
 
-      // Update all-time stats for author - pool-aware
-      if (scoreDelta > 0) {
-        await tx.allTimeUserStat.upsert({
-          where: { userId_pool: { userId: c.authorId, pool } },
-          create: { userId: c.authorId, pool, scoreReceived: scoreDelta },
+        // Update all-time stats for author - pool-aware
+        await db.allTimeUserStat.upsert({
+          where: { userId_pool: { userId: updated.authorId, pool } },
+          create: { userId: updated.authorId, pool, scoreReceived: scoreDelta },
           update: { scoreReceived: { increment: scoreDelta } },
         });
       }
@@ -182,14 +192,14 @@ export async function POST(req: NextRequest) {
       // Track voter stats for all members - pool-aware
       // Mod votes don't count toward voter rewards
       if (!isModVote) {
-        await tx.weeklyVoterStat.upsert({
+        await db.weeklyVoterStat.upsert({
           where: { weekKey_userId_pool: { weekKey: wk, userId: voterId, pool } },
           create: { weekKey: wk, userId: voterId, pool, votesCast: 1 },
           update: { votesCast: { increment: 1 } },
         });
 
         // Mark daily active for the voter (for "active every day" weekly bonus)
-        await tx.userDailyActive.upsert({
+        await db.userDailyActive.upsert({
           where: { userId_day_pool: { userId: voterId, day: dayUTC, pool } },
           create: { userId: voterId, day: dayUTC, pool },
           update: {},
@@ -198,14 +208,14 @@ export async function POST(req: NextRequest) {
 
       // Log flat-rate "like received" for comment author (if positive vote)
       if (value === 1) {
-        const likeRefId = `like_rcvd:${wk}:${c.authorId}:${commentId}:${voterId}`;
+        const likeRefId = `like_rcvd:${wk}:${updated.authorId}:${commentId}:${voterId}`;
         const likeAmount = FLAT_RATES[pool].LIKE_RECEIVED;
-        await tx.flatActionLedger.upsert({
+        await db.flatActionLedger.upsert({
           where: { refId: likeRefId },
           create: {
             refId: likeRefId,
             weekKey: wk,
-            userId: c.authorId,
+            userId: updated.authorId,
             pool,
             action: "LIKE_RECEIVED",
             units: 1,
@@ -214,48 +224,55 @@ export async function POST(req: NextRequest) {
           update: {}, // no-op if already exists
         });
       }
+    } catch (err) {
+      // Non-critical - log but don't fail the request
+      console.error("[vote] Stats tracking failed (non-critical):", err);
+    }
 
-      // Award special credits for voting (1 credit, once per comment)
-      // Use ledger refId to track uniqueness: "vote_credit_{voterId}_{commentId}"
+    // Step 3: Award special credits (separate small transaction)
+    // 50 credits for Xessex Originals, 1 credit for embeds
+    const isXessexOriginal = video?.kind === "XESSEX";
+    const voteCreditsReward = isXessexOriginal ? VOTE_CREDIT_REWARD_XESSEX : VOTE_CREDIT_REWARD_EMBED;
+    let creditsAwarded = 0;
+    try {
       const creditRefId = `vote_credit_${voterId}_${commentId}`;
-      const existingCredit = await tx.specialCreditLedger.findFirst({
+      const existingCredit = await db.specialCreditLedger.findFirst({
         where: { refId: creditRefId },
       });
 
-      let creditsAwarded = 0n;
       if (!existingCredit) {
-        // Ensure user has a credit account
-        await tx.specialCreditAccount.upsert({
-          where: { userId: voterId },
-          create: { userId: voterId, balanceMicro: 0n },
-          update: {},
-        });
+        await db.$transaction(async (tx) => {
+          await tx.specialCreditAccount.upsert({
+            where: { userId: voterId },
+            create: { userId: voterId, balanceMicro: 0n },
+            update: {},
+          });
 
-        // Award credits
-        const rewardMicro = VOTE_CREDIT_REWARD * CREDIT_MICRO;
-        await tx.specialCreditAccount.update({
-          where: { userId: voterId },
-          data: { balanceMicro: { increment: rewardMicro } },
-        });
+          const rewardMicro = voteCreditsReward * CREDIT_MICRO;
+          await tx.specialCreditAccount.update({
+            where: { userId: voterId },
+            data: { balanceMicro: { increment: rewardMicro } },
+          });
 
-        // Record in ledger
-        await tx.specialCreditLedger.create({
-          data: {
-            userId: voterId,
-            weekKey: wk,
-            amountMicro: rewardMicro,
-            reason: "Vote reward",
-            refType: "VOTE_CREDIT",
-            refId: creditRefId,
-          },
-        });
+          await tx.specialCreditLedger.create({
+            data: {
+              userId: voterId,
+              weekKey: wk,
+              amountMicro: rewardMicro,
+              reason: isXessexOriginal ? "Vote reward (Xessex Original)" : "Vote reward",
+              refType: "VOTE_CREDIT",
+              refId: creditRefId,
+            },
+          });
+        }, { timeout: 10000 });
 
-        creditsAwarded = VOTE_CREDIT_REWARD;
-        console.log("[vote] Awarded", creditsAwarded.toString(), "special credit for voting");
+        creditsAwarded = Number(voteCreditsReward);
+        console.log("[vote] Awarded", creditsAwarded, "special credits for voting on", isXessexOriginal ? "Xessex Original" : "embed");
       }
-
-      return { ...c, creditsAwarded: Number(creditsAwarded) };
-    });
+    } catch (err) {
+      // Non-critical - log but don't fail the request
+      console.error("[vote] Credits award failed (non-critical):", err);
+    }
 
     return NextResponse.json({
       ok: true,
@@ -266,7 +283,7 @@ export async function POST(req: NextRequest) {
       modDislikes: updated.modDislikes,
       voteLocked: false,
       secondsLeftToFlip: 60,
-      creditsEarned: updated.creditsAwarded,
+      creditsEarned: creditsAwarded,
     });
   }
 
@@ -309,18 +326,20 @@ export async function POST(req: NextRequest) {
   // Net score change = subtract old + add new
   const netScoreDelta = newScoreDelta - oldScoreDelta;
 
-  const updated = await db.$transaction(async (tx) => {
-    // Fetch video kind to determine pool
-    const video = await tx.video.findUnique({
-      where: { id: comment.videoId },
-      select: { kind: true },
-    });
-    const pool = poolFromVideoKind(video?.kind);
-    const dayUTC = startOfDayUTC(new Date());
+  // Fetch video kind to determine pool
+  const video = await db.video.findUnique({
+    where: { id: comment.videoId },
+    select: { kind: true },
+  });
+  const pool = poolFromVideoKind(video?.kind);
+  const dayUTC = startOfDayUTC(new Date());
 
+  // Step 1: Update vote and comment (core operation)
+  let afterFlip;
+  try {
     // Update vote row - use appropriate table based on voter type
     if (isModVoter) {
-      await tx.commentModVote.update({
+      await db.commentModVote.update({
         where: { commentId_modId: { commentId, modId: voterId } },
         data: {
           value,
@@ -329,7 +348,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      await tx.commentMemberVote.update({
+      await db.commentMemberVote.update({
         where: { commentId_voterId: { commentId, voterId } },
         data: {
           value,
@@ -343,7 +362,7 @@ export async function POST(req: NextRequest) {
     const likeIncrement = (value === 1 ? 1 : 0) + (existing.value === 1 ? -1 : 0);
     const dislikeIncrement = (value === -1 ? 1 : 0) + (existing.value === -1 ? -1 : 0);
 
-    const afterFlip = await tx.comment.update({
+    afterFlip = await db.comment.update({
       where: { id: commentId },
       data: isModVoter
         ? {
@@ -358,12 +377,16 @@ export async function POST(req: NextRequest) {
           },
       select: { memberLikes: true, memberDislikes: true, modLikes: true, modDislikes: true, authorId: true, score: true },
     });
+  } catch (err) {
+    console.error("[vote] Flip failed:", err);
+    return NextResponse.json({ ok: false, error: "INTERNAL_ERROR" }, { status: 500 });
+  }
 
+  // Step 2: Track stats (non-critical)
+  try {
     // Update weekly stats for author (only positive deltas) - pool-aware
-    // For flip: if going from dislike to like, we add the positive delta
-    // if going from like to dislike, we don't subtract from weekly (keep earned score)
     if (netScoreDelta > 0) {
-      await tx.weeklyUserStat.upsert({
+      await db.weeklyUserStat.upsert({
         where: { weekKey_userId_pool: { weekKey: wk, userId: afterFlip.authorId, pool } },
         create: {
           weekKey: wk,
@@ -379,11 +402,9 @@ export async function POST(req: NextRequest) {
           scoreReceived: { increment: netScoreDelta },
         },
       });
-    }
 
-    // Update all-time stats for author (only track positive deltas) - pool-aware
-    if (netScoreDelta > 0) {
-      await tx.allTimeUserStat.upsert({
+      // Update all-time stats for author (only track positive deltas) - pool-aware
+      await db.allTimeUserStat.upsert({
         where: { userId_pool: { userId: afterFlip.authorId, pool } },
         create: { userId: afterFlip.authorId, pool, scoreReceived: netScoreDelta },
         update: { scoreReceived: { increment: netScoreDelta } },
@@ -392,7 +413,7 @@ export async function POST(req: NextRequest) {
 
     // Mark daily active for the voter on flip as well (if not mod)
     if (!isModVoter) {
-      await tx.userDailyActive.upsert({
+      await db.userDailyActive.upsert({
         where: { userId_day_pool: { userId: voterId, day: dayUTC, pool } },
         create: { userId: voterId, day: dayUTC, pool },
         update: {},
@@ -403,7 +424,7 @@ export async function POST(req: NextRequest) {
     if (value === 1 && existing.value === -1) {
       const likeRefId = `like_rcvd:${wk}:${afterFlip.authorId}:${commentId}:${voterId}`;
       const likeAmount = FLAT_RATES[pool].LIKE_RECEIVED;
-      await tx.flatActionLedger.upsert({
+      await db.flatActionLedger.upsert({
         where: { refId: likeRefId },
         create: {
           refId: likeRefId,
@@ -417,17 +438,18 @@ export async function POST(req: NextRequest) {
         update: {}, // no-op if already exists
       });
     }
-
-    return afterFlip;
-  });
+  } catch (err) {
+    // Non-critical - log but don't fail the request
+    console.error("[vote] Stats tracking on flip failed (non-critical):", err);
+  }
 
   return NextResponse.json({
     ok: true,
     userVote: value,
-    memberLikes: updated.memberLikes,
-    memberDislikes: updated.memberDislikes,
-    modLikes: updated.modLikes,
-    modDislikes: updated.modDislikes,
+    memberLikes: afterFlip.memberLikes,
+    memberDislikes: afterFlip.memberDislikes,
+    modLikes: afterFlip.modLikes,
+    modDislikes: afterFlip.modDislikes,
     voteLocked: true, // they used their one flip
     secondsLeftToFlip: 0,
   });

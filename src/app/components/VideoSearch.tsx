@@ -510,7 +510,7 @@ export default function VideoSearch({
                         ) : (
                           <Link
                             href="/login"
-                            className="mt-2 px-3 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-400 text-white text-xs font-bold transition"
+                            className="mt-2 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold transition border border-white/20"
                           >
                             Login to Unlock
                           </Link>

@@ -25,6 +25,8 @@ model User {
   referredById             String?
   recoveryEmail            String?                  @unique
   recoveryEmailVerifiedAt  DateTime?
+  profilePictureKey        String?
+  username                 String?                  @unique
   allTimeStats         AllTimeUserStat[]
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
@@ -1116,13 +1118,13 @@ model SaleConfig {
   publicAllocation      BigInt    @default(315000000)
   walletCapXess         BigInt    @default(5000000)
 
-  // Pricing in USD micros (e.g. 2500 = $0.002500)
-  privatePriceUsdMicros BigInt @default(2500)
-  publicPriceUsdMicros  BigInt @default(3000)
+  // Pricing in USD micros (e.g. 39 = $0.000039)
+  privatePriceUsdMicros BigInt @default(39)
+  publicPriceUsdMicros  BigInt @default(46)
 
   // SOL pricing (lamports per XESS)
-  privateLamportsPerXess BigInt @default(500)
-  publicLamportsPerXess  BigInt @default(650)
+  privateLamportsPerXess BigInt @default(7)
+  publicLamportsPerXess  BigInt @default(10)
 
   // Whitelist for private sale (Merkle root hex)
   privateMerkleRootHex  String?

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 
 type Comment = {
@@ -8,6 +9,7 @@ type Comment = {
   body: string;
   authorId: string;
   authorWallet: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
   status?: "ACTIVE" | "PENDING" | "HIDDEN" | "REMOVED";
   memberLikes: number;
@@ -168,6 +170,14 @@ export default function Comments({
     if (!text.trim() || submitting) return;
 
     setSubmitting(true);
+
+    // Show evaluation toast sequence
+    const evaluationToast = toast.loading("Evaluating Comment for Quality, Content, Accuracy, and Creativity...");
+
+    // Brief delay then update to "Please wait..."
+    await new Promise(resolve => setTimeout(resolve, 800));
+    toast.loading("Please wait...", { id: evaluationToast });
+
     try {
       const res = await fetch("/api/comments", {
         method: "POST",
@@ -179,7 +189,16 @@ export default function Comments({
       });
 
       const data = await res.json();
+
+      // Dismiss the loading toast
+      toast.dismiss(evaluationToast);
+
       if (data.ok) {
+        // Show the processed message
+        toast.success("Your comment has been processed. You will earn the most for comments that resonate with your peers and represent the keen observer.", {
+          duration: 5000,
+        });
+
         if (data.comment?.status && data.comment.status !== "ACTIVE") {
           toast.success("Comment submitted for review.");
         } else {
@@ -187,9 +206,6 @@ export default function Comments({
         }
         setText("");
         setHasPostedComment(true);
-        if (!data.comment?.status || data.comment.status === "ACTIVE") {
-          toast.success("Comment posted!");
-        }
         // Show credits earned toast and update UI
         if (data.creditsEarned && data.creditsEarned > 0) {
           toast.success(`You earned ${data.creditsEarned} Special Credits!`, {
@@ -207,6 +223,7 @@ export default function Comments({
         toast.error(data.error || "Failed to post comment");
       }
     } catch {
+      toast.dismiss(evaluationToast);
       toast.error("Failed to post comment");
     } finally {
       setSubmitting(false);
@@ -224,6 +241,8 @@ export default function Comments({
       toast.error("Your vote on this comment is locked");
       return;
     }
+
+    const voteToast = toast.loading("Vote being processed...");
 
     try {
       const res = await fetch("/api/comments/vote", {
@@ -251,31 +270,38 @@ export default function Comments({
               : c
           )
         );
+
+        toast.success("Success! You've earned XESS for voting. Keep voting to maximize your rewards!", {
+          id: voteToast,
+          duration: 4000,
+        });
+
         // Show credits earned toast and update UI
         if (data.creditsEarned && data.creditsEarned > 0) {
-          toast.success(`You earned ${data.creditsEarned} Special Credit!`, {
+          const creditWord = data.creditsEarned === 1 ? "Credit" : "Credits";
+          toast.success(`You earned ${data.creditsEarned} Special ${creditWord}!`, {
             icon: <img src="/logos/diamond3.png" alt="" className="w-5 h-5" />,
           });
           // Dispatch event to update credit display in nav
           window.dispatchEvent(new CustomEvent("credits-changed"));
         }
       } else if (data.error === "VOTE_LOCKED_WINDOW_EXPIRED") {
-        toast.error("Vote locked: you can only change it within 60 seconds.");
+        toast.error("Vote locked: you can only change it within 60 seconds.", { id: voteToast });
       } else if (data.error === "VOTE_LOCKED_FLIP_ALREADY_USED") {
-        toast.error("Vote locked: you can only change your vote once.");
+        toast.error("Vote locked: you can only change your vote once.", { id: voteToast });
       } else if (data.error === "RATE_LIMIT_1_PER_MINUTE") {
-        toast.error("Please wait 1 minute before changing your vote");
+        toast.error("Please wait 1 minute before changing your vote", { id: voteToast });
       } else if (data.error === "FLIP_LIMIT_REACHED") {
-        toast.error("You've reached the maximum vote changes for this comment");
+        toast.error("You've reached the maximum vote changes for this comment", { id: voteToast });
       } else if (data.error === "PAID_ONLY") {
-        toast.error("Only paid members can vote on comments");
+        toast.error("Only paid members can vote on comments", { id: voteToast });
       } else if (data.error === "CANNOT_VOTE_OWN_COMMENT") {
-        toast.error("You can't rate your own comment");
+        toast.error("You can't rate your own comment", { id: voteToast });
       } else {
-        toast.error(data.error || "Failed to vote");
+        toast.error(data.error || "Failed to vote", { id: voteToast });
       }
     } catch {
-      toast.error("Failed to vote");
+      toast.error("Failed to vote", { id: voteToast });
     }
   };
 
@@ -537,9 +563,25 @@ export default function Comments({
               <button
                 type="submit"
                 disabled={!text.trim() || text.length < 3 || submitting || hasPostedComment}
-                className="px-4 py-2 rounded-xl bg-pink-500/80 hover:bg-pink-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium transition"
+                className="hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                {submitting ? "Posting..." : "Post Comment"}
+                {submitting ? (
+                  <Image
+                    src="/logos/textlogo/siteset3/Posting...trans.png"
+                    alt="Posting..."
+                    width={938}
+                    height={276}
+                    className="h-[32px] w-auto"
+                  />
+                ) : (
+                  <Image
+                    src="/logos/textlogo/siteset3/Post100.png"
+                    alt="Post Comment"
+                    width={938}
+                    height={276}
+                    className="h-[32px] w-auto"
+                  />
+                )}
               </button>
               {hasPostedComment && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-black/90 border border-white/20 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -584,6 +626,18 @@ export default function Comments({
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2 pr-8">
                   <div className="flex items-center gap-2">
+                    {/* Avatar */}
+                    {comment.authorAvatarUrl ? (
+                      <img
+                        src={comment.authorAvatarUrl}
+                        alt=""
+                        className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-[10px] text-white/60 font-semibold flex-shrink-0">
+                        {comment.authorWallet.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     {isOwnComment ? (
                       <span className="font-medium text-pink-300 text-sm">{comment.authorWallet}</span>
                     ) : (
@@ -618,14 +672,20 @@ export default function Comments({
                         type="button"
                         onClick={() => openReportModal(comment.id)}
                         disabled={reportedIds.has(comment.id)}
-                        className={`text-[10px] px-2 py-0.5 rounded-full border transition ${
+                        className={`transition ${
                           reportedIds.has(comment.id)
-                            ? "border-white/10 text-white/30 cursor-not-allowed"
-                            : "border-red-500/30 text-red-300 hover:border-red-400/60 hover:text-red-200"
+                            ? "opacity-30 cursor-not-allowed"
+                            : "opacity-70 hover:opacity-100"
                         }`}
                         title={reportedIds.has(comment.id) ? "Already reported" : "Report comment"}
                       >
-                        {reportedIds.has(comment.id) ? "Reported" : "Report"}
+                        <Image
+                          src="/logos/Report2.png"
+                          alt={reportedIds.has(comment.id) ? "Reported" : "Report"}
+                          width={100}
+                          height={100}
+                          className="h-[26px] w-auto"
+                        />
                       </button>
                     )}
                   </div>

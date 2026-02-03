@@ -10,6 +10,7 @@ type AuthData = {
   authed: boolean;
   walletAddress: string | null;
   creditBalance: number;
+  username: string | null;
 };
 
 export default function WalletStatus() {
@@ -33,6 +34,7 @@ export default function WalletStatus() {
               authed: true,
               walletAddress: d.walletAddress ?? null,
               creditBalance: d.creditBalance ?? 0,
+              username: d.user?.username ?? null,
             });
           } else {
             setAuth(null);
@@ -83,9 +85,9 @@ export default function WalletStatus() {
     router.refresh();
   };
 
-  // Use auth wallet or connected wallet's publicKey - truncate for display
+  // Use auth wallet or connected wallet's publicKey
   const fullWalletAddress = auth?.walletAddress || publicKey?.toBase58();
-  const walletAddress = fullWalletAddress
+  const truncatedWalletAddress = fullWalletAddress
     ? `${fullWalletAddress.slice(0, 4)}...${fullWalletAddress.slice(-4)}`
     : null;
 
@@ -152,11 +154,18 @@ export default function WalletStatus() {
         className={`neon-border rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 cursor-pointer transition ${bgClass} ${borderClass}`}
       >
         {authed ? (
-          // State 3: Signed in - show pubkey
+          // State 3: Signed in - show username or pubkey
           <div className="flex items-center gap-2">
-            <div className={`text-[10px] md:text-xs font-mono ${textColor}`}>
-              {walletAddress ?? "Connected"}
-            </div>
+            {auth?.username ? (
+              <div className={`text-[10px] md:text-xs font-semibold ${textColor}`}>
+                {auth.username}
+              </div>
+            ) : (
+              <div className={`text-[10px] md:text-xs font-mono ${textColor}`}>
+                <span className="hidden lg:inline">{fullWalletAddress ?? "Connected"}</span>
+                <span className="lg:hidden">{truncatedWalletAddress ?? "Connected"}</span>
+              </div>
+            )}
             {auth?.creditBalance !== undefined && auth.creditBalance > 0 && (
               <div className="text-[10px] md:text-xs font-semibold text-yellow-400 whitespace-nowrap">
                 {auth.creditBalance} credits
@@ -189,6 +198,8 @@ export default function WalletStatus() {
         email={null}
         walletAddress={fullWalletAddress ?? null}
         tier="diamond"
+        creditBalance={auth?.creditBalance}
+        username={auth?.username}
       />
     </>
   );

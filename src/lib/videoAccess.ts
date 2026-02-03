@@ -27,12 +27,41 @@ export async function getVideoAccessForContext(params: {
 
   const video = await db.video.findUnique({
     where: { id: videoId },
-    select: { id: true, unlockCost: true, isActive: true },
+    select: { id: true, unlockCost: true, isActive: true, kind: true },
   });
 
   if (!video) return { ok: false, error: "not_found" };
 
-  const unlockCost = video.unlockCost ?? 0;
+  return getVideoAccessWithData({
+    videoId,
+    userId,
+    isAdminOrMod,
+    creditBalance,
+    videoKind: video.kind,
+    videoUnlockCost: video.unlockCost ?? 0,
+  });
+}
+
+/**
+ * Optimized version that accepts video data directly to avoid redundant DB query.
+ * Use when you already have the video data from a previous query.
+ */
+export async function getVideoAccessWithData(params: {
+  videoId: string;
+  userId: string | null;
+  isAdminOrMod: boolean;
+  creditBalance: number;
+  videoKind: string;
+  videoUnlockCost: number;
+}): Promise<VideoAccessResult> {
+  const { videoId, userId, isAdminOrMod, creditBalance, videoKind, videoUnlockCost } = params;
+
+  const unlockCost = videoUnlockCost ?? 0;
+
+  // XESSEX videos are always free (no unlock required)
+  if (videoKind === "XESSEX") {
+    return { ok: true, unlocked: true, reason: "free", unlockCost: 0 };
+  }
 
   // Free video
   if (unlockCost <= 0) {
@@ -79,12 +108,17 @@ export async function getVideoAccess(params: {
 
   const video = await db.video.findUnique({
     where: { id: videoId },
-    select: { id: true, unlockCost: true },
+    select: { id: true, unlockCost: true, kind: true },
   });
 
   if (!video) return { ok: false, error: "not_found" };
 
   const unlockCost = video.unlockCost ?? 0;
+
+  // XESSEX videos are always free (no unlock required)
+  if (video.kind === "XESSEX") {
+    return { ok: true, unlocked: true, reason: "free", unlockCost: 0 };
+  }
 
   // Free videos
   if (unlockCost <= 0) {

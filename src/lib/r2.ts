@@ -3,7 +3,7 @@
  * Uses AWS SDK v3 with S3-compatible R2 endpoint.
  */
 
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // R2 configuration from environment
@@ -80,4 +80,44 @@ export function extractR2Key(mediaUrl: string): string {
     // If URL parsing fails, return original
     return mediaUrl;
   }
+}
+
+/**
+ * Generate a presigned URL for uploading to R2.
+ *
+ * @param key - The object key in R2 (e.g., "avatars/user123.webp")
+ * @param contentType - The expected content type (e.g., "image/webp")
+ * @param expiresIn - URL validity in seconds (default: 5 minutes)
+ * @returns Presigned URL for PUT request
+ */
+export async function signR2PutUrl(
+  key: string,
+  contentType: string,
+  expiresIn: number = 300
+): Promise<string> {
+  const client = getR2Client();
+
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  return getSignedUrl(client, command, { expiresIn });
+}
+
+/**
+ * Delete an object from R2.
+ *
+ * @param key - The object key to delete
+ */
+export async function deleteR2Object(key: string): Promise<void> {
+  const client = getR2Client();
+
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    })
+  );
 }
