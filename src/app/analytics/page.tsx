@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import TopNav from "../components/TopNav";
+
+type ContentFilter = "standard" | "xessex";
 
 type CommentModalData = {
   body: string;
@@ -14,6 +16,7 @@ type CommentModalData = {
 } | null;
 
 type AnalyticsData = {
+  contentFilter: ContentFilter;
   totals: {
     totalVideos: number;
     totalComments: number;
@@ -55,12 +58,20 @@ type AnalyticsData = {
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedComment, setSelectedComment] = useState<CommentModalData>(null);
+  const [contentFilter, setContentFilter] = useState<ContentFilter>("standard");
 
-  useEffect(() => {
-    fetch("/api/analytics")
+  const fetchAnalytics = useCallback((filter: ContentFilter, isInitial: boolean) => {
+    if (isInitial) {
+      setInitialLoading(true);
+    } else {
+      setTabLoading(true);
+    }
+    setError(null);
+    fetch(`/api/analytics?contentFilter=${filter}`)
       .then((res) => {
         if (res.status === 401) throw new Error("UNAUTHORIZED");
         if (res.status === 403) throw new Error("DIAMOND_ONLY");
@@ -74,10 +85,24 @@ export default function AnalyticsPage() {
         }
       })
       .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setInitialLoading(false);
+        setTabLoading(false);
+      });
   }, []);
 
-  if (loading) {
+  useEffect(() => {
+    fetchAnalytics(contentFilter, !data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentFilter]);
+
+  const handleFilterChange = (filter: ContentFilter) => {
+    if (filter !== contentFilter) {
+      setContentFilter(filter);
+    }
+  };
+
+  if (initialLoading) {
     return (
       <main className="min-h-screen">
         <TopNav />
@@ -168,6 +193,38 @@ export default function AnalyticsPage() {
             Diamond Member performance dashboard
           </p>
         </div>
+
+        {/* Content Filter Tabs */}
+        <div className="flex items-center gap-2 mb-6">
+          <button
+            onClick={() => handleFilterChange("standard")}
+            disabled={tabLoading}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 ${
+              contentFilter === "standard"
+                ? "bg-pink-500 text-white"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+            }`}
+          >
+            Standard
+          </button>
+          <button
+            onClick={() => handleFilterChange("xessex")}
+            disabled={tabLoading}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 ${
+              contentFilter === "xessex"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+            }`}
+          >
+            Xessex Content
+          </button>
+          {tabLoading && (
+            <div className="animate-spin w-5 h-5 border-2 border-pink-400 border-t-transparent rounded-full ml-2" />
+          )}
+        </div>
+
+        {/* Content wrapper with loading fade */}
+        <div className={`transition-opacity duration-200 ${tabLoading ? "opacity-50" : "opacity-100"}`}>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
@@ -393,6 +450,8 @@ export default function AnalyticsPage() {
             (-1 × member dislikes) + (-20 × mod dislikes)
           </p>
         </div>
+
+        </div>{/* End content wrapper */}
       </div>
 
       {/* Comment Modal */}

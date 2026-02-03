@@ -1,121 +1,87 @@
+/*
+ * © 2026 Xessex. All rights reserved.
+ * Proprietary and confidential.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
-import { checkAndApplyCommentModeration } from "@/lib/commentModeration";
-import { CREDIT_MICRO } from "@/lib/rewardsConstants";
-import { weekKeyUTC } from "@/lib/weekKey";
-
-// Credits to deduct when comment is removed (same as reward amount)
-const COMMENT_CREDIT_PENALTY = 2n;
 
 /**
  * POST /api/mod/comments/remove
- * Admin/Mod remove comment (sets status=REMOVED, never hard delete)
- * Also deducts special credits and applies moderation actions
+ * Body: { commentId: string, reason?: string }
+ *
+ * Removes a comment (moderator action).
+ * - Marks status REMOVED
+ * - Populates removedById / removedAt / removedReason
+ * - Resolves open reports (optional but recommended)
  */
 export async function POST(req: NextRequest) {
   const access = await getAccessContext();
 
   if (!access.user) {
-    return NextResponse.json(
-      { ok: false, error: "UNAUTHORIZED" },
-      { status: 401 }
-    );
+    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
+  }
+  if (access.user.role !== "MOD" && access.user.role !== "ADMIN") {
+    return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 
-  if (!access.isAdminOrMod) {
-    return NextResponse.json(
-      { ok: false, error: "FORBIDDEN" },
-      { status: 403 }
-    );
-  }
-
-  const body = (await req.json().catch(() => null)) as {
-    commentId?: string;
-    reason?: string;
-  } | null;
+  const body = (await req.json().catch(() => null)) as
+    | { commentId?: string; reason?: string }
+    | null;
 
   const commentId = body?.commentId?.trim();
-  const reason = body?.reason?.trim() || "removed";
+  const reason =
+    typeof body?.reason === "string" && body.reason.trim().length > 0
+      ? body.reason.trim().slice(0, 200)
+      : "Removed by moderator";
 
   if (!commentId) {
-    return NextResponse.json(
-      { ok: false, error: "MISSING_COMMENT_ID" },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: "MISSING_FIELDS" }, { status: 400 });
   }
 
-  const comment = await db.comment.findUnique({ where: { id: commentId } });
-  if (!comment) {
-    return NextResponse.json(
-      { ok: false, error: "NOT_FOUND" },
-      { status: 404 }
-    );
-  }
-
-  // Already removed
-  if (comment.status === "REMOVED") {
-    return NextResponse.json(
-      { ok: false, error: "ALREADY_REMOVED" },
-      { status: 400 }
-    );
-  }
-
-  const wk = weekKeyUTC(new Date());
-
-  // Transaction: remove comment, deduct credits, record penalty
   const result = await db.$transaction(async (tx) => {
-    // Set status to REMOVED
-    const updated = await tx.comment.update({
+    const c = await tx.comment.findUnique({
+      where: { id: commentId },
+      select: {
+        id: true,
+        status: true,
+        removedAt: true,
+      },
+    });
+
+    if (!c) return { ok: false as const, error: "COMMENT_NOT_FOUND" as const };
+
+    // Idempotent: if already removed, just return ok
+    if (c.status === "REMOVED" || c.removedAt) {
+      return { ok: true as const, alreadyRemoved: true };
+    }
+
+    await tx.comment.update({
       where: { id: commentId },
       data: {
         status: "REMOVED",
-        removedById: access.user!.id,
         removedAt: new Date(),
+        removedById: access.user!.id,
         removedReason: reason,
       },
     });
 
-    // Deduct special credits from author (can go negative)
-    const penaltyMicro = COMMENT_CREDIT_PENALTY * CREDIT_MICRO;
-
-    // Ensure user has a credit account
-    await tx.specialCreditAccount.upsert({
-      where: { userId: comment.authorId },
-      create: { userId: comment.authorId, balanceMicro: -penaltyMicro },
-      update: { balanceMicro: { decrement: penaltyMicro } },
+    // Optional: resolve any outstanding reports
+    await tx.commentReport.updateMany({
+      where: { commentId, resolvedAt: null },
+      data: { resolvedAt: new Date(), resolvedById: access.user!.id },
     });
 
-    // Record penalty in ledger
-    const penaltyRefId = `comment_removed_${commentId}`;
-    await tx.specialCreditLedger.create({
-      data: {
-        userId: comment.authorId,
-        weekKey: wk,
-        amountMicro: -penaltyMicro,
-        reason: `Comment removed: ${reason}`,
-        refType: "COMMENT_REMOVED_PENALTY",
-        refId: penaltyRefId,
-      },
-    });
-
-    console.log(`[mod/comments/remove] Deducted ${COMMENT_CREDIT_PENALTY} credits from user ${comment.authorId}`);
-
-    return updated;
+    return { ok: true as const, alreadyRemoved: false };
   });
 
-  // Apply moderation actions (warnings/bans) based on removed count
-  const moderation = await checkAndApplyCommentModeration(comment.authorId);
-
-  console.log(`[mod/comments/remove] Comment ${commentId} removed by ${access.user.id}. Moderation action: ${moderation.action}`);
+  if (!result.ok) {
+    return NextResponse.json({ ok: false, error: result.error }, { status: 404 });
+  }
 
   return NextResponse.json({
     ok: true,
-    comment: result,
-    moderation: {
-      action: moderation.action,
-      removedCount: moderation.removedCount,
-      message: moderation.message,
-    },
+    alreadyRemoved: result.alreadyRemoved,
   });
 }

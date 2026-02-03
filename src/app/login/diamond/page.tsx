@@ -55,14 +55,14 @@ export default function DiamondLoginPage() {
         <div className="w-full max-w-xl space-y-6">
           {/* Diamond Login - Wallet Only */}
           <div className="rounded-2xl p-6 bg-black/30 border-2 border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex flex-wrap items-center gap-4 mb-4">
               <WalletActions mode="WALLET_LOGIN" />
               <Image
                 src="/logos/textlogo/siteset3/login100.png"
                 alt="Diamond Login"
                 width={938}
                 height={276}
-                className="h-[44px] w-auto"
+                className="h-[52px] w-auto flex-none min-w-[180px] max-w-full"
               />
             </div>
             <p className="text-sm text-white/70">

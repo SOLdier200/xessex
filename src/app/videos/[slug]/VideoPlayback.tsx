@@ -20,6 +20,7 @@ type VideoPayload = {
   unlockCost?: number;
   thumbnailUrl?: string | null;
   rank?: number | null;
+  kind?: string;
 };
 
 type RelatedVideo = {
@@ -259,7 +260,7 @@ export default function VideoPlayback({
           </Link>
         </div>
 
-        <div className="neon-border rounded-2xl overflow-hidden bg-black/30">
+        <div className={`${currentVideo.kind === "XESSEX" ? "neon-border-gold" : "neon-border"} rounded-2xl overflow-hidden bg-black/30`}>
           <div className="relative w-full bg-black" style={{ paddingTop: "56.25%" }}>
             {/* Blurred thumbnail background */}
             {currentVideo.thumbnailUrl ? (
@@ -471,7 +472,7 @@ export default function VideoPlayback({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2">
-          <div className="neon-border rounded-2xl overflow-hidden bg-black/30">
+          <div className={`${currentVideo.kind === "XESSEX" ? "neon-border-gold" : "neon-border"} rounded-2xl overflow-hidden bg-black/30`}>
             <div className="relative w-full bg-black" style={{ paddingTop: "56.25%" }}>
               {currentVideo.embedUrl ? (
                 <iframe
@@ -582,7 +583,7 @@ export default function VideoPlayback({
 
           {/* Credits display */}
           {localIsAuthed && (
-            <div className="mt-6 neon-border rounded-xl p-4 bg-black/30">
+            <div className={`mt-6 ${currentVideo.kind === "XESSEX" ? "neon-border-gold" : "neon-border"} rounded-xl p-4 bg-black/30`}>
               <h3 className="text-sm font-semibold text-white mb-2">Special Credits</h3>
               <p className="text-2xl font-bold text-yellow-400">{localCredits}</p>
               <p className="text-xs text-white/50 mt-1">
@@ -590,6 +591,20 @@ export default function VideoPlayback({
               </p>
             </div>
           )}
+
+          {/* Ad placement box */}
+          <div className="mt-6 rounded-xl border border-dashed border-white/20 bg-black/20 p-4 text-center">
+            <p className="text-sm text-white/70 font-medium">Place your AD Here!</p>
+            <p className="text-xs text-white/50 mt-1">
+              Contact{" "}
+              <a
+                href="mailto:support@xessex.me"
+                className="text-pink-400 hover:text-pink-300 transition"
+              >
+                support@xessex.me
+              </a>
+            </p>
+          </div>
         </div>
       </div>
 

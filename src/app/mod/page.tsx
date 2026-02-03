@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ReportedCommentsPanel from "@/app/components/mod/ReportedCommentsPanel";
 
 interface UserInfo {
   id: string;
@@ -471,6 +472,8 @@ export default function ModDashboard() {
             </Link>
           )}
         </div>
+
+        <ReportedCommentsPanel />
 
         {/* Comment Spammers Section */}
         <div className="bg-gray-900 border border-orange-500/30 rounded-xl mb-8">

@@ -98,7 +98,7 @@ export default function TopNav() {
       {/* Desktop Layout */}
       <div className="hidden lg:flex lg:items-start lg:justify-between gap-4">
         {/* Left side: Logo */}
-        <div className="shrink-0">
+        <div className="shrink-0 mt-[8px]">
           <Link href="/" title="Click for homepage">
             <Image
               src="/logos/mainsitelogo.png"

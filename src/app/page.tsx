@@ -71,6 +71,24 @@ export default async function HomePage() {
   const viewCountMap = new Map(dbVideos.map((v) => [v.slug, v.viewsCount ?? 0]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
 
+  // Get XESSEX videos (original content)
+  const xessexVideos = await db.video.findMany({
+    where: { kind: "XESSEX", isActive: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      thumbnailUrl: true,
+      posterUrl: true,
+      mediaUrl: true,
+      unlockCost: true,
+      viewsCount: true,
+      rank: true,
+    },
+    orderBy: { sortOrder: "asc" },
+    take: 3,
+  });
+
   // Get user's unlocked videos if authenticated
   let unlockedSlugs: string[] = [];
   if (access.user?.id) {
@@ -355,25 +373,102 @@ export default async function HomePage() {
             );
           })()}
 
-          {/* Xessex Preview Video */}
+          {/* Xessex Content Video */}
           <div className="w-full max-w-full md:max-w-[70%]">
-            <h2 className="text-lg font-semibold text-pink-400 mb-4">Xessex Preview</h2>
-            <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden cursor-pointer">
-              <HoverPreviewVideo
-                src="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.mp4"
-                poster="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.jpg"
-                alt="Xessex Preview"
-                segmentLen={2}
-                segments={8}
-                startAt={5}
-                className="relative aspect-video bg-black/60"
-                videoClassName="w-full h-full object-cover rounded-xl"
-              />
-              <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
-                <span className="text-pink-400 font-medium">Coming Soon</span>
-                <span>Xessex Original</span>
-              </div>
-            </div>
+            <h2 className="text-lg font-semibold text-yellow-400 mb-4">Xessex Original</h2>
+            {xessexVideos.length > 0 ? (
+              // Display first XESSEX video with link to its page
+              (() => {
+                const xv = xessexVideos[0];
+                const isXvFree = xv.unlockCost === 0;
+                const isXvUnlocked = unlockedSet.has(xv.slug);
+                const xvLocked = !isXvFree && !isXvUnlocked;
+
+                if (xvLocked) {
+                  return (
+                    <LockedVideoCard
+                      viewkey={xv.slug}
+                      title={xv.title}
+                      thumb={xv.thumbnailUrl || xv.posterUrl}
+                      duration=""
+                      rank={xv.rank}
+                      viewsCount={xv.viewsCount ?? 0}
+                      isAuthed={isAuthed}
+                      size="normal"
+                      showMetaBelow
+                      borderVariant="gold"
+                    />
+                  );
+                }
+
+                return (
+                  <Link href={`/videos/${xv.slug}`} className="block">
+                    <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group">
+                      {xv.mediaUrl ? (
+                        <HoverPreviewVideo
+                          src={xv.mediaUrl}
+                          poster={xv.thumbnailUrl || xv.posterUrl}
+                          alt={xv.title}
+                          segmentLen={2}
+                          segments={8}
+                          startAt={5}
+                          className="relative aspect-video bg-black/60"
+                          videoClassName="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="relative aspect-video bg-black/60">
+                          {xv.thumbnailUrl || xv.posterUrl ? (
+                            <img
+                              src={xv.thumbnailUrl || xv.posterUrl || ""}
+                              alt={xv.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white/30">
+                              No Thumbnail
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="p-3">
+                        <h3 className="text-sm font-semibold text-white group-hover:text-yellow-300 transition line-clamp-2">
+                          {xv.title}
+                        </h3>
+                        <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/70">
+                          <span className="text-yellow-400 font-medium">Xessex Original</span>
+                          <span>{formatViews(xv.viewsCount ?? 0)} Views</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })()
+            ) : (
+              // Hardcoded XESSEX preview - links directly to video page
+              <Link href="/videos/pinkhairgirlfirst" className="block">
+                <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group cursor-pointer">
+                  <HoverPreviewVideo
+                    src="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.mp4"
+                    poster="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.jpg"
+                    alt="Pink Hair Girl - Xessex Original"
+                    segmentLen={2}
+                    segments={8}
+                    startAt={5}
+                    className="relative aspect-video bg-black/60"
+                    videoClassName="w-full h-full object-cover"
+                  />
+                  <div className="p-3">
+                    <h3 className="text-sm font-semibold text-white group-hover:text-yellow-300 transition">
+                      Pink Hair Girl
+                    </h3>
+                    <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/70">
+                      <span className="text-yellow-400 font-medium">Xessex Original</span>
+                      <span>Click to Watch</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
 

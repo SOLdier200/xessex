@@ -40,8 +40,11 @@ const LADDER_PERCENTS: number[] = [
  * GET /api/analytics
  * User analytics page data with live pending estimates
  * Available to all authenticated users
+ *
+ * Query params:
+ * - contentFilter: "standard" (all content) | "xessex" (only XESSEX kind videos)
  */
-export async function GET() {
+export async function GET(request: Request) {
   const access = await getAccessContext();
 
   if (!access.user) {
@@ -53,12 +56,22 @@ export async function GET() {
 
   const userId = access.user.id;
 
-  // Total videos in system
-  const totalVideos = await db.video.count();
+  // Parse content filter from query params
+  const { searchParams } = new URL(request.url);
+  const contentFilter = searchParams.get("contentFilter") || "standard";
+  const isXessexOnly = contentFilter === "xessex";
 
-  // Get all comments by this user
+  // Total videos in system (filtered if xessex only)
+  const totalVideos = await db.video.count({
+    where: isXessexOnly ? { kind: "XESSEX" } : undefined,
+  });
+
+  // Get all comments by this user (filtered by video kind if xessex only)
   const comments = await db.comment.findMany({
-    where: { authorId: userId },
+    where: {
+      authorId: userId,
+      ...(isXessexOnly ? { video: { kind: "XESSEX" } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     include: {
       memberVotes: true,
@@ -66,10 +79,11 @@ export async function GET() {
     },
   });
 
-  // Get all score adjustments that used this user's comments
+  // Get all score adjustments that used this user's comments (filtered if xessex only)
   const adjustments = await db.videoScoreAdjustment.findMany({
     where: {
       comment: { authorId: userId },
+      ...(isXessexOnly ? { video: { kind: "XESSEX" } } : {}),
     },
     select: { commentId: true },
   });
@@ -212,6 +226,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    contentFilter,
     totals: {
       totalVideos,
       totalComments: comments.length,

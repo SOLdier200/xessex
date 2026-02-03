@@ -41,6 +41,7 @@ export default function UsersPage() {
   const [showMakeModModal, setShowMakeModModal] = useState(false);
   const [makingMod, setMakingMod] = useState(false);
   const [highlightedStat, setHighlightedStat] = useState<{ userId: string; stat: string } | null>(null);
+  const [copiedWallet, setCopiedWallet] = useState<string | null>(null);
   const [messageModal, setMessageModal] = useState<{
     open: boolean;
     user: UserData | null;
@@ -251,6 +252,25 @@ export default function UsersPage() {
     return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
   };
 
+  const copyWallet = async (wallet: string | null) => {
+    if (!wallet) return;
+    try {
+      await navigator.clipboard.writeText(wallet);
+      setCopiedWallet(wallet);
+      setTimeout(() => setCopiedWallet(null), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = wallet;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopiedWallet(wallet);
+      setTimeout(() => setCopiedWallet(null), 2000);
+    }
+  };
+
   const totalPages = Math.ceil(total / pageSize);
 
   if (error) {
@@ -332,7 +352,6 @@ export default function UsersPage() {
                   <th className="px-4 py-3 text-gray-400 font-medium">Wallet</th>
                   <th className="px-4 py-3 text-gray-400 font-medium">Role</th>
                   <th className="px-4 py-3 text-gray-400 font-medium text-center">Likes Recv</th>
-                  <th className="px-4 py-3 text-gray-400 font-medium text-center">Comments Recv</th>
                   <th className="px-4 py-3 text-gray-400 font-medium text-center">Votes Cast</th>
                   <th className="px-4 py-3 text-gray-400 font-medium text-center">Comments Made</th>
                   <th className="px-4 py-3 text-gray-400 font-medium text-right">XESS Earned</th>
@@ -342,13 +361,13 @@ export default function UsersPage() {
               <tbody className="divide-y divide-gray-800">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                       No users found
                     </td>
                   </tr>
@@ -365,8 +384,24 @@ export default function UsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-400 font-mono text-sm">
-                        {formatWallet(user.walletAddress)}
+                      <td className="px-4 py-3">
+                        {user.walletAddress ? (
+                          <button
+                            onClick={() => copyWallet(user.walletAddress)}
+                            className={`font-mono text-sm transition cursor-pointer hover:text-pink-400 ${
+                              copiedWallet === user.walletAddress
+                                ? "text-green-400"
+                                : "text-gray-400"
+                            }`}
+                            title={`Click to copy: ${user.walletAddress}`}
+                          >
+                            {copiedWallet === user.walletAddress
+                              ? "Copied!"
+                              : user.walletAddress}
+                          </button>
+                        ) : (
+                          <span className="text-gray-600">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -390,16 +425,6 @@ export default function UsersPage() {
                         onClick={() => handleStatClick(user.id, "likes")}
                       >
                         {user.stats.totalLikesReceived}
-                      </td>
-                      <td
-                        className={`px-4 py-3 text-center cursor-pointer transition ${
-                          highlightedStat?.userId === user.id && highlightedStat?.stat === "commentsRecv"
-                            ? "bg-blue-500/20 text-blue-400 font-bold"
-                            : "hover:bg-gray-700"
-                        }`}
-                        onClick={() => handleStatClick(user.id, "commentsRecv")}
-                      >
-                        {user.stats.totalCommentsReceived}
                       </td>
                       <td
                         className={`px-4 py-3 text-center cursor-pointer transition ${

@@ -28,6 +28,8 @@ model User {
   allTimeStats         AllTimeUserStat[]
   commentsAuthored     Comment[]                @relation("CommentAuthor")
   commentsRemoved      Comment[]                @relation("CommentRemovedBy")
+  commentReportsMade   CommentReport[]          @relation("CommentReportReporter")
+  commentReportsResolved CommentReport[]        @relation("CommentReportResolver")
   memberVotes          CommentMemberVote[]
   modVotes             CommentModVote[]
   sourceGradesEarned   CommentSourceGrade[]     @relation("CommentSourceGradeAuthor")
@@ -234,8 +236,10 @@ model Comment {
   videoId          String
   authorId         String
   body             String
+  bodyNormalized   String?
   createdAt        DateTime               @default(now())
   status           CommentStatus          @default(ACTIVE)
+  autoReason       String?
   removedById      String?
   removedAt        DateTime?
   removedReason    String?
@@ -251,6 +255,7 @@ model Comment {
   modVotes         CommentModVote[]
   sourceGrades     CommentSourceGrade[]
   scoreAdjustments VideoScoreAdjustment[]
+  reports          CommentReport[]
 
   @@index([videoId])
   @@index([authorId])
@@ -285,6 +290,26 @@ model CommentModVote {
 
   @@unique([commentId, modId])
   @@index([modId])
+}
+
+model CommentReport {
+  id           String              @id @default(cuid())
+  commentId    String
+  reporterId   String
+  reason       CommentReportReason
+  note         String?
+  createdAt    DateTime            @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  comment     Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporter    User    @relation("CommentReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedBy  User?   @relation("CommentReportResolver", fields: [resolvedById], references: [id])
+
+  @@unique([commentId, reporterId])
+  @@index([commentId, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([resolvedAt])
 }
 
 model VideoScoreAdjustment {
@@ -694,7 +719,18 @@ model UserBlock {
 
 enum CommentStatus {
   ACTIVE
+  PENDING
+  HIDDEN
   REMOVED
+}
+
+enum CommentReportReason {
+  SPAM
+  HARASSMENT
+  HATE
+  THREAT
+  SEXUAL_VIOLENCE
+  OTHER
 }
 
 enum RewardStatus {

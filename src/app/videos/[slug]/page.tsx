@@ -193,6 +193,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
           unlockCost: video.unlockCost,
           thumbnailUrl: video.thumbnailUrl,
           rank: video.rank,
+          kind: video.kind,
         }}
         relatedVideos={relatedVideos}
         canRateStars={canRateStars}

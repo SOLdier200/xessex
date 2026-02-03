@@ -30,6 +30,19 @@ type ApiResponse = {
   stats: { approved: number };
 };
 
+type PendingComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  autoReason: string | null;
+  status: "PENDING" | "HIDDEN";
+  reportCount: number;
+  reportReasonCounts: Record<string, number>;
+  latestReportAt: string | null;
+  author: { id: string; email: string | null; walletAddress: string | null };
+  video: { id: string; slug: string; title: string; kind: string };
+};
+
 export default function ReviewApprovedPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [approvedCount, setApprovedCount] = useState(0);
@@ -49,6 +62,13 @@ export default function ReviewApprovedPage() {
   // Modal state
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
+  // Comment review state
+  const [pendingComments, setPendingComments] = useState<PendingComment[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [commentQueueStatus, setCommentQueueStatus] = useState<"ALL" | "PENDING" | "HIDDEN">("ALL");
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+  const [removeReason, setRemoveReason] = useState<string>("");
+
   // Get correct embed URL based on database source
   const getEmbedUrl = (viewkey: string) => {
     if (dbSource === "youporn") {
@@ -61,7 +81,7 @@ export default function ReviewApprovedPage() {
     setLoading(true);
     const params = new URLSearchParams();
     params.set("source", dbSource);
-    params.set("status", "approved"); // Always filter to approved only
+    params.set("status", "approved");
     if (search) params.set("search", search);
     if (cursor) {
       params.set("cursorValue", String(cursor.value));
@@ -83,9 +103,38 @@ export default function ReviewApprovedPage() {
     setLoading(false);
   }, [dbSource, search]);
 
+  const fetchPendingComments = useCallback(async () => {
+    setPendingLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("status", commentQueueStatus);
+      params.set("limit", "200");
+
+      const res = await fetch(`/api/mod/comments/pending?${params.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await res.json().catch(() => null);
+      if (data?.ok) {
+        const rows: PendingComment[] = data.comments || [];
+        setPendingComments(rows);
+        setSelectedCommentId((prev) => prev ?? (rows[0]?.id ?? null));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [commentQueueStatus]);
+
   useEffect(() => {
     fetchVideos(null, true);
   }, [fetchVideos]);
+
+  useEffect(() => {
+    fetchPendingComments();
+  }, [fetchPendingComments]);
 
   const handleSearch = () => {
     setSearch(searchInput);
@@ -115,13 +164,65 @@ export default function ReviewApprovedPage() {
       body: JSON.stringify({ ...patch, source: dbSource }),
     });
 
-    // Refresh the list
     const currentCursor = cursorStack[cursorStack.length - 1];
     await fetchVideos(currentCursor);
 
-    // Close modal if video was moved out of approved
     if (patch.status && patch.status !== "approved") {
       setSelectedVideo(null);
+    }
+  };
+
+  const approveComment = async (commentId: string) => {
+    try {
+      const res = await fetch("/api/mod/comments/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error || "Failed to approve");
+        return;
+      }
+      const credits = typeof data.creditsAwarded === "number" ? data.creditsAwarded : 0;
+      toast.success(credits ? `Comment approved (+${credits} credits)` : "Comment approved");
+
+      setPendingComments((prev) => {
+        const next = prev.filter((c) => c.id !== commentId);
+        if (selectedCommentId === commentId) {
+          setSelectedCommentId(next[0]?.id ?? null);
+        }
+        return next;
+      });
+    } catch {
+      toast.error("Failed to approve");
+    }
+  };
+
+  const removeComment = async (commentId: string) => {
+    try {
+      const res = await fetch("/api/mod/comments/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId, reason: removeReason || "Removed by moderator" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error || "Failed to remove");
+        return;
+      }
+      toast.success("Comment removed");
+      setRemoveReason("");
+
+      setPendingComments((prev) => {
+        const next = prev.filter((c) => c.id !== commentId);
+        if (selectedCommentId === commentId) {
+          setSelectedCommentId(next[0]?.id ?? null);
+        }
+        return next;
+      });
+    } catch {
+      toast.error("Failed to remove");
     }
   };
 
@@ -182,6 +283,220 @@ export default function ReviewApprovedPage() {
             Back to Admin
           </Link>
         </div>
+      </div>
+
+      {/* Pending Comments Queue */}
+      <div className="mb-8 rounded-2xl border border-yellow-500/30 bg-black/30 p-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-semibold text-yellow-300">Comment Review Queue</h2>
+            <p className="text-xs text-white/50">Approve or remove comments held for review</p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCommentQueueStatus("ALL")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition ${
+                  commentQueueStatus === "ALL"
+                    ? "bg-yellow-500/20 text-yellow-200 border-yellow-400/40"
+                    : "bg-black/20 text-white/60 border-white/15 hover:border-white/30"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setCommentQueueStatus("PENDING")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition ${
+                  commentQueueStatus === "PENDING"
+                    ? "bg-yellow-500/20 text-yellow-200 border-yellow-400/40"
+                    : "bg-black/20 text-white/60 border-white/15 hover:border-white/30"
+                }`}
+              >
+                Pending
+              </button>
+              <button
+                onClick={() => setCommentQueueStatus("HIDDEN")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition ${
+                  commentQueueStatus === "HIDDEN"
+                    ? "bg-yellow-500/20 text-yellow-200 border-yellow-400/40"
+                    : "bg-black/20 text-white/60 border-white/15 hover:border-white/30"
+                }`}
+              >
+                Hidden
+              </button>
+            </div>
+
+            <button
+              onClick={fetchPendingComments}
+              disabled={pendingLoading}
+              className="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-200 border border-yellow-400/40 text-xs font-semibold hover:bg-yellow-500/30 transition disabled:opacity-50"
+            >
+              {pendingLoading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        {pendingLoading ? (
+          <div className="text-center text-white/50 py-6">Loading queue…</div>
+        ) : pendingComments.length === 0 ? (
+          <div className="text-center text-white/40 py-6">No comments in queue</div>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
+            {/* Left: list */}
+            <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
+              <div className="max-h-[420px] overflow-y-auto">
+                {pendingComments.map((c) => {
+                  const isSelected = c.id === selectedCommentId;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCommentId(c.id)}
+                      className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition ${
+                        isSelected ? "bg-white/5" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-white/40">
+                          {new Date(c.createdAt).toLocaleString()}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                              c.status === "PENDING"
+                                ? "border-yellow-400/40 text-yellow-200 bg-yellow-500/10"
+                                : "border-red-400/40 text-red-200 bg-red-500/10"
+                            }`}
+                          >
+                            {c.status}
+                          </span>
+
+                          {c.reportCount > 0 && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/10 text-white/70">
+                              {c.reportCount} reports
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-1 text-sm text-white/90">
+                        {c.body.length > 160 ? c.body.slice(0, 160) + "…" : c.body}
+                      </div>
+
+                      <div className="mt-1 text-[11px] text-white/50">
+                        {c.author.email || c.author.walletAddress || c.author.id.slice(0, 8) + "..."} •{" "}
+                        {c.video.title || c.video.slug}
+                      </div>
+
+                      <div className="mt-1 text-[11px] text-white/40">
+                        {c.autoReason ? `Auto: ${c.autoReason}` : "Auto: —"}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: detail */}
+            {(() => {
+              const selected =
+                pendingComments.find((x) => x.id === selectedCommentId) || pendingComments[0];
+              if (!selected) return null;
+
+              return (
+                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-white">Details</div>
+                      <div className="text-xs text-white/50 mt-1">
+                        {selected.author.email ||
+                          selected.author.walletAddress ||
+                          selected.author.id.slice(0, 8) + "..."}{" "}
+                        • {new Date(selected.createdAt).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-white/60 mt-1">
+                        Video:{" "}
+                        <Link href={`/videos/${selected.video.slug}`} className="text-cyan-300 hover:text-cyan-200">
+                          {selected.video.title || selected.video.slug}
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => approveComment(selected.id)}
+                        className="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 text-xs font-semibold hover:bg-emerald-500/30 transition"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => removeComment(selected.id)}
+                        className="px-3 py-1 rounded-lg bg-red-500/20 text-red-200 border border-red-400/40 text-xs font-semibold hover:bg-red-500/30 transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-white/10 bg-black/10 p-3">
+                    <div className="text-[11px] text-white/50">Comment</div>
+                    <div className="mt-2 text-sm text-white/90 whitespace-pre-wrap">{selected.body}</div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                      <div className="text-[11px] text-white/50">Unresolved reports</div>
+                      <div className="mt-2 text-sm text-white/80">
+                        {selected.reportCount === 0 ? (
+                          <span className="text-white/50">None</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {Object.entries(selected.reportReasonCounts || {}).map(([k, v]) => (
+                              <div key={k} className="flex items-center justify-between">
+                                <span className="text-white/70">{k}</span>
+                                <span className="text-white/70">{v}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {selected.latestReportAt && (
+                        <div className="mt-2 text-[11px] text-white/40">
+                          Latest: {new Date(selected.latestReportAt).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                      <div className="text-[11px] text-white/50">Remove reason</div>
+                      <textarea
+                        value={removeReason}
+                        onChange={(e) => setRemoveReason(e.target.value)}
+                        rows={5}
+                        placeholder='Example: "Threat of violence"'
+                        className="mt-2 w-full rounded-xl bg-black/20 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none"
+                      />
+                      <div className="mt-2 text-[11px] text-white/40">
+                        Stored in <span className="text-white/60">removedReason</span>.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-[11px] text-white/40">
+                    Status: <span className="text-white/70">{selected.status}</span>
+                    {selected.autoReason ? (
+                      <>
+                        {" "}
+                        • Auto: <span className="text-white/70">{selected.autoReason}</span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Database Switcher */}
@@ -426,7 +741,6 @@ export default function ReviewApprovedPage() {
           </div>
         </div>
       )}
-
     </main>
   );
 }

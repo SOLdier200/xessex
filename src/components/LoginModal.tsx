@@ -56,7 +56,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         <div className="flex justify-center mb-2">
           <Image
-            src="/logos/textlogo/siteset3/login100.png"
+            src="/logos/textlogo/siteset3/login.png"
             alt="Login"
             width={982}
             height={247}

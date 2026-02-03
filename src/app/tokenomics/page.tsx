@@ -342,7 +342,6 @@ export default function TokenomicsPage() {
           <div className="mt-6 flex justify-center gap-4 text-sm">
             <Link href="/whitepaper" className="text-cyan-400 hover:text-cyan-300">Whitepaper</Link>
             <Link href="/faq" className="text-cyan-400 hover:text-cyan-300">FAQ</Link>
-            <Link href="/" className="text-cyan-400 hover:text-cyan-300">Home</Link>
           </div>
         </div>
       </div>

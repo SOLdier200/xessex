@@ -76,6 +76,11 @@ export function formatXess6(amount6Str: string, decimals = 2): string {
  * Get a friendly label for reward types
  */
 export function rewardTypeLabel(type: string): string {
+  // Flat rate rewards (e.g., "EMBED:flat_total", "LIKES:flat_total")
+  if (type.endsWith(":flat_total")) {
+    return "FLAT";
+  }
+
   switch (type) {
     case "WEEKLY_LIKES":
       return "Weekly Likes Pool";

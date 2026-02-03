@@ -11,7 +11,7 @@ type LockedFeaturedCardProps = {
   duration: string;
   performers: string;
   isAuthed: boolean;
-  variant: "featured" | "topRanked";
+  variant: "featured" | "topRanked" | "xessex";
   viewsCount?: number | null;
   showMetaBelow?: boolean;
   className?: string;
@@ -72,9 +72,10 @@ export default function LockedFeaturedCard({
   }
 
   const isFeatured = variant === "featured";
-  const borderClass = isFeatured ? "" : "border-yellow-400/30";
-  const headerClass = isFeatured ? "neon-text" : "text-yellow-400";
-  const headerText = isFeatured ? "Featured Video" : "Top Ranked Video";
+  const isXessex = variant === "xessex";
+  const borderClass = isXessex ? "neon-border-gold" : isFeatured ? "" : "border-yellow-400/30";
+  const headerClass = isXessex ? "text-yellow-400" : isFeatured ? "neon-text" : "text-yellow-400";
+  const headerText = isXessex ? "Xessex Original" : isFeatured ? "Featured Video" : "Top Ranked Video";
 
   const formatViews = (views: number | null | undefined) => {
     const v = Number(views ?? 0);
@@ -86,7 +87,7 @@ export default function LockedFeaturedCard({
 
   return (
     <>
-      <section className={`neon-border rounded-2xl p-4 md:p-6 bg-black/30 ${borderClass} ${className || ""}`}>
+      <section className={`${isXessex ? "neon-border-gold" : "neon-border"} rounded-2xl p-4 md:p-6 bg-black/30 ${!isXessex ? borderClass : ""} ${className || ""}`}>
         <h2 className={`text-lg font-semibold ${headerClass} mb-4`}>{headerText}</h2>
         <div className="block w-full">
           <div className="relative aspect-video rounded-xl overflow-hidden">

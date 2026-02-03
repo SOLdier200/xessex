@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import ReportedCommentsPanel from "@/app/components/mod/ReportedCommentsPanel";
 
 type Toast = {
   id: number;
@@ -389,6 +390,8 @@ export default function AdminPage() {
           </Link>
         </div>
       </div>
+
+      <ReportedCommentsPanel />
 
       {/* Database Switcher */}
       <div className="flex gap-2 mb-4">

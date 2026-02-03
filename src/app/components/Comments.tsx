@@ -9,11 +9,13 @@ type Comment = {
   authorId: string;
   authorWallet: string;
   createdAt: string;
+  status?: "ACTIVE" | "PENDING" | "HIDDEN" | "REMOVED";
   memberLikes: number;
   memberDislikes: number;
   userVote: number | null;
   voteLocked?: boolean;
   secondsLeftToFlip?: number;
+  reportedByMe?: boolean;
 };
 
 function formatDate(dateStr: string): string {
@@ -63,6 +65,15 @@ type DeleteState = {
   busy: boolean;
 };
 
+type ReportState = {
+  open: boolean;
+  commentId: string | null;
+  reason: string;
+  note: string;
+  busy: boolean;
+  error?: string;
+};
+
 type MessageModalState = {
   open: boolean;
   recipientId: string | null;
@@ -97,6 +108,16 @@ export default function Comments({
     busy: false,
   });
 
+  const [reportModal, setReportModal] = useState<ReportState>({
+    open: false,
+    commentId: null,
+    reason: "SPAM",
+    note: "",
+    busy: false,
+  });
+
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
+
   const [messageModal, setMessageModal] = useState<MessageModalState>({
     open: false,
     recipientId: null,
@@ -118,12 +139,20 @@ export default function Comments({
     setCurrentUserId(null);
     setSubmitting(false);
     setText("");
+    setReportedIds(new Set());
 
     fetch(`/api/comments?videoId=${videoId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
           setComments(data.comments);
+          if (Array.isArray(data.comments)) {
+            const initial = new Set<string>();
+            for (const c of data.comments) {
+              if (c.reportedByMe) initial.add(c.id);
+            }
+            setReportedIds(initial);
+          }
 
           if (data.hasUserComment) setHasPostedComment(true);
 
@@ -151,10 +180,16 @@ export default function Comments({
 
       const data = await res.json();
       if (data.ok) {
-        setComments([data.comment, ...comments]);
+        if (data.comment?.status && data.comment.status !== "ACTIVE") {
+          toast.success("Comment submitted for review.");
+        } else {
+          setComments([data.comment, ...comments]);
+        }
         setText("");
         setHasPostedComment(true);
-        toast.success("Comment posted!");
+        if (!data.comment?.status || data.comment.status === "ACTIVE") {
+          toast.success("Comment posted!");
+        }
         // Show credits earned toast and update UI
         if (data.creditsEarned && data.creditsEarned > 0) {
           toast.success(`You earned ${data.creditsEarned} Special Credits!`, {
@@ -347,6 +382,49 @@ export default function Comments({
     }
   };
 
+  const openReportModal = (commentId: string) => {
+    setReportModal({ open: true, commentId, reason: "SPAM", note: "", busy: false, error: undefined });
+  };
+
+  const closeReportModal = () => {
+    if (reportModal.busy) return;
+    setReportModal({ open: false, commentId: null, reason: "SPAM", note: "", busy: false, error: undefined });
+  };
+
+  const submitReport = async () => {
+    if (!reportModal.open || !reportModal.commentId || reportModal.busy) return;
+
+    setReportModal({ ...reportModal, busy: true, error: undefined });
+    try {
+      const res = await fetch("/api/comments/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commentId: reportModal.commentId,
+          reason: reportModal.reason,
+          note: reportModal.note,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        setReportModal({ ...reportModal, busy: false, error: data?.error || "report_failed" });
+        return;
+      }
+
+      setReportedIds((prev) => {
+        const next = new Set(prev);
+        next.add(reportModal.commentId!);
+        return next;
+      });
+
+      toast.success(data.alreadyReported ? "Already reported" : "Report submitted");
+      closeReportModal();
+    } catch {
+      setReportModal({ ...reportModal, busy: false, error: "network_error" });
+    }
+  };
+
   const openMessageModal = (authorId: string, authorWallet: string) => {
     console.log("[Comments] openMessageModal called", { authorId, authorWallet, currentUserId });
 
@@ -528,7 +606,29 @@ export default function Comments({
                     )}
                     <span className="text-[10px] text-white/30 font-mono">#{comment.id.slice(-6)}</span>
                   </div>
-                  <span className="text-xs text-white/40">{formatDate(comment.createdAt)}</span>
+                  <div className="flex items-center gap-2">
+                    {comment.status && comment.status !== "ACTIVE" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-400/30 text-yellow-300">
+                        {comment.status}
+                      </span>
+                    )}
+                    <span className="text-xs text-white/40">{formatDate(comment.createdAt)}</span>
+                    {!isOwnComment && (
+                      <button
+                        type="button"
+                        onClick={() => openReportModal(comment.id)}
+                        disabled={reportedIds.has(comment.id)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition ${
+                          reportedIds.has(comment.id)
+                            ? "border-white/10 text-white/30 cursor-not-allowed"
+                            : "border-red-500/30 text-red-300 hover:border-red-400/60 hover:text-red-200"
+                        }`}
+                        title={reportedIds.has(comment.id) ? "Already reported" : "Report comment"}
+                      >
+                        {reportedIds.has(comment.id) ? "Reported" : "Report"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <p className="text-white/90 text-sm mb-3 whitespace-pre-wrap break-words">
@@ -702,6 +802,78 @@ export default function Comments({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Report confirmation modal */}
+      {reportModal.open && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+          <div className="w-full max-w-sm rounded-2xl border border-red-500/30 bg-black/90 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-white font-semibold">Report Comment</div>
+              <button
+                type="button"
+                onClick={closeReportModal}
+                disabled={reportModal.busy}
+                className="text-white/60 hover:text-white disabled:opacity-40"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              <label className="block text-xs text-white/60">Reason</label>
+              <select
+                value={reportModal.reason}
+                onChange={(e) => setReportModal({ ...reportModal, reason: e.target.value })}
+                disabled={reportModal.busy}
+                className="w-full rounded-lg bg-black/60 border border-white/10 text-white text-sm px-3 py-2"
+              >
+                <option value="SPAM">Spam</option>
+                <option value="HARASSMENT">Harassment</option>
+                <option value="HATE">Hate</option>
+                <option value="THREAT">Threat</option>
+                <option value="SEXUAL_VIOLENCE">Sexual Violence</option>
+                <option value="OTHER">Other</option>
+              </select>
+
+              <label className="block text-xs text-white/60">Optional note</label>
+              <textarea
+                value={reportModal.note}
+                onChange={(e) => setReportModal({ ...reportModal, note: e.target.value })}
+                disabled={reportModal.busy}
+                rows={3}
+                className="w-full rounded-lg bg-black/60 border border-white/10 text-white text-sm px-3 py-2"
+                placeholder="Add context (optional)"
+              />
+            </div>
+
+            {reportModal.error && (
+              <div className="mt-3 text-xs text-red-400">
+                {reportModal.error}
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={closeReportModal}
+                disabled={reportModal.busy}
+                className="flex-1 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white text-sm font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitReport}
+                disabled={reportModal.busy}
+                className="flex-1 px-4 py-2 rounded-xl bg-red-500/80 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
+              >
+                {reportModal.busy ? "Reporting..." : "Report"}
+              </button>
+            </div>
           </div>
         </div>
       )}
