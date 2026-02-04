@@ -297,39 +297,39 @@ export default function RewardsPage() {
               <tbody className="text-white/70">
                 <tr className="border-b border-white/5">
                   <td className="py-2 px-2">10,000 XESS</td>
-                  <td className="text-right py-2 px-2 text-cyan-400">40</td>
+                  <td className="text-right py-2 px-2 text-cyan-400">80</td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="py-2 px-2">25,000 XESS</td>
-                  <td className="text-right py-2 px-2 text-cyan-400">120</td>
-                </tr>
-                <tr className="border-b border-white/5">
-                  <td className="py-2 px-2">50,000 XESS</td>
                   <td className="text-right py-2 px-2 text-cyan-400">240</td>
                 </tr>
                 <tr className="border-b border-white/5">
+                  <td className="py-2 px-2">50,000 XESS</td>
+                  <td className="text-right py-2 px-2 text-cyan-400">480</td>
+                </tr>
+                <tr className="border-b border-white/5">
                   <td className="py-2 px-2">100,000 XESS</td>
-                  <td className="text-right py-2 px-2 text-cyan-400">800</td>
+                  <td className="text-right py-2 px-2 text-cyan-400">1,600</td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="py-2 px-2">250,000 XESS</td>
-                  <td className="text-right py-2 px-2 text-cyan-400">2,000</td>
-                </tr>
-                <tr className="border-b border-white/5">
-                  <td className="py-2 px-2">500,000 XESS</td>
                   <td className="text-right py-2 px-2 text-cyan-400">4,000</td>
                 </tr>
                 <tr className="border-b border-white/5">
-                  <td className="py-2 px-2">1,000,000 XESS</td>
+                  <td className="py-2 px-2">500,000 XESS</td>
                   <td className="text-right py-2 px-2 text-cyan-400">8,000</td>
                 </tr>
                 <tr className="border-b border-white/5">
+                  <td className="py-2 px-2">1,000,000 XESS</td>
+                  <td className="text-right py-2 px-2 text-cyan-400">16,000</td>
+                </tr>
+                <tr className="border-b border-white/5">
                   <td className="py-2 px-2">2,500,000 XESS</td>
-                  <td className="text-right py-2 px-2 text-cyan-400">12,000</td>
+                  <td className="text-right py-2 px-2 text-cyan-400">24,000</td>
                 </tr>
                 <tr>
                   <td className="py-2 px-2">5,000,000+ XESS</td>
-                  <td className="text-right py-2 px-2 text-cyan-400">16,000</td>
+                  <td className="text-right py-2 px-2 text-cyan-400">32,000</td>
                 </tr>
               </tbody>
             </table>

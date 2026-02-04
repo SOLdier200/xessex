@@ -8,6 +8,13 @@ import ViewTracker from "@/app/components/ViewTracker";
 
 const COUNTDOWN_SECONDS = 5;
 
+function formatViews(views: number | null): string {
+  if (!views) return "0";
+  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1)}M`;
+  if (views >= 1_000) return `${(views / 1_000).toFixed(1)}K`;
+  return views.toString();
+}
+
 type VideoPayload = {
   id: string;
   slug: string;
@@ -29,6 +36,7 @@ type RelatedVideo = {
   title: string;
   thumbnailUrl: string | null;
   avgStars: number;
+  viewsCount: number | null;
 };
 
 type VideoAccess =
@@ -533,19 +541,19 @@ export default function VideoPlayback({
           {relatedVideos.length === 0 ? (
             <p className="text-white/50 text-sm">No other videos available.</p>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 lg:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-2 gap-2 lg:gap-2">
               {relatedVideos.map((v) => (
                 <Link
                   key={v.id}
                   href={`/videos/${v.slug}`}
-                  className="flex flex-col lg:flex-row gap-2 lg:gap-3 group"
+                  className="block group"
                 >
-                  <div className="relative w-full lg:w-24 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
+                  <div className="relative w-full aspect-video bg-black/60 rounded-md overflow-hidden">
                     {v.thumbnailUrl ? (
                       <img
                         src={v.thumbnailUrl}
                         alt={v.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white/30">
@@ -565,17 +573,9 @@ export default function VideoPlayback({
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs lg:text-sm font-medium text-white line-clamp-2 group-hover:text-pink-300 transition">
-                      {v.title}
-                    </div>
-                    <div className="mt-1 text-[10px] lg:text-xs text-white/50">
-                      {v.avgStars > 0 && (
-                        <span className="text-yellow-400">
-                          &#9733; {v.avgStars.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
+                  {/* Views bar below thumbnail */}
+                  <div className="flex items-center justify-center px-1 py-0.5 text-[9px] text-white/70 bg-black/30 rounded-b-md -mt-1">
+                    <span>{formatViews(v.viewsCount)} views</span>
                   </div>
                 </Link>
               ))}

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
 import RoadmapMarquee from "@/app/components/RoadmapMarquee";
+import TopNav from "@/app/components/TopNav";
 
 // Treasury addresses
 const TREASURY_SOL = "FuG1tCeK53s17nQxvNcpKKo5bvESnPdHduhemHLu7aeS";
@@ -406,33 +407,20 @@ export default function LaunchClient() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="px-4 py-6">
-        <Link href="/">
-          <Image
-            src="/logos/mainsitelogo.png"
-            alt="Xessex"
-            width={285}
-            height={95}
-            className="h-[100px] w-auto"
-            priority
-          />
-        </Link>
-      </div>
+      <TopNav />
 
       <section className="mx-auto max-w-6xl px-4 pt-6 pb-10">
         <div className="flex flex-col gap-6">
           {/* Header */}
           <div className="flex flex-col gap-2">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-xs text-white/80">
-              <span className={`h-2 w-2 rounded-full ${
-                isClosed ? "bg-red-500" : isPrivate ? "bg-yellow-500" : "bg-green-500"
-              }`} />
-              {cfg ? phase?.toUpperCase() : "LOADING"} SALE
-            </div>
-
-            <h1 className="text-4xl font-semibold tracking-tight">
-              XESS Token Launch
+            <h1>
+              <Image
+                src="/logos/textlogo/siteset3/TokenLaunch100.png"
+                alt="XESS Token Launch"
+                width={400}
+                height={100}
+                className="h-[50px] w-auto"
+              />
             </h1>
             <div className="mt-2">
               <Image
@@ -511,7 +499,7 @@ export default function LaunchClient() {
               <div className="mt-4 flex items-center justify-center">
                 {wallet.connected ? (
                   <div
-                    className={`rounded-2xl p-[2px] ${
+                    className={`rounded-lg p-[1px] ${
                       wallet.wallet?.adapter.name === "Phantom"
                         ? "bg-gradient-to-r from-purple-500 to-purple-400"
                         : wallet.wallet?.adapter.name === "Solflare"
@@ -519,20 +507,22 @@ export default function LaunchClient() {
                         : "bg-gradient-to-r from-cyan-500 to-purple-500"
                     }`}
                   >
-                    <WalletMultiButton className="!rounded-[14px] !bg-black/90 !px-5 !py-2.5 !text-sm !text-white/90 hover:!bg-black/70 !border-0 !font-medium !transition-all !duration-200" />
+                    <WalletMultiButton className="!rounded-[6px] !bg-black/90 !px-2.5 !py-1 !text-xs !text-white/90 hover:!bg-black/70 !border-0 !font-medium !transition-all !duration-200" />
                   </div>
                 ) : (
                   <button
                     onClick={() => setWalletModalVisible(true)}
-                    className="hover:opacity-80 transition-opacity"
+                    className="rounded-full p-[2px] bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.5)]"
                   >
-                    <Image
-                      src="/logos/textlogo/siteset3/Connect.png"
-                      alt="Connect Wallet"
-                      width={200}
-                      height={60}
-                      className="h-[50px] w-auto"
-                    />
+                    <div className="rounded-full bg-black/90 px-6 py-3 flex items-center justify-center">
+                      <Image
+                        src="/logos/textlogo/siteset3/Connect.png"
+                        alt="Connect Wallet"
+                        width={200}
+                        height={60}
+                        className="h-[32px] w-auto"
+                      />
+                    </div>
                   </button>
                 )}
               </div>
@@ -674,7 +664,7 @@ export default function LaunchClient() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-                Contact Support@xessex.me
+                Contact Support@xessex.me to be put on the whitelist for the private sale
               </li>
             </ul>
           </div>
@@ -713,25 +703,6 @@ export default function LaunchClient() {
           Participation is voluntary and subject to market risk.
         </p>
       </section>
-
-      {/* Footer */}
-      <div className="border-t border-white/10 py-8 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <Link href="/">
-            <Image
-              src="/logos/mainsitelogo.png"
-              alt="Xessex"
-              width={285}
-              height={95}
-              className="h-[50px] w-auto opacity-70 hover:opacity-100 transition"
-            />
-          </Link>
-          <div className="flex justify-center gap-6 text-sm">
-            <Link href="/whitepaper" className="text-cyan-400 hover:text-cyan-300">Whitepaper</Link>
-            <Link href="/faq" className="text-cyan-400 hover:text-cyan-300">FAQ</Link>
-          </div>
-        </div>
-      </div>
     </main>
   );
 }

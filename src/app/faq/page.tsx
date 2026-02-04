@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import TopNav from "../components/TopNav";
 
 export const metadata = {
   title: "FAQ | Xessex",
@@ -109,15 +110,15 @@ const FAQ_SECTIONS: FAQSection[] = [
         q: "How do credit tiers work?",
         a: [
           "Your monthly credit allocation depends on your XESS balance:",
-          "• 10,000 XESS → 40 credits/month (Tier 1)",
-          "• 25,000 XESS → 120 credits/month (Tier 2)",
-          "• 50,000 XESS → 240 credits/month (Tier 3)",
-          "• 100,000 XESS → 800 credits/month (Tier 4)",
-          "• 250,000 XESS → 2,000 credits/month (Tier 5)",
-          "• 500,000 XESS → 4,000 credits/month (Tier 6)",
-          "• 1,000,000 XESS → 8,000 credits/month (Tier 7)",
-          "• 2,500,000 XESS → 12,000 credits/month (Tier 8)",
-          "• 5,000,000 XESS → 16,000 credits/month (Tier 9)",
+          "• 10,000 XESS → 80 credits/month (Tier 1)",
+          "• 25,000 XESS → 240 credits/month (Tier 2)",
+          "• 50,000 XESS → 480 credits/month (Tier 3)",
+          "• 100,000 XESS → 1,600 credits/month (Tier 4)",
+          "• 250,000 XESS → 4,000 credits/month (Tier 5)",
+          "• 500,000 XESS → 8,000 credits/month (Tier 6)",
+          "• 1,000,000 XESS → 16,000 credits/month (Tier 7)",
+          "• 2,500,000 XESS → 24,000 credits/month (Tier 8)",
+          "• 5,000,000 XESS → 32,000 credits/month (Tier 9)",
         ],
       },
       {
@@ -140,8 +141,8 @@ const FAQ_SECTIONS: FAQSection[] = [
         a: [
           "Video unlock costs follow a progressive ladder:",
           "• First video: 10 credits",
-          "• Gradually increases: 20, 30, 40... up to 500",
-          "• After 26 unlocks: capped at 500 credits per video",
+          "• Increases by 10 each unlock: 10, 20, 30, 40... up to 500",
+          "• After 50 unlocks: capped at 500 credits per video",
           "• Free videos: Always 0 credits",
           "Once unlocked, a video is yours forever.",
         ],
@@ -311,30 +312,8 @@ const colorMap: Record<string, { border: string; title: string }> = {
 export default function FAQPage() {
   return (
     <main className="min-h-screen bg-black text-white">
+      <TopNav />
       <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/">
-            <Image
-              src="/logos/mainsitelogo.png"
-              alt="Xessex"
-              width={855}
-              height={285}
-              className="h-[240px] w-auto"
-              priority
-            />
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white transition"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Back to Home
-          </Link>
-        </div>
-
         <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
           Frequently Asked Questions
         </h1>

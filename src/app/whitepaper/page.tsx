@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import TopNav from "../components/TopNav";
 
 export const metadata = {
   title: "Whitepaper v1.0 | Xessex",
@@ -9,30 +10,8 @@ export const metadata = {
 export default function WhitepaperPage() {
   return (
     <main className="min-h-screen bg-black text-white">
+      <TopNav />
       <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/">
-            <Image
-              src="/logos/mainsitelogo.png"
-              alt="Xessex"
-              width={285}
-              height={95}
-              className="h-[168px] w-auto"
-              priority
-            />
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white transition"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Back to Home
-          </Link>
-        </div>
-
         <div className="mb-2">
           <Image
             src="/logos/Whitepaper100.png"

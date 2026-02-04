@@ -17,9 +17,7 @@ const BURN_TO_ATOMIC = 1000n;
 function formatXess(amount: bigint): string {
   const DECIMALS = 1_000_000n;
   const whole = amount / DECIMALS;
-  const frac = amount % DECIMALS;
-  if (frac === 0n) return whole.toLocaleString();
-  return `${whole.toLocaleString()}.${frac.toString().padStart(6, "0").replace(/0+$/, "")}`;
+  return whole.toLocaleString();
 }
 
 export async function GET() {

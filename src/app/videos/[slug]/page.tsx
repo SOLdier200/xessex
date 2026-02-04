@@ -116,6 +116,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
         title: true,
         thumbnailUrl: true,
         avgStars: true,
+        viewsCount: true,
       },
       take: 20,
     }),

@@ -1114,8 +1114,8 @@ model SaleConfig {
   activePhase           String    @default("private") // "private" | "public" | "closed"
   totalSupplyXess       BigInt    @default(1000000000)
   saleAllocationXess    BigInt    @default(350000000)
-  privateAllocation     BigInt    @default(35000000)
-  publicAllocation      BigInt    @default(315000000)
+  privateAllocation     BigInt    @default(200000000)
+  publicAllocation      BigInt    @default(150000000)
   walletCapXess         BigInt    @default(10000000)
 
   // Pricing in USD micros (e.g. 39 = $0.000039)

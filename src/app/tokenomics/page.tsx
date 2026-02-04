@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import TopNav from "../components/TopNav";
 
 type Allocation = {
   name: string;
@@ -89,28 +90,9 @@ export default function TokenomicsPage() {
   const amtTotal = sumAmt(ALLOCATIONS);
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="max-w-5xl mx-auto">
-        {/* Logo and Back button */}
-        <div className="flex items-center justify-between mb-6">
-          <Link href="/">
-            <Image
-              src="/logos/mainsitelogo.png"
-              alt="Xessex"
-              width={285}
-              height={95}
-              className="h-[100px] md:h-[144px] w-auto"
-              priority
-            />
-          </Link>
-          <Link
-            href="/"
-            className="text-gray-400 hover:text-white text-sm transition"
-          >
-            ← Back
-          </Link>
-        </div>
-
+    <main className="min-h-screen">
+      <TopNav />
+      <div className="max-w-5xl mx-auto px-6 py-10">
         {/* Header */}
         <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
@@ -121,7 +103,7 @@ export default function TokenomicsPage() {
                   alt="XESSEX TOKENOMICS (FINAL — LOCKED)"
                   width={800}
                   height={200}
-                  className="h-[40px] w-auto"
+                  className="h-[52px] w-auto"
                 />
               </h1>
               <div className="mt-2">

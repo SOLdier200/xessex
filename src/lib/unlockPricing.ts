@@ -3,14 +3,16 @@
  *
  * Cost increases with each video unlocked:
  * - First video: 10 credits
- * - Gradual increase to 500 credits
- * - After 26 unlocks: capped at 500 credits forever
+ * - Increases by 10 each unlock
+ * - After 50 unlocks: capped at 500 credits forever
  */
 
 export const UNLOCK_PRICES: number[] = [
   10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
-  125, 150, 175, 200, 225, 250, 275, 300, 325, 350,
-  375, 400, 425, 450, 475, 500,
+  110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
+  210, 220, 230, 240, 250, 260, 270, 280, 290, 300,
+  310, 320, 330, 340, 350, 360, 370, 380, 390, 400,
+  410, 420, 430, 440, 450, 460, 470, 480, 490, 500,
 ];
 
 /**
