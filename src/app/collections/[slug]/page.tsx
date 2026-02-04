@@ -4,6 +4,7 @@ import path from "path";
 import type { Metadata } from "next";
 import TopNav from "../../components/TopNav";
 import { db } from "@/lib/prisma";
+import { getAccessContext } from "@/lib/access";
 
 const CATEGORY_META: Record<string, { title: string; description: string }> = {
   "blonde": {
@@ -126,11 +127,39 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const allApprovedVideos = getApprovedVideos();
   const categoryInfo = CATEGORY_INFO[slug] || { name: slug.replace(/-/g, " "), icon: "📁" };
 
-  // Fetch all video ranks from DB
+  // Get access context to check user's unlocked videos
+  const access = await getAccessContext();
+  const userId = access.user?.id || null;
+
+  // Fetch all video ranks and unlock costs from DB
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true },
+    select: { slug: true, rank: true, unlockCost: true, id: true },
   });
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
+  const unlockCostMap = new Map(dbVideos.map((v) => [v.slug, v.unlockCost]));
+  const videoIdMap = new Map(dbVideos.map((v) => [v.slug, v.id]));
+
+  // Get user's unlocked videos if logged in
+  const userUnlockedSet = new Set<string>();
+  if (userId) {
+    const unlocks = await db.videoUnlock.findMany({
+      where: { userId },
+      select: { videoId: true },
+    });
+    for (const u of unlocks) {
+      userUnlockedSet.add(u.videoId);
+    }
+  }
+
+  // Helper to check if video is locked for this user
+  const isVideoLocked = (viewkey: string): boolean => {
+    const unlockCost = unlockCostMap.get(viewkey) ?? 0;
+    if (unlockCost === 0) return false; // Free video
+    if (access.isAdminOrMod) return false; // Admin/mod can see all
+    const videoId = videoIdMap.get(viewkey);
+    if (videoId && userUnlockedSet.has(videoId)) return false; // User unlocked it
+    return true;
+  };
 
   // Merge rank into approved videos
   const allVideos = allApprovedVideos.map((v) => ({
@@ -201,54 +230,71 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             No videos in this category yet
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {videos.map((v) => (
-              <Link
-                key={v.viewkey}
-                href={`/videos/${v.viewkey}`}
-                className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition group"
-              >
-                <div className="relative aspect-video bg-black/60">
-                  {v.primary_thumb ? (
-                    <img
-                      src={v.primary_thumb}
-                      alt={v.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">
-                      No Thumbnail
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
+            {videos.map((v) => {
+              const locked = isVideoLocked(v.viewkey);
+              return (
+                <Link
+                  key={v.viewkey}
+                  href={`/videos/${v.viewkey}`}
+                  className="neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition group"
+                >
+                  <div className="relative aspect-video bg-black/60">
+                    {v.primary_thumb ? (
+                      <img
+                        src={v.primary_thumb}
+                        alt={locked ? "Locked video" : v.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/30 text-[8px]">
+                        No Thumbnail
+                      </div>
+                    )}
+                    {/* Lock overlay for locked videos */}
+                    {locked && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="text-xl">🔒</span>
+                      </div>
+                    )}
+                    {/* Rank Badge */}
+                    {v.rank != null && (
+                      <div className="absolute top-0.5 left-0.5 md:top-1 md:left-1 min-w-[16px] md:min-w-[18px] h-4 flex items-center justify-center text-[8px] md:text-[10px] font-bold px-0.5 md:px-1 rounded bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white/90 backdrop-blur-sm shadow-md">
+                        #{v.rank}
+                      </div>
+                    )}
+                    <div className="absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
+                      {formatDuration(v.duration)}
                     </div>
-                  )}
-                  {/* Rank Badge */}
-                  {v.rank != null && (
-                    <div className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white/90 backdrop-blur-sm shadow-md">
-                      #{v.rank}
-                    </div>
-                  )}
-                  <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-black/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-white">
-                    {formatDuration(v.duration)}
+                    {v.favorite === 1 && (
+                      <div className="absolute top-0.5 right-0.5 md:top-1 md:right-1 bg-yellow-500/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-black font-semibold">
+                        ★
+                      </div>
+                    )}
                   </div>
-                  {v.favorite === 1 && (
-                    <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-1.5 py-0.5 rounded text-[10px] md:text-xs text-black font-semibold">
-                      ★
-                    </div>
-                  )}
-                </div>
 
-                <div className="p-2 md:p-3">
-                  <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
-                    {v.title}
+                  <div className="p-1.5 md:p-2">
+                    {locked ? (
+                      <div className="font-semibold text-white/50 text-[10px] md:text-xs line-clamp-1 italic">
+                        🔒 Unlock to reveal
+                      </div>
+                    ) : (
+                      <div className="font-semibold text-white text-[10px] md:text-xs line-clamp-1 group-hover:text-pink-300 transition">
+                        {v.title}
+                      </div>
+                    )}
+                    {!locked && (
+                      <div className="mt-0.5 md:mt-1 text-[8px] md:text-[10px] text-white/60 truncate">
+                        {v.performers || "Unknown"}
+                      </div>
+                    )}
+                    <div className="mt-0.5 text-[8px] md:text-[10px] text-white/50">
+                      {formatViews(v.views)} views
+                    </div>
                   </div>
-                  <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
-                    {v.performers || "Unknown"}
-                  </div>
-                  <div className="mt-1 text-[10px] md:text-xs text-white/50">
-                    {formatViews(v.views)} views
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

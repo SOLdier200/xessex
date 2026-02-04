@@ -1111,10 +1111,10 @@ export default function ProfilePage() {
                         <img
                           src={data.avatarUrl}
                           alt="Profile"
-                          className="w-12 h-12 rounded-full object-cover border-2 border-pink-500/50"
+                          className="w-[72px] h-[72px] rounded-full object-cover border-2 border-pink-500/50"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-white/60 text-lg font-semibold border-2 border-white/20">
+                        <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-white/60 text-2xl font-semibold border-2 border-white/20">
                           {(data.username || data.walletAddress || "?").slice(0, 2).toUpperCase()}
                         </div>
                       )}
@@ -1959,6 +1959,56 @@ export default function ProfilePage() {
             <div className="neon-border rounded-2xl p-6 bg-black/30">
               <h2 className="text-lg font-semibold text-white mb-4">XESS History</h2>
               <RewardsTab />
+            </div>
+          )}
+
+          {/* Username Modal */}
+          {showUsernameModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+              <div
+                className="absolute inset-0 bg-black/80"
+                onClick={() => setShowUsernameModal(false)}
+              />
+              <div className="relative w-full max-w-sm rounded-2xl neon-border bg-black/95 p-5">
+                <button
+                  onClick={() => setShowUsernameModal(false)}
+                  className="absolute top-3 right-3 text-white/50 hover:text-white transition p-1"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  {data?.username ? "Change Username" : "Set Username"}
+                </h3>
+                <input
+                  type="text"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  placeholder="Enter username"
+                  maxLength={20}
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-pink-500 transition"
+                />
+                <p className="mt-2 text-xs text-white/50">2-20 characters. Letters, numbers, and special characters allowed.</p>
+                {usernameError && (
+                  <p className="mt-2 text-sm text-red-400">{usernameError}</p>
+                )}
+                <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={() => setShowUsernameModal(false)}
+                    className="flex-1 px-4 py-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUsernameSubmit}
+                    disabled={usernameLoading || !usernameInput.trim()}
+                    className="flex-1 px-4 py-2 rounded-lg bg-pink-500 text-white font-semibold hover:bg-pink-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {usernameLoading ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

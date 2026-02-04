@@ -94,14 +94,13 @@ export default function LockedFeaturedCard({
             {thumb && (
               <img
                 src={thumb}
-                alt="Premium video"
-                className="w-full h-full object-cover blur-lg scale-110"
+                alt="Locked video"
+                className="w-full h-full object-cover"
               />
             )}
+            {/* Lock overlay */}
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
-              <svg className="w-10 h-10 text-yellow-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              </svg>
+              <span className="text-4xl">🔒</span>
               {isAuthed ? (
                 <button
                   onClick={() => setShowModal(true)}
@@ -132,14 +131,9 @@ export default function LockedFeaturedCard({
               )}
             </div>
           )}
-          <h3 className="mt-3 text-lg font-semibold text-white/40 italic">
-            Locked Video
+          <h3 className="mt-3 text-sm font-semibold text-white/50 italic">
+            🔒 Unlock to reveal
           </h3>
-          {!showMetaBelow && (
-            <p className="mt-1 text-sm text-white/30">
-              {duration}
-            </p>
-          )}
         </div>
       </section>
 

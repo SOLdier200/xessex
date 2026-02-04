@@ -12,9 +12,13 @@ export default function RewardsPage() {
       <div className="mx-auto max-w-4xl px-5 py-10">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold neon-text mb-4">
-            Earn XESS Rewards
-          </h1>
+          <Image
+            src="/logos/textlogo/siteset3/rewards2020.png"
+            alt="Rewards"
+            width={400}
+            height={100}
+            className="mx-auto mb-4"
+          />
           <p className="text-white/70 text-lg max-w-2xl mx-auto">
             Multiple ways to earn crypto on Xessex. Active users earn weekly payouts
             in XESS tokens for their activity and engagement.

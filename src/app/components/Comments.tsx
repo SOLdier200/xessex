@@ -196,7 +196,7 @@ export default function Comments({
       if (data.ok) {
         // Show the processed message
         toast.success("Your comment has been processed. You will earn the most for comments that resonate with your peers and represent the keen observer.", {
-          duration: 5000,
+          duration: 7000,
         });
 
         if (data.comment?.status && data.comment.status !== "ACTIVE") {
@@ -273,7 +273,7 @@ export default function Comments({
 
         toast.success("Success! You've earned XESS for voting. Keep voting to maximize your rewards!", {
           id: voteToast,
-          duration: 4000,
+          duration: 6000,
         });
 
         // Show credits earned toast and update UI
@@ -579,7 +579,7 @@ export default function Comments({
                     alt="Post Comment"
                     width={938}
                     height={276}
-                    className="h-[32px] w-auto"
+                    className="h-[26px] w-auto"
                   />
                 )}
               </button>
@@ -631,10 +631,10 @@ export default function Comments({
                       <img
                         src={comment.authorAvatarUrl}
                         alt=""
-                        className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-[10px] text-white/60 font-semibold flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-sm text-white/60 font-semibold flex-shrink-0">
                         {comment.authorWallet.slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -680,7 +680,7 @@ export default function Comments({
                         title={reportedIds.has(comment.id) ? "Already reported" : "Report comment"}
                       >
                         <Image
-                          src="/logos/Report2.png"
+                          src="/logos/textlogo/siteset3/Report2020.png"
                           alt={reportedIds.has(comment.id) ? "Reported" : "Report"}
                           width={100}
                           height={100}

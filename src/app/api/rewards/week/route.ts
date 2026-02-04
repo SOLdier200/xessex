@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       type: true,
+      refType: true,
       amount: true,
       status: true,
       createdAt: true,
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
     rewards: rewards.map((r) => ({
       id: r.id,
       type: r.type,
+      refType: r.refType,
       amount: r.amount.toString(),
       status: r.status,
       createdAt: r.createdAt.toISOString(),

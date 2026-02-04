@@ -25,9 +25,12 @@ export async function GET(req: NextRequest) {
           body: true,
           createdAt: true,
           status: true,
-          author: { select: { id: true, email: true, walletAddress: true } },
+          author: { select: { id: true, email: true, walletAddress: true, createdAt: true } },
           video: { select: { id: true, slug: true, title: true } },
         },
+      },
+      reporter: {
+        select: { id: true, email: true, walletAddress: true },
       },
     },
   });
@@ -44,16 +47,27 @@ export async function GET(req: NextRequest) {
         body: r.comment.body,
         createdAt: r.comment.createdAt.toISOString(),
         status: r.comment.status,
-        author: r.comment.author,
+        author: {
+          ...r.comment.author,
+          createdAt: r.comment.author.createdAt?.toISOString(),
+        },
         video: r.comment.video,
         reportCount: 0,
         reasons: {} as Record<string, number>,
+        reporters: [] as Array<{ id: string; email: string | null; walletAddress: string | null; reportedAt: string; reason: string }>,
         latestReportAt: r.createdAt.toISOString(),
       });
     }
     const row = grouped.get(key);
     row.reportCount += 1;
     row.reasons[r.reason] = (row.reasons[r.reason] || 0) + 1;
+    row.reporters.push({
+      id: r.reporter.id,
+      email: r.reporter.email,
+      walletAddress: r.reporter.walletAddress,
+      reportedAt: r.createdAt.toISOString(),
+      reason: r.reason,
+    });
     if (r.createdAt.toISOString() > row.latestReportAt) {
       row.latestReportAt = r.createdAt.toISOString();
     }

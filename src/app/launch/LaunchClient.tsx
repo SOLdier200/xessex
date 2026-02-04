@@ -507,20 +507,22 @@ export default function LaunchClient() {
               <h2 className="text-lg font-medium">Participate</h2>
 
               {/* Wallet Connection */}
-              <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 p-4">
-                <div className="text-sm text-white/70">
-                  {wallet.connected ? (
-                    <>
-                      <span className="text-white/50">Wallet:</span>{" "}
-                      <span className="text-white/90 font-mono">
-                        {wallet.publicKey?.toBase58().slice(0, 4)}...{wallet.publicKey?.toBase58().slice(-4)}
-                      </span>
-                    </>
-                  ) : (
-                    "Connect wallet to continue"
-                  )}
-                </div>
-                <WalletMultiButton className="!rounded-full !border !border-white/15 !bg-white/[0.04] !px-4 !py-2 !text-sm !text-white/80 hover:!bg-white/[0.06]" />
+              <div className="mt-4 flex items-center justify-center">
+                {wallet.connected ? (
+                  <div
+                    className={`rounded-full bg-black p-1 border-2 ${
+                      wallet.wallet?.adapter.name === "Phantom"
+                        ? "border-purple-500"
+                        : wallet.wallet?.adapter.name === "Solflare"
+                        ? "border-yellow-400"
+                        : "border-white/30"
+                    }`}
+                  >
+                    <WalletMultiButton className="!rounded-full !bg-black !px-4 !py-2 !text-sm !text-white/80 hover:!bg-black/80 !border-0" />
+                  </div>
+                ) : (
+                  <WalletMultiButton className="!rounded-full !border !border-white/15 !bg-white/[0.04] !px-4 !py-2 !text-sm !text-white/80 hover:!bg-white/[0.06]" />
+                )}
               </div>
 
               {/* Eligibility Status */}

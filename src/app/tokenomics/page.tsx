@@ -117,7 +117,7 @@ export default function TokenomicsPage() {
             <div>
               <h1>
                 <Image
-                  src="/logos/tokenomics100.png"
+                  src="/logos/Tokenomics100.png"
                   alt="XESSEX TOKENOMICS (FINAL — LOCKED)"
                   width={800}
                   height={200}

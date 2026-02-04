@@ -56,27 +56,13 @@ export default function BurnedPage() {
 
         {/* Header */}
         <section className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div
-                className="absolute inset-0 blur-xl scale-150 rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(239,68,68,0.35) 0%, rgba(249,115,22,0.2) 50%, transparent 70%)",
-                }}
-              />
-              <div className="relative w-16 h-16 flex items-center justify-center text-4xl">
-                🔥
-              </div>
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
-                XESS Token Burns
-              </h1>
-              <p className="text-white/60 text-sm mt-1">
-                Tracking deflationary token burns
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              XESS Token Burns
+            </h1>
+            <p className="text-white/60 text-sm mt-1">
+              Tracking deflationary token burns
+            </p>
           </div>
         </section>
 
@@ -93,8 +79,8 @@ export default function BurnedPage() {
           <>
             {/* Main Stats */}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="neon-border rounded-2xl p-6 bg-gradient-to-br from-orange-500/10 to-red-500/10 text-center">
-                <div className="text-3xl md:text-4xl font-bold text-orange-400">
+              <div className="neon-border rounded-2xl p-6 bg-gradient-to-br from-orange-500/10 to-red-500/10 text-center overflow-hidden">
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-orange-400 break-all">
                   {data.totalBurned}
                 </div>
                 <div className="text-sm text-white/60 mt-1">Total XESS Burned</div>

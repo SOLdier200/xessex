@@ -1,17 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+
+type Reporter = {
+  id: string;
+  email: string | null;
+  walletAddress: string | null;
+  reportedAt: string;
+  reason: string;
+};
 
 type ReportRow = {
   commentId: string;
   body: string;
   createdAt: string;
   status: string;
-  author: { id: string; email: string | null; walletAddress: string | null };
+  author: { id: string; email: string | null; walletAddress: string | null; createdAt?: string };
   video: { id: string; slug: string; title: string };
   reportCount: number;
   reasons: Record<string, number>;
+  reporters: Reporter[];
   latestReportAt: string;
 };
 
@@ -25,11 +34,23 @@ function truncate(s: string, max = 120) {
   return s.slice(0, max).trim() + "…";
 }
 
+function formatWallet(wallet: string | null) {
+  if (!wallet) return null;
+  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
+function getUserDisplay(user: { email: string | null; walletAddress: string | null; id: string }) {
+  if (user.email) return user.email;
+  if (user.walletAddress) return formatWallet(user.walletAddress);
+  return user.id.slice(0, 8) + "...";
+}
+
 export default function ReportedCommentsPanel() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -123,66 +144,136 @@ export default function ReportedCommentsPanel() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-400">
+                  <th className="pb-3 font-medium w-8"></th>
                   <th className="pb-3 font-medium">Comment</th>
-                  <th className="pb-3 font-medium">Author</th>
+                  <th className="pb-3 font-medium">Author Info</th>
                   <th className="pb-3 font-medium">Video</th>
                   <th className="pb-3 font-medium">Reports</th>
-                  <th className="pb-3 font-medium">Last</th>
                   <th className="pb-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {reports.map((r) => (
-                  <tr key={r.commentId} className="hover:bg-gray-800/50">
-                    <td className="py-3 pr-4">
-                      <div className="text-white/90">{truncate(r.body)}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {r.status === "REMOVED" ? "REMOVED" : "ACTIVE"} • {formatDate(r.createdAt)}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <div className="text-white/80">
-                        {r.author.email || r.author.walletAddress || r.author.id.slice(0, 8) + "..."}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <Link
-                        href={`/videos/${r.video.slug}`}
-                        className="text-cyan-300 hover:text-cyan-200"
-                      >
-                        {truncate(r.video.title || r.video.slug, 32)}
-                      </Link>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <div className="text-white/90 font-semibold">{r.reportCount}</div>
-                      <div className="text-xs text-gray-500">
-                        {Object.entries(r.reasons)
-                          .map(([k, v]) => `${k}:${v}`)
-                          .join(" • ")}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4 text-gray-400">
-                      {formatDate(r.latestReportAt)}
-                    </td>
-                    <td className="py-3">
-                      <div className="flex items-center gap-2">
+                  <Fragment key={r.commentId}>
+                    <tr className="hover:bg-gray-800/50">
+                      <td className="py-3 pr-2">
                         <button
-                          onClick={() => removeComment(r.commentId)}
-                          disabled={actionId === r.commentId}
-                          className="px-3 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30 text-xs font-semibold disabled:opacity-50"
+                          onClick={() => setExpandedId(expandedId === r.commentId ? null : r.commentId)}
+                          className="text-gray-400 hover:text-white transition"
                         >
-                          Remove
+                          <svg
+                            className={`w-4 h-4 transition-transform ${expandedId === r.commentId ? "rotate-90" : ""}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
-                        <button
-                          onClick={() => dismissReports(r.commentId)}
-                          disabled={actionId === r.commentId}
-                          className="px-3 py-1 rounded bg-gray-700/40 text-gray-200 hover:bg-gray-700/70 text-xs font-semibold disabled:opacity-50"
+                      </td>
+                      <td className="py-3 pr-4">
+                        <div className="text-white/90">{truncate(r.body)}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <span className={r.status === "REMOVED" ? "text-red-400" : "text-green-400"}>
+                            {r.status === "REMOVED" ? "REMOVED" : "ACTIVE"}
+                          </span>
+                          {" • "}{formatDate(r.createdAt)}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <div className="space-y-1">
+                          <div className="text-white/90 font-medium">{getUserDisplay(r.author)}</div>
+                          {r.author.walletAddress && (
+                            <div className="text-xs text-cyan-400 font-mono">
+                              {formatWallet(r.author.walletAddress)}
+                            </div>
+                          )}
+                          {r.author.email && r.author.walletAddress && (
+                            <div className="text-xs text-gray-500">+ wallet linked</div>
+                          )}
+                          <div className="text-xs text-gray-500">
+                            ID: {r.author.id.slice(0, 8)}...
+                          </div>
+                          {r.author.createdAt && (
+                            <div className="text-xs text-gray-600">
+                              Joined: {formatDate(r.author.createdAt)}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <Link
+                          href={`/videos/${r.video.slug}`}
+                          className="text-cyan-300 hover:text-cyan-200"
                         >
-                          Dismiss
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          {truncate(r.video.title || r.video.slug, 32)}
+                        </Link>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <div className="text-white/90 font-semibold text-lg">{r.reportCount}</div>
+                        <div className="text-xs text-gray-500">
+                          {Object.entries(r.reasons)
+                            .map(([k, v]) => `${k}:${v}`)
+                            .join(" • ")}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Latest: {formatDate(r.latestReportAt)}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => removeComment(r.commentId)}
+                            disabled={actionId === r.commentId}
+                            className="px-3 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30 text-xs font-semibold disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                          <button
+                            onClick={() => dismissReports(r.commentId)}
+                            disabled={actionId === r.commentId}
+                            className="px-3 py-1 rounded bg-gray-700/40 text-gray-200 hover:bg-gray-700/70 text-xs font-semibold disabled:opacity-50"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedId === r.commentId && (
+                      <tr key={`${r.commentId}-expanded`} className="bg-gray-800/30">
+                        <td colSpan={6} className="py-4 px-6">
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-yellow-400">Reporters ({r.reporters.length})</h4>
+                            <div className="grid gap-2">
+                              {r.reporters.map((reporter, idx) => (
+                                <div key={idx} className="flex items-center gap-4 p-3 bg-gray-900/50 rounded-lg text-sm">
+                                  <div className="flex-1">
+                                    <div className="text-white/90 font-medium">{getUserDisplay(reporter)}</div>
+                                    {reporter.walletAddress && (
+                                      <div className="text-xs text-cyan-400 font-mono mt-0.5">
+                                        {reporter.walletAddress}
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      ID: {reporter.id.slice(0, 12)}...
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs">
+                                      {reporter.reason}
+                                    </span>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {formatDate(reporter.reportedAt)}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

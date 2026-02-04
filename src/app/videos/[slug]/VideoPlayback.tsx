@@ -539,7 +539,7 @@ export default function VideoPlayback({
                   href={`/videos/${v.slug}`}
                   className="flex flex-col lg:flex-row gap-2 lg:gap-3 group"
                 >
-                  <div className="relative w-full lg:w-32 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
+                  <div className="relative w-full lg:w-24 shrink-0 aspect-video bg-black/60 rounded-lg overflow-hidden">
                     {v.thumbnailUrl ? (
                       <img
                         src={v.thumbnailUrl}

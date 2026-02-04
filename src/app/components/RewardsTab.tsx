@@ -19,6 +19,7 @@ type WeeksResponse = {
 type RewardDetail = {
   id: string;
   type: string;
+  refType: string | null;
   amount: string;
   status: string;
   createdAt: string;
@@ -196,10 +197,11 @@ export default function RewardsTab() {
               <button
                 onClick={() => {
                   const rows: string[][] = [
-                    ["createdAt", "type", "amount", "status", "paidAt", "txSig"],
+                    ["createdAt", "type", "category", "amount", "status", "paidAt", "txSig"],
                     ...weekDetail.rewards.map((r) => [
                       r.createdAt,
-                      r.type,
+                      rewardTypeLabel(r.type, r.refType),
+                      r.refType ?? r.type,
                       r.amount,
                       r.status,
                       r.paidAt ?? "",
@@ -242,7 +244,7 @@ export default function RewardsTab() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="min-w-0">
-                      <div className="text-white truncate">{rewardTypeLabel(r.type)}</div>
+                      <div className="text-white truncate">{rewardTypeLabel(r.type, r.refType)}</div>
                       <div className="text-xs text-white/50">
                         {new Date(r.createdAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
                       </div>

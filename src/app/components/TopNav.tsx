@@ -201,7 +201,7 @@ export default function TopNav() {
 
           {/* Menu (dropdownlogo trigger) */}
           <div className="relative" ref={menuRef}>
-            <button
+            <motion.button
               type="button"
               aria-haspopup="menu"
               aria-expanded={menuOpen}
@@ -210,14 +210,22 @@ export default function TopNav() {
                 // When closing, also close token submenu
                 if (menuOpen) setTokenSubOpen(false);
               }}
-              className="group relative select-none rounded-lg p-[2px]"
+              className="group relative select-none rounded-lg p-[2px] hover:shadow-[0_0_20px_rgba(236,72,153,0.6)]"
               style={{
                 background: "linear-gradient(90deg, #ec4899, #a855f7, #06b6d4, #a855f7, #ec4899)",
                 backgroundSize: "200% 100%",
                 animation: "gradient-shift 2s ease infinite",
               }}
+              animate={{
+                rotate: menuOpen ? 8 : 0,
+                scale: menuOpen ? 1.05 : 1,
+              }}
+              whileHover={{
+                boxShadow: "0 0 25px rgba(168, 85, 247, 0.7)",
+              }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
             >
-              <div className="rounded-lg bg-black p-1">
+              <div className="rounded-lg bg-black p-1 group-hover:bg-gray-900 transition-colors">
                 <Image
                   src="/logos/dropdownlogo.png"
                   alt="Menu"
@@ -227,12 +235,11 @@ export default function TopNav() {
                   className={[
                     "h-10 w-10 md:h-11 md:w-11",
                     "transition-all duration-150 ease-out",
-                    // Hover = brighten
-                    "group-hover:brightness-125",
+                    "group-hover:brightness-125 group-hover:scale-110",
                   ].join(" ")}
                 />
               </div>
-            </button>
+            </motion.button>
 
             <AnimatePresence>
               {menuOpen && (

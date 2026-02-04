@@ -80,9 +80,22 @@ export default function CategoriesPage() {
             Browse videos by collection
           </p>
           <p className="mt-2 text-sm text-white/60">
-            New here?{" "}
+            <span className="text-white/80 font-medium">Unlock videos:</span>{" "}
+            New here? Get a Solana Wallet ({" "}
+            <a href="https://phantom.app/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">
+              Phantom
+            </a>{" "}
+            /{" "}
+            <a href="https://solflare.com/" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 underline">
+              Solflare
+            </a>{" "}
+            /{" "}
+            <a href="https://backpack.app/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline">
+              Backpack
+            </a>{" "}
+            ) then{" "}
             <Link href="/login/diamond" className="text-pink-400 hover:text-pink-300 underline">
-              Connect your wallet
+              connect your wallet
             </Link>{" "}
             to unlock videos, or learn how to{" "}
             <Link href="/earn-crypto-watching-porn" className="text-pink-400 hover:text-pink-300 underline">

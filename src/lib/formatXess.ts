@@ -74,11 +74,19 @@ export function formatXess6(amount6Str: string, decimals = 2): string {
 
 /**
  * Get a friendly label for reward types
+ * @param type - The reward type (e.g., "WEEKLY_LIKES", "WEEKLY_COMMENTS")
+ * @param refType - Optional refType for more specific categorization (e.g., "embed:flat_total")
  */
-export function rewardTypeLabel(type: string): string {
-  // Flat rate rewards (e.g., "EMBED:flat_total", "LIKES:flat_total")
+export function rewardTypeLabel(type: string, refType?: string | null): string {
+  // Check refType first for flat rate rewards
+  if (refType?.endsWith(":flat_total")) {
+    const pool = refType.startsWith("xessex:") ? "Xessex" : "Embed";
+    return `Flat Rate (${pool})`;
+  }
+
+  // Legacy check for type field
   if (type.endsWith(":flat_total")) {
-    return "FLAT";
+    return "Flat Rate";
   }
 
   switch (type) {
