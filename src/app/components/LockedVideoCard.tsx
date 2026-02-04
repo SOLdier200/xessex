@@ -72,8 +72,9 @@ export default function LockedVideoCard({
         setUnlockError(json?.error ?? "unlock_failed");
         return;
       }
-      // Success - close modal and refresh to show unlocked video
+      // Success - close modal, update wallet status, and refresh to show unlocked video
       setShowModal(false);
+      window.dispatchEvent(new CustomEvent("credits-changed"));
       router.refresh();
     } catch {
       setUnlockError("network_error");

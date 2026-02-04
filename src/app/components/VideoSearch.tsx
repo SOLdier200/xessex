@@ -146,6 +146,8 @@ export default function VideoSearch({
       setUnlockedCount(json.unlockedCount);
       setNextCost(json.nextCost);
       setUnlockModal(null);
+      // Dispatch event to update wallet status display
+      window.dispatchEvent(new CustomEvent("credits-changed"));
       // Optionally refresh the page to get fresh data
       router.refresh();
     } catch {

@@ -1116,7 +1116,7 @@ model SaleConfig {
   saleAllocationXess    BigInt    @default(350000000)
   privateAllocation     BigInt    @default(35000000)
   publicAllocation      BigInt    @default(315000000)
-  walletCapXess         BigInt    @default(5000000)
+  walletCapXess         BigInt    @default(10000000)
 
   // Pricing in USD micros (e.g. 39 = $0.000039)
   privatePriceUsdMicros BigInt @default(39)

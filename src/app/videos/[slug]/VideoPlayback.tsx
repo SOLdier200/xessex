@@ -230,6 +230,7 @@ export default function VideoPlayback({
       setLocalUnlocked(true);
       setLocalCredits(json.creditBalance);
       setShowUnlockModal(false);
+      window.dispatchEvent(new CustomEvent("credits-changed"));
       return true;
     } catch {
       setUnlockError("network_error");

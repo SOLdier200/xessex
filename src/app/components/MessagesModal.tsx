@@ -323,7 +323,7 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
             <img
               src="/logos/textlogo/siteset3/messages100.png"
               alt="Messages"
-              className="h-7"
+              className="h-[35px]"
             />
             {unreadCount > 0 && (
               <span className="px-2 py-0.5 text-xs font-medium bg-pink-500 text-white rounded-full">

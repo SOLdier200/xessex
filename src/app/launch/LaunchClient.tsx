@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { WalletMultiButton, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync,
@@ -125,6 +125,7 @@ function formatNumber(n: string | bigint): string {
 
 export default function LaunchClient() {
   const wallet = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   const [cfg, setCfg] = React.useState<SaleConfig | null>(null);
   const [walletStatus, setWalletStatus] = React.useState<WalletStatus | null>(null);
   const [whitelistProof, setWhitelistProof] = React.useState<WhitelistProof | null>(null);
@@ -381,7 +382,7 @@ export default function LaunchClient() {
           unauthorized: "Please sign in with your wallet first",
           phase_not_active: "This sale phase is not currently active",
           not_whitelisted: "Your wallet is not on the whitelist for this phase",
-          cap_exceeded: `You've exceeded your wallet cap (${data.cap ? formatNumber(data.cap) : "5M"} XESS)`,
+          cap_exceeded: `You've exceeded your wallet cap (${data.cap ? formatNumber(data.cap) : "10M"} XESS)`,
           sold_out: "This phase is sold out",
           tx_too_old_or_unconfirmed: "Transaction too old or not confirmed. Please try again.",
           tx_not_found: "Transaction not found. Please wait and try again.",
@@ -510,18 +511,29 @@ export default function LaunchClient() {
               <div className="mt-4 flex items-center justify-center">
                 {wallet.connected ? (
                   <div
-                    className={`rounded-full bg-black p-1 border-2 ${
+                    className={`rounded-2xl p-[2px] ${
                       wallet.wallet?.adapter.name === "Phantom"
-                        ? "border-purple-500"
+                        ? "bg-gradient-to-r from-purple-500 to-purple-400"
                         : wallet.wallet?.adapter.name === "Solflare"
-                        ? "border-yellow-400"
-                        : "border-white/30"
+                        ? "bg-gradient-to-r from-yellow-500 to-orange-400"
+                        : "bg-gradient-to-r from-cyan-500 to-purple-500"
                     }`}
                   >
-                    <WalletMultiButton className="!rounded-full !bg-black !px-4 !py-2 !text-sm !text-white/80 hover:!bg-black/80 !border-0" />
+                    <WalletMultiButton className="!rounded-[14px] !bg-black/90 !px-5 !py-2.5 !text-sm !text-white/90 hover:!bg-black/70 !border-0 !font-medium !transition-all !duration-200" />
                   </div>
                 ) : (
-                  <WalletMultiButton className="!rounded-full !border !border-white/15 !bg-white/[0.04] !px-4 !py-2 !text-sm !text-white/80 hover:!bg-white/[0.06]" />
+                  <button
+                    onClick={() => setWalletModalVisible(true)}
+                    className="hover:opacity-80 transition-opacity"
+                  >
+                    <Image
+                      src="/logos/textlogo/siteset3/Connect.png"
+                      alt="Connect Wallet"
+                      width={200}
+                      height={60}
+                      className="h-[50px] w-auto"
+                    />
+                  </button>
                 )}
               </div>
 
@@ -642,7 +654,7 @@ export default function LaunchClient() {
             <ul className="mt-3 grid gap-2 text-sm text-white/70 md:grid-cols-2">
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-                Wallet cap: 5 million XESS per wallet
+                Wallet cap: 10 million XESS per wallet
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />

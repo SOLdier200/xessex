@@ -63,6 +63,7 @@ export default function LockedFeaturedCard({
         return;
       }
       setShowModal(false);
+      window.dispatchEvent(new CustomEvent("credits-changed"));
       router.refresh();
     } catch {
       setUnlockError("network_error");
