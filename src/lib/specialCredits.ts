@@ -107,6 +107,41 @@ export function getSimpleDailyMicro(tier: number, daysInMonth: number): bigint {
 }
 
 /**
+ * Calculate twice-daily accrual in microcredits with carry-over
+ * Credits are served twice a day (morning and evening)
+ *
+ * @param tier - Current tier (0-9)
+ * @param carryMicro - Fractional microcredits carried from previous accrual
+ * @param daysInMonth - Number of days in the current month
+ * @returns Object with accrual microcredits to add and new carry amount
+ */
+export function calculateTwiceDailyAccrual(
+  tier: number,
+  carryMicro: bigint,
+  daysInMonth: number
+): { accrualMicro: bigint; newCarryMicro: bigint } {
+  const monthlyCredits = getMonthlyCreditsForTier(tier);
+  if (monthlyCredits === 0n) {
+    return { accrualMicro: 0n, newCarryMicro: 0n };
+  }
+
+  // Convert monthly credits to monthly microcredits
+  const monthlyMicro = monthlyCredits * CREDIT_MICRO;
+
+  // Twice daily = 2 accruals per day = 2 * daysInMonth accruals per month
+  const accrualsPerMonth = BigInt(daysInMonth * 2);
+
+  // Calculate per-accrual rate: (monthlyMicro + carryMicro * accrualsPerMonth) / accrualsPerMonth
+  const totalMicro = monthlyMicro + carryMicro * accrualsPerMonth;
+  const accrualMicro = totalMicro / accrualsPerMonth;
+
+  // Calculate new carry: the remainder after distributing
+  const newCarryMicro = totalMicro % accrualsPerMonth;
+
+  return { accrualMicro, newCarryMicro };
+}
+
+/**
  * Get the number of days in a given month
  */
 export function getDaysInMonth(year: number, month: number): number {

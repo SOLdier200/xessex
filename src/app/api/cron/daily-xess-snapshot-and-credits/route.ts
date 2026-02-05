@@ -1,15 +1,15 @@
 /**
- * Daily XESS Snapshot and Special Credits Accrual
+ * Twice-Daily XESS Snapshot and Special Credits Accrual
  *
  * POST /api/cron/daily-xess-snapshot-and-credits
  *
- * This cron job runs daily and:
+ * This cron job runs TWICE daily (morning and evening) and:
  * 1. Fetches XESS balances for all users with linked wallets
  * 2. Creates WalletBalanceSnapshot records
  * 3. Calculates tier from balance
- * 4. Accrues daily special credits based on tier
+ * 4. Accrues special credits based on tier (half the daily amount each run)
  *
- * Idempotent: Re-running for the same dateKey will not create duplicate entries.
+ * Idempotent: Re-running for the same dateKey+slot will not create duplicate entries.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,9 +18,21 @@ import { getXessAtomicBalances } from "@/lib/xessBalance";
 import { getDateKeyPT, raffleWeekInfo } from "@/lib/raffleWeekPT";
 import {
   getTierFromBalance,
-  calculateDailyAccrual,
+  calculateTwiceDailyAccrual,
   getDaysInMonth,
 } from "@/lib/specialCredits";
+
+/**
+ * Get the time slot for twice-daily accrual (AM or PM based on PT timezone)
+ */
+function getTimeSlot(): "AM" | "PM" {
+  const now = new Date();
+  // Convert to PT
+  const ptTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const hour = ptTime.getHours();
+  // Before noon = AM, noon and after = PM
+  return hour < 12 ? "AM" : "PM";
+}
 
 const CRON_SECRET = process.env.CRON_SECRET || "";
 
@@ -44,12 +56,13 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const dateKey = getDateKeyPT(now);
     const { weekKey } = raffleWeekInfo(now);
+    const timeSlot = getTimeSlot();
 
     // Parse dateKey to get year and month for days calculation
     const [year, month] = dateKey.split("-").map(Number);
     const daysInMonth = getDaysInMonth(year, month);
 
-    console.log(`[DAILY_SNAPSHOT] Running for dateKey=${dateKey}, weekKey=${weekKey}`);
+    console.log(`[TWICE_DAILY_SNAPSHOT] Running for dateKey=${dateKey}, slot=${timeSlot}, weekKey=${weekKey}`);
 
     // Find all users with a wallet
     const usersWithWallets = await db.user.findMany({
@@ -135,28 +148,28 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        // Check if already accrued for this date (idempotency)
-        const refId = `${userId}:${dateKey}`;
+        // Check if already accrued for this date+slot (idempotency)
+        const refId = `${userId}:${dateKey}:${timeSlot}`;
         const existingLedger = await db.specialCreditLedger.findUnique({
           where: { refType_refId: { refType: CreditReason.DAILY_ACCRUAL, refId } },
         });
 
         if (existingLedger) {
-          // Already processed
+          // Already processed this slot
           continue;
         }
 
-        // Calculate daily accrual
-        const { dailyMicro, newCarryMicro } = calculateDailyAccrual(
+        // Calculate twice-daily accrual (half of daily amount)
+        const { accrualMicro, newCarryMicro } = calculateTwiceDailyAccrual(
           tier,
           account.carryMicro,
           daysInMonth
         );
 
-        if (dailyMicro === 0n) continue;
+        if (accrualMicro === 0n) continue;
 
         // Update account and create ledger entry in transaction
-        const newBalance = account.balanceMicro + dailyMicro;
+        const newBalance = account.balanceMicro + accrualMicro;
 
         await db.$transaction([
           db.specialCreditAccount.update({
@@ -170,15 +183,15 @@ export async function POST(req: NextRequest) {
             data: {
               userId,
               weekKey,
-              amountMicro: dailyMicro,
-              reason: `Tier ${tier} daily accrual for ${dateKey}`,
+              amountMicro: accrualMicro,
+              reason: `Tier ${tier} ${timeSlot} accrual for ${dateKey}`,
               refType: CreditReason.DAILY_ACCRUAL,
               refId,
             },
           }),
         ]);
 
-        creditsAccrued += dailyMicro;
+        creditsAccrued += accrualMicro;
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.error(`[DAILY_SNAPSHOT] Error processing user ${userId}:`, errMsg);
@@ -188,13 +201,14 @@ export async function POST(req: NextRequest) {
 
     const elapsed = Date.now() - startTime;
     console.log(
-      `[DAILY_SNAPSHOT] Complete: ${snapshotsCreated} snapshots created, ` +
+      `[TWICE_DAILY_SNAPSHOT] Complete (${timeSlot}): ${snapshotsCreated} snapshots created, ` +
         `${snapshotsSkipped} skipped, ${creditsAccrued.toString()} microcredits accrued in ${elapsed}ms`
     );
 
     return NextResponse.json({
       ok: true,
       dateKey,
+      timeSlot,
       weekKey,
       usersProcessed: wallets.length,
       snapshotsCreated,
