@@ -5,8 +5,8 @@ export const runtime = "nodejs";
 export async function GET() {
   const body = [
     "User-agent: *",
-    "Allow: /",
-    "Host: xessex.me",
+    "Disallow:",
+    "",
     "Sitemap: https://xessex.me/sitemap.xml",
     "",
   ].join("\n");
