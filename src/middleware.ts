@@ -12,7 +12,9 @@ const BOT_RE =
 
 function isIndexerBot(req: NextRequest) {
   const ua = req.headers.get("user-agent") || "";
-  return BOT_RE.test(ua);
+  const isBot = BOT_RE.test(ua);
+  console.log("[MW] UA:", ua, "| isBot:", isBot);
+  return isBot;
 }
 
 // Wallet / in-app UA detection (used for behavior tweaks, NOT for skipping the gate)
@@ -55,6 +57,8 @@ function isStaticOrMetaAsset(pathname: string) {
 export default function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const { pathname } = url;
+
+  console.log("[MW] Request:", pathname, "Method:", req.method);
 
   // Never gate preflight / probe methods
   if (req.method === "OPTIONS" || req.method === "HEAD") {
