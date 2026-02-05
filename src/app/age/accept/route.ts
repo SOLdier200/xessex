@@ -10,13 +10,32 @@ function sanitizeNext(nextValue: string | null | undefined) {
   return nextValue;
 }
 
+/**
+ * Safely derive the origin from request headers.
+ * Some in-app browsers (Backpack, etc.) may have malformed req.url
+ */
+function getOrigin(req: NextRequest): string {
+  // Prefer x-forwarded headers (set by Cloudflare/proxies)
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+
+  // Validate host - must not be localhost or contain unexpected ports
+  if (host && !host.includes("localhost") && !host.includes("127.0.0.1") && !host.match(/:\d+$/)) {
+    return `${proto}://${host}`;
+  }
+
+  // Fallback to production URL
+  return "https://xessex.me";
+}
+
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const nextRaw = form.get("next");
   const next = sanitizeNext(typeof nextRaw === "string" ? nextRaw : null);
 
-  // Redirect first (303 forces GET)
-  const res = NextResponse.redirect(new URL(next, req.url), 303);
+  // Build redirect URL safely (don't rely on req.url which can be malformed in some browsers)
+  const origin = getOrigin(req);
+  const res = NextResponse.redirect(new URL(next, origin), 303);
 
   // Keep SameSite=None for iOS wallet deep-link returns
   const maxAge = 60 * 60 * 24 * 365; // 1 year
