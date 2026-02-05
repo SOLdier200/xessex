@@ -1,5 +1,4 @@
 User-agent: *
-Allow: /
+Disallow:
 
-Rating: adult
 Sitemap: https://xessex.me/sitemap.xml
