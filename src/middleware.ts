@@ -12,9 +12,7 @@ const BOT_RE =
 
 function isIndexerBot(req: NextRequest) {
   const ua = req.headers.get("user-agent") || "";
-  const isBot = BOT_RE.test(ua);
-  console.log("[MW] UA:", ua, "| isBot:", isBot);
-  return isBot;
+  return BOT_RE.test(ua);
 }
 
 // Wallet / in-app UA detection (used for behavior tweaks, NOT for skipping the gate)
@@ -58,11 +56,11 @@ export default function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const { pathname } = url;
 
-  console.log("[MW] Request:", pathname, "Method:", req.method);
-
   // Never gate preflight / probe methods
   if (req.method === "OPTIONS" || req.method === "HEAD") {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "method-bypass");
+    return res;
   }
 
   // 🚨 ABSOLUTE BYPASS - robots/sitemaps MUST return 200, no redirect ever
@@ -71,17 +69,23 @@ export default function middleware(req: NextRequest) {
     pathname === "/sitemap.xml" ||
     pathname.startsWith("/sitemap-")
   ) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "seo-bypass");
+    return res;
   }
 
   // Never gate static assets + meta assets
   if (isStaticOrMetaAsset(pathname)) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "static-bypass");
+    return res;
   }
 
   // Never gate API routes
   if (pathname.startsWith("/api")) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "api-bypass");
+    return res;
   }
 
   // Bot bypass (server-side, reliable for Bing)
@@ -94,7 +98,9 @@ export default function middleware(req: NextRequest) {
 
   // Allow the age page and its subroutes (avoid loops; required for /age/accept)
   if (pathname === "/age" || pathname.startsWith("/age/")) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "age-page");
+    return res;
   }
 
   // If user passed age gate, allow (support legacy cookie too)
@@ -102,7 +108,11 @@ export default function middleware(req: NextRequest) {
     req.cookies.get("age_ok")?.value === "1" ||
     req.cookies.get("age_verified")?.value === "1";
 
-  if (ageOk) return NextResponse.next();
+  if (ageOk) {
+    const res = NextResponse.next();
+    res.headers.set("x-xessex-mw", "cookie-ok");
+    return res;
+  }
 
   // Gate humans: redirect to /age and preserve full original path+query
   const redir = url.clone();
@@ -122,5 +132,15 @@ export default function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Match all paths except static files
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    "/",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
 };
