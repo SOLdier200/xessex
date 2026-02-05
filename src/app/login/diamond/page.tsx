@@ -32,8 +32,12 @@ export default function DiamondLoginPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMod, setIsMod] = useState(false);
   const [isAdminRole, setIsAdminRole] = useState(false);
+  const [currentUrl, setCurrentUrl] = useState("https://xessex.me/login/diamond");
 
   useEffect(() => {
+    // Set current URL on client
+    setCurrentUrl(window.location.href);
+
     fetch("/api/me/is-admin")
       .then((res) => res.json())
       .then((data) => {
@@ -70,9 +74,36 @@ export default function DiamondLoginPage() {
             <p className="text-sm text-white/70">
               Connect your wallet to sign in.
             </p>
-            <p className="mt-2 text-xs text-purple-400 animate-pulse">
-              Note: All mobile users will need to download Phantom and select Open in Phantom to connect.
-            </p>
+
+            {/* Mobile Deep Links */}
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <p className="text-xs text-white/50 mb-3 text-center">
+                On mobile? Open this page in your wallet app:
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <a
+                  href={`https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition"
+                >
+                  <Image src="/logos/phantomtrans.png" alt="Phantom" width={20} height={20} className="w-5 h-5" />
+                  Open in Phantom
+                </a>
+                <a
+                  href={`https://solflare.com/ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 border border-orange-400/50 text-orange-300 text-sm font-medium hover:bg-orange-500/30 transition"
+                >
+                  <Image src="/logos/solflaretrans.png" alt="Solflare" width={20} height={20} className="w-5 h-5" />
+                  Open in Solflare
+                </a>
+                <a
+                  href={`https://backpack.app/ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 border border-red-400/50 text-red-300 text-sm font-medium hover:bg-red-500/30 transition"
+                >
+                  <Image src="/logos/backpacktrans.png" alt="Backpack" width={20} height={20} className="w-5 h-5" />
+                  Open in Backpack
+                </a>
+              </div>
+            </div>
 
             {/* Need a wallet? */}
             <div className="mt-6 pt-4 border-t border-white/10 text-center">
