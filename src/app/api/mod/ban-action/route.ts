@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrMod } from "@/lib/adminActions";
 import { db } from "@/lib/prisma";
+import { notifyMods, getUserDisplayString } from "@/lib/modNotifications";
 
 export const runtime = "nodejs";
 
@@ -172,6 +173,14 @@ export async function POST(req: NextRequest) {
       : `${targetType} unbanned`;
 
     console.log(`[mod/ban-action] ${modUser.id} performed ${actionLabel} on user ${userId}`);
+
+    // Notify other mods about the action
+    notifyMods({
+      type: action === "ban" ? "USER_BANNED" : "USER_UNBANNED",
+      targetUserId: userId,
+      targetUserDisplay: getUserDisplayString(targetUser),
+      details: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} ${action === "ban" ? "suspended" : "restored"} by ${modUser.email || modUser.id.slice(0, 8)}${action === "ban" ? ` for ${getDurationLabel(duration)}` : ""}.${reason ? `\nReason: ${reason}` : ""}`,
+    });
 
     return NextResponse.json({
       ok: true,

@@ -694,14 +694,18 @@ model UserMessage {
 // Track star rating abuse warnings sent to users
 model StarAbuseWarning {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @unique
   oneStarCount    Int      // Count of 1-star ratings at time of warning
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   acknowledgedAt  DateTime?
+  acknowledged    Boolean  @default(false)  // Whether mod has reviewed this case
+  autoBlocked     Boolean  @default(false)  // Whether user was auto-blocked (spam detection)
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([autoBlocked, acknowledged])
 }
 
 // User blocking for messaging

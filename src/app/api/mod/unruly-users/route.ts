@@ -79,7 +79,15 @@ export async function GET() {
     };
   }).sort((a, b) => b.dislikeRatio - a.dislikeRatio);
 
-  // ============ Star Abusers (10+ 1-star ratings) ============
+  // ============ Star Abusers (10+ 1-star ratings OR auto-blocked) ============
+  // First, get all auto-blocked users (these need mod review)
+  const autoBlockedWarnings = await db.starAbuseWarning.findMany({
+    where: { autoBlocked: true },
+    select: { userId: true },
+  });
+  const autoBlockedUserIds = autoBlockedWarnings.map((w) => w.userId);
+
+  // Then get users with 10+ 1-star ratings
   const oneStarCounts = await db.videoStarRating.groupBy({
     by: ["userId"],
     where: { stars: 1 },
@@ -87,7 +95,10 @@ export async function GET() {
     having: { id: { _count: { gte: 10 } } },
   });
 
-  const starAbuserIds = oneStarCounts.map((c) => c.userId);
+  const starAbuserIds = [...new Set([
+    ...autoBlockedUserIds,
+    ...oneStarCounts.map((c) => c.userId),
+  ])];
 
   const starAbuserUsers = starAbuserIds.length > 0
     ? await db.user.findMany({
@@ -108,20 +119,31 @@ export async function GET() {
 
   const starCountMap = new Map(oneStarCounts.map((c) => [c.userId, c._count.id]));
 
-  const starAbusers = starAbuserUsers.map((u) => ({
-    id: u.id,
-    email: u.email,
-    wallet: u.walletAddress,
-    status: u.ratingBanStatus,
-    oneStarCount: starCountMap.get(u.id) || 0,
-    lastWarning: u.starAbuseWarnings[0]
-      ? {
-          createdAt: u.starAbuseWarnings[0].createdAt.toISOString(),
-          acknowledged: !!u.starAbuseWarnings[0].acknowledgedAt,
-        }
-      : null,
-    createdAt: u.createdAt.toISOString(),
-  })).sort((a, b) => b.oneStarCount - a.oneStarCount);
+  const starAbusers = starAbuserUsers.map((u) => {
+    const warning = u.starAbuseWarnings[0];
+    return {
+      id: u.id,
+      email: u.email,
+      wallet: u.walletAddress,
+      status: u.ratingBanStatus,
+      oneStarCount: starCountMap.get(u.id) || warning?.oneStarCount || 0,
+      autoBlocked: warning?.autoBlocked || false,
+      lastWarning: warning
+        ? {
+            createdAt: warning.createdAt.toISOString(),
+            acknowledged: warning.acknowledged || !!warning.acknowledgedAt,
+            autoBlocked: warning.autoBlocked,
+          }
+        : null,
+      createdAt: u.createdAt.toISOString(),
+    };
+  })
+  // Sort: auto-blocked first, then by oneStarCount
+  .sort((a, b) => {
+    if (a.autoBlocked && !b.autoBlocked) return -1;
+    if (!a.autoBlocked && b.autoBlocked) return 1;
+    return b.oneStarCount - a.oneStarCount;
+  });
 
   return NextResponse.json({
     ok: true,

@@ -136,7 +136,7 @@ function StarfieldParallax({ isMobile }: { isMobile: boolean }) {
   const layer2 = React.useMemo(() => makeStars(isMobile ? 12 : 45, 2), [isMobile]);
   const layer3 = React.useMemo(() => makeStars(isMobile ? 8 : 28, 3), [isMobile]);
 
-  // Skip animations entirely on mobile - just show static stars
+  // Skip animations entirely on mobile - just show static stars with lighter vignette
   if (isMobile) {
     return (
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -154,7 +154,8 @@ function StarfieldParallax({ isMobile }: { isMobile: boolean }) {
             />
           ))}
         </div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),rgba(0,0,0,0)_45%,rgba(0,0,0,0.85)_85%)]" />
+        {/* Lighter vignette on mobile - less dark edges */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03),rgba(0,0,0,0)_60%,rgba(0,0,0,0.4)_95%)]" />
       </div>
     );
   }
@@ -413,7 +414,7 @@ export default function RoadmapMarquee() {
 
       {/* background polish for pure black - simplified on mobile */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/[0.08] to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-16 sm:h-32 bg-gradient-to-b from-white/[0.04] sm:from-white/[0.08] to-transparent" />
         {/* Skip heavy blur on mobile */}
         {!isMobile && (
           <div className="absolute top-1/2 left-1/2 h-80 w-[80rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.03] blur-[120px]" />
@@ -442,16 +443,17 @@ export default function RoadmapMarquee() {
         </motion.div>
       )}
 
-      <div className="relative mx-auto max-w-6xl px-4 py-12">
-        <div className="flex items-end justify-between gap-4">
+      <div className="relative mx-auto max-w-6xl px-3 sm:px-4 py-8 sm:py-12">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
           <div>
-            <h2 className="text-2xl font-semibold text-white">Roadmap</h2>
-            <p className="mt-1 text-sm text-white/60">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white">Roadmap</h2>
+            <p className="mt-1 text-xs sm:text-sm text-white/60">
               Completed milestones behind us — current focus centered — what&apos;s next ahead.
             </p>
           </div>
 
-          <div className="hidden items-center gap-2 md:flex">
+          {/* Legend - visible on mobile too */}
+          <div className="flex items-center gap-3 sm:gap-2">
             <LegendDot label="Complete" tone="done" />
             <LegendDot label="Now" tone="now" />
             <LegendDot label="Upcoming" tone="next" />
@@ -460,13 +462,15 @@ export default function RoadmapMarquee() {
 
         <div
           ref={viewportRef}
-          className="relative mt-7 overflow-hidden rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl p-4"
+          className="relative mt-5 sm:mt-7 overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 bg-black/40 sm:bg-black/60 backdrop-blur-xl p-3 sm:p-4"
           style={{
-            // Past fades away on the left, stays clear through center/right
-            WebkitMaskImage:
-              "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 7%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 100%)",
-            maskImage:
-              "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 7%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 100%)",
+            // Past fades away on the left - gentler on mobile
+            WebkitMaskImage: isMobile
+              ? "linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 100%)"
+              : "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 7%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 100%)",
+            maskImage: isMobile
+              ? "linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 10%, rgba(0,0,0,1) 100%)"
+              : "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 7%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 100%)",
           }}
         >
           {/* Completed trail behind us (subtle, fades out) - hidden on mobile for perf */}
@@ -491,13 +495,13 @@ export default function RoadmapMarquee() {
             <div className="pointer-events-none absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-black to-transparent" />
           </div>
 
-          {/* center NOW marker */}
-          <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-gradient-to-b from-transparent via-white/30 to-transparent" />
-          <div className="pointer-events-none absolute top-10 left-1/2 -translate-x-1/2">
+          {/* center NOW marker - hidden on very small screens */}
+          <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-gradient-to-b from-transparent via-white/30 to-transparent hidden sm:block" />
+          <div className="pointer-events-none absolute top-2 sm:top-10 left-1/2 -translate-x-1/2 z-10">
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-full border border-white/30 bg-black/70 px-4 py-1 text-[11px] tracking-widest text-white/80 backdrop-blur-xl"
+              className="rounded-full border border-white/30 bg-black/70 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[11px] tracking-widest text-white/80 backdrop-blur-xl whitespace-nowrap"
             >
               CURRENT PHASE
             </motion.div>
@@ -506,7 +510,7 @@ export default function RoadmapMarquee() {
           {/* track - GPU accelerated */}
           <motion.div
             ref={trackRef}
-            className="mt-8 flex w-max items-stretch gap-4 pr-16"
+            className="mt-6 sm:mt-8 flex w-max items-stretch gap-3 sm:gap-4 pr-8 sm:pr-16"
             style={{ x, willChange: "transform" }}
           >
             {trackPhases.map((p, idx) => (
@@ -514,32 +518,33 @@ export default function RoadmapMarquee() {
             ))}
           </motion.div>
 
-          {/* Past depth stack (left trailing blur) - simplified on mobile */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-[220px]">
-            {/* Deep black falloff */}
-            <div className="absolute inset-y-0 left-0 w-[220px] bg-gradient-to-r from-black via-black/80 to-transparent" />
+          {/* Past depth stack (left trailing blur) - much lighter on mobile */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-[100px] sm:w-[220px]">
+            {/* Deep black falloff - lighter on mobile */}
+            <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-black/60 sm:from-black via-transparent sm:via-black/80 to-transparent" />
 
             {/* Blur veil (makes past feel farther away) - skip on mobile */}
             <div className="absolute inset-y-0 left-0 w-[180px] hidden md:block backdrop-blur-2xl" />
 
-            {/* Inner soft shadow line for depth */}
-            <div className="absolute inset-y-0 left-[140px] w-px bg-white/10 opacity-40" />
+            {/* Inner soft shadow line for depth - hidden on mobile */}
+            <div className="absolute inset-y-0 left-[140px] w-px bg-white/10 opacity-40 hidden sm:block" />
 
             {/* Extra haze near the extreme left edge - skip on mobile */}
             <div className="absolute inset-y-0 left-0 w-[120px] hidden md:block bg-white/[0.02] blur-xl" />
           </div>
 
-          {/* subtle fade edges */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/90 to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-black/80 to-transparent" />
+          {/* subtle fade edges - much lighter on mobile */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-24 bg-gradient-to-r from-black/50 sm:from-black/90 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-16 bg-gradient-to-l from-black/40 sm:from-black/80 to-transparent" />
 
-          <div className="mt-4 flex items-center justify-between text-xs text-white/50">
+          <div className="mt-3 sm:mt-4 flex items-center justify-between text-[10px] sm:text-xs text-white/50">
             <span className="hidden sm:inline">Tip: scroll wheel or drag</span>
+            <span className="sm:hidden">Swipe to explore</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => centerNow()}
-                className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-white/70 hover:bg-white/[0.06]"
+                className="rounded-full border border-white/15 bg-white/[0.04] px-2 sm:px-3 py-1 text-[10px] sm:text-xs text-white/70 hover:bg-white/[0.06]"
               >
                 Center Current
               </button>
@@ -573,28 +578,28 @@ function PhaseCard({ phase, index }: { phase: RoadmapPhase; index: number }) {
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.5, delay: Math.min(index * 0.03, 0.3) }}
       className={cn(
-        "relative w-[320px] shrink-0 rounded-3xl border p-5 backdrop-blur",
+        "relative w-[260px] sm:w-[320px] shrink-0 rounded-2xl sm:rounded-3xl border p-4 sm:p-5 backdrop-blur",
         s.card,
         s.glow
       )}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2">
-          <span className={cn("h-2.5 w-2.5 rounded-full ring-2", s.dot, s.ring)} />
-          <span className={cn("text-sm font-medium", s.title)}>{phase.title}</span>
+          <span className={cn("h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full ring-2", s.dot, s.ring)} />
+          <span className={cn("text-xs sm:text-sm font-medium", s.title)}>{phase.title}</span>
         </div>
 
-        <span className={cn("rounded-full px-2.5 py-1 text-[11px]", s.badge)}>
+        <span className={cn("rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-[11px] self-start sm:self-auto", s.badge)}>
           {phase.status === "done" ? "COMPLETED" : phase.status === "now" ? "CURRENT" : "UPCOMING"}
         </span>
       </div>
 
-      <p className={cn("mt-2 text-sm", s.sub)}>{phase.subtitle}</p>
+      <p className={cn("mt-1.5 sm:mt-2 text-xs sm:text-sm", s.sub)}>{phase.subtitle}</p>
 
-      <ul className="mt-4 space-y-2">
+      <ul className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2">
         {phase.bullets.map((b, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-white/70">
-            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-white/40" />
+          <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-white/70">
+            <span className="mt-1 sm:mt-1.5 h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-white/40 shrink-0" />
             <span>{b}</span>
           </li>
         ))}
@@ -604,7 +609,7 @@ function PhaseCard({ phase, index }: { phase: RoadmapPhase; index: number }) {
       {isNow && (
         <motion.div
           aria-hidden
-          className="pointer-events-none absolute -inset-1 rounded-[26px] hidden md:block"
+          className="pointer-events-none absolute -inset-1 rounded-[22px] sm:rounded-[26px] hidden md:block"
           animate={{ opacity: [0.14, 0.32, 0.14] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
           style={{

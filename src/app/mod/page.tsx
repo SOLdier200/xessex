@@ -42,9 +42,11 @@ interface StarAbuser {
   wallet: string | null;
   status: string;
   oneStarCount: number;
+  autoBlocked: boolean;
   lastWarning: {
     createdAt: string;
     acknowledged: boolean;
+    autoBlocked?: boolean;
   } | null;
   createdAt: string;
 }
@@ -158,6 +160,14 @@ export default function ModDashboard() {
 
   // Active tab for activity modal
   const [activityTab, setActivityTab] = useState<"comments" | "votes" | "ratings">("comments");
+
+  // Revoke 1-star ratings modal state
+  const [revoke1StarModal, setRevoke1StarModal] = useState<{
+    open: boolean;
+    userId: string;
+    userDisplay: string;
+    oneStarCount: number;
+  } | null>(null);
 
   const fetchUnrulyUsers = useCallback(async () => {
     setUnrulyLoading(true);
@@ -302,6 +312,40 @@ export default function ModDashboard() {
     setConfirmModal({ open: true, userId, action, targetType, duration, userDisplay });
   };
 
+  const handleRevoke1StarRatings = async (userId: string) => {
+    setActionLoading(userId);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const res = await fetch("/api/mod/users/revoke-1star-ratings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        setActionSuccess(`Successfully revoked ${data.deletedCount} 1-star rating(s)`);
+        // Refresh user activity if modal is open
+        if (activityModal?.data) {
+          fetchUserActivity(activityModal.userId);
+        }
+        // Refresh unruly users list
+        await fetchUnrulyUsers();
+      } else {
+        setActionError(data.error || "Failed to revoke ratings");
+      }
+    } catch (err) {
+      setActionError("Failed to revoke 1-star ratings");
+    } finally {
+      setActionLoading(null);
+      setRevoke1StarModal(null);
+    }
+  };
+
   const getUserDisplay = (u: { email: string | null; wallet: string | null; id: string }): string => {
     if (u.email) return u.email;
     if (u.wallet) return `${u.wallet.slice(0, 4)}...${u.wallet.slice(-4)}`;
@@ -411,9 +455,14 @@ export default function ModDashboard() {
             <h3 className="text-gray-400 text-sm uppercase tracking-wide mb-2">Dislike Spammers</h3>
             <p className="text-3xl font-bold text-purple-500">{dislikeSpammers.length}</p>
           </div>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className={`bg-gray-900 border rounded-xl p-6 ${starAbusers.filter((u) => u.autoBlocked).length > 0 ? "border-red-500/50" : "border-gray-800"}`}>
             <h3 className="text-gray-400 text-sm uppercase tracking-wide mb-2">Star Abusers</h3>
             <p className="text-3xl font-bold text-yellow-600">{starAbusers.length}</p>
+            {starAbusers.filter((u) => u.autoBlocked).length > 0 && (
+              <p className="text-sm text-red-400 mt-1">
+                {starAbusers.filter((u) => u.autoBlocked).length} auto-blocked
+              </p>
+            )}
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <h3 className="text-gray-400 text-sm uppercase tracking-wide mb-2">Temp Banned</h3>
@@ -672,13 +721,20 @@ export default function ModDashboard() {
                   </thead>
                   <tbody className="divide-y divide-gray-800">
                     {starAbusers.map((u) => (
-                      <tr key={u.id} className="hover:bg-gray-800/50">
+                      <tr key={u.id} className={`hover:bg-gray-800/50 ${u.autoBlocked ? "bg-red-500/5" : ""}`}>
                         <td className="py-3">
                           <button
                             onClick={() => fetchUserActivity(u.id)}
                             className="text-left hover:text-pink-400 transition"
                           >
-                            <div className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</span>
+                              {u.autoBlocked && (
+                                <span className="px-1.5 py-0.5 bg-red-500/30 text-red-400 rounded text-xs font-bold animate-pulse">
+                                  AUTO-BLOCKED
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-500 hover:text-pink-300">{u.id.slice(0, 12)}...</div>
                           </button>
                         </td>
@@ -691,9 +747,13 @@ export default function ModDashboard() {
                         <td className="py-3">
                           {u.lastWarning ? (
                             <div className="text-sm">
-                              <div className={u.lastWarning.acknowledged ? "text-green-400" : "text-yellow-400"}>
-                                {u.lastWarning.acknowledged ? "Acknowledged" : "Pending"}
-                              </div>
+                              {u.lastWarning.autoBlocked ? (
+                                <div className="text-red-400 font-medium">Spam Detected</div>
+                              ) : (
+                                <div className={u.lastWarning.acknowledged ? "text-green-400" : "text-yellow-400"}>
+                                  {u.lastWarning.acknowledged ? "Acknowledged" : "Pending"}
+                                </div>
+                              )}
                               <div className="text-gray-500 text-xs">{formatDate(u.lastWarning.createdAt)}</div>
                             </div>
                           ) : (
@@ -704,9 +764,13 @@ export default function ModDashboard() {
                         <td className="py-3">
                           <button
                             onClick={() => fetchUserActivity(u.id)}
-                            className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded hover:bg-pink-500/30 transition text-sm"
+                            className={`px-3 py-1 rounded transition text-sm ${
+                              u.autoBlocked
+                                ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                : "bg-pink-500/20 text-pink-400 hover:bg-pink-500/30"
+                            }`}
                           >
-                            View Activity
+                            {u.autoBlocked ? "Review & Restore" : "View Activity"}
                           </button>
                         </td>
                       </tr>
@@ -850,23 +914,23 @@ export default function ModDashboard() {
 
       {/* Confirmation Modal */}
       {confirmModal?.open && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-2">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
               {confirmModal.action === "unban"
                 ? `Restore ${confirmModal.targetType} ability`
                 : `Suspend ${confirmModal.targetType} ability`}
             </h3>
-            <p className="text-gray-300 mb-4">
+            <p className="text-gray-300 text-sm sm:text-base mb-3 sm:mb-4">
               Are you sure you want to{" "}
               <span className={confirmModal.action === "unban" ? "text-green-400" : "text-red-400"}>
                 {confirmModal.action === "unban" ? "restore" : "suspend"}
               </span>{" "}
               <span className="font-medium text-white">{confirmModal.targetType}</span> ability for{" "}
-              <span className="font-medium text-white">{confirmModal.userDisplay}</span>?
+              <span className="font-medium text-white break-all">{confirmModal.userDisplay}</span>?
             </p>
             {confirmModal.action === "ban" && confirmModal.duration && (
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
                 Duration:{" "}
                 <span className="text-white">
                   {confirmModal.duration === "1_week" ? "1 week" :
@@ -875,10 +939,10 @@ export default function ModDashboard() {
                 </span>
               </p>
             )}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-2 sm:gap-3 justify-end">
               <button
                 onClick={() => setConfirmModal(null)}
-                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition"
+                className="px-3 sm:px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition text-sm sm:text-base"
               >
                 Cancel
               </button>
@@ -892,7 +956,7 @@ export default function ModDashboard() {
                   )
                 }
                 disabled={actionLoading === confirmModal.userId}
-                className={`px-4 py-2 rounded-lg transition disabled:opacity-50 ${
+                className={`px-3 sm:px-4 py-2 rounded-lg transition disabled:opacity-50 text-sm sm:text-base ${
                   confirmModal.action === "unban"
                     ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
                     : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
@@ -905,25 +969,59 @@ export default function ModDashboard() {
         </div>
       )}
 
+      {/* Revoke 1-Star Ratings Modal */}
+      {revoke1StarModal?.open && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-2">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-purple-400">
+              Revoke 1-Star Ratings
+            </h3>
+            <p className="text-gray-300 text-sm sm:text-base mb-3 sm:mb-4">
+              Are you sure you want to <span className="text-purple-400 font-medium">permanently delete</span> all{" "}
+              <span className="text-white font-bold">{revoke1StarModal.oneStarCount}</span> 1-star rating(s) from{" "}
+              <span className="font-medium text-white break-all">{revoke1StarModal.userDisplay}</span>?
+            </p>
+            <p className="text-xs text-gray-500 mb-4">
+              This action cannot be undone. Video rankings will be recalculated.
+            </p>
+            <div className="flex gap-2 sm:gap-3 justify-end">
+              <button
+                onClick={() => setRevoke1StarModal(null)}
+                className="px-3 sm:px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition text-sm sm:text-base"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRevoke1StarRatings(revoke1StarModal.userId)}
+                disabled={actionLoading === revoke1StarModal.userId}
+                className="px-3 sm:px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition disabled:opacity-50 text-sm sm:text-base"
+              >
+                {actionLoading === revoke1StarModal.userId ? "Revoking..." : "Revoke All 1★"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* User Activity Modal */}
       {activityModal?.open && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold">User Activity Review</h3>
+            <div className="p-4 sm:p-6 border-b border-gray-700 flex items-center justify-between gap-2 shrink-0">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg sm:text-xl font-bold">User Activity Review</h3>
                 {activityModal.data && (
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-gray-400 text-xs sm:text-sm mt-1 truncate">
                     {activityModal.data.user.email || activityModal.data.user.wallet || activityModal.data.user.id}
                   </p>
                 )}
               </div>
               <button
                 onClick={() => setActivityModal(null)}
-                className="text-gray-400 hover:text-white transition"
+                className="text-gray-400 hover:text-white transition shrink-0"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -934,58 +1032,58 @@ export default function ModDashboard() {
                 <div className="text-pink-500">Loading user activity...</div>
               </div>
             ) : activityModal.data ? (
-              <>
+              <div className="flex-1 overflow-y-auto">
                 {/* Summary Stats */}
-                <div className="p-6 border-b border-gray-700">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gray-800 rounded-lg p-4">
+                <div className="p-4 sm:p-6 border-b border-gray-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
                       <h4 className="text-gray-400 text-sm mb-2">Comments</h4>
-                      <div className="flex gap-4">
+                      <div className="flex gap-3 sm:gap-4 flex-wrap">
                         <div>
-                          <span className="text-2xl font-bold text-white">{activityModal.data.summary.comments.total}</span>
-                          <span className="text-gray-500 text-sm ml-1">total</span>
+                          <span className="text-xl sm:text-2xl font-bold text-white">{activityModal.data.summary.comments.total}</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">total</span>
                         </div>
                         <div>
                           <span className="text-green-400 font-medium">{activityModal.data.summary.comments.active}</span>
-                          <span className="text-gray-500 text-sm ml-1">active</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">active</span>
                         </div>
                         <div>
                           <span className="text-red-400 font-medium">{activityModal.data.summary.comments.removed}</span>
-                          <span className="text-gray-500 text-sm ml-1">removed</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">removed</span>
                         </div>
                       </div>
                     </div>
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
                       <h4 className="text-gray-400 text-sm mb-2">Votes</h4>
-                      <div className="flex gap-4">
+                      <div className="flex gap-3 sm:gap-4 flex-wrap">
                         <div>
-                          <span className="text-2xl font-bold text-white">{activityModal.data.summary.votes.total}</span>
-                          <span className="text-gray-500 text-sm ml-1">total</span>
+                          <span className="text-xl sm:text-2xl font-bold text-white">{activityModal.data.summary.votes.total}</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">total</span>
                         </div>
                         <div>
                           <span className="text-green-400 font-medium">{activityModal.data.summary.votes.likes}</span>
-                          <span className="text-gray-500 text-sm ml-1">likes</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">likes</span>
                         </div>
                         <div>
                           <span className="text-red-400 font-medium">{activityModal.data.summary.votes.dislikes}</span>
-                          <span className="text-gray-500 text-sm ml-1">dislikes</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">dislikes</span>
                           <span className="text-purple-400 text-xs ml-1">({activityModal.data.summary.votes.dislikeRatio}%)</span>
                         </div>
                       </div>
                     </div>
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
                       <h4 className="text-gray-400 text-sm mb-2">Ratings</h4>
-                      <div className="flex gap-4">
+                      <div className="flex gap-3 sm:gap-4 flex-wrap">
                         <div>
-                          <span className="text-2xl font-bold text-white">{activityModal.data.summary.ratings.total}</span>
-                          <span className="text-gray-500 text-sm ml-1">total</span>
+                          <span className="text-xl sm:text-2xl font-bold text-white">{activityModal.data.summary.ratings.total}</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">total</span>
                         </div>
                         <div>
                           <span className="text-yellow-400 font-medium">{activityModal.data.summary.ratings.average}</span>
-                          <span className="text-gray-500 text-sm ml-1">avg</span>
+                          <span className="text-gray-500 text-xs sm:text-sm ml-1">avg</span>
                         </div>
                       </div>
-                      <div className="flex gap-2 mt-2 text-xs">
+                      <div className="flex gap-1 sm:gap-2 mt-2 text-xs flex-wrap">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <span key={star} className="text-gray-500">
                             {star}★: {activityModal.data!.summary.ratings.breakdown[star]}
@@ -997,11 +1095,11 @@ export default function ModDashboard() {
                 </div>
 
                 {/* Moderation Actions */}
-                <div className="p-6 border-b border-gray-700">
-                  <h4 className="text-gray-400 text-sm mb-4 uppercase tracking-wide">Moderation Actions</h4>
-                  <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 sm:p-6 border-b border-gray-700">
+                  <h4 className="text-gray-400 text-sm mb-3 sm:mb-4 uppercase tracking-wide">Moderation Actions</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     {/* Comment Status */}
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h5 className="text-white font-medium">Comments</h5>
                         {getStatusBadge(activityModal.data.user.commentBanStatus)}
@@ -1052,7 +1150,7 @@ export default function ModDashboard() {
                     </div>
 
                     {/* Vote Status */}
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h5 className="text-white font-medium">Votes</h5>
                         {getStatusBadge(activityModal.data.user.voteBanStatus)}
@@ -1103,7 +1201,7 @@ export default function ModDashboard() {
                     </div>
 
                     {/* Rating Status */}
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h5 className="text-white font-medium">Ratings</h5>
                         {getStatusBadge(activityModal.data.user.ratingBanStatus)}
@@ -1151,16 +1249,35 @@ export default function ModDashboard() {
                           </>
                         )}
                       </div>
+                      {/* Revoke 1-star ratings for star abuse */}
+                      {activityModal.data.summary.ratings.breakdown[1] > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-700">
+                          <button
+                            onClick={() => setRevoke1StarModal({
+                              open: true,
+                              userId: activityModal.userId,
+                              userDisplay: activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId,
+                              oneStarCount: activityModal.data!.summary.ratings.breakdown[1],
+                            })}
+                            className="w-full px-3 py-2 bg-purple-500/20 text-purple-400 rounded text-xs hover:bg-purple-500/30 flex items-center justify-center gap-2"
+                          >
+                            <span>Revoke all 1★ ratings</span>
+                            <span className="bg-purple-500/30 px-1.5 py-0.5 rounded">
+                              {activityModal.data.summary.ratings.breakdown[1]}
+                            </span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="border-b border-gray-700 px-6">
-                  <div className="flex gap-4">
+                <div className="border-b border-gray-700 px-4 sm:px-6 overflow-x-auto">
+                  <div className="flex gap-1 sm:gap-4 min-w-max">
                     <button
                       onClick={() => setActivityTab("comments")}
-                      className={`py-3 px-4 font-medium transition ${
+                      className={`py-2 sm:py-3 px-3 sm:px-4 font-medium transition text-sm sm:text-base whitespace-nowrap ${
                         activityTab === "comments"
                           ? "text-pink-400 border-b-2 border-pink-400"
                           : "text-gray-400 hover:text-white"
@@ -1170,7 +1287,7 @@ export default function ModDashboard() {
                     </button>
                     <button
                       onClick={() => setActivityTab("votes")}
-                      className={`py-3 px-4 font-medium transition ${
+                      className={`py-2 sm:py-3 px-3 sm:px-4 font-medium transition text-sm sm:text-base whitespace-nowrap ${
                         activityTab === "votes"
                           ? "text-pink-400 border-b-2 border-pink-400"
                           : "text-gray-400 hover:text-white"
@@ -1180,7 +1297,7 @@ export default function ModDashboard() {
                     </button>
                     <button
                       onClick={() => setActivityTab("ratings")}
-                      className={`py-3 px-4 font-medium transition ${
+                      className={`py-2 sm:py-3 px-3 sm:px-4 font-medium transition text-sm sm:text-base whitespace-nowrap ${
                         activityTab === "ratings"
                           ? "text-pink-400 border-b-2 border-pink-400"
                           : "text-gray-400 hover:text-white"
@@ -1192,23 +1309,23 @@ export default function ModDashboard() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="p-4 sm:p-6">
                   {activityTab === "comments" && (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {activityModal.data.comments.length === 0 ? (
                         <div className="text-gray-500 text-center py-8">No comments</div>
                       ) : (
                         activityModal.data.comments.map((c) => (
                           <div
                             key={c.id}
-                            className={`p-4 rounded-lg ${
+                            className={`p-3 sm:p-4 rounded-lg ${
                               c.status === "REMOVED"
                                 ? "bg-red-500/10 border border-red-500/30"
                                 : "bg-gray-800"
                             }`}
                           >
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0 mb-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-gray-400 text-xs">{c.videoId.slice(0, 8)}...</span>
                                 {c.status === "REMOVED" && (
                                   <span className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">
@@ -1218,14 +1335,14 @@ export default function ModDashboard() {
                               </div>
                               <span className="text-gray-500 text-xs">{formatDate(c.createdAt)}</span>
                             </div>
-                            <p className="text-white mb-2">{c.body}</p>
-                            <div className="flex gap-4 text-xs text-gray-400">
+                            <p className="text-white text-sm sm:text-base mb-2 break-words">{c.body}</p>
+                            <div className="flex gap-3 sm:gap-4 text-xs text-gray-400 flex-wrap">
                               <span className="text-green-400">{c.likes} likes</span>
                               <span className="text-red-400">{c.dislikes} dislikes</span>
                               <span>Score: {c.score}</span>
                             </div>
                             {c.removedReason && (
-                              <div className="mt-2 text-sm text-red-400">
+                              <div className="mt-2 text-xs sm:text-sm text-red-400">
                                 Reason: {c.removedReason}
                               </div>
                             )}
@@ -1241,19 +1358,19 @@ export default function ModDashboard() {
                         <div className="text-gray-500 text-center py-8">No votes</div>
                       ) : (
                         activityModal.data.votes.map((v) => (
-                          <div key={v.id} className="p-3 bg-gray-800 rounded-lg flex items-center gap-4">
+                          <div key={v.id} className="p-2 sm:p-3 bg-gray-800 rounded-lg flex items-start sm:items-center gap-2 sm:gap-4">
                             <span
-                              className={`w-8 h-8 flex items-center justify-center rounded ${
+                              className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded shrink-0 ${
                                 v.value === 1 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
                               }`}
                             >
                               {v.value === 1 ? "+" : "-"}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-gray-300 truncate">{v.commentPreview}</p>
+                              <p className="text-gray-300 text-sm sm:text-base truncate">{v.commentPreview}</p>
                               <p className="text-gray-500 text-xs">by {v.commentAuthor}</p>
                             </div>
-                            <span className="text-gray-500 text-xs">{formatDate(v.createdAt)}</span>
+                            <span className="text-gray-500 text-xs shrink-0">{formatDate(v.createdAt)}</span>
                           </div>
                         ))
                       )}
@@ -1266,22 +1383,22 @@ export default function ModDashboard() {
                         <div className="text-gray-500 text-center py-8">No ratings</div>
                       ) : (
                         activityModal.data.ratings.map((r) => (
-                          <div key={r.id} className="p-3 bg-gray-800 rounded-lg flex items-center gap-4">
-                            <span className="text-yellow-400 text-lg">
+                          <div key={r.id} className="p-2 sm:p-3 bg-gray-800 rounded-lg flex items-center gap-2 sm:gap-4">
+                            <span className="text-yellow-400 text-base sm:text-lg shrink-0">
                               {"★".repeat(r.score)}
                               <span className="text-gray-600">{"★".repeat(5 - r.score)}</span>
                             </span>
-                            <div className="flex-1">
-                              <p className="text-gray-400 text-sm">{r.videoId.slice(0, 12)}...</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-400 text-xs sm:text-sm truncate">{r.videoId.slice(0, 12)}...</p>
                             </div>
-                            <span className="text-gray-500 text-xs">{formatDate(r.createdAt)}</span>
+                            <span className="text-gray-500 text-xs shrink-0">{formatDate(r.createdAt)}</span>
                           </div>
                         ))
                       )}
                     </div>
                   )}
                 </div>
-              </>
+              </div>
             ) : null}
           </div>
         </div>

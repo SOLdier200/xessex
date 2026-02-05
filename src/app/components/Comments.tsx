@@ -808,7 +808,7 @@ export default function Comments({
 
       {/* Grade modal */}
       {grade.open && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/90 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -868,7 +868,7 @@ export default function Comments({
 
       {/* Report confirmation modal */}
       {reportModal.open && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="w-full max-w-sm rounded-2xl border border-red-500/30 bg-black/90 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="text-white font-semibold">Report Comment</div>
@@ -940,7 +940,7 @@ export default function Comments({
 
       {/* Delete confirmation modal */}
       {deleteModal.open && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="w-full max-w-sm rounded-2xl border border-red-500/30 bg-black/90 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="text-white font-semibold">Remove Comment</div>
@@ -983,7 +983,7 @@ export default function Comments({
 
       {/* Send Message Modal */}
       {messageModal.open && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh]">
           <div className="w-full max-w-md rounded-2xl border border-pink-500/30 bg-black/90 p-4">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>

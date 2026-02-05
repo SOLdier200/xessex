@@ -215,9 +215,13 @@ export default function WalletLoginButton() {
         return;
       }
 
-      // Show welcome modal for new users
+      // Show welcome modal for new users - delay navigation until they dismiss it
       if ((v as any).isNewUser) {
         setShowWelcomeModal(true);
+        endInflight();
+        setInFlight(false);
+        window.dispatchEvent(new Event("auth-changed"));
+        return;
       }
 
       triggerSuccess("/");
@@ -352,7 +356,10 @@ export default function WalletLoginButton() {
               Unlock more videos with the credits you earn and help us build a legendary organized porn list where we aim to discover the hottest video on the web!
             </p>
             <button
-              onClick={() => setShowWelcomeModal(false)}
+              onClick={() => {
+                setShowWelcomeModal(false);
+                window.location.href = "/";
+              }}
               className="w-full py-3 px-6 rounded-xl font-semibold text-white transition bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400"
             >
               Let&apos;s Go!
