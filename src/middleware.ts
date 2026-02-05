@@ -1,10 +1,10 @@
-// src/proxy.ts
+// src/middleware.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 /**
- * Next.js 16 Proxy Middleware (proxy.ts)
- * Server-side age gate enforcement.
+ * Next.js Middleware
+ * Server-side age gate enforcement with bot bypass for SEO crawlers.
  */
 
 const BOT_RE =
@@ -52,7 +52,7 @@ function isStaticOrMetaAsset(pathname: string) {
   );
 }
 
-export default function proxy(req: NextRequest) {
+export default function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const { pathname } = url;
 
