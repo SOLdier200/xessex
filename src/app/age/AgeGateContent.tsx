@@ -47,8 +47,8 @@ export default function AgeGateContent({ next = "/" }: AgeGateContentProps) {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <form action="/age/accept" method="GET" className="flex-1">
-              <input type="hidden" name="next" value={next} />
+            <form action="/age/accept" method="POST" className="flex-1">
+              <input type="hidden" name="next" value={next || "/"} />
               <button
                 type="submit"
                 className="w-full rounded-xl border-2 border-pink-500 bg-pink-500/20 text-white font-semibold py-4 min-h-[56px] touch-manipulation cursor-pointer"

@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
 import Providers from "./providers";
-import { AgeGateEnforcer } from "./components/AgeGateEnforcer";
 import { PageViewTracker } from "./components/PageViewTracker";
 import IncognitoButton from "./components/IncognitoButton";
 import { Toaster } from "sonner";
@@ -117,7 +116,6 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen">
         <Suspense fallback={null}>
-          <AgeGateEnforcer />
           <PageViewTracker />
         </Suspense>
         <Providers>{children}</Providers>

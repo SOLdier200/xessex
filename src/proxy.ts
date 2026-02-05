@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 /**
  * Next.js 16 Proxy Middleware (proxy.ts)
- * - If proxy.ts exists, DO NOT use middleware.ts (Next will error)
+ * Server-side age gate enforcement.
  */
 
 const BOT_RE =
@@ -15,8 +15,51 @@ function isIndexerBot(req: NextRequest) {
   return BOT_RE.test(ua);
 }
 
+// Wallet / in-app UA detection (used for behavior tweaks, NOT for skipping the gate)
+function isWalletInAppUA(req: NextRequest) {
+  const ua = (req.headers.get("user-agent") || "").toLowerCase();
+  return (
+    ua.includes("phantom") ||
+    ua.includes("solflare") ||
+    ua.includes("backpack") ||
+    ua.includes("slope") ||
+    ua.includes("coinbasewallet") ||
+    ua.includes("trust") ||
+    ua.includes("metamask")
+  );
+}
+
+function isStaticOrMetaAsset(pathname: string) {
+  // "Never gate these"
+  if (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/logos/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname.startsWith("/sitemap-") ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/manifest.json" ||
+    pathname === "/browserconfig.xml" ||
+    pathname.startsWith("/.well-known/")
+  ) {
+    return true;
+  }
+
+  // File extensions
+  return /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?|ttf|otf|webm|mp4|xml|json)$/i.test(
+    pathname
+  );
+}
+
 export default function proxy(req: NextRequest) {
-  const pathname = req.nextUrl.pathname;
+  const url = req.nextUrl;
+  const { pathname } = url;
+
+  // Never gate preflight / probe methods
+  if (req.method === "OPTIONS" || req.method === "HEAD") {
+    return NextResponse.next();
+  }
 
   // 🚨 ABSOLUTE BYPASS - robots/sitemaps MUST return 200, no redirect ever
   if (
@@ -27,16 +70,8 @@ export default function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Never gate static assets
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/logos/") ||
-    pathname.startsWith("/.well-known/") ||
-    pathname === "/favicon.ico" ||
-    pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml" ||
-    /\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?|ttf|otf|webm|mp4)$/i.test(pathname)
-  ) {
+  // Never gate static assets + meta assets
+  if (isStaticOrMetaAsset(pathname)) {
     return NextResponse.next();
   }
 
@@ -45,9 +80,7 @@ export default function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const url = req.nextUrl;
-
-  // Let search engines through (200) so they can index
+  // Bot bypass (server-side, reliable for Bing)
   if (isIndexerBot(req)) {
     const res = NextResponse.next();
     res.headers.set("x-xessex-mw", "bot-bypass");
@@ -55,19 +88,32 @@ export default function proxy(req: NextRequest) {
     return res;
   }
 
-  // Allow the age page itself (avoid loops)
-  if (pathname === "/age") return NextResponse.next();
+  // Allow the age page and its subroutes (avoid loops; required for /age/accept)
+  if (pathname === "/age" || pathname.startsWith("/age/")) {
+    return NextResponse.next();
+  }
 
-  // If user passed age gate, allow
-  const ageOk = req.cookies.get("age_ok")?.value === "1";
+  // If user passed age gate, allow (support legacy cookie too)
+  const ageOk =
+    req.cookies.get("age_ok")?.value === "1" ||
+    req.cookies.get("age_verified")?.value === "1";
+
   if (ageOk) return NextResponse.next();
 
-  // Gate humans
+  // Gate humans: redirect to /age and preserve full original path+query
   const redir = url.clone();
   redir.pathname = "/age";
   redir.searchParams.set("next", pathname + (url.search || ""));
-  const res = NextResponse.redirect(redir, 307);
+
+  // Prefer 302/303 over 307 for a UX gate (avoid method preservation weirdness)
+  const res = NextResponse.redirect(redir, 302);
   res.headers.set("x-xessex-mw", "redirect-age");
+
+  // Wallet in-app browsers can be sticky about caching redirects
+  if (isWalletInAppUA(req)) {
+    res.headers.set("Cache-Control", "no-store");
+  }
+
   return res;
 }
 
