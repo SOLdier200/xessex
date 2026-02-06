@@ -5,9 +5,15 @@ import Link from "next/link";
 import Image from "next/image";
 import WalletStatus from "./WalletStatus";
 import MessagesModal from "./MessagesModal";
+import WalletBalancesModal from "./WalletBalancesModal";
 import { AnimatePresence, motion } from "framer-motion";
 
-const tokenLinks = [
+type TokenLink =
+  | { label: string; href: string; action?: never }
+  | { label: string; action: "wallet"; href?: never };
+
+const tokenLinks: TokenLink[] = [
+  { label: "Wallet", action: "wallet" },
   { label: "Token Launch", href: "/launch" },
   { label: "Tokenomics", href: "/tokenomics" },
   { label: "Whitepaper", href: "/whitepaper" },
@@ -34,6 +40,7 @@ export default function TopNav() {
   const [tokenSubOpen, setTokenSubOpen] = useState(false);
 
   const [messagesModalOpen, setMessagesModalOpen] = useState(false);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -331,17 +338,30 @@ export default function TopNav() {
                                 className="mt-1 mb-2 overflow-hidden rounded-xl border border-white/10 bg-white/5"
                               >
                                 {tokenLinks.map((link) => (
-                                  <motion.div key={link.href} variants={subItem}>
-                                    <Link
-                                      href={link.href}
-                                      onClick={() => {
-                                        setMenuOpen(false);
-                                        setTokenSubOpen(false);
-                                      }}
-                                      className="block px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors text-center lg:text-left"
-                                    >
-                                      {link.label}
-                                    </Link>
+                                  <motion.div key={link.action || link.href} variants={subItem}>
+                                    {link.action === "wallet" ? (
+                                      <button
+                                        onClick={() => {
+                                          setMenuOpen(false);
+                                          setTokenSubOpen(false);
+                                          setWalletModalOpen(true);
+                                        }}
+                                        className="block w-full px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors text-center lg:text-left"
+                                      >
+                                        {link.label}
+                                      </button>
+                                    ) : (
+                                      <Link
+                                        href={link.href!}
+                                        onClick={() => {
+                                          setMenuOpen(false);
+                                          setTokenSubOpen(false);
+                                        }}
+                                        className="block px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors text-center lg:text-left"
+                                      >
+                                        {link.label}
+                                      </Link>
+                                    )}
                                   </motion.div>
                                 ))}
                               </motion.div>
@@ -363,6 +383,12 @@ export default function TopNav() {
         isOpen={messagesModalOpen}
         onClose={() => setMessagesModalOpen(false)}
         onUnreadCountChange={setUnreadCount}
+      />
+
+      {/* Wallet Balances Modal */}
+      <WalletBalancesModal
+        isOpen={walletModalOpen}
+        onClose={() => setWalletModalOpen(false)}
       />
     </header>
   );

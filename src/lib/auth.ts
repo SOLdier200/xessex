@@ -33,6 +33,12 @@ export async function getCurrentUser() {
   if (!session) return null;
   if (session.expiresAt.getTime() < Date.now()) return null;
 
+  // Global ban enforcement — kill session and deny access
+  if (session.user.globalBanStatus === "PERM_BANNED") {
+    await db.session.delete({ where: { id: session.id } }).catch(() => {});
+    return null;
+  }
+
   return session.user;
 }
 

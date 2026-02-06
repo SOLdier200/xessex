@@ -51,6 +51,15 @@ export async function GET() {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  // Check claim freeze
+  if (ctx.user.claimFrozen) {
+    if (ctx.user.claimFrozenUntil && ctx.user.claimFrozenUntil < new Date()) {
+      db.user.update({ where: { id: ctx.user.id }, data: { claimFrozen: false, claimFrozenUntil: null } }).catch(() => {});
+    } else {
+      return NextResponse.json({ ok: true, epochs: [], claimFrozen: true });
+    }
+  }
+
   const desiredVersion = 2; // V2 uses wallet-based rewards
   const wallet = ctx.user.walletAddress || "".trim();
 

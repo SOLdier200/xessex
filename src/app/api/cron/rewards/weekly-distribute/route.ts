@@ -1,7 +1,7 @@
 // src/app/api/cron/rewards/weekly-distribute/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { monthKeyUTC } from "@/lib/weekKey";
+import { monthKeyUTC, parsePeriodKey } from "@/lib/weekKey";
 import { getAdminConfig } from "@/lib/adminConfig";
 import { Prisma, BatchStatus } from "@prisma/client";
 
@@ -15,12 +15,17 @@ const CRON_SECRET = process.env.CRON_SECRET || "";
 const EMISSION_DECIMALS = 6n;
 const EMISSION_MULTIPLIER = 10n ** EMISSION_DECIMALS;
 
-// Existing emission schedule (unchanged)
+// Existing emission schedule (returns FULL weekly amount)
 function getWeeklyEmission(weekIndex: number): bigint {
   if (weekIndex < 12) return 666_667n * EMISSION_MULTIPLIER;
   if (weekIndex < 39) return 500_000n * EMISSION_MULTIPLIER;
   if (weekIndex < 78) return 333_333n * EMISSION_MULTIPLIER;
   return 166_667n * EMISSION_MULTIPLIER;
+}
+
+// For twice-weekly payouts, each period gets half the weekly emission
+function getPeriodEmission(weekIndex: number): bigint {
+  return getWeeklyEmission(weekIndex) / 2n;
 }
 
 // Leaderboard sub-pool splits (unchanged)
@@ -77,10 +82,18 @@ function parseWeekKeyUTC(weekKey: string): Date {
 }
 
 /**
- * Eligibility filter (wallet-native): must have walletAddress.
+ * Eligibility filter: must have walletAddress, not reward-banned, not global-banned.
+ * Expired temp bans are included (auto-lift).
  */
 function eligibleUserWhere(): Prisma.UserWhereInput {
-  return { walletAddress: { not: null } };
+  return {
+    walletAddress: { not: null },
+    OR: [
+      { rewardBanStatus: { in: ["ALLOWED", "WARNED", "UNBANNED"] } },
+      { rewardBanStatus: "TEMP_BANNED", rewardBanUntil: { lt: new Date() } },
+    ],
+    globalBanStatus: { in: ["ALLOWED", "WARNED", "UNBANNED"] },
+  };
 }
 
 /**
@@ -235,10 +248,16 @@ function poolPrefix(pool: Pool) {
  * POST /api/cron/rewards/weekly-distribute
  *
  * Query params:
- * - weekKey: payout week ("YYYY-MM-DD")
- * - statsWeekKey: optional stats source week (defaults to weekKey)
+ * - periodKey: payout period ("YYYY-MM-DD-P1" or "YYYY-MM-DD-P2") - NEW twice-weekly format
+ * - weekKey: (DEPRECATED) payout week ("YYYY-MM-DD") - falls back to P1 for backwards compat
+ * - statsWeekKey: optional stats source week (defaults to week portion of periodKey)
  * - weekIndex: 0-based emission week index
  * - force: 1|true to rerun if safe
+ *
+ * Twice-weekly payout periods:
+ * - P1 (Period 1): Sunday-Wednesday, paid out Wednesday evening
+ * - P2 (Period 2): Thursday-Saturday, paid out Saturday evening
+ * Each period emits half the weekly allocation.
  */
 export async function POST(req: NextRequest) {
   // Verify cron secret
@@ -248,17 +267,43 @@ export async function POST(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const weekKey = searchParams.get("weekKey");
-  const statsWeekKey = searchParams.get("statsWeekKey") || weekKey;
+
+  // Support both new periodKey and legacy weekKey formats
+  let periodKey = searchParams.get("periodKey");
+  const legacyWeekKey = searchParams.get("weekKey");
+
+  // If no periodKey but weekKey is provided, treat as P1 for backwards compatibility
+  if (!periodKey && legacyWeekKey) {
+    periodKey = `${legacyWeekKey}-P1`;
+    console.log(`[weekly-distribute] Legacy weekKey format detected, using periodKey=${periodKey}`);
+  }
+
   const weekIndexStr = searchParams.get("weekIndex");
   const force = searchParams.get("force") === "1" || searchParams.get("force") === "true";
 
-  if (!weekKey || !weekIndexStr) {
+  if (!periodKey || !weekIndexStr) {
     return NextResponse.json(
-      { ok: false, error: "MISSING_PARAMS", required: ["weekKey", "weekIndex"] },
+      { ok: false, error: "MISSING_PARAMS", required: ["periodKey (or weekKey)", "weekIndex"] },
       { status: 400 }
     );
   }
+
+  // Parse the period key to extract weekKey and period number
+  let weekKey: string;
+  let period: 1 | 2;
+  try {
+    const parsed = parsePeriodKey(periodKey);
+    weekKey = parsed.weekKey;
+    period = parsed.period;
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: "INVALID_PERIOD_KEY", message: (err as Error).message },
+      { status: 400 }
+    );
+  }
+
+  // Stats are looked up by the underlying weekKey (not periodKey)
+  const statsWeekKey = searchParams.get("statsWeekKey") || weekKey;
 
   const weekIndex = parseInt(weekIndexStr, 10);
   if (isNaN(weekIndex) || weekIndex < 0) {
@@ -266,10 +311,11 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
-  const runId = `${weekKey}-${now.getTime()}`;
+  const runId = `${periodKey}-${now.getTime()}`;
 
-  // Idempotency / batch handling (same pattern as your current code)
-  const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey } });
+  // Idempotency / batch handling - use periodKey for batch uniqueness
+  // Note: RewardBatch.weekKey field stores periodKey for twice-weekly payouts
+  const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey: periodKey } });
 
   if (existingBatch) {
     if (existingBatch.status === BatchStatus.DONE) {
@@ -278,7 +324,9 @@ export async function POST(req: NextRequest) {
           ok: true,
           skipped: true,
           reason: "already_processed",
+          periodKey,
           weekKey,
+          period,
           batchId: existingBatch.id,
           totalUsers: existingBatch.totalUsers,
           totalAmount: existingBatch.totalAmount?.toString(),
@@ -286,7 +334,7 @@ export async function POST(req: NextRequest) {
       }
 
       const onChainEpoch = await db.claimEpoch.findFirst({
-        where: { weekKey, setOnChain: true },
+        where: { weekKey: periodKey, setOnChain: true },
         select: { epoch: true, version: true },
       });
       if (onChainEpoch) {
@@ -295,25 +343,20 @@ export async function POST(req: NextRequest) {
             ok: false,
             error: "EPOCH_ONCHAIN",
             message: `Epoch ${onChainEpoch.epoch} (v${onChainEpoch.version}) is already on-chain. Refusing to rerun.`,
-            weekKey,
+            periodKey,
           },
           { status: 409 }
         );
       }
 
       await db.$transaction(async (tx) => {
-        await tx.claimLeaf.deleteMany({ where: { weekKey } });
-        await tx.claimEpoch.deleteMany({ where: { weekKey } });
-        await tx.rewardEvent.deleteMany({ where: { weekKey } });
-        await tx.rewardBatch.delete({ where: { weekKey } });
+        await tx.claimLeaf.deleteMany({ where: { weekKey: periodKey } });
+        await tx.claimEpoch.deleteMany({ where: { weekKey: periodKey } });
+        await tx.rewardEvent.deleteMany({ where: { weekKey: periodKey } });
+        await tx.rewardBatch.delete({ where: { weekKey: periodKey } });
 
-        // reset paidAtomic for both pools for statsWeekKey
-        if (statsWeekKey) {
-          await tx.weeklyUserStat.updateMany({
-            where: { weekKey: statsWeekKey },
-            data: { paidAtomic: 0n },
-          });
-        }
+        // Note: We don't reset paidAtomic since stats are per-week, not per-period
+        // paidAtomic would need to be tracked per-period if needed
       });
     } else if (existingBatch.status === BatchStatus.RUNNING) {
       const batchAge = now.getTime() - existingBatch.startedAt.getTime();
@@ -322,23 +365,17 @@ export async function POST(req: NextRequest) {
           `[weekly-distribute] Stale batch detected (${Math.round(batchAge / 1000)}s old), force resetting...`
         );
         await db.$transaction(async (tx) => {
-          await tx.claimLeaf.deleteMany({ where: { weekKey } });
-          await tx.claimEpoch.deleteMany({ where: { weekKey } });
-          await tx.rewardEvent.deleteMany({ where: { weekKey } });
-          await tx.rewardBatch.delete({ where: { weekKey } });
-          if (statsWeekKey) {
-            await tx.weeklyUserStat.updateMany({
-              where: { weekKey: statsWeekKey },
-              data: { paidAtomic: 0n },
-            });
-          }
+          await tx.claimLeaf.deleteMany({ where: { weekKey: periodKey } });
+          await tx.claimEpoch.deleteMany({ where: { weekKey: periodKey } });
+          await tx.rewardEvent.deleteMany({ where: { weekKey: periodKey } });
+          await tx.rewardBatch.delete({ where: { weekKey: periodKey } });
         });
       } else {
         return NextResponse.json({
           ok: true,
           skipped: true,
           reason: "already_running",
-          weekKey,
+          periodKey,
           batchId: existingBatch.id,
           startedAt: existingBatch.startedAt.toISOString(),
           runId: existingBatch.runId,
@@ -347,34 +384,28 @@ export async function POST(req: NextRequest) {
     } else if (existingBatch.status === BatchStatus.FAILED) {
       console.log(`[weekly-distribute] Previous batch failed, clearing and retrying...`);
       await db.$transaction(async (tx) => {
-        await tx.claimLeaf.deleteMany({ where: { weekKey } });
-        await tx.claimEpoch.deleteMany({ where: { weekKey } });
-        await tx.rewardEvent.deleteMany({ where: { weekKey } });
-        await tx.rewardBatch.delete({ where: { weekKey } });
-        if (statsWeekKey) {
-          await tx.weeklyUserStat.updateMany({
-            where: { weekKey: statsWeekKey },
-            data: { paidAtomic: 0n },
-          });
-        }
+        await tx.claimLeaf.deleteMany({ where: { weekKey: periodKey } });
+        await tx.claimEpoch.deleteMany({ where: { weekKey: periodKey } });
+        await tx.rewardEvent.deleteMany({ where: { weekKey: periodKey } });
+        await tx.rewardBatch.delete({ where: { weekKey: periodKey } });
       });
     }
   }
 
-  // Claim batch
+  // Claim batch - store periodKey in weekKey field
   let batch;
   try {
     batch = await db.rewardBatch.create({
-      data: { weekKey, status: BatchStatus.RUNNING, runId, startedAt: now },
+      data: { weekKey: periodKey, status: BatchStatus.RUNNING, runId, startedAt: now },
     });
   } catch (e: unknown) {
     const prismaError = e as { code?: string };
     if (prismaError?.code === "P2002") {
-      const existing = await db.rewardBatch.findUnique({ where: { weekKey } });
+      const existing = await db.rewardBatch.findUnique({ where: { weekKey: periodKey } });
       if (existing?.status === BatchStatus.DONE) {
-        return NextResponse.json({ ok: true, skipped: true, reason: "already_processed", weekKey, batchId: existing.id });
+        return NextResponse.json({ ok: true, skipped: true, reason: "already_processed", periodKey, batchId: existing.id });
       }
-      return NextResponse.json({ ok: true, skipped: true, reason: "already_running", weekKey, batchId: existing?.id });
+      return NextResponse.json({ ok: true, skipped: true, reason: "already_running", periodKey, batchId: existing?.id });
     }
     throw e;
   }
@@ -391,9 +422,11 @@ export async function POST(req: NextRequest) {
     const memberVoterBps = BigInt(cfg.memberVoterBpsOfLikes);
     const weeklyDiamondBps = 10000n - allTimeLikesBps - memberVoterBps;
 
-    // Total emission (override supported if you added it; if not, this will just be undefined/null)
-    const totalEmission: bigint =
+    // Total emission for this period (half of weekly emission for twice-weekly payouts)
+    // Override still applies but is interpreted as the full weekly amount (divided by 2)
+    const weeklyEmission: bigint =
       (cfg.weeklyEmissionOverride as bigint | null) ?? getWeeklyEmission(weekIndex);
+    const totalEmission = weeklyEmission / 2n; // Half per period
 
     // Top-level budgets (69/31 from cfg)
     const xessexBudget = (totalEmission * BigInt(cfg.xessexPoolBps)) / 10000n;
@@ -404,8 +437,8 @@ export async function POST(req: NextRequest) {
       { pool: "EMBED", budget: embedBudget },
     ];
 
-    console.log(`[weekly-distribute] Week ${weekKey} (index ${weekIndex})`);
-    console.log(`[weekly-distribute] Emission: ${formatXess(totalEmission)} XESS`);
+    console.log(`[weekly-distribute] Period ${periodKey} (P${period} of week ${weekKey}, index ${weekIndex})`);
+    console.log(`[weekly-distribute] Period emission: ${formatXess(totalEmission)} XESS (half of ${formatXess(weeklyEmission)} weekly)`);
     console.log(`[weekly-distribute] Budgets -> XESSEX: ${formatXess(xessexBudget)} | EMBED: ${formatXess(embedBudget)}`);
     if (statsWeekKey && statsWeekKey !== weekKey) console.log(`[weekly-distribute] Stats Source Week ${statsWeekKey}`);
 
@@ -429,6 +462,25 @@ export async function POST(req: NextRequest) {
         pool,
         weeklyActiveBonusAtomic
       );
+
+      // Remove reward-banned / global-banned users from flat rewards
+      if (flatByUserRaw.size > 0) {
+        const heldUsers = await db.user.findMany({
+          where: {
+            id: { in: Array.from(flatByUserRaw.keys()) },
+            OR: [
+              { rewardBanStatus: { in: ["TEMP_BANNED", "PERM_BANNED"] } },
+              { globalBanStatus: { in: ["TEMP_BANNED", "PERM_BANNED"] } },
+            ],
+          },
+          select: { id: true, rewardBanStatus: true, rewardBanUntil: true },
+        });
+        for (const u of heldUsers) {
+          // Allow expired temp bans through
+          if (u.rewardBanStatus === "TEMP_BANNED" && u.rewardBanUntil && u.rewardBanUntil < new Date()) continue;
+          flatByUserRaw.delete(u.id);
+        }
+      }
 
       const flatCapAtomic: bigint =
         pool === "XESSEX" ? cfg.flatCapXessexAtomic : cfg.flatCapEmbedAtomic;
@@ -765,14 +817,14 @@ export async function POST(req: NextRequest) {
 
     const totalAmount = Array.from(userRewards.values()).reduce((sum, r) => sum + r.amount, 0n);
 
-    // RewardEvent createMany rows
+    // RewardEvent createMany rows - use periodKey in weekKey field for twice-weekly tracking
     const rewardEventData = allRewards.map((reward) => {
-      // Unique refId includes pool via refType prefix
+      // Unique refId includes periodKey and pool via refType prefix
       const isReferral = reward.type.startsWith("REF_");
       const refId =
         isReferral && reward.referralFromUserId
-          ? `${weekKey}:${reward.userId}:${reward.referralFromUserId}:${reward.refType}`
-          : `${weekKey}:${reward.userId}:${reward.refType}`;
+          ? `${periodKey}:${reward.userId}:${reward.referralFromUserId}:${reward.refType}`
+          : `${periodKey}:${reward.userId}:${reward.refType}`;
 
       return {
         userId: reward.userId,
@@ -780,7 +832,7 @@ export async function POST(req: NextRequest) {
         type: reward.type,
         amount: reward.amount,
         status: "PAID" as const,
-        weekKey,
+        weekKey: periodKey, // Store periodKey in weekKey field for twice-weekly payouts
         refType: reward.refType,
         refId,
       };
@@ -840,11 +892,11 @@ export async function POST(req: NextRequest) {
         if (burnAmount > 0n) {
           await tx.burnRecord.create({
             data: {
-              weekKey,
+              weekKey: periodKey, // Store periodKey for twice-weekly tracking
               pool,
               reason: "unused_emission",
               amount: burnAmount,
-              description: `Unused ${pool} pool emission for week ${weekKey}`,
+              description: `Unused ${pool} pool emission for period ${periodKey}`,
             },
           });
           console.log(`[weekly-distribute] Burned ${formatXess(burnAmount)} XESS from ${pool} pool`);
@@ -857,10 +909,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      periodKey,
+      period,
       weekKey,
       statsWeekKey,
       weekIndex,
-      emission: formatXess(totalEmission),
+      periodEmission: formatXess(totalEmission),
+      weeklyEmission: formatXess(weeklyEmission),
       budgets: {
         xessex: poolSummary["xessex"]?.budget,
         embed: poolSummary["embed"]?.budget,

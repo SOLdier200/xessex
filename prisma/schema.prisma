@@ -83,6 +83,20 @@ model User {
   ratingBanUntil       DateTime?
   ratingBanReason      String?
 
+  // Reward moderation (XESS payout hold — prevents earning new rewards)
+  rewardBanStatus      CommentBanStatus     @default(ALLOWED)
+  rewardBanUntil       DateTime?
+  rewardBanReason      String?
+
+  // Claim freeze (prevents claiming already-earned rewards)
+  claimFrozen          Boolean              @default(false)
+  claimFrozenUntil     DateTime?
+  claimFrozenReason    String?
+
+  // Global account ban
+  globalBanStatus      CommentBanStatus     @default(ALLOWED)
+  globalBanReason      String?
+
   // Mod action tracking
   modActionsReceived   ModAction[]          @relation("ModActionTarget")
   modActionsPerformed  ModAction[]          @relation("ModActionPerformer")
@@ -104,6 +118,8 @@ model User {
   @@index([commentBanStatus])
   @@index([voteBanStatus])
   @@index([ratingBanStatus])
+  @@index([rewardBanStatus])
+  @@index([globalBanStatus])
 }
 
 model Session {
@@ -721,6 +737,23 @@ model UserBlock {
   @@unique([blockerId, blockedId])
   @@index([blockerId])
   @@index([blockedId])
+}
+
+// Banned wallets/IPs — prevents re-registration after global ban
+model BannedEntity {
+  id          String    @id @default(cuid())
+  entityType  String    // "wallet" | "ip"
+  entityValue String
+  reason      String?
+  bannedById  String?
+  userId      String?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  liftedAt    DateTime?
+
+  @@unique([entityType, entityValue])
+  @@index([entityType])
+  @@index([userId])
 }
 
 enum CommentStatus {

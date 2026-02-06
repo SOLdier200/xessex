@@ -1,32 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { markActionRun, requireAdminOrMod } from "@/lib/adminActions";
 import { db } from "@/lib/prisma";
-import { weekKeyUTC } from "@/lib/weekKey";
+import { weekKeyUTC, weekKeySundayMidnightPT, getPayoutPeriod, periodKeyPT, parsePeriodKey } from "@/lib/weekKey";
 
 export const runtime = "nodejs";
 
 // Genesis date for weekIndex calculation (first week of rewards)
-// Must be a Monday to match weekKeyUTC() convention
-const GENESIS_MONDAY = "2026-01-19"; // First Monday
+// Uses Sunday as week start to match weekKeySundayMidnightPT() convention
+const GENESIS_SUNDAY = "2026-01-19"; // First Sunday (genesis week)
 
 /**
- * Parse and normalize a weekKey input to Monday format using weekKeyUTC
- * This ensures consistency with the comments route and other stats
+ * Parse and normalize a weekKey input to Sunday format using weekKeySundayMidnightPT
+ * This ensures consistency with twice-weekly payout periods
  */
 function normalizeWeekKey(value: string | null | undefined): string | null {
   if (!value) return null;
-  const d = new Date(`${value}T00:00:00Z`);
+  const d = new Date(`${value}T12:00:00Z`); // Use noon to avoid timezone edge cases
   if (Number.isNaN(d.getTime())) return null;
-  // Normalize to Monday using the same helper as comments route
-  return weekKeyUTC(d);
+  // Normalize to Sunday using the same helper as periodKey
+  return weekKeySundayMidnightPT(d);
 }
 
 /**
- * Compute weekIndex from genesis Monday
- * Week 0 = GENESIS_MONDAY, Week 1 = GENESIS_MONDAY + 7 days, etc.
+ * Check if a string is a period key (YYYY-MM-DD-P1 or YYYY-MM-DD-P2)
+ */
+function isPeriodKey(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}-P[12]$/.test(value);
+}
+
+/**
+ * Compute weekIndex from genesis Sunday
+ * Week 0 = GENESIS_SUNDAY, Week 1 = GENESIS_SUNDAY + 7 days, etc.
  */
 function computeWeekIndex(weekKey: string): number {
-  const genesis = new Date(`${GENESIS_MONDAY}T00:00:00Z`);
+  const genesis = new Date(`${GENESIS_SUNDAY}T00:00:00Z`);
   const target = new Date(`${weekKey}T00:00:00Z`);
 
   if (Number.isNaN(genesis.getTime()) || Number.isNaN(target.getTime())) {
@@ -39,7 +46,7 @@ function computeWeekIndex(weekKey: string): number {
 }
 
 /**
- * GET: Return week info for UI
+ * GET: Return week/period info for UI (twice-weekly payouts)
  */
 export async function GET() {
   const user = await requireAdminOrMod();
@@ -48,41 +55,75 @@ export async function GET() {
   }
 
   const now = new Date();
-  // Use weekKeyUTC for Monday-based keys (matches comments route)
-  const thisWeekKey = weekKeyUTC(now);
+
+  // Use Sunday-based weekKey for twice-weekly payout periods
+  const thisWeekKey = weekKeySundayMidnightPT(now);
+  const currentPeriod = getPayoutPeriod(now);
+  const currentPeriodKey = periodKeyPT(now);
 
   // Last week
   const lastWeekDate = new Date(now);
   lastWeekDate.setUTCDate(lastWeekDate.getUTCDate() - 7);
-  const lastWeekKey = weekKeyUTC(lastWeekDate);
+  const lastWeekKey = weekKeySundayMidnightPT(lastWeekDate);
 
   const thisWeekIndex = computeWeekIndex(thisWeekKey);
   const lastWeekIndex = computeWeekIndex(lastWeekKey);
 
-  // Check if batches already exist
-  const [thisWeekBatch, lastWeekBatch] = await Promise.all([
-    db.rewardBatch.findUnique({ where: { weekKey: thisWeekKey } }),
-    db.rewardBatch.findUnique({ where: { weekKey: lastWeekKey } }),
+  // Check if batches already exist (now checking period keys)
+  const [thisWeekP1Batch, thisWeekP2Batch, lastWeekP1Batch, lastWeekP2Batch] = await Promise.all([
+    db.rewardBatch.findUnique({ where: { weekKey: `${thisWeekKey}-P1` } }),
+    db.rewardBatch.findUnique({ where: { weekKey: `${thisWeekKey}-P2` } }),
+    db.rewardBatch.findUnique({ where: { weekKey: `${lastWeekKey}-P1` } }),
+    db.rewardBatch.findUnique({ where: { weekKey: `${lastWeekKey}-P2` } }),
   ]);
 
   return NextResponse.json({
     ok: true,
+    currentPeriodKey,
+    currentPeriod,
     thisWeek: {
       weekKey: thisWeekKey,
       weekIndex: thisWeekIndex,
-      batchExists: !!thisWeekBatch,
+      periods: {
+        P1: {
+          periodKey: `${thisWeekKey}-P1`,
+          batchExists: !!thisWeekP1Batch,
+          batchStatus: thisWeekP1Batch?.status,
+        },
+        P2: {
+          periodKey: `${thisWeekKey}-P2`,
+          batchExists: !!thisWeekP2Batch,
+          batchStatus: thisWeekP2Batch?.status,
+        },
+      },
     },
     lastWeek: {
       weekKey: lastWeekKey,
       weekIndex: lastWeekIndex,
-      batchExists: !!lastWeekBatch,
+      periods: {
+        P1: {
+          periodKey: `${lastWeekKey}-P1`,
+          batchExists: !!lastWeekP1Batch,
+          batchStatus: lastWeekP1Batch?.status,
+        },
+        P2: {
+          periodKey: `${lastWeekKey}-P2`,
+          batchExists: !!lastWeekP2Batch,
+          batchStatus: lastWeekP2Batch?.status,
+        },
+      },
     },
   });
 }
 
 /**
- * POST: Run weekly distribute for a given weekKey
- * weekIndex is computed automatically
+ * POST: Run twice-weekly distribute for a given periodKey
+ * weekIndex is computed automatically from the week portion
+ *
+ * Body params:
+ * - periodKey: "YYYY-MM-DD-P1" or "YYYY-MM-DD-P2" (new format, preferred)
+ * - weekKey: "YYYY-MM-DD" (legacy format, defaults to P1)
+ * - force: boolean to rerun existing batch
  */
 export async function POST(req: NextRequest) {
   const user = await requireAdminOrMod();
@@ -100,30 +141,63 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => null)) as {
+    periodKey?: string;
     weekKey?: string;
     force?: boolean;
   } | null;
 
-  // Normalize weekKey to Monday format (matches comments route)
-  // If no weekKey provided, use current week
-  const weekKey = normalizeWeekKey(body?.weekKey) || weekKeyUTC(new Date());
   const force = body?.force === true;
 
-  // Compute weekIndex automatically
+  // Determine the periodKey to use
+  let periodKey: string;
+  let weekKey: string;
+  let period: 1 | 2;
+
+  if (body?.periodKey && isPeriodKey(body.periodKey)) {
+    // New format: use provided periodKey
+    periodKey = body.periodKey;
+    try {
+      const parsed = parsePeriodKey(periodKey);
+      weekKey = parsed.weekKey;
+      period = parsed.period;
+    } catch (e) {
+      return NextResponse.json({
+        ok: false,
+        error: "INVALID_PERIOD_KEY",
+        message: (e as Error).message,
+      }, { status: 400 });
+    }
+  } else if (body?.weekKey) {
+    // Legacy format: normalize weekKey and default to P1
+    weekKey = normalizeWeekKey(body.weekKey) || weekKeySundayMidnightPT(new Date());
+    period = 1;
+    periodKey = `${weekKey}-P1`;
+    console.log(`[recompute-rewards-epoch] Legacy weekKey format, using periodKey=${periodKey}`);
+  } else {
+    // No input: use current period
+    periodKey = periodKeyPT(new Date());
+    const parsed = parsePeriodKey(periodKey);
+    weekKey = parsed.weekKey;
+    period = parsed.period;
+  }
+
+  // Compute weekIndex from the week portion
   const weekIndex = computeWeekIndex(weekKey);
 
-  console.log(`[recompute-rewards-epoch] INPUT weekKey: ${body?.weekKey || "not provided"}`);
-  console.log(`[recompute-rewards-epoch] CANONICAL weekKey: ${weekKey}, weekIndex: ${weekIndex}`);
+  console.log(`[recompute-rewards-epoch] INPUT periodKey: ${body?.periodKey || "not provided"}`);
+  console.log(`[recompute-rewards-epoch] CANONICAL periodKey: ${periodKey}, weekKey: ${weekKey}, period: ${period}, weekIndex: ${weekIndex}`);
 
   // Check if batch already exists (unless force is set)
   if (!force) {
-    const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey } });
+    const existingBatch = await db.rewardBatch.findUnique({ where: { weekKey: periodKey } });
     if (existingBatch) {
       return NextResponse.json({
         ok: false,
         error: "BATCH_EXISTS",
-        message: `Batch already exists for ${weekKey}. Use force=true to rerun.`,
+        message: `Batch already exists for ${periodKey}. Use force=true to rerun.`,
+        periodKey,
         weekKey,
+        period,
         weekIndex,
       }, { status: 409 });
     }
@@ -131,7 +205,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const url = new URL("http://internal/api/cron/rewards/weekly-distribute");
-    url.searchParams.set("weekKey", weekKey);
+    url.searchParams.set("periodKey", periodKey);
     url.searchParams.set("weekIndex", String(weekIndex));
     if (force) {
       url.searchParams.set("force", "1");
@@ -152,12 +226,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: msg, message: payload?.message }, { status: 500 });
     }
 
-    const msg = `Rewards computed for ${weekKey} (index ${weekIndex})`;
+    const msg = `Rewards computed for ${periodKey} (P${period} of week ${weekKey}, index ${weekIndex})`;
     await markActionRun("RECOMPUTE_REWARDS_EPOCH", true, msg);
     return NextResponse.json({
       ok: true,
       message: msg,
+      periodKey,
       weekKey,
+      period,
       weekIndex,
       detail: payload,
     });

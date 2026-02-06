@@ -19,6 +19,8 @@ import { db } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { setSessionCookieOnResponse, clearCookieOnResponse } from "@/lib/authCookies";
 import { generateReferralCode } from "@/lib/referral";
+import { sendWelcomeMessage } from "@/lib/welcomeMessage";
+import { isWalletBanned } from "@/lib/bannedCheck";
 
 export const runtime = "nodejs";
 
@@ -119,11 +121,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
     }
 
+    // Check if wallet is banned
+    const walletCheck = await isWalletBanned(w);
+    if (walletCheck.banned) {
+      return NextResponse.json({ ok: false, error: "ACCOUNT_BANNED" }, { status: 403, headers: noCache });
+    }
+
     // Find or create user by walletAddress
     let user = await db.user.findUnique({
       where: { walletAddress: w },
       select: { id: true, walletAddress: true },
     });
+    let isNewUser = false;
 
     if (!user) {
       // Look up referrer if refCode provided
@@ -150,6 +159,7 @@ export async function POST(req: Request) {
             },
             select: { id: true, walletAddress: true },
           });
+          isNewUser = true;
           break;
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
@@ -163,6 +173,9 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ ok: false, error: "Failed to create user" }, { status: 500, headers: noCache });
     }
+
+    // Send welcome message to new user's inbox (fire-and-forget)
+    if (isNewUser) sendWelcomeMessage(user.id);
 
     // Create session
     const { token, expiresAt } = await createSession(user.id);

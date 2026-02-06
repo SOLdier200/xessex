@@ -95,6 +95,16 @@ export async function POST(req: Request) {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  // Check claim freeze
+  if (ctx.user.claimFrozen) {
+    if (ctx.user.claimFrozenUntil && ctx.user.claimFrozenUntil < new Date()) {
+      // Expired freeze — auto-lift
+      db.user.update({ where: { id: ctx.user.id }, data: { claimFrozen: false, claimFrozenUntil: null } }).catch(() => {});
+    } else {
+      return NextResponse.json({ ok: true, claimable: false, reason: "claim_frozen" });
+    }
+  }
+
   const desiredVersion = 2; // V2 uses wallet-based rewards
 
   // Get the latest epoch with a root set on-chain (by version)

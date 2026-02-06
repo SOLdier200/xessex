@@ -71,16 +71,27 @@ Wallet-native access model:
 
 ## Rewards Pipeline
 
-### Weekly Distribution Flow
+### Twice-Weekly Distribution Flow (v2)
+XESS rewards are now paid out twice weekly (P1 and P2 periods) instead of weekly.
+
+**Payout Periods (PT timezone):**
+- **Period 1 (P1)**: Sunday-Wednesday activity, paid out Wednesday evening
+- **Period 2 (P2)**: Thursday-Saturday activity, paid out Saturday evening
+- Each period emits **half** the weekly allocation
+
+**Period Key Format:** `YYYY-MM-DD-P1` or `YYYY-MM-DD-P2` where date is the Sunday of the week.
+
 1. **weekly-distribute** (`/api/cron/rewards/weekly-distribute`)
    - Creates `RewardEvent` records with status=PAID
-   - Pools: 75% Likes, 20% MVM, 5% Comments
-   - Requires `weekKey` (Monday-based) and `weekIndex` (weeks since genesis 2026-01-19)
+   - Pools: 70% Likes, 20% MVM, 5% Comments, 5% Referrals
+   - **New params:** `periodKey` (e.g., "2026-01-19-P1"), `weekIndex` (weeks since genesis)
+   - Legacy `weekKey` param falls back to P1 for backwards compatibility
+   - Stats are looked up by the underlying weekKey (same for both periods)
 
 2. **build-week** (`/api/cron/claims/build-week`)
-   - Finds PAID RewardEvents, builds merkle tree
-   - Creates `ClaimEpoch` (epoch, weekKey, rootHex) and `ClaimLeaf` records
-   - Uses SHA256 merkle tree compatible with Solana
+   - Data-driven: finds latest periodKey with PAID RewardEvents
+   - Builds merkle tree per period (each period gets its own epoch)
+   - Creates `ClaimEpoch` and `ClaimLeaf` records
 
 3. **set-epoch-root** (CLI: `node solana-programs/xess-claim/set-epoch-root.mjs <epoch> <rootHex>`)
    - Publishes merkle root on-chain
@@ -88,15 +99,25 @@ Wallet-native access model:
 4. **mark-epoch-onchain** (`/api/admin/mark-epoch-onchain`)
    - Sets `setOnChain=true` in ClaimEpoch after on-chain publish
 
+### Key Helpers (`src/lib/weekKey.ts`)
+```typescript
+weekKeySundayMidnightPT(d)   // Returns "YYYY-MM-DD" for Sunday of week in PT
+getPayoutPeriod(d)           // Returns 1 (Sun-Wed) or 2 (Thu-Sat)
+periodKeyPT(d)               // Returns "YYYY-MM-DD-P1" or "YYYY-MM-DD-P2"
+parsePeriodKey(periodKey)    // Parses back to {weekKey, period}
+```
+
 ### Key Models
-- `RewardEvent`: Individual reward records (status: PENDING → PAID → claimed via claimedAt)
-- `ClaimEpoch`: Weekly merkle roots (epoch is @id, no separate id field)
+- `RewardEvent`: Individual reward records; `weekKey` field stores periodKey for twice-weekly
+- `ClaimEpoch`: Merkle roots per period (epoch is @id, weekKey stores periodKey)
 - `ClaimLeaf`: Per-user claim data with merkle proof
-- `RewardBatch`: Weekly batch metadata
+- `RewardBatch`: Batch metadata; `weekKey` stores periodKey for uniqueness
 
 ### Admin Pipeline UI
 - `/admin/payout-pipeline` - Step-by-step UI for running the full flow
-- `/api/admin/recompute-rewards-epoch` - Computes weekKey/weekIndex and calls weekly-distribute
+- `/api/admin/recompute-rewards-epoch` - Computes periodKey/weekIndex and calls weekly-distribute
+  - GET: Returns period info for current and last week (P1/P2 batch status)
+  - POST: Accepts `periodKey` (new) or `weekKey` (legacy, defaults to P1)
 
 ## Wallet/Auth UX
 Comprehensive fix for wallet connection issues across platforms.
@@ -164,6 +185,14 @@ TIER_TABLE = [
   { minBalance: 5_000_000n, monthlyCredits: 32_000n }, // Tier 9: 5M XESS
 ]
 ```
+
+**Twice-Daily Special Credits Accrual:**
+- Credits accrue twice per day (AM and PM slots, PT timezone)
+- Cron: `/api/cron/daily-xess-snapshot-and-credits` runs twice daily
+- Each accrual = (monthlyCredits / daysInMonth / 2) microcredits
+- Idempotent via refId: `${userId}:${dateKey}:${timeSlot}` (e.g., "user123:2026-01-19:AM")
+- AM = before noon PT, PM = noon and after
+- Uses `calculateTwiceDailyAccrual()` for fractional carry-over handling
 
 ### iOS Wallet Sign-In Loop Fix
 Fixed infinite "sign again" loop on iOS where Phantom kept reopening after signing.

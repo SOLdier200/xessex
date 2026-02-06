@@ -7,7 +7,6 @@ import LockedVideoCard from "./components/LockedVideoCard";
 import LockedFeaturedCard from "./components/LockedFeaturedCard";
 import RoadmapMarquee from "./components/RoadmapMarquee";
 import HoverPreviewVideo from "./components/HoverPreviewVideo";
-import WelcomeModalTest from "./components/WelcomeModalTest";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -130,7 +129,6 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen">
       <TopNav />
-      <WelcomeModalTest />
 
       <div className="px-4 md:px-6 pb-10">
 

@@ -5,6 +5,7 @@ import TopNav from "../../components/TopNav";
 import Image from "next/image";
 import WalletActions from "@/components/WalletActions";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const WALLETS = [
   {
@@ -77,32 +78,38 @@ export default function DiamondLoginPage() {
 
             {/* Mobile Deep Links */}
             <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-white/50 mb-3 text-center">
+              <p className="text-sm text-white/60 mb-4 text-center">
                 On mobile? Open this page in your wallet app:
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="flex flex-col gap-3">
                 <a
                   href={`https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition"
+                  onClick={() => toast("Opening Phantom...")}
+                  className="flex items-center gap-3 w-full px-5 py-4 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-200 text-base font-semibold hover:bg-purple-500/30 transition"
                 >
-                  <Image src="/logos/phantomtrans.png" alt="Phantom" width={20} height={20} className="w-5 h-5" />
+                  <Image src="/logos/phantomtrans.png" alt="Phantom" width={32} height={32} className="w-8 h-8" />
                   Open in Phantom
                 </a>
                 <a
                   href={`https://solflare.com/ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/20 border border-orange-400/50 text-orange-300 text-sm font-medium hover:bg-orange-500/30 transition"
+                  onClick={() => toast("Opening Solflare...")}
+                  className="flex items-center gap-3 w-full px-5 py-4 rounded-xl bg-orange-500/20 border border-orange-400/50 text-orange-200 text-base font-semibold hover:bg-orange-500/30 transition"
                 >
-                  <Image src="/logos/solflaretrans.png" alt="Solflare" width={20} height={20} className="w-5 h-5" />
+                  <Image src="/logos/solflaretrans.png" alt="Solflare" width={32} height={32} className="w-8 h-8" />
                   Open in Solflare
                 </a>
                 <a
                   href={`https://backpack.app/ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 border border-red-400/50 text-red-300 text-sm font-medium hover:bg-red-500/30 transition"
+                  onClick={() => toast("Opening Backpack...")}
+                  className="flex items-center gap-3 w-full px-5 py-4 rounded-xl bg-red-500/20 border border-red-400/50 text-red-200 text-base font-semibold hover:bg-red-500/30 transition"
                 >
-                  <Image src="/logos/backpacktrans.png" alt="Backpack" width={20} height={20} className="w-5 h-5" />
+                  <Image src="/logos/backpacktrans.png" alt="Backpack" width={32} height={32} className="w-8 h-8" />
                   Open in Backpack
                 </a>
               </div>
+              <p className="mt-4 text-xs text-white/40 text-center leading-relaxed">
+                Note: You may need to go into the built-in browser of your wallet and load <span className="text-white/60 font-medium">xessex.me</span> to sign in with your wallet.
+              </p>
             </div>
 
             {/* Need a wallet? */}

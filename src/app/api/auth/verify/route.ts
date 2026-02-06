@@ -11,6 +11,8 @@ import { db } from "@/lib/prisma";
 import { createSession, getCurrentUser } from "@/lib/auth";
 import { setSessionCookieOnResponse, clearCookieOnResponse } from "@/lib/authCookies";
 import { generateReferralCode } from "@/lib/referral";
+import { sendWelcomeMessage } from "@/lib/welcomeMessage";
+import { isWalletBanned } from "@/lib/bannedCheck";
 
 export const runtime = "nodejs";
 
@@ -110,6 +112,12 @@ export async function POST(req: Request) {
 
     const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     if (!ok) return NextResponse.json({ ok: false, error: "Bad signature" }, { status: 401, headers: noCache });
+
+    // Check if wallet is banned
+    const walletCheck = await isWalletBanned(w);
+    if (walletCheck.banned) {
+      return NextResponse.json({ ok: false, error: "ACCOUNT_BANNED", message: walletCheck.reason }, { status: 403, headers: noCache });
+    }
 
     // Check if this wallet is already registered
     const existingWalletUser = await db.user.findUnique({
@@ -216,6 +224,9 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // Send welcome message to new user's inbox (fire-and-forget)
+    sendWelcomeMessage(user.id);
 
     const { token, expiresAt } = await createSession(user.id);
     const res = NextResponse.json({ ok: true, isNewUser: true }, { headers: noCache });

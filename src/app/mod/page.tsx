@@ -68,6 +68,21 @@ interface BannedUser {
   createdAt: string;
 }
 
+interface RewardHeldUser {
+  id: string;
+  email: string | null;
+  wallet: string | null;
+  rewardBanStatus: string;
+  rewardBanUntil: string | null;
+  rewardBanReason: string | null;
+  claimFrozen: boolean;
+  claimFrozenUntil: string | null;
+  claimFrozenReason: string | null;
+  globalBanStatus: string;
+  globalBanReason: string | null;
+  createdAt: string;
+}
+
 interface UserActivity {
   user: {
     id: string;
@@ -83,6 +98,14 @@ interface UserActivity {
     ratingBanStatus: string;
     ratingBanUntil: string | null;
     ratingBanReason: string | null;
+    rewardBanStatus: string;
+    rewardBanUntil: string | null;
+    rewardBanReason: string | null;
+    claimFrozen: boolean;
+    claimFrozenUntil: string | null;
+    claimFrozenReason: string | null;
+    globalBanStatus: string;
+    globalBanReason: string | null;
     createdAt: string;
   };
   summary: {
@@ -129,6 +152,7 @@ export default function ModDashboard() {
   const [commentSpammers, setCommentSpammers] = useState<CommentSpammer[]>([]);
   const [dislikeSpammers, setDislikeSpammers] = useState<DislikeSpammer[]>([]);
   const [starAbusers, setStarAbusers] = useState<StarAbuser[]>([]);
+  const [rewardHeld, setRewardHeld] = useState<RewardHeldUser[]>([]);
   const [unrulyLoading, setUnrulyLoading] = useState(false);
 
   // Banned users state
@@ -145,10 +169,34 @@ export default function ModDashboard() {
     open: boolean;
     userId: string;
     action: "ban" | "unban";
-    targetType: "comment" | "vote" | "rating";
-    duration?: "1_week" | "2_week" | "4_week" | "permanent";
+    targetType: "comment" | "vote" | "rating" | "reward";
+    duration?: string;
+    weeks?: number;
     userDisplay: string;
   } | null>(null);
+
+  // Global ban modal state
+  const [globalBanModal, setGlobalBanModal] = useState<{
+    open: boolean;
+    userId: string;
+    userDisplay: string;
+    banIps: boolean;
+    reason: string;
+  } | null>(null);
+
+  // Claim freeze modal state
+  const [claimFreezeModal, setClaimFreezeModal] = useState<{
+    open: boolean;
+    userId: string;
+    userDisplay: string;
+    weeks: string;
+    reason: string;
+  } | null>(null);
+
+  // Custom weeks input for ban actions
+  const [banWeeksInput, setBanWeeksInput] = useState<string>("");
+  // Per-card weeks inputs in activity modal
+  const [cardWeeks, setCardWeeks] = useState<Record<string, string>>({ comment: "", vote: "", rating: "", reward: "", claim: "" });
 
   // User activity modal state
   const [activityModal, setActivityModal] = useState<{
@@ -178,6 +226,7 @@ export default function ModDashboard() {
         setCommentSpammers(data.commentSpammers || []);
         setDislikeSpammers(data.dislikeSpammers || []);
         setStarAbusers(data.starAbusers || []);
+        setRewardHeld(data.rewardHeld || []);
       }
     } catch (err) {
       console.error("Failed to fetch unruly users:", err);
@@ -258,8 +307,9 @@ export default function ModDashboard() {
   const handleBanAction = async (
     userId: string,
     action: "ban" | "unban",
-    targetType: "comment" | "vote" | "rating",
-    duration?: "1_week" | "2_week" | "4_week" | "permanent"
+    targetType: "comment" | "vote" | "rating" | "reward",
+    duration?: string,
+    weeks?: number
   ) => {
     setActionLoading(userId);
     setActionError(null);
@@ -270,31 +320,25 @@ export default function ModDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ userId, action, targetType, duration }),
+        body: JSON.stringify({ userId, action, targetType, duration, weeks }),
       });
 
       const data = await res.json();
 
       if (data.ok) {
-        const durationLabel = duration === "1_week" ? "1 week" :
-          duration === "2_week" ? "2 weeks" :
-          duration === "4_week" ? "4 weeks" :
-          duration === "permanent" ? "permanently" : "";
         setActionSuccess(
           action === "ban"
-            ? `Successfully suspended ${targetType} for ${durationLabel}`
+            ? `Successfully suspended ${targetType} for ${data.duration || "unknown duration"}`
             : `Successfully restored ${targetType} ability`
         );
-        // Refresh both lists
         await Promise.all([fetchUnrulyUsers(), fetchBannedUsers()]);
-        // Refresh user activity if modal is open
         if (activityModal?.data) {
           fetchUserActivity(activityModal.userId);
         }
       } else {
         setActionError(data.error || "Action failed");
       }
-    } catch (err) {
+    } catch {
       setActionError("Failed to perform action");
     } finally {
       setActionLoading(null);
@@ -302,14 +346,67 @@ export default function ModDashboard() {
     }
   };
 
+  const handleClaimFreeze = async (userId: string, action: "freeze" | "unfreeze", weeks?: number, reason?: string) => {
+    setActionLoading(userId);
+    setActionError(null);
+    try {
+      const res = await fetch("/api/mod/claim-freeze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userId, action, weeks, reason }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setActionSuccess(action === "freeze" ? "Claim button frozen" : "Claim button unfrozen");
+        if (activityModal?.data) fetchUserActivity(activityModal.userId);
+        await fetchUnrulyUsers();
+      } else {
+        setActionError(data.error || "Action failed");
+      }
+    } catch {
+      setActionError("Failed to perform action");
+    } finally {
+      setActionLoading(null);
+      setClaimFreezeModal(null);
+    }
+  };
+
+  const handleGlobalBan = async (userId: string, reason: string, banIps: boolean) => {
+    setActionLoading(userId);
+    setActionError(null);
+    try {
+      const res = await fetch("/api/mod/global-ban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userId, reason, banIps }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setActionSuccess(`User globally banned${data.ipsBanned > 0 ? ` (${data.ipsBanned} IPs banned)` : ""}`);
+        if (activityModal?.data) fetchUserActivity(activityModal.userId);
+        await Promise.all([fetchUnrulyUsers(), fetchBannedUsers()]);
+      } else {
+        setActionError(data.error || "Action failed");
+      }
+    } catch {
+      setActionError("Failed to perform action");
+    } finally {
+      setActionLoading(null);
+      setGlobalBanModal(null);
+    }
+  };
+
   const openConfirmModal = (
     userId: string,
     action: "ban" | "unban",
-    targetType: "comment" | "vote" | "rating",
+    targetType: "comment" | "vote" | "rating" | "reward",
     userDisplay: string,
-    duration?: "1_week" | "2_week" | "4_week" | "permanent"
+    duration?: string,
+    weeks?: number
   ) => {
-    setConfirmModal({ open: true, userId, action, targetType, duration, userDisplay });
+    setConfirmModal({ open: true, userId, action, targetType, duration, weeks, userDisplay });
   };
 
   const handleRevoke1StarRatings = async (userId: string) => {
@@ -481,6 +578,15 @@ export default function ModDashboard() {
             <p className="text-3xl font-bold text-gray-500">
               {bannedUsers.filter((u) => u.status === "UNBANNED").length}
             </p>
+          </div>
+          <div className={`bg-gray-900 border rounded-xl p-6 ${rewardHeld.length > 0 ? "border-cyan-500/50" : "border-gray-800"}`}>
+            <h3 className="text-gray-400 text-sm uppercase tracking-wide mb-2">Reward Held</h3>
+            <p className="text-3xl font-bold text-cyan-500">{rewardHeld.length}</p>
+            {rewardHeld.filter((u) => u.globalBanStatus === "PERM_BANNED").length > 0 && (
+              <p className="text-sm text-red-400 mt-1">
+                {rewardHeld.filter((u) => u.globalBanStatus === "PERM_BANNED").length} global banned
+              </p>
+            )}
           </div>
         </div>
 
@@ -782,6 +888,135 @@ export default function ModDashboard() {
           </div>
         </div>
 
+        {/* Reward-Held Users Section */}
+        <div className="bg-gray-900 border border-cyan-500/30 rounded-xl mb-8">
+          <div className="p-6 border-b border-cyan-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-cyan-400">Reward-Held / Frozen / Banned</h2>
+                  <p className="text-sm text-gray-400">Users with reward holds, claim freezes, or global bans</p>
+                </div>
+              </div>
+              <button
+                onClick={fetchUnrulyUsers}
+                disabled={unrulyLoading}
+                className="px-3 py-1 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 transition text-sm"
+              >
+                {unrulyLoading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+          </div>
+          <div className="p-6">
+            {unrulyLoading ? (
+              <div className="text-center text-gray-400 py-8">Loading...</div>
+            ) : rewardHeld.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">No reward-held users found</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-400 text-sm">
+                      <th className="pb-3 font-medium">User</th>
+                      <th className="pb-3 font-medium">Reward Status</th>
+                      <th className="pb-3 font-medium">Claim</th>
+                      <th className="pb-3 font-medium">Global</th>
+                      <th className="pb-3 font-medium">Reason</th>
+                      <th className="pb-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {rewardHeld.map((u) => (
+                      <tr key={u.id} className="hover:bg-gray-800/50">
+                        <td className="py-3">
+                          <button
+                            onClick={() => fetchUserActivity(u.id)}
+                            className="text-left hover:text-pink-400 transition"
+                          >
+                            <div className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</div>
+                            <div className="text-xs text-gray-500">{u.id.slice(0, 12)}...</div>
+                          </button>
+                        </td>
+                        <td className="py-3">
+                          {getStatusBadge(u.rewardBanStatus)}
+                          {u.rewardBanUntil && (
+                            <div className="text-xs text-gray-500 mt-1">Until {formatDate(u.rewardBanUntil)}</div>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          {u.claimFrozen ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">FROZEN</span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400">OK</span>
+                          )}
+                          {u.claimFrozenUntil && (
+                            <div className="text-xs text-gray-500 mt-1">Until {formatDate(u.claimFrozenUntil)}</div>
+                          )}
+                        </td>
+                        <td className="py-3">{getStatusBadge(u.globalBanStatus)}</td>
+                        <td className="py-3 text-sm text-gray-400 max-w-[200px] truncate">
+                          {u.rewardBanReason || u.claimFrozenReason || u.globalBanReason || "—"}
+                        </td>
+                        <td className="py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {u.rewardBanStatus !== "ALLOWED" && u.rewardBanStatus !== "UNBANNED" && (
+                              <button
+                                onClick={() => openConfirmModal(u.id, "unban", "reward", getUserDisplay(u))}
+                                disabled={actionLoading === u.id}
+                                className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30 transition"
+                              >
+                                Reinstate
+                              </button>
+                            )}
+                            {u.claimFrozen && (
+                              <button
+                                onClick={() => handleClaimFreeze(u.id, "unfreeze")}
+                                disabled={actionLoading === u.id}
+                                className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30 transition"
+                              >
+                                Unfreeze Claim
+                              </button>
+                            )}
+                            {!u.claimFrozen && (
+                              <button
+                                onClick={() => setClaimFreezeModal({ open: true, userId: u.id, userDisplay: getUserDisplay(u), weeks: "", reason: "" })}
+                                disabled={actionLoading === u.id}
+                                className="px-2 py-1 bg-blue-500/10 text-blue-300 rounded text-xs hover:bg-blue-500/20 transition"
+                              >
+                                Freeze Claim
+                              </button>
+                            )}
+                            {u.globalBanStatus !== "PERM_BANNED" && (
+                              <button
+                                onClick={() => setGlobalBanModal({ open: true, userId: u.id, userDisplay: getUserDisplay(u), banIps: false, reason: "" })}
+                                disabled={actionLoading === u.id}
+                                className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30 transition"
+                              >
+                                Global Ban
+                              </button>
+                            )}
+                            <button
+                              onClick={() => fetchUserActivity(u.id)}
+                              className="px-2 py-1 bg-pink-500/20 text-pink-400 rounded text-xs hover:bg-pink-500/30 transition"
+                            >
+                              View
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Comment Banned Section */}
         <div className="bg-gray-900 border border-red-500/30 rounded-xl">
           <div className="p-6 border-b border-red-500/20">
@@ -929,32 +1164,51 @@ export default function ModDashboard() {
               <span className="font-medium text-white">{confirmModal.targetType}</span> ability for{" "}
               <span className="font-medium text-white break-all">{confirmModal.userDisplay}</span>?
             </p>
-            {confirmModal.action === "ban" && confirmModal.duration && (
+            {confirmModal.action === "ban" && (confirmModal.duration || confirmModal.weeks) && (
               <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
                 Duration:{" "}
                 <span className="text-white">
-                  {confirmModal.duration === "1_week" ? "1 week" :
-                   confirmModal.duration === "2_week" ? "2 weeks" :
-                   confirmModal.duration === "4_week" ? "4 weeks" : "Permanent"}
+                  {confirmModal.weeks
+                    ? `${confirmModal.weeks} week${confirmModal.weeks === 1 ? "" : "s"}`
+                    : confirmModal.duration === "1_week" ? "1 week"
+                    : confirmModal.duration === "2_week" ? "2 weeks"
+                    : confirmModal.duration === "4_week" ? "4 weeks"
+                    : "Permanent"}
                 </span>
               </p>
             )}
+            {confirmModal.action === "ban" && !confirmModal.duration && !confirmModal.weeks && (
+              <div className="mb-4">
+                <label className="text-sm text-gray-400 block mb-1">Duration (weeks, 0 = permanent)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={banWeeksInput}
+                  onChange={(e) => setBanWeeksInput(e.target.value)}
+                  placeholder="e.g. 3"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            )}
             <div className="flex gap-2 sm:gap-3 justify-end">
               <button
-                onClick={() => setConfirmModal(null)}
+                onClick={() => { setConfirmModal(null); setBanWeeksInput(""); }}
                 className="px-3 sm:px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
-                onClick={() =>
+                onClick={() => {
+                  const weeks = confirmModal.weeks ?? (banWeeksInput !== "" ? parseInt(banWeeksInput) : undefined);
                   handleBanAction(
                     confirmModal.userId,
                     confirmModal.action,
                     confirmModal.targetType,
-                    confirmModal.duration
-                  )
-                }
+                    confirmModal.duration,
+                    weeks
+                  );
+                  setBanWeeksInput("");
+                }}
                 disabled={actionLoading === confirmModal.userId}
                 className={`px-3 sm:px-4 py-2 rounded-lg transition disabled:opacity-50 text-sm sm:text-base ${
                   confirmModal.action === "unban"
@@ -963,6 +1217,110 @@ export default function ModDashboard() {
                 }`}
               >
                 {actionLoading === confirmModal.userId ? "Processing..." : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Ban Modal */}
+      {globalBanModal?.open && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-2">
+          <div className="bg-gray-900 border border-red-500/50 rounded-xl p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 text-red-400">Global Ban User</h3>
+            <p className="text-gray-300 text-sm mb-4">
+              This will <span className="text-red-400 font-bold">permanently ban</span>{" "}
+              <span className="text-white font-medium break-all">{globalBanModal.userDisplay}</span> from the platform.
+              Their wallet will be blocked, sessions killed, rewards held, and claims frozen.
+            </p>
+            <div className="mb-4">
+              <label className="text-sm text-gray-400 block mb-1">Reason</label>
+              <input
+                type="text"
+                value={globalBanModal.reason}
+                onChange={(e) => setGlobalBanModal({ ...globalBanModal, reason: e.target.value })}
+                placeholder="Reason for ban..."
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-red-500 focus:outline-none"
+              />
+            </div>
+            <label className="flex items-center gap-2 mb-4 text-sm text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={globalBanModal.banIps}
+                onChange={(e) => setGlobalBanModal({ ...globalBanModal, banIps: e.target.checked })}
+                className="rounded"
+              />
+              Also ban known IP addresses
+              <span className="text-xs text-gray-500">(may affect shared networks)</span>
+            </label>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setGlobalBanModal(null)}
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleGlobalBan(globalBanModal.userId, globalBanModal.reason, globalBanModal.banIps)}
+                disabled={actionLoading === globalBanModal.userId}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition text-sm disabled:opacity-50"
+              >
+                {actionLoading === globalBanModal.userId ? "Banning..." : "Permanently Ban"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Claim Freeze Modal */}
+      {claimFreezeModal?.open && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-2">
+          <div className="bg-gray-900 border border-blue-500/50 rounded-xl p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 text-blue-400">Freeze Claim Button</h3>
+            <p className="text-gray-300 text-sm mb-4">
+              Freeze the claim button for{" "}
+              <span className="text-white font-medium break-all">{claimFreezeModal.userDisplay}</span>.
+              Leave weeks blank for indefinite freeze.
+            </p>
+            <div className="mb-3">
+              <label className="text-sm text-gray-400 block mb-1">Weeks (leave blank = indefinite)</label>
+              <input
+                type="number"
+                min="0"
+                value={claimFreezeModal.weeks}
+                onChange={(e) => setClaimFreezeModal({ ...claimFreezeModal, weeks: e.target.value })}
+                placeholder="e.g. 3"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="text-sm text-gray-400 block mb-1">Reason (optional)</label>
+              <input
+                type="text"
+                value={claimFreezeModal.reason}
+                onChange={(e) => setClaimFreezeModal({ ...claimFreezeModal, reason: e.target.value })}
+                placeholder="Reason..."
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setClaimFreezeModal(null)}
+                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleClaimFreeze(
+                  claimFreezeModal.userId,
+                  "freeze",
+                  claimFreezeModal.weeks ? parseInt(claimFreezeModal.weeks) : undefined,
+                  claimFreezeModal.reason || undefined
+                )}
+                disabled={actionLoading === claimFreezeModal.userId}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition text-sm disabled:opacity-50"
+              >
+                {actionLoading === claimFreezeModal.userId ? "Freezing..." : "Freeze Claims"}
               </button>
             </div>
           </div>
@@ -1109,9 +1467,10 @@ export default function ModDashboard() {
                           Until: {formatDate(activityModal.data.user.commentBanUntil)}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-2 mt-3">
+                      <div className="flex flex-wrap gap-2 mt-3 items-center">
                         {activityModal.data.user.commentBanStatus !== "ALLOWED" &&
-                         activityModal.data.user.commentBanStatus !== "WARNED" ? (
+                         activityModal.data.user.commentBanStatus !== "WARNED" &&
+                         activityModal.data.user.commentBanStatus !== "UNBANNED" ? (
                           <button
                             onClick={() => openConfirmModal(activityModal.userId, "unban", "comment", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId)}
                             className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30"
@@ -1120,23 +1479,24 @@ export default function ModDashboard() {
                           </button>
                         ) : (
                           <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="52"
+                              placeholder="Wks"
+                              value={cardWeeks.comment}
+                              onChange={(e) => setCardWeeks((p) => ({ ...p, comment: e.target.value }))}
+                              className="w-14 px-1.5 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white text-center"
+                            />
                             <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "comment", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "1_week")}
-                              className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs hover:bg-yellow-500/30"
+                              disabled={!cardWeeks.comment || parseInt(cardWeeks.comment) < 1}
+                              onClick={() => {
+                                const w = parseInt(cardWeeks.comment);
+                                if (w > 0) openConfirmModal(activityModal.userId, "ban", "comment", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, undefined, w);
+                              }}
+                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30 disabled:opacity-40"
                             >
-                              1W
-                            </button>
-                            <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "comment", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "2_week")}
-                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30"
-                            >
-                              2W
-                            </button>
-                            <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "comment", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "4_week")}
-                              className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30"
-                            >
-                              4W
+                              Ban
                             </button>
                             <button
                               onClick={() => openConfirmModal(activityModal.userId, "ban", "comment", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "permanent")}
@@ -1160,9 +1520,10 @@ export default function ModDashboard() {
                           Until: {formatDate(activityModal.data.user.voteBanUntil)}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-2 mt-3">
+                      <div className="flex flex-wrap gap-2 mt-3 items-center">
                         {activityModal.data.user.voteBanStatus !== "ALLOWED" &&
-                         activityModal.data.user.voteBanStatus !== "WARNED" ? (
+                         activityModal.data.user.voteBanStatus !== "WARNED" &&
+                         activityModal.data.user.voteBanStatus !== "UNBANNED" ? (
                           <button
                             onClick={() => openConfirmModal(activityModal.userId, "unban", "vote", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId)}
                             className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30"
@@ -1171,23 +1532,24 @@ export default function ModDashboard() {
                           </button>
                         ) : (
                           <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="52"
+                              placeholder="Wks"
+                              value={cardWeeks.vote}
+                              onChange={(e) => setCardWeeks((p) => ({ ...p, vote: e.target.value }))}
+                              className="w-14 px-1.5 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white text-center"
+                            />
                             <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "vote", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "1_week")}
-                              className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs hover:bg-yellow-500/30"
+                              disabled={!cardWeeks.vote || parseInt(cardWeeks.vote) < 1}
+                              onClick={() => {
+                                const w = parseInt(cardWeeks.vote);
+                                if (w > 0) openConfirmModal(activityModal.userId, "ban", "vote", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, undefined, w);
+                              }}
+                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30 disabled:opacity-40"
                             >
-                              1W
-                            </button>
-                            <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "vote", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "2_week")}
-                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30"
-                            >
-                              2W
-                            </button>
-                            <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "vote", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "4_week")}
-                              className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30"
-                            >
-                              4W
+                              Ban
                             </button>
                             <button
                               onClick={() => openConfirmModal(activityModal.userId, "ban", "vote", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "permanent")}
@@ -1211,9 +1573,10 @@ export default function ModDashboard() {
                           Until: {formatDate(activityModal.data.user.ratingBanUntil)}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-2 mt-3">
+                      <div className="flex flex-wrap gap-2 mt-3 items-center">
                         {activityModal.data.user.ratingBanStatus !== "ALLOWED" &&
-                         activityModal.data.user.ratingBanStatus !== "WARNED" ? (
+                         activityModal.data.user.ratingBanStatus !== "WARNED" &&
+                         activityModal.data.user.ratingBanStatus !== "UNBANNED" ? (
                           <button
                             onClick={() => openConfirmModal(activityModal.userId, "unban", "rating", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId)}
                             className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30"
@@ -1222,23 +1585,24 @@ export default function ModDashboard() {
                           </button>
                         ) : (
                           <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="52"
+                              placeholder="Wks"
+                              value={cardWeeks.rating}
+                              onChange={(e) => setCardWeeks((p) => ({ ...p, rating: e.target.value }))}
+                              className="w-14 px-1.5 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white text-center"
+                            />
                             <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "rating", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "1_week")}
-                              className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs hover:bg-yellow-500/30"
+                              disabled={!cardWeeks.rating || parseInt(cardWeeks.rating) < 1}
+                              onClick={() => {
+                                const w = parseInt(cardWeeks.rating);
+                                if (w > 0) openConfirmModal(activityModal.userId, "ban", "rating", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, undefined, w);
+                              }}
+                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30 disabled:opacity-40"
                             >
-                              1W
-                            </button>
-                            <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "rating", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "2_week")}
-                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30"
-                            >
-                              2W
-                            </button>
-                            <button
-                              onClick={() => openConfirmModal(activityModal.userId, "ban", "rating", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "4_week")}
-                              className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30"
-                            >
-                              4W
+                              Ban
                             </button>
                             <button
                               onClick={() => openConfirmModal(activityModal.userId, "ban", "rating", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "permanent")}
@@ -1269,7 +1633,136 @@ export default function ModDashboard() {
                         </div>
                       )}
                     </div>
+
+                    {/* Reward Status */}
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-white font-medium">Rewards</h5>
+                        {getStatusBadge(activityModal.data.user.rewardBanStatus)}
+                      </div>
+                      {activityModal.data.user.rewardBanUntil && (
+                        <p className="text-yellow-400 text-xs mb-2">
+                          Until: {formatDate(activityModal.data.user.rewardBanUntil)}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-3 items-center">
+                        {activityModal.data.user.rewardBanStatus !== "ALLOWED" &&
+                         activityModal.data.user.rewardBanStatus !== "WARNED" &&
+                         activityModal.data.user.rewardBanStatus !== "UNBANNED" ? (
+                          <button
+                            onClick={() => openConfirmModal(activityModal.userId, "unban", "reward", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId)}
+                            className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30"
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="52"
+                              placeholder="Wks"
+                              value={cardWeeks.reward}
+                              onChange={(e) => setCardWeeks((p) => ({ ...p, reward: e.target.value }))}
+                              className="w-14 px-1.5 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white text-center"
+                            />
+                            <button
+                              disabled={!cardWeeks.reward || parseInt(cardWeeks.reward) < 1}
+                              onClick={() => {
+                                const w = parseInt(cardWeeks.reward);
+                                if (w > 0) openConfirmModal(activityModal.userId, "ban", "reward", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, undefined, w);
+                              }}
+                              className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30 disabled:opacity-40"
+                            >
+                              Ban
+                            </button>
+                            <button
+                              onClick={() => openConfirmModal(activityModal.userId, "ban", "reward", activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId, "permanent")}
+                              className="px-2 py-1 bg-red-700/30 text-red-300 rounded text-xs hover:bg-red-700/40"
+                            >
+                              Perm
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Claim Freeze Status */}
+                    <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-white font-medium">Claim</h5>
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          activityModal.data.user.claimFrozen
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-green-500/20 text-green-400"
+                        }`}>
+                          {activityModal.data.user.claimFrozen ? "FROZEN" : "ACTIVE"}
+                        </span>
+                      </div>
+                      {activityModal.data.user.claimFrozenUntil && (
+                        <p className="text-yellow-400 text-xs mb-2">
+                          Until: {formatDate(activityModal.data.user.claimFrozenUntil)}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-3 items-center">
+                        {activityModal.data.user.claimFrozen ? (
+                          <button
+                            onClick={() => handleClaimFreeze(activityModal.userId, "unfreeze")}
+                            className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30"
+                          >
+                            Unfreeze
+                          </button>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              min="1"
+                              max="52"
+                              placeholder="Wks"
+                              value={cardWeeks.claim}
+                              onChange={(e) => setCardWeeks((p) => ({ ...p, claim: e.target.value }))}
+                              className="w-14 px-1.5 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white text-center"
+                            />
+                            <button
+                              onClick={() => {
+                                const w = cardWeeks.claim ? parseInt(cardWeeks.claim) : undefined;
+                                handleClaimFreeze(activityModal.userId, "freeze", w);
+                              }}
+                              className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30"
+                            >
+                              {cardWeeks.claim ? "Freeze" : "Freeze Indef."}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Global Ban */}
+                  {activityModal.data.user.globalBanStatus !== "PERM_BANNED" && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setGlobalBanModal({
+                          open: true,
+                          userId: activityModal.userId,
+                          userDisplay: activityModal.data!.user.email || activityModal.data!.user.wallet || activityModal.userId,
+                          banIps: false,
+                          reason: "",
+                        })}
+                        className="w-full px-4 py-2 bg-red-900/30 text-red-400 border border-red-800/50 rounded-lg text-sm hover:bg-red-900/50 transition"
+                      >
+                        Global Ban User
+                      </button>
+                    </div>
+                  )}
+                  {activityModal.data.user.globalBanStatus === "PERM_BANNED" && (
+                    <div className="mt-4 px-4 py-2 bg-red-900/20 border border-red-800/30 rounded-lg text-center">
+                      <span className="text-red-400 text-sm font-medium">Globally Banned</span>
+                      {activityModal.data.user.globalBanReason && (
+                        <span className="text-gray-500 text-xs ml-2">— {activityModal.data.user.globalBanReason}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tabs */}

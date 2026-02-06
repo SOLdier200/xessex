@@ -42,6 +42,14 @@ export async function GET(req: NextRequest) {
       ratingBanStatus: true,
       ratingBanUntil: true,
       ratingBanReason: true,
+      rewardBanStatus: true,
+      rewardBanUntil: true,
+      rewardBanReason: true,
+      claimFrozen: true,
+      claimFrozenUntil: true,
+      claimFrozenReason: true,
+      globalBanStatus: true,
+      globalBanReason: true,
       createdAt: true,
     },
   });
@@ -142,6 +150,17 @@ export async function GET(req: NextRequest) {
       ratingBanStatus: user.ratingBanStatus,
       ratingBanUntil: user.ratingBanUntil?.toISOString() || null,
       ratingBanReason: user.ratingBanReason,
+      // Reward ban info
+      rewardBanStatus: user.rewardBanStatus,
+      rewardBanUntil: user.rewardBanUntil?.toISOString() || null,
+      rewardBanReason: user.rewardBanReason,
+      // Claim freeze info
+      claimFrozen: user.claimFrozen,
+      claimFrozenUntil: user.claimFrozenUntil?.toISOString() || null,
+      claimFrozenReason: user.claimFrozenReason,
+      // Global ban info
+      globalBanStatus: user.globalBanStatus,
+      globalBanReason: user.globalBanReason,
       createdAt: user.createdAt.toISOString(),
     },
     summary: {

@@ -74,6 +74,15 @@ export async function POST(req: Request) {
   const ctx = await getAccessContext();
   if (!ctx.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  // Check claim freeze
+  if (ctx.user.claimFrozen) {
+    if (ctx.user.claimFrozenUntil && ctx.user.claimFrozenUntil < new Date()) {
+      db.user.update({ where: { id: ctx.user.id }, data: { claimFrozen: false, claimFrozenUntil: null } }).catch(() => {});
+    } else {
+      return NextResponse.json({ error: "claim_frozen" }, { status: 403 });
+    }
+  }
+
   const rpc = process.env.SOLANA_RPC_URL || process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
   const connection = new Connection(rpc, "confirmed");
 

@@ -11,7 +11,10 @@ type NotificationType =
   | "COMMENT_SPAM_WARNING"
   | "DISLIKE_SPAM_DETECTED"
   | "USER_BANNED"
-  | "USER_UNBANNED";
+  | "USER_UNBANNED"
+  | "REWARD_HOLD_AUTO"
+  | "GLOBAL_BAN"
+  | "CLAIM_FREEZE";
 
 interface NotifyModsOptions {
   type: NotificationType;
@@ -60,6 +63,24 @@ function getNotificationContent(opts: NotifyModsOptions): { subject: string; bod
       return {
         subject: "User Unban Action Taken",
         body: `A user has been unbanned.\n\nUser: ${targetUserDisplay}\n${details || ""}\n\nReview in Mod Dashboard: ${MOD_DASHBOARD_URL}`,
+      };
+
+    case "REWARD_HOLD_AUTO":
+      return {
+        subject: "Auto Reward Hold — Dislike Spam Detected",
+        body: `A user's XESS payouts have been automatically held for 3 weeks due to 100% dislike voting.\n\nUser: ${targetUserDisplay}\n${details || ""}\n\nPlease review and decide whether to reinstate, extend, or escalate.\n\nReview in Mod Dashboard: ${MOD_DASHBOARD_URL}`,
+      };
+
+    case "GLOBAL_BAN":
+      return {
+        subject: "Global Ban Issued",
+        body: `A user has been permanently banned from the platform.\n\nUser: ${targetUserDisplay}\n${details || ""}\n\nReview in Mod Dashboard: ${MOD_DASHBOARD_URL}`,
+      };
+
+    case "CLAIM_FREEZE":
+      return {
+        subject: "Claim Freeze Applied",
+        body: `A user's claim button has been frozen.\n\nUser: ${targetUserDisplay}\n${details || ""}\n\nReview in Mod Dashboard: ${MOD_DASHBOARD_URL}`,
       };
 
     default:

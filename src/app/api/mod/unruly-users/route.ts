@@ -1,9 +1,10 @@
 /**
  * GET /api/mod/unruly-users
- * Returns three categories of unruly users:
+ * Returns four categories of unruly users:
  * 1. Comment spammers: Users with 3+ removed comments (not yet banned)
  * 2. Dislike spammers: Users who dislike 75%+ of comments they vote on
  * 3. Star abusers: Users who gave 10+ videos a 1-star rating
+ * 4. Reward-held: Users with reward bans, claim freezes, or global bans
  */
 
 import { NextResponse } from "next/server";
@@ -145,6 +146,47 @@ export async function GET() {
     return b.oneStarCount - a.oneStarCount;
   });
 
+  // ============ Reward-Held Users ============
+  const rewardHeldUsers = await db.user.findMany({
+    where: {
+      OR: [
+        { rewardBanStatus: { in: ["TEMP_BANNED", "PERM_BANNED"] } },
+        { claimFrozen: true },
+        { globalBanStatus: { in: ["TEMP_BANNED", "PERM_BANNED"] } },
+      ],
+    },
+    select: {
+      id: true,
+      email: true,
+      walletAddress: true,
+      rewardBanStatus: true,
+      rewardBanUntil: true,
+      rewardBanReason: true,
+      claimFrozen: true,
+      claimFrozenUntil: true,
+      claimFrozenReason: true,
+      globalBanStatus: true,
+      globalBanReason: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const rewardHeld = rewardHeldUsers.map((u) => ({
+    id: u.id,
+    email: u.email,
+    wallet: u.walletAddress,
+    rewardBanStatus: u.rewardBanStatus,
+    rewardBanUntil: u.rewardBanUntil?.toISOString() || null,
+    rewardBanReason: u.rewardBanReason,
+    claimFrozen: u.claimFrozen,
+    claimFrozenUntil: u.claimFrozenUntil?.toISOString() || null,
+    claimFrozenReason: u.claimFrozenReason,
+    globalBanStatus: u.globalBanStatus,
+    globalBanReason: u.globalBanReason,
+    createdAt: u.createdAt.toISOString(),
+  }));
+
   return NextResponse.json({
     ok: true,
     commentSpammers: commentSpammers.map((u) => ({
@@ -164,5 +206,6 @@ export async function GET() {
     })),
     dislikeSpammers,
     starAbusers,
+    rewardHeld,
   });
 }
