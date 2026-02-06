@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (!access.canVoteComments) {
+    // Check if user is vote banned vs just not having permission
+    if (access.isVoteBanned) {
+      return NextResponse.json({ ok: false, error: "VOTE_BANNED" }, { status: 403 });
+    }
     return NextResponse.json({ ok: false, error: "PAID_ONLY" }, { status: 403 });
   }
 

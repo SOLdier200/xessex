@@ -106,15 +106,17 @@ function formatViews(views: number | null): string {
   return views.toString();
 }
 
-const CATEGORY_INFO: Record<string, { name: string; icon: string }> = {
-  "blonde": { name: "Blonde", icon: "" },
-  "brunette": { name: "Brunette", icon: "" },
-  "blowjob": { name: "Blowjob", icon: "" },
-  "threesome": { name: "Threesome", icon: "" },
+const R2_BASE = "https://pub-77b523433fb04971ba656a572f298a11.r2.dev";
+
+const CATEGORY_INFO: Record<string, { name: string; icon: string; image?: string }> = {
+  "blonde": { name: "Blonde", icon: "", image: `${R2_BASE}/blonde.jpg` },
+  "brunette": { name: "Brunette", icon: "", image: `${R2_BASE}/brunette.jpg` },
+  "blowjob": { name: "Blowjob", icon: "", image: `${R2_BASE}/blowjob.jpg` },
+  "threesome": { name: "Threesome", icon: "", image: `${R2_BASE}/threesome2.png` },
   "for-women": { name: "For Women", icon: "♀️" },
-  "anal": { name: "Anal", icon: "" },
-  "asian": { name: "Asian", icon: "" },
-  "2d": { name: "2D Animated", icon: "" },
+  "anal": { name: "Anal", icon: "", image: `${R2_BASE}/anal23.png` },
+  "asian": { name: "Asian", icon: "", image: `${R2_BASE}/asian100.webp` },
+  "2d": { name: "2D Animated", icon: "", image: `${R2_BASE}/2dpic.webp` },
   "highest-rated": { name: "Highest Rated", icon: "⭐" },
 };
 
@@ -213,16 +215,29 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           ← Back to Collections
         </Link>
 
-        <section className="neon-border rounded-2xl p-4 md:p-6 bg-black/30 mb-4 md:mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl md:text-4xl">{categoryInfo.icon}</span>
-            <div>
-              <h1 className="text-xl md:text-2xl font-semibold neon-text">{categoryInfo.name}</h1>
-              <p className="mt-1 text-sm text-white/70">
+        <section className="neon-border rounded-2xl p-3 md:p-4 bg-black/30 mb-4 md:mb-6 inline-block">
+          {categoryInfo.image ? (
+            <div className="flex flex-col items-center">
+              <img
+                src={categoryInfo.image}
+                alt={categoryInfo.name}
+                className="w-32 md:w-40 h-40 md:h-52 object-cover rounded-lg"
+              />
+              <p className="mt-2 text-sm text-white/70">
                 {videos.length} videos
               </p>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-3xl md:text-4xl">{categoryInfo.icon}</span>
+              <div>
+                <h1 className="text-xl md:text-2xl font-semibold neon-text">{categoryInfo.name}</h1>
+                <p className="mt-1 text-sm text-white/70">
+                  {videos.length} videos
+                </p>
+              </div>
+            </div>
+          )}
         </section>
 
         {videos.length === 0 ? (

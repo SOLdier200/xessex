@@ -21,6 +21,26 @@ const ADMIN_WALLETS = new Set(
     .filter(Boolean)
 );
 
+/**
+ * Check if a ban is currently active
+ * Returns true if user is banned (temp ban not expired, or perm banned)
+ */
+function isBanActive(
+  status: string | null | undefined,
+  until: Date | null | undefined
+): boolean {
+  if (!status) return false;
+  if (status === "ALLOWED" || status === "UNBANNED") return false;
+  if (status === "PERM_BANNED") return true;
+  if (status === "TEMP_BANNED") {
+    // Check if temp ban has expired
+    if (!until) return false; // No expiry = not banned
+    return until.getTime() > Date.now();
+  }
+  // WARNED status doesn't block actions
+  return false;
+}
+
 export async function getAccessContext() {
   const user = await getCurrentUser();
 
@@ -36,6 +56,11 @@ export async function getAccessContext() {
   const creditBalanceMicro = user?.specialCreditAccount?.balanceMicro ?? 0n;
   const creditBalance = Number(creditBalanceMicro / CREDIT_MICRO);
 
+  // Check ban statuses (admins/mods bypass bans)
+  const isCommentBanned = !isAdminOrMod && isBanActive(user?.commentBanStatus, user?.commentBanUntil);
+  const isVoteBanned = !isAdminOrMod && isBanActive(user?.voteBanStatus, user?.voteBanUntil);
+  const isRatingBanned = !isAdminOrMod && isBanActive(user?.ratingBanStatus, user?.ratingBanUntil);
+
   return {
     user,
     isAuthed: !!user,
@@ -49,11 +74,16 @@ export async function getAccessContext() {
     creditBalance,
     creditBalanceMicro,
 
-    // Permissions - All authenticated users have equal access
-    // Video access is determined by unlockCost (checked per-video)
-    canComment: isAdminOrMod || !!user,
-    canRateStars: isAdminOrMod || !!user,
-    canVoteComments: isAdminOrMod || !!user,
+    // Permissions - respects ban status
+    // Admins/mods always have access, regular users checked against bans
+    canComment: isAdminOrMod || (!!user && !isCommentBanned),
+    canRateStars: isAdminOrMod || (!!user && !isRatingBanned),
+    canVoteComments: isAdminOrMod || (!!user && !isVoteBanned),
+
+    // Ban info for UI feedback
+    isCommentBanned,
+    isVoteBanned,
+    isRatingBanned,
   };
 }
 

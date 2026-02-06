@@ -16,6 +16,7 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [canRate, setCanRate] = useState(false);
+  const [isRatingBanned, setIsRatingBanned] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +64,10 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
         try {
           const res = await fetch("/api/auth/status", { credentials: "include" });
           const data = await res.json().catch(() => null);
-          if (!cancelled && data?.ok) setCanRate(!!data.canRateStars);
+          if (!cancelled && data?.ok) {
+            setCanRate(!!data.canRateStars);
+            setIsRatingBanned(!!data.isRatingBanned);
+          }
         } catch (e) {
           console.warn("[StarRating] auth status check failed:", e);
         }
@@ -79,7 +83,11 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
     if (readOnly || submitting) return;
 
     if (!canRate) {
-      toast.error("Diamond membership required to rate videos");
+      if (isRatingBanned) {
+        toast.error("You can no longer rate videos for spamming the site. Email support@xessex.me if you wish to appeal the ban.");
+      } else {
+        toast.error("Diamond membership required to rate videos");
+      }
       return;
     }
 
@@ -121,7 +129,13 @@ export default function StarRating({ videoId, readOnly = false }: StarRatingProp
       } else if (res.status === 401) {
         toast.error("Please log in to rate videos");
       } else if (res.status === 403) {
-        toast.error("Diamond membership required to rate videos");
+        if (data?.error === "RATING_BANNED") {
+          toast.error("You can no longer rate videos for spamming the site. Email support@xessex.me if you wish to appeal the ban.");
+          setIsRatingBanned(true);
+          setCanRate(false);
+        } else {
+          toast.error("Diamond membership required to rate videos");
+        }
       } else {
         toast.error(data?.error || "Failed to submit rating");
       }

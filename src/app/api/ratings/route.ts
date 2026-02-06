@@ -36,31 +36,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (!access.canRateStars) {
-    return NextResponse.json({ ok: false, error: "DIAMOND_ONLY" }, { status: 403 });
-  }
-
-  // Check if user is banned from rating
-  const userRecord = await db.user.findUnique({
-    where: { id: access.user.id },
-    select: { ratingBanStatus: true, ratingBanUntil: true },
-  });
-
-  if (userRecord?.ratingBanStatus === "PERM_BANNED") {
-    return NextResponse.json(
-      { ok: false, error: "RATING_BANNED", reason: "You are permanently banned from rating videos." },
-      { status: 403 }
-    );
-  }
-
-  if (userRecord?.ratingBanStatus === "TEMP_BANNED") {
-    const banUntil = userRecord.ratingBanUntil;
-    if (banUntil && banUntil > new Date()) {
+    // Check if user is rating banned vs just not having permission
+    if (access.isRatingBanned) {
       return NextResponse.json(
-        { ok: false, error: "RATING_SUSPENDED", until: banUntil.toISOString() },
+        { ok: false, error: "RATING_BANNED" },
         { status: 403 }
       );
     }
-    // Suspension has expired, allow rating (status will be cleaned up later)
+    return NextResponse.json({ ok: false, error: "DIAMOND_ONLY" }, { status: 403 });
   }
 
   const body = (await req.json().catch(() => null)) as

@@ -496,11 +496,11 @@ export default function WhitepaperPage() {
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 border border-blue-400/30">
                   <div className="font-semibold text-blue-400 mb-2">Phase 1 — Presale & Mainnet Launch</div>
-                  <p className="text-sm">Private presale (30 days pre-launch), Public sale, Liquidity pools locked, Rewards live, First Xessex-owned content</p>
+                  <p className="text-sm">Private presale (30 days pre-launch), Public sale, Liquidity pools locked, Rewards live, First Xessex-owned content, Anti-abuse automation</p>
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 border border-purple-400/30">
                   <div className="font-semibold text-purple-400 mb-2">Phase 2 — Growth</div>
-                  <p className="text-sm">Weekly content expansion, Partner video onboarding, Credit tuning, UI/UX polish, Anti-abuse automation</p>
+                  <p className="text-sm">Weekly content expansion, Partner video onboarding, Credit tuning, UI/UX polish</p>
                 </div>
                 <div className="bg-black/40 rounded-xl p-4 border border-pink-400/30">
                   <div className="font-semibold text-pink-400 mb-2">Phase 3 — Scale</div>

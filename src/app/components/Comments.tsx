@@ -295,6 +295,8 @@ export default function Comments({
         toast.error("You've reached the maximum vote changes for this comment", { id: voteToast });
       } else if (data.error === "PAID_ONLY") {
         toast.error("Only paid members can vote on comments", { id: voteToast });
+      } else if (data.error === "VOTE_BANNED") {
+        toast.error("You can no longer vote for spamming the site. Email support@xessex.me if you wish to appeal the ban.", { id: voteToast });
       } else if (data.error === "CANNOT_VOTE_OWN_COMMENT") {
         toast.error("You can't rate your own comment", { id: voteToast });
       } else {

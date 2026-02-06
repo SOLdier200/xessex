@@ -14,6 +14,9 @@ export async function GET() {
       canComment: false,
       canVoteComments: false,
       canRateStars: false,
+      isRatingBanned: false,
+      isVoteBanned: false,
+      isCommentBanned: false,
       creditBalance: 0,
     }, { headers: noCache });
   }
@@ -25,6 +28,9 @@ export async function GET() {
     canComment: access.canComment,
     canVoteComments: access.canVoteComments,
     canRateStars: access.canRateStars,
+    isRatingBanned: access.isRatingBanned,
+    isVoteBanned: access.isVoteBanned,
+    isCommentBanned: access.isCommentBanned,
     creditBalance: access.creditBalance,
     wallet: truncWallet(access.user.walletAddress, null),
   }, { headers: noCache });

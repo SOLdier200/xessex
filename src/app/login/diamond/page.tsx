@@ -76,8 +76,8 @@ export default function DiamondLoginPage() {
               Connect your wallet to sign in.
             </p>
 
-            {/* Mobile Deep Links */}
-            <div className="mt-4 pt-4 border-t border-white/10">
+            {/* Mobile Deep Links - hidden on desktop (lg and up) */}
+            <div className="mt-4 pt-4 border-t border-white/10 lg:hidden">
               <p className="text-sm text-white/60 mb-4 text-center">
                 On mobile? Open this page in your wallet app:
               </p>
@@ -108,7 +108,7 @@ export default function DiamondLoginPage() {
                 </a>
               </div>
               <p className="mt-4 text-xs text-white/40 text-center leading-relaxed">
-                Note: You may need to go into the built-in browser of your wallet and load <span className="text-white/60 font-medium">xessex.me</span> to sign in with your wallet.
+                If you&apos;re not using Chrome, you will need to go into the built-in browser of your wallet and navigate to <span className="text-white/60 font-medium">https://xessex.me</span> so you can sign in to Xessex.
               </p>
             </div>
 

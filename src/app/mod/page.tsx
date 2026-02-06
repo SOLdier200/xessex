@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import ReportedCommentsPanel from "@/app/components/mod/ReportedCommentsPanel";
 
 interface UserInfo {
@@ -326,20 +327,23 @@ export default function ModDashboard() {
       const data = await res.json();
 
       if (data.ok) {
-        setActionSuccess(
-          action === "ban"
-            ? `Successfully suspended ${targetType} for ${data.duration || "unknown duration"}`
-            : `Successfully restored ${targetType} ability`
-        );
+        const successMsg = action === "ban"
+          ? `Successfully suspended ${targetType} for ${data.duration || "unknown duration"}`
+          : `Successfully restored ${targetType} ability`;
+        setActionSuccess(successMsg);
+        toast.success(successMsg);
         await Promise.all([fetchUnrulyUsers(), fetchBannedUsers()]);
         if (activityModal?.data) {
           fetchUserActivity(activityModal.userId);
         }
       } else {
-        setActionError(data.error || "Action failed");
+        const errorMsg = data.error || "Action failed";
+        setActionError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch {
       setActionError("Failed to perform action");
+      toast.error("Failed to perform action");
     } finally {
       setActionLoading(null);
       setConfirmModal(null);
@@ -358,14 +362,19 @@ export default function ModDashboard() {
       });
       const data = await res.json();
       if (data.ok) {
-        setActionSuccess(action === "freeze" ? "Claim button frozen" : "Claim button unfrozen");
+        const successMsg = action === "freeze" ? "Claim button frozen" : "Claim button unfrozen";
+        setActionSuccess(successMsg);
+        toast.success(successMsg);
         if (activityModal?.data) fetchUserActivity(activityModal.userId);
         await fetchUnrulyUsers();
       } else {
-        setActionError(data.error || "Action failed");
+        const errorMsg = data.error || "Action failed";
+        setActionError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch {
       setActionError("Failed to perform action");
+      toast.error("Failed to perform action");
     } finally {
       setActionLoading(null);
       setClaimFreezeModal(null);
@@ -384,14 +393,19 @@ export default function ModDashboard() {
       });
       const data = await res.json();
       if (data.ok) {
-        setActionSuccess(`User globally banned${data.ipsBanned > 0 ? ` (${data.ipsBanned} IPs banned)` : ""}`);
+        const successMsg = `User globally banned${data.ipsBanned > 0 ? ` (${data.ipsBanned} IPs banned)` : ""}`;
+        setActionSuccess(successMsg);
+        toast.success(successMsg);
         if (activityModal?.data) fetchUserActivity(activityModal.userId);
         await Promise.all([fetchUnrulyUsers(), fetchBannedUsers()]);
       } else {
-        setActionError(data.error || "Action failed");
+        const errorMsg = data.error || "Action failed";
+        setActionError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch {
       setActionError("Failed to perform action");
+      toast.error("Failed to perform action");
     } finally {
       setActionLoading(null);
       setGlobalBanModal(null);
@@ -628,523 +642,220 @@ export default function ModDashboard() {
           )}
         </div>
 
-        <ReportedCommentsPanel />
-
-        {/* Comment Spammers Section */}
-        <div className="bg-gray-900 border border-orange-500/30 rounded-xl mb-8">
-          <div className="p-6 border-b border-orange-500/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-orange-400">Comment Spammers</h2>
-                  <p className="text-sm text-gray-400">Users with 3+ removed comments (not yet banned)</p>
-                </div>
-              </div>
-              <button
-                onClick={fetchUnrulyUsers}
-                disabled={unrulyLoading}
-                className="px-3 py-1 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 transition text-sm"
-              >
-                {unrulyLoading ? "Loading..." : "Refresh"}
-              </button>
-            </div>
-          </div>
-          <div className="p-6">
-            {unrulyLoading ? (
-              <div className="text-center text-gray-400 py-8">Loading...</div>
-            ) : commentSpammers.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">No comment spammers found</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-sm">
-                      <th className="pb-3 font-medium">User</th>
-                      <th className="pb-3 font-medium">Removed Comments</th>
-                      <th className="pb-3 font-medium">Status</th>
-                      <th className="pb-3 font-medium">Last Warning</th>
-                      <th className="pb-3 font-medium">Joined</th>
-                      <th className="pb-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {commentSpammers.map((u) => (
-                      <tr key={u.id} className="hover:bg-gray-800/50">
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className="text-left hover:text-pink-400 transition"
-                          >
-                            <div className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</div>
-                            <div className="text-xs text-gray-500 hover:text-pink-300">{u.id.slice(0, 12)}...</div>
-                          </button>
-                        </td>
-                        <td className="py-3">
-                          <span className={`font-bold ${u.removedCount >= 5 ? "text-red-400" : "text-orange-400"}`}>
-                            {u.removedCount}
-                          </span>
-                        </td>
-                        <td className="py-3">{getStatusBadge(u.status)}</td>
-                        <td className="py-3">
-                          {u.lastWarning ? (
-                            <div className="text-sm">
-                              <div className="text-gray-300">{u.lastWarning.type.replace(/_/g, " ")}</div>
-                              <div className="text-gray-500 text-xs">{formatDate(u.lastWarning.createdAt)}</div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">None</span>
-                          )}
-                        </td>
-                        <td className="py-3 text-gray-400 text-sm">{formatDate(u.createdAt)}</td>
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded hover:bg-pink-500/30 transition text-sm"
-                          >
-                            View Activity
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Dislike Spammers Section */}
-        <div className="bg-gray-900 border border-purple-500/30 rounded-xl mb-8">
-          <div className="p-6 border-b border-purple-500/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-purple-400">Dislike Spammers</h2>
-                  <p className="text-sm text-gray-400">Users who dislike 75%+ of comments they vote on (min 10 votes)</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="p-6">
-            {unrulyLoading ? (
-              <div className="text-center text-gray-400 py-8">Loading...</div>
-            ) : dislikeSpammers.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">No dislike spammers found</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-sm">
-                      <th className="pb-3 font-medium">User</th>
-                      <th className="pb-3 font-medium">Dislike Ratio</th>
-                      <th className="pb-3 font-medium">Total Votes</th>
-                      <th className="pb-3 font-medium">Dislikes</th>
-                      <th className="pb-3 font-medium">Status</th>
-                      <th className="pb-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {dislikeSpammers.map((u) => (
-                      <tr key={u.id} className="hover:bg-gray-800/50">
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className="text-left hover:text-pink-400 transition"
-                          >
-                            <div className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</div>
-                            <div className="text-xs text-gray-500 hover:text-pink-300">{u.id.slice(0, 12)}...</div>
-                          </button>
-                        </td>
-                        <td className="py-3">
-                          <span className={`font-bold ${u.dislikeRatio >= 90 ? "text-red-400" : "text-purple-400"}`}>
-                            {u.dislikeRatio}%
-                          </span>
-                        </td>
-                        <td className="py-3 text-gray-300">{u.totalVotes}</td>
-                        <td className="py-3 text-red-400">{u.dislikes}</td>
-                        <td className="py-3">{getStatusBadge(u.status)}</td>
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded hover:bg-pink-500/30 transition text-sm"
-                          >
-                            View Activity
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Star Abusers Section */}
-        <div className="bg-gray-900 border border-yellow-600/30 rounded-xl mb-8">
-          <div className="p-6 border-b border-yellow-600/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-yellow-600/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-yellow-500">Star Abusers</h2>
-                  <p className="text-sm text-gray-400">Users who gave 10+ videos a 1-star rating</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="p-6">
-            {unrulyLoading ? (
-              <div className="text-center text-gray-400 py-8">Loading...</div>
-            ) : starAbusers.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">No star abusers found</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-sm">
-                      <th className="pb-3 font-medium">User</th>
-                      <th className="pb-3 font-medium">1-Star Ratings</th>
-                      <th className="pb-3 font-medium">Status</th>
-                      <th className="pb-3 font-medium">Warning</th>
-                      <th className="pb-3 font-medium">Joined</th>
-                      <th className="pb-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {starAbusers.map((u) => (
-                      <tr key={u.id} className={`hover:bg-gray-800/50 ${u.autoBlocked ? "bg-red-500/5" : ""}`}>
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className="text-left hover:text-pink-400 transition"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</span>
-                              {u.autoBlocked && (
-                                <span className="px-1.5 py-0.5 bg-red-500/30 text-red-400 rounded text-xs font-bold animate-pulse">
-                                  AUTO-BLOCKED
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500 hover:text-pink-300">{u.id.slice(0, 12)}...</div>
-                          </button>
-                        </td>
-                        <td className="py-3">
-                          <span className={`font-bold ${u.oneStarCount >= 20 ? "text-red-400" : "text-yellow-500"}`}>
-                            {u.oneStarCount}
-                          </span>
-                        </td>
-                        <td className="py-3">{getStatusBadge(u.status)}</td>
-                        <td className="py-3">
-                          {u.lastWarning ? (
-                            <div className="text-sm">
-                              {u.lastWarning.autoBlocked ? (
-                                <div className="text-red-400 font-medium">Spam Detected</div>
-                              ) : (
-                                <div className={u.lastWarning.acknowledged ? "text-green-400" : "text-yellow-400"}>
-                                  {u.lastWarning.acknowledged ? "Acknowledged" : "Pending"}
-                                </div>
-                              )}
-                              <div className="text-gray-500 text-xs">{formatDate(u.lastWarning.createdAt)}</div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">No warning</span>
-                          )}
-                        </td>
-                        <td className="py-3 text-gray-400 text-sm">{formatDate(u.createdAt)}</td>
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className={`px-3 py-1 rounded transition text-sm ${
-                              u.autoBlocked
-                                ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                                : "bg-pink-500/20 text-pink-400 hover:bg-pink-500/30"
-                            }`}
-                          >
-                            {u.autoBlocked ? "Review & Restore" : "View Activity"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Reward-Held Users Section */}
-        <div className="bg-gray-900 border border-cyan-500/30 rounded-xl mb-8">
-          <div className="p-6 border-b border-cyan-500/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-cyan-400">Reward-Held / Frozen / Banned</h2>
-                  <p className="text-sm text-gray-400">Users with reward holds, claim freezes, or global bans</p>
-                </div>
-              </div>
-              <button
-                onClick={fetchUnrulyUsers}
-                disabled={unrulyLoading}
-                className="px-3 py-1 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 transition text-sm"
-              >
-                {unrulyLoading ? "Loading..." : "Refresh"}
-              </button>
-            </div>
-          </div>
-          <div className="p-6">
-            {unrulyLoading ? (
-              <div className="text-center text-gray-400 py-8">Loading...</div>
-            ) : rewardHeld.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">No reward-held users found</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-sm">
-                      <th className="pb-3 font-medium">User</th>
-                      <th className="pb-3 font-medium">Reward Status</th>
-                      <th className="pb-3 font-medium">Claim</th>
-                      <th className="pb-3 font-medium">Global</th>
-                      <th className="pb-3 font-medium">Reason</th>
-                      <th className="pb-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {rewardHeld.map((u) => (
-                      <tr key={u.id} className="hover:bg-gray-800/50">
-                        <td className="py-3">
-                          <button
-                            onClick={() => fetchUserActivity(u.id)}
-                            className="text-left hover:text-pink-400 transition"
-                          >
-                            <div className="font-medium text-white hover:text-pink-400">{getUserDisplay(u)}</div>
-                            <div className="text-xs text-gray-500">{u.id.slice(0, 12)}...</div>
-                          </button>
-                        </td>
-                        <td className="py-3">
-                          {getStatusBadge(u.rewardBanStatus)}
-                          {u.rewardBanUntil && (
-                            <div className="text-xs text-gray-500 mt-1">Until {formatDate(u.rewardBanUntil)}</div>
-                          )}
-                        </td>
-                        <td className="py-3">
-                          {u.claimFrozen ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">FROZEN</span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400">OK</span>
-                          )}
-                          {u.claimFrozenUntil && (
-                            <div className="text-xs text-gray-500 mt-1">Until {formatDate(u.claimFrozenUntil)}</div>
-                          )}
-                        </td>
-                        <td className="py-3">{getStatusBadge(u.globalBanStatus)}</td>
-                        <td className="py-3 text-sm text-gray-400 max-w-[200px] truncate">
-                          {u.rewardBanReason || u.claimFrozenReason || u.globalBanReason || "—"}
-                        </td>
-                        <td className="py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {u.rewardBanStatus !== "ALLOWED" && u.rewardBanStatus !== "UNBANNED" && (
-                              <button
-                                onClick={() => openConfirmModal(u.id, "unban", "reward", getUserDisplay(u))}
-                                disabled={actionLoading === u.id}
-                                className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30 transition"
-                              >
-                                Reinstate
-                              </button>
-                            )}
-                            {u.claimFrozen && (
-                              <button
-                                onClick={() => handleClaimFreeze(u.id, "unfreeze")}
-                                disabled={actionLoading === u.id}
-                                className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30 transition"
-                              >
-                                Unfreeze Claim
-                              </button>
-                            )}
-                            {!u.claimFrozen && (
-                              <button
-                                onClick={() => setClaimFreezeModal({ open: true, userId: u.id, userDisplay: getUserDisplay(u), weeks: "", reason: "" })}
-                                disabled={actionLoading === u.id}
-                                className="px-2 py-1 bg-blue-500/10 text-blue-300 rounded text-xs hover:bg-blue-500/20 transition"
-                              >
-                                Freeze Claim
-                              </button>
-                            )}
-                            {u.globalBanStatus !== "PERM_BANNED" && (
-                              <button
-                                onClick={() => setGlobalBanModal({ open: true, userId: u.id, userDisplay: getUserDisplay(u), banIps: false, reason: "" })}
-                                disabled={actionLoading === u.id}
-                                className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30 transition"
-                              >
-                                Global Ban
-                              </button>
-                            )}
-                            <button
-                              onClick={() => fetchUserActivity(u.id)}
-                              className="px-2 py-1 bg-pink-500/20 text-pink-400 rounded text-xs hover:bg-pink-500/30 transition"
-                            >
-                              View
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Comment Banned Section */}
-        <div className="bg-gray-900 border border-red-500/30 rounded-xl">
+        {/* Unruly Users Section - Consolidated View */}
+        <div className="bg-gray-900 border border-red-500/30 rounded-xl mb-8">
           <div className="p-6 border-b border-red-500/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
                   <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-red-400">Comment Banned</h2>
-                  <p className="text-sm text-gray-400">Users with comment restrictions (temp, perm, or unbanned)</p>
+                  <h2 className="text-xl font-bold text-red-400">Unruly Users</h2>
+                  <p className="text-sm text-gray-400">All users with offenses - click any row for details and actions</p>
                 </div>
               </div>
               <button
-                onClick={fetchBannedUsers}
-                disabled={bannedLoading}
+                onClick={() => { fetchUnrulyUsers(); fetchBannedUsers(); }}
+                disabled={unrulyLoading || bannedLoading}
                 className="px-3 py-1 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 transition text-sm"
               >
-                {bannedLoading ? "Loading..." : "Refresh"}
+                {unrulyLoading || bannedLoading ? "Loading..." : "Refresh"}
               </button>
             </div>
           </div>
           <div className="p-6">
-            {bannedLoading ? (
-              <div className="text-center text-gray-400 py-8">Loading banned users...</div>
-            ) : bannedUsers.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">No banned users found</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-gray-400 text-sm">
-                      <th className="pb-3 font-medium">User</th>
-                      <th className="pb-3 font-medium">Status</th>
-                      <th className="pb-3 font-medium">Removed Comments</th>
-                      <th className="pb-3 font-medium">Ban Info</th>
-                      <th className="pb-3 font-medium">Reason</th>
-                      <th className="pb-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {bannedUsers.map((u) => {
-                      const isUnbanned = u.status === "UNBANNED";
-                      return (
-                        <tr
-                          key={u.id}
-                          className={`${isUnbanned ? "opacity-50 bg-gray-800/30" : "hover:bg-gray-800/50"}`}
-                        >
-                          <td className="py-3">
-                            <button
-                              onClick={() => fetchUserActivity(u.id)}
-                              className="text-left hover:text-pink-400 transition"
-                            >
-                              <div className={`font-medium ${isUnbanned ? "text-gray-400" : "text-white"} hover:text-pink-400`}>
-                                {getUserDisplay(u)}
-                              </div>
-                              <div className="text-xs text-gray-500 hover:text-pink-300">{u.id.slice(0, 12)}...</div>
-                            </button>
-                          </td>
-                          <td className="py-3">{getStatusBadge(u.status)}</td>
-                          <td className="py-3">
-                            <span className="font-bold text-red-400">{u.removedCount}</span>
-                          </td>
-                          <td className="py-3">
-                            {u.latestBan ? (
-                              <div className="text-sm">
-                                <div className="text-gray-300">{u.latestBan.type.replace(/_/g, " ")}</div>
-                                <div className="text-gray-500 text-xs">
-                                  Banned: {formatDate(u.latestBan.bannedAt)}
+            {unrulyLoading || bannedLoading ? (
+              <div className="text-center text-gray-400 py-8">Loading...</div>
+            ) : (() => {
+              // Consolidate all unruly users into a single list
+              const userMap = new Map<string, {
+                id: string;
+                email: string | null;
+                wallet: string | null;
+                createdAt: string;
+                offenses: {
+                  commentSpam?: { removedCount: number; status: string };
+                  dislikeSpam?: { ratio: number; total: number; dislikes: number; status: string };
+                  starAbuse?: { count: number; autoBlocked: boolean; status: string };
+                  rewardHeld?: { status: string; claimFrozen: boolean; globalBan: string };
+                  commentBan?: { status: string; removedCount: number; banUntil: string | null };
+                };
+              }>();
+
+              // Add comment spammers
+              commentSpammers.forEach((u) => {
+                const existing = userMap.get(u.id) || { id: u.id, email: u.email, wallet: u.wallet, createdAt: u.createdAt, offenses: {} };
+                existing.offenses.commentSpam = { removedCount: u.removedCount, status: u.status };
+                userMap.set(u.id, existing);
+              });
+
+              // Add dislike spammers
+              dislikeSpammers.forEach((u) => {
+                const existing = userMap.get(u.id) || { id: u.id, email: u.email, wallet: u.wallet, createdAt: u.createdAt, offenses: {} };
+                existing.offenses.dislikeSpam = { ratio: u.dislikeRatio, total: u.totalVotes, dislikes: u.dislikes, status: u.status };
+                userMap.set(u.id, existing);
+              });
+
+              // Add star abusers
+              starAbusers.forEach((u) => {
+                const existing = userMap.get(u.id) || { id: u.id, email: u.email, wallet: u.wallet, createdAt: u.createdAt, offenses: {} };
+                existing.offenses.starAbuse = { count: u.oneStarCount, autoBlocked: u.autoBlocked, status: u.status };
+                userMap.set(u.id, existing);
+              });
+
+              // Add reward held users
+              rewardHeld.forEach((u) => {
+                const existing = userMap.get(u.id) || { id: u.id, email: u.email, wallet: u.wallet, createdAt: u.createdAt, offenses: {} };
+                existing.offenses.rewardHeld = { status: u.rewardBanStatus, claimFrozen: u.claimFrozen, globalBan: u.globalBanStatus };
+                userMap.set(u.id, existing);
+              });
+
+              // Add comment banned users
+              bannedUsers.forEach((u) => {
+                const existing = userMap.get(u.id) || { id: u.id, email: u.email, wallet: u.wallet, createdAt: u.createdAt, offenses: {} };
+                existing.offenses.commentBan = { status: u.status, removedCount: u.removedCount, banUntil: u.banUntil };
+                userMap.set(u.id, existing);
+              });
+
+              const allUsers = Array.from(userMap.values());
+
+              if (allUsers.length === 0) {
+                return <div className="text-center text-gray-500 py-8">No unruly users found</div>;
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-gray-400 text-sm">
+                        <th className="pb-3 font-medium">User</th>
+                        <th className="pb-3 font-medium text-center">
+                          <span className="text-orange-400" title="Comment Spam (3+ removed)">Comment</span>
+                        </th>
+                        <th className="pb-3 font-medium text-center">
+                          <span className="text-purple-400" title="Dislike Spam (75%+ dislikes)">Dislike</span>
+                        </th>
+                        <th className="pb-3 font-medium text-center">
+                          <span className="text-yellow-500" title="Star Abuse (10+ 1-star)">Star</span>
+                        </th>
+                        <th className="pb-3 font-medium text-center">
+                          <span className="text-cyan-400" title="Reward/Claim/Global">Reward</span>
+                        </th>
+                        <th className="pb-3 font-medium text-center">
+                          <span className="text-red-400" title="Comment Ban Status">Banned</span>
+                        </th>
+                        <th className="pb-3 font-medium">Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {allUsers.map((u) => {
+                        const hasAutoBlock = u.offenses.starAbuse?.autoBlocked;
+                        const hasGlobalBan = u.offenses.rewardHeld?.globalBan === "PERM_BANNED";
+                        return (
+                          <tr
+                            key={u.id}
+                            onClick={() => fetchUserActivity(u.id)}
+                            className={`hover:bg-gray-800/50 cursor-pointer transition ${hasGlobalBan ? "bg-red-500/10" : hasAutoBlock ? "bg-yellow-500/5" : ""}`}
+                          >
+                            <td className="py-3">
+                              <div className="flex items-center gap-2">
+                                <div>
+                                  <div className="font-medium text-white hover:text-pink-400">
+                                    {getUserDisplay(u)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{u.id.slice(0, 12)}...</div>
                                 </div>
-                                {u.banUntil && (
-                                  <div className="text-yellow-400 text-xs">
-                                    Until: {formatDate(u.banUntil)}
-                                  </div>
+                                {hasGlobalBan && (
+                                  <span className="px-1.5 py-0.5 bg-red-500/30 text-red-400 rounded text-xs font-bold">
+                                    GLOBAL BAN
+                                  </span>
                                 )}
-                                {u.latestBan.unbannedAt && (
-                                  <div className="text-green-400 text-xs">
-                                    Unbanned: {formatDate(u.latestBan.unbannedAt)}
-                                  </div>
+                                {hasAutoBlock && !hasGlobalBan && (
+                                  <span className="px-1.5 py-0.5 bg-yellow-500/30 text-yellow-400 rounded text-xs font-bold animate-pulse">
+                                    AUTO-BLOCKED
+                                  </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-gray-500">-</span>
-                            )}
-                          </td>
-                          <td className="py-3">
-                            <div className="text-sm text-gray-400 max-w-xs truncate" title={u.banReason || ""}>
-                              {u.banReason || "-"}
-                            </div>
-                          </td>
-                          <td className="py-3">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => fetchUserActivity(u.id)}
-                                className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded hover:bg-pink-500/30 transition text-sm"
-                              >
-                                View
-                              </button>
-                              {isUnbanned ? (
-                                <button
-                                  onClick={() => openConfirmModal(u.id, "ban", "comment", getUserDisplay(u), "permanent")}
-                                  disabled={actionLoading === u.id}
-                                  className="px-3 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition text-sm disabled:opacity-50"
-                                >
-                                  {actionLoading === u.id ? "..." : "Reban"}
-                                </button>
+                            </td>
+                            <td className="py-3 text-center">
+                              {u.offenses.commentSpam ? (
+                                <span className={`font-bold ${u.offenses.commentSpam.removedCount >= 5 ? "text-red-400" : "text-orange-400"}`}>
+                                  {u.offenses.commentSpam.removedCount}
+                                </span>
                               ) : (
-                                <button
-                                  onClick={() => openConfirmModal(u.id, "unban", "comment", getUserDisplay(u))}
-                                  disabled={actionLoading === u.id}
-                                  className="px-3 py-1 bg-green-500/20 text-green-400 rounded hover:bg-green-500/30 transition text-sm disabled:opacity-50"
-                                >
-                                  {actionLoading === u.id ? "..." : "Unban"}
-                                </button>
+                                <span className="text-gray-600">—</span>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            </td>
+                            <td className="py-3 text-center">
+                              {u.offenses.dislikeSpam ? (
+                                <span className={`font-bold ${u.offenses.dislikeSpam.ratio >= 90 ? "text-red-400" : "text-purple-400"}`}>
+                                  {u.offenses.dislikeSpam.ratio}%
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 text-center">
+                              {u.offenses.starAbuse ? (
+                                <span className={`font-bold ${u.offenses.starAbuse.autoBlocked ? "text-red-400" : u.offenses.starAbuse.count >= 20 ? "text-red-400" : "text-yellow-500"}`}>
+                                  {u.offenses.starAbuse.count}★
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 text-center">
+                              {u.offenses.rewardHeld ? (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  {u.offenses.rewardHeld.globalBan === "PERM_BANNED" && (
+                                    <span className="text-xs text-red-400 font-bold">GLOBAL</span>
+                                  )}
+                                  {u.offenses.rewardHeld.claimFrozen && (
+                                    <span className="text-xs text-blue-400">Frozen</span>
+                                  )}
+                                  {u.offenses.rewardHeld.status !== "ALLOWED" && u.offenses.rewardHeld.status !== "UNBANNED" && (
+                                    <span className="text-xs text-cyan-400">Held</span>
+                                  )}
+                                  {u.offenses.rewardHeld.status === "ALLOWED" && !u.offenses.rewardHeld.claimFrozen && u.offenses.rewardHeld.globalBan !== "PERM_BANNED" && (
+                                    <span className="text-gray-600">—</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-600">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 text-center">
+                              {u.offenses.commentBan ? (
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  u.offenses.commentBan.status === "PERM_BANNED" ? "bg-red-500/20 text-red-400" :
+                                  u.offenses.commentBan.status === "TEMP_BANNED" ? "bg-yellow-500/20 text-yellow-400" :
+                                  u.offenses.commentBan.status === "UNBANNED" ? "bg-gray-500/20 text-gray-400" :
+                                  "bg-green-500/20 text-green-400"
+                                }`}>
+                                  {u.offenses.commentBan.status === "PERM_BANNED" ? "Perm" :
+                                   u.offenses.commentBan.status === "TEMP_BANNED" ? "Temp" :
+                                   u.offenses.commentBan.status === "UNBANNED" ? "Was" : "OK"}
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 text-gray-400 text-sm">{formatDate(u.createdAt)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         </div>
+
+        <ReportedCommentsPanel />
       </main>
 
       {/* Confirmation Modal */}
