@@ -29,7 +29,7 @@ interface MessagesModalProps {
 }
 
 type ConfirmModalState = {
-  type: "delete" | "block" | null;
+  type: "delete" | "delete-all" | "block" | null;
   messageId?: string;
   userId?: string;
   userDisplay?: string;
@@ -217,6 +217,32 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
     }
   }
 
+  async function handleDeleteAllConfirm() {
+    setConfirmBusy(true);
+    try {
+      const res = await fetch("/api/messages/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(`Deleted ${data.deleted} message(s)`);
+        setMessages([]);
+        setSelectedMessage(null);
+        onUnreadCountChange?.(0);
+        setConfirmModal({ type: null });
+      } else {
+        toast.error(data.error || "Failed to delete messages");
+      }
+    } catch {
+      toast.error("Failed to delete messages");
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
   async function handleBlockConfirm() {
     if (!confirmModal.userId) return;
 
@@ -332,6 +358,14 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
             )}
           </div>
           <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={() => setConfirmModal({ type: "delete-all" })}
+                className="text-sm text-red-400 hover:text-red-300 transition"
+              >
+                Delete all
+              </button>
+            )}
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
@@ -586,7 +620,30 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => !confirmBusy && setConfirmModal({ type: null })} />
           <div className="relative w-full max-w-sm bg-gray-900 border border-white/10 rounded-xl p-5">
-            {confirmModal.type === "delete" ? (
+            {confirmModal.type === "delete-all" ? (
+              <>
+                <h3 className="text-lg font-semibold text-white mb-2">Delete All Messages?</h3>
+                <p className="text-white/60 text-sm mb-4">
+                  This will permanently delete all {messages.length} message(s) from your inbox. This cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmModal({ type: null })}
+                    disabled={confirmBusy}
+                    className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAllConfirm}
+                    disabled={confirmBusy}
+                    className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition disabled:opacity-50"
+                  >
+                    {confirmBusy ? "Deleting..." : "Delete All"}
+                  </button>
+                </div>
+              </>
+            ) : confirmModal.type === "delete" ? (
               <>
                 <h3 className="text-lg font-semibold text-white mb-2">Delete Message?</h3>
                 <p className="text-white/60 text-sm mb-4">

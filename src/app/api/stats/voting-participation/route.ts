@@ -1,11 +1,10 @@
 /**
  * Voting Participation API
  *
- * Returns user's voting participation percentage:
- * - votesCast: Number of comments user has voted on
+ * Returns user's voting participation percentage based on unlocked videos:
+ * - votesCast: Number of comments user has voted on (on their unlocked videos)
+ * - totalComments: Active comments on videos the user has unlocked
  * - percentage: (votesCast / totalComments) * 100
- *
- * Total comment count is cached for 5 minutes
  */
 
 import { NextResponse } from "next/server";
@@ -15,31 +14,6 @@ import { getCurrentUser } from "@/lib/auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Cache for total comment count (refreshed every 5 minutes)
-let cachedTotalComments: number | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-async function getTotalCommentCount(): Promise<number> {
-  const now = Date.now();
-
-  if (cachedTotalComments !== null && now - cacheTimestamp < CACHE_TTL) {
-    return cachedTotalComments;
-  }
-
-  // Count all comments that can be voted on (active only)
-  const count = await db.comment.count({
-    where: {
-      status: "ACTIVE",
-    },
-  });
-
-  cachedTotalComments = count;
-  cacheTimestamp = now;
-
-  return count;
-}
-
 export async function GET() {
   try {
     const user = await getCurrentUser();
@@ -47,30 +21,57 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "not_authenticated" }, { status: 401 });
     }
 
-    // Get user's vote count (unique comments they've voted on)
-    const votesCast = await db.commentMemberVote.count({
+    // Get video IDs the user has unlocked
+    const unlocks = await db.videoUnlock.findMany({
+      where: { userId: user.id },
+      select: { videoId: true },
+    });
+
+    const unlockedVideoIds = unlocks.map((u) => u.videoId);
+
+    if (unlockedVideoIds.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        votesCast: 0,
+        totalComments: 0,
+        percentage: 0,
+      });
+    }
+
+    // Count active comments on unlocked videos
+    const totalComments = await db.comment.count({
       where: {
-        voterId: user.id,
+        status: "ACTIVE",
+        videoId: { in: unlockedVideoIds },
       },
     });
 
-    // Get total voteable comments
-    const totalComments = await getTotalCommentCount();
+    // Count user's votes on comments from unlocked videos
+    const votesCast = await db.commentMemberVote.count({
+      where: {
+        voterId: user.id,
+        comment: {
+          videoId: { in: unlockedVideoIds },
+        },
+      },
+    });
 
     // Calculate percentage (handle division by zero)
     const percentage = totalComments > 0
-      ? Math.round((votesCast / totalComments) * 10000) / 100 // 2 decimal places
+      ? Math.round((votesCast / totalComments) * 10000) / 100
       : 0;
 
     return NextResponse.json({
       ok: true,
       votesCast,
+      totalComments,
       percentage,
     });
-  } catch (err: any) {
-    console.error("[voting-participation] Error:", err);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[voting-participation] Error:", message);
     return NextResponse.json(
-      { ok: false, error: "server_error", message: err?.message || String(err) },
+      { ok: false, error: "server_error", message },
       { status: 500 }
     );
   }

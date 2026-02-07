@@ -158,18 +158,18 @@ export async function GET() {
     const leaf = epochRow.leaves[0];
     if (!leaf) continue;
 
-    // Check if user has ANY unclaimed rewards (not weekKey specific since test epochs aggregate all)
-    const unclaimedReward = await db.rewardEvent.findFirst({
+    // Check if rewards for this epoch's weekKey are already claimed in DB
+    // For test epochs (no matching RewardEvents), we still show as claimable
+    const claimedRewardForEpoch = await db.rewardEvent.findFirst({
       where: {
         userId,
-        status: "PAID",
-        claimedAt: null,
+        weekKey: epochRow.weekKey,
+        claimedAt: { not: null },
         type: { in: ALL_REWARD_TYPES },
       },
     });
 
-    if (!unclaimedReward) {
-      // All rewards already claimed - skip this epoch
+    if (claimedRewardForEpoch) {
       continue;
     }
 

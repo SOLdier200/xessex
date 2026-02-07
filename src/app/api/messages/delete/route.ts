@@ -17,6 +17,15 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
+
+  // Delete all messages for this user
+  if (body?.all === true) {
+    const result = await db.userMessage.deleteMany({
+      where: { userId: access.user.id },
+    });
+    return NextResponse.json({ ok: true, deleted: result.count });
+  }
+
   const messageId = body?.messageId?.trim();
 
   if (!messageId) {
