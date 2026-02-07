@@ -132,10 +132,12 @@ export async function notifyMods(opts: NotifyModsOptions): Promise<void> {
  * Get a display string for a user (email > wallet > id)
  */
 export function getUserDisplayString(user: {
+  username?: string | null;
   email?: string | null;
   walletAddress?: string | null;
   id: string;
 }): string {
+  if (user.username) return user.username;
   if (user.email) return user.email;
   if (user.walletAddress) return `${user.walletAddress.slice(0, 4)}...${user.walletAddress.slice(-4)}`;
   return user.id.slice(0, 12) + "...";

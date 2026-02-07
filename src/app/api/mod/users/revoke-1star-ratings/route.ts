@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       type: "USER_BANNED",
       targetUserId: userId,
       targetUserDisplay: getUserDisplayString(targetUser),
-      details: `${oneStarRatings.length} 1-star rating(s) revoked by ${modUser.email || modUser.id.slice(0, 8)} for star abuse.\nAffected ${affectedVideoIds.length} video(s).`,
+      details: `${oneStarRatings.length} 1-star rating(s) revoked by ${getUserDisplayString(modUser)} for star abuse.\nAffected ${affectedVideoIds.length} video(s).`,
     });
 
     return NextResponse.json({

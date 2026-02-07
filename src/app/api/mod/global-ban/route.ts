@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
     type: "GLOBAL_BAN",
     targetUserId: userId,
     targetUserDisplay: getUserDisplayString(targetUser),
-    details: `Global ban by ${modUser.email || modUser.id.slice(0, 8)}. ${banIps ? `${bannedIpCount} IP(s) also banned.` : "Wallet banned only."}\nReason: ${banReason}`,
+    details: `Global ban by ${getUserDisplayString(modUser)}. ${banIps ? `${bannedIpCount} IP(s) also banned.` : "Wallet banned only."}\nReason: ${banReason}`,
   });
 
   return NextResponse.json({

@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     type: "CLAIM_FREEZE",
     targetUserId: userId,
     targetUserDisplay: getUserDisplayString(targetUser),
-    details: `Claim ${action === "freeze" ? `frozen ${durationLabel}` : "unfrozen"} by ${modUser.email || modUser.id.slice(0, 8)}.${reason ? `\nReason: ${reason}` : ""}`,
+    details: `Claim ${action === "freeze" ? `frozen ${durationLabel}` : "unfrozen"} by ${getUserDisplayString(modUser)}.${reason ? `\nReason: ${reason}` : ""}`,
   });
 
   return NextResponse.json({

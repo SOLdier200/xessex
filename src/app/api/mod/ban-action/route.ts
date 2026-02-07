@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
       type: action === "ban" ? "USER_BANNED" : "USER_UNBANNED",
       targetUserId: userId,
       targetUserDisplay: getUserDisplayString(targetUser),
-      details: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} ${action === "ban" ? "suspended" : "restored"} by ${modUser.email || modUser.id.slice(0, 8)}${action === "ban" ? ` for ${durationLabel}` : ""}.${reason ? `\nReason: ${reason}` : ""}`,
+      details: `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} ${action === "ban" ? "suspended" : "restored"} by ${getUserDisplayString(modUser)}${action === "ban" ? ` for ${durationLabel}` : ""}.${reason ? `\nReason: ${reason}` : ""}`,
     });
 
     return NextResponse.json({
