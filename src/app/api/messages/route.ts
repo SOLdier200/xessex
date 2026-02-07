@@ -15,6 +15,11 @@ function extractWinnerId(body: string): string | null {
   return match ? match[1] : null;
 }
 
+// Check if message contains avatar prompt
+function hasAvatarPrompt(body: string): boolean {
+  return body.includes("[AVATAR_PROMPT]");
+}
+
 export async function GET() {
   const access = await getAccessContext();
 
@@ -43,6 +48,17 @@ export async function GET() {
   });
   const pendingWinIds = new Set(pendingWins.map((w) => w.id));
 
+  // Check if any message has avatar prompt and if user needs avatar
+  const hasAnyAvatarPrompt = messages.some((m) => hasAvatarPrompt(m.body));
+  let userNeedsAvatar = false;
+  if (hasAnyAvatarPrompt) {
+    const user = await db.user.findUnique({
+      where: { id: access.user.id },
+      select: { profilePictureKey: true },
+    });
+    userNeedsAvatar = !user?.profilePictureKey;
+  }
+
   return NextResponse.json({
     ok: true,
     messages: messages.map((m) => {
@@ -50,11 +66,17 @@ export async function GET() {
       // Check if this message has a winner that's still claimable
       const canClaim = winnerId ? pendingWinIds.has(winnerId) : false;
 
+      // Check if this message has avatar prompt
+      const isAvatarPrompt = hasAvatarPrompt(m.body);
+
       return {
         id: m.id,
         type: m.type,
         subject: m.subject,
-        body: m.body.replace(/\[WINNER_ID:[^\]]+\]/, "").trim(), // Remove winner ID from display
+        body: m.body
+          .replace(/\[WINNER_ID:[^\]]+\]/, "")
+          .replace(/\[AVATAR_PROMPT\]/, "")
+          .trim(), // Remove special markers from display
         read: !!m.readAt,
         createdAt: m.createdAt.toISOString(),
         senderId: m.senderId,
@@ -68,6 +90,9 @@ export async function GET() {
         // Raffle win info
         winnerId: winnerId,
         canClaim: canClaim,
+        // Avatar prompt info - only show upload if user still needs avatar
+        isAvatarPrompt: isAvatarPrompt,
+        showAvatarUpload: isAvatarPrompt && userNeedsAvatar,
       };
     }),
   });

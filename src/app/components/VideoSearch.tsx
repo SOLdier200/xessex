@@ -575,17 +575,9 @@ export default function VideoSearch({
                     )}
                   </div>
 
-                  <div className="p-2 md:p-3">
-                    <div className="font-semibold text-white text-xs md:text-sm line-clamp-2 group-hover:text-pink-300 transition">
-                      {v.title}
-                    </div>
-                    <div className="mt-1 md:mt-2 text-[10px] md:text-xs text-white/60 truncate">
-                      {v.performers || "Unknown"}
-                    </div>
-                    <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/50">
-                      <span>{formatViews(v.views)} views</span>
-                      <span className="truncate ml-1">{v.categories?.split(";")[0]}</span>
-                    </div>
+                  <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+                    <span>{formatDuration(v.duration)}</span>
+                    <span>{formatViews(v.views)} views</span>
                   </div>
                 </Link>
               );

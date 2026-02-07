@@ -22,6 +22,12 @@ export async function GET(req: NextRequest) {
   const access = await getAccessContext();
   const meId = access.user?.id ?? null;
 
+  const displayName = (user?: { username?: string | null; walletAddress?: string | null }) => {
+    const name = user?.username?.trim();
+    if (name) return name;
+    return truncWallet(user?.walletAddress ?? null, null);
+  };
+
   // Top list
   const top = await db.user.findMany({
     where: { mvmPoints: { gt: 0 } },
@@ -30,7 +36,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       walletAddress: true,
-      email: true,
+      username: true,
       mvmPoints: true,
       createdAt: true,
       role: true,
@@ -38,12 +44,10 @@ export async function GET(req: NextRequest) {
   });
 
   const leaderboard = top.map((u, idx) => {
-    const primaryWallet = u.walletAddress || null;
-
     return {
       rank: idx + 1,
       userId: u.id,
-      display: truncWallet(primaryWallet, u.email),
+      display: displayName(u),
       points: u.mvmPoints,
       role: u.role,
       joinedAt: u.createdAt.toISOString(),
@@ -56,7 +60,7 @@ export async function GET(req: NextRequest) {
   if (meId) {
     const mine = await db.user.findUnique({
       where: { id: meId },
-      select: { id: true, mvmPoints: true, walletAddress: true, email: true, createdAt: true },
+      select: { id: true, mvmPoints: true, walletAddress: true, username: true, createdAt: true },
     });
 
     if (mine) {
@@ -76,12 +80,10 @@ export async function GET(req: NextRequest) {
         },
       });
 
-      const primaryWallet = mine.walletAddress || null;
-
       me = {
         rank: ahead + 1,
         points: mine.mvmPoints,
-        display: truncWallet(primaryWallet, mine.email),
+        display: displayName(mine),
       };
     }
   }

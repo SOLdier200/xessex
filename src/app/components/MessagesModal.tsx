@@ -19,6 +19,9 @@ interface Message {
   // Raffle win info
   winnerId: string | null;
   canClaim: boolean;
+  // Avatar prompt info
+  isAvatarPrompt: boolean;
+  showAvatarUpload: boolean;
 }
 
 interface MessagesModalProps {
@@ -53,6 +56,10 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
 
   // Claim prize state
   const [claiming, setClaiming] = useState(false);
+
+  // Avatar upload state
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -297,6 +304,78 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Please upload a JPEG, PNG, or WebP image");
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Step 1: Get upload URL
+      const uploadRes = await fetch("/api/profile/avatar/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: file.type }),
+      });
+
+      const uploadData = await uploadRes.json();
+      if (!uploadData.ok) {
+        throw new Error(uploadData.error || "Failed to get upload URL");
+      }
+
+      // Step 2: Upload to R2
+      await fetch(uploadData.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      // Step 3: Confirm upload
+      const confirmRes = await fetch("/api/profile/avatar/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: uploadData.key }),
+      });
+
+      const confirmData = await confirmRes.json();
+      if (!confirmData.ok) {
+        throw new Error(confirmData.error || "Failed to confirm upload");
+      }
+
+      // Success! Update local state to hide upload button
+      setAvatarPreview(confirmData.avatarUrl);
+      setMessages((prev) =>
+        prev.map((m) => (m.isAvatarPrompt ? { ...m, showAvatarUpload: false } : m))
+      );
+      if (selectedMessage?.isAvatarPrompt) {
+        setSelectedMessage({ ...selectedMessage, showAvatarUpload: false });
+      }
+
+      toast.success("Avatar uploaded successfully!");
+
+      // Dispatch event so other components can update
+      window.dispatchEvent(new CustomEvent("auth-changed"));
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+      // Clear the input so the same file can be selected again
+      e.target.value = "";
+    }
+  }
+
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -497,6 +576,60 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
                         {claiming ? "Claiming..." : "Claim Prize"}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Avatar Upload - show if this is an avatar prompt and user still needs one */}
+                {selectedMessage.isAvatarPrompt && (
+                  <div className="mt-4 p-4 bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-lg">
+                    {selectedMessage.showAvatarUpload && !avatarPreview ? (
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <div className="text-pink-400 font-semibold">Add Your Avatar</div>
+                          <div className="text-white/60 text-sm">JPEG, PNG, or WebP (max 2MB)</div>
+                        </div>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleAvatarUpload}
+                            disabled={uploadingAvatar}
+                            className="hidden"
+                          />
+                          <span className={`inline-block px-6 py-2 rounded-lg font-bold transition shadow-lg ${
+                            uploadingAvatar
+                              ? "bg-gray-600 cursor-not-allowed"
+                              : "bg-pink-500 hover:bg-pink-600 shadow-pink-500/25 cursor-pointer"
+                          } text-white`}>
+                            {uploadingAvatar ? "Uploading..." : "Choose Image"}
+                          </span>
+                        </label>
+                      </div>
+                    ) : avatarPreview ? (
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={avatarPreview}
+                          alt="Your new avatar"
+                          className="w-16 h-16 rounded-full object-cover border-2 border-pink-500/50"
+                        />
+                        <div>
+                          <div className="text-green-400 font-semibold">Avatar Set!</div>
+                          <div className="text-white/60 text-sm">Your profile picture is now visible on your comments.</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center border-2 border-green-500/50">
+                          <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="text-green-400 font-semibold">Avatar Already Set!</div>
+                          <div className="text-white/60 text-sm">You can change it anytime from your Profile page.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

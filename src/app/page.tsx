@@ -431,10 +431,7 @@ export default async function HomePage() {
                         </div>
                       )}
                       <div className="p-3">
-                        <h3 className="text-sm font-semibold text-white group-hover:text-yellow-300 transition line-clamp-2">
-                          {xv.title}
-                        </h3>
-                        <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/70">
+                        <div className="flex items-center justify-between text-[10px] md:text-xs text-white/70">
                           <span className="text-yellow-400 font-medium">Xessex Original</span>
                           <span>{formatViews(xv.viewsCount ?? 0)} Views</span>
                         </div>
@@ -458,10 +455,7 @@ export default async function HomePage() {
                     videoClassName="w-full h-full object-cover"
                   />
                   <div className="p-3">
-                    <h3 className="text-sm font-semibold text-white group-hover:text-yellow-300 transition">
-                      Pink Hair Girl
-                    </h3>
-                    <div className="mt-1 flex items-center justify-between text-[10px] md:text-xs text-white/70">
+                    <div className="flex items-center justify-between text-[10px] md:text-xs text-white/70">
                       <span className="text-yellow-400 font-medium">Xessex Original</span>
                       <span>Click to Watch</span>
                     </div>

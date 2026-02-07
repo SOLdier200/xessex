@@ -11,6 +11,7 @@ type AuthData = {
   walletAddress: string | null;
   creditBalance: number;
   username: string | null;
+  avatarUrl: string | null;
 };
 
 export default function WalletStatus() {
@@ -35,6 +36,7 @@ export default function WalletStatus() {
               walletAddress: d.walletAddress ?? null,
               creditBalance: d.creditBalance ?? 0,
               username: d.user?.username ?? null,
+              avatarUrl: d.user?.avatarUrl ?? null,
             });
           } else {
             setAuth(null);
@@ -102,7 +104,8 @@ export default function WalletStatus() {
       // Not logged in - redirect to wallet connect/sign-in
       router.push("/login/diamond");
     } else {
-      // Logged in - show logout modal
+      // Refresh auth data (gets fresh avatar signed URL) then show modal
+      fetchAuth(0);
       setShowLogoutModal(true);
     }
   };
@@ -200,6 +203,7 @@ export default function WalletStatus() {
         tier="diamond"
         creditBalance={auth?.creditBalance}
         username={auth?.username}
+        avatarUrl={auth?.avatarUrl}
       />
     </>
   );

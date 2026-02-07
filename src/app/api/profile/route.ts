@@ -55,7 +55,7 @@ export async function GET() {
   if (xessWallet) {
     const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
       where: { wallet: xessWallet },
-      orderBy: { createdAt: "desc" },
+      orderBy: { dateKey: "desc" },
       select: { tier: true, balanceAtomic: true },
     });
     if (latestSnapshot) {

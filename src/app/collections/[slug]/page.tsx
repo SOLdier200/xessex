@@ -289,21 +289,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                   </div>
 
                   <div className="p-1.5 md:p-2">
-                    {locked ? (
-                      <div className="font-semibold text-white/50 text-[10px] md:text-xs line-clamp-1 italic">
-                        🔒 Unlock to reveal
-                      </div>
-                    ) : (
-                      <div className="font-semibold text-white text-[10px] md:text-xs line-clamp-1 group-hover:text-pink-300 transition">
-                        {v.title}
-                      </div>
-                    )}
-                    {!locked && (
-                      <div className="mt-0.5 md:mt-1 text-[8px] md:text-[10px] text-white/60 truncate">
-                        {v.performers || "Unknown"}
-                      </div>
-                    )}
-                    <div className="mt-0.5 text-[8px] md:text-[10px] text-white/50">
+                    <div className="text-[8px] md:text-[10px] text-white/50">
                       {formatViews(v.views)} views
                     </div>
                   </div>

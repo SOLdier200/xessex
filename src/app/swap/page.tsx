@@ -24,9 +24,13 @@ export default function SwapPage() {
           {/* Orca Pool */}
           <section className="bg-gray-900/50 border border-cyan-500/30 rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                <span className="text-2xl">🐋</span>
-              </div>
+              <Image
+                src="/logos/orca.jpg"
+                alt="Orca"
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-full"
+              />
               <h2 className="text-2xl font-semibold text-cyan-300">Orca</h2>
             </div>
             <p className="text-white/70 mb-4">
@@ -50,53 +54,59 @@ export default function SwapPage() {
           {/* Raydium Pool */}
           <section className="bg-gray-900/50 border border-purple-500/30 rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <span className="text-2xl">⚡</span>
-              </div>
+              <Image
+                src="/logos/ray.png"
+                alt="Raydium"
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-full"
+              />
               <h2 className="text-2xl font-semibold text-purple-300">Raydium</h2>
             </div>
             <p className="text-white/70 mb-4">
               Trade on Raydium&apos;s AMM pools with deep liquidity and fast execution.
             </p>
-            <a
-              href="https://raydium.io/swap/?inputMint=sol&outputMint=DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition"
-            >
-              Open Raydium Swap
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
-          </section>
-
-          {/* Jupiter Aggregator */}
-          <section className="bg-gray-900/50 border border-orange-500/30 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-                <span className="text-2xl">🪐</span>
-              </div>
-              <h2 className="text-2xl font-semibold text-orange-300">Jupiter</h2>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="https://raydium.io/swap/?inputMint=sol&outputMint=DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition"
+              >
+                Buy XESS (SOL → XESS)
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+              <a
+                href="https://raydium.io/swap/?inputMint=DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu&outputMint=sol"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition"
+              >
+                Sell XESS (XESS → SOL)
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+              <a
+                href="https://raydium.io/clmm/create-position/?pool_id=2oWAH92yRBbLgxs1VUhkV6BFwfsFfpDZ82DKeYktYUCW"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-500/10 border border-purple-400/30 text-purple-300 font-semibold hover:bg-purple-500/20 transition"
+              >
+                Raydium Pool (Devnet)
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
             </div>
-            <p className="text-white/70 mb-4">
-              Jupiter aggregates all DEXes to find you the best swap rates across Solana.
-            </p>
-            <a
-              href="https://jup.ag/swap/SOL-DYW4Q416BWgwrjLFvr3uVB9HDddkzzGj1RquerMkbZBu"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-500/20 border border-orange-400/50 text-orange-400 font-semibold hover:bg-orange-500/30 transition"
-            >
-              Open Jupiter Swap
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
           </section>
 
           {/* XESS Token Info */}

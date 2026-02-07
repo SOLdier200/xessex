@@ -1,9 +1,9 @@
 /**
  * Voting Participation API
  *
- * Returns user's voting participation percentage based on unlocked videos:
- * - votesCast: Number of comments user has voted on (on their unlocked videos)
- * - totalComments: Active comments on videos the user has unlocked
+ * Returns user's voting participation percentage based on engagement scope:
+ * - votesCast: Number of active comments user has voted on (member + mod votes)
+ * - totalComments: Active comments on videos the user has unlocked OR voted on
  * - percentage: (votesCast / totalComments) * 100
  */
 
@@ -29,7 +29,31 @@ export async function GET() {
 
     const unlockedVideoIds = unlocks.map((u) => u.videoId);
 
-    if (unlockedVideoIds.length === 0) {
+    // Get votes (member + mod) on ACTIVE comments and their video IDs
+    const [memberVotes, modVotes] = await Promise.all([
+      db.commentMemberVote.findMany({
+        where: { voterId: user.id, comment: { status: "ACTIVE" } },
+        select: { commentId: true, comment: { select: { videoId: true } } },
+      }),
+      db.commentModVote.findMany({
+        where: { modId: user.id, comment: { status: "ACTIVE" } },
+        select: { commentId: true, comment: { select: { videoId: true } } },
+      }),
+    ]);
+
+    const videoIdSet = new Set<string>(unlockedVideoIds);
+    const votedCommentIds = new Set<string>();
+
+    for (const vote of memberVotes) {
+      votedCommentIds.add(vote.commentId);
+      if (vote.comment?.videoId) videoIdSet.add(vote.comment.videoId);
+    }
+    for (const vote of modVotes) {
+      votedCommentIds.add(vote.commentId);
+      if (vote.comment?.videoId) videoIdSet.add(vote.comment.videoId);
+    }
+
+    if (videoIdSet.size === 0) {
       return NextResponse.json({
         ok: true,
         votesCast: 0,
@@ -38,23 +62,16 @@ export async function GET() {
       });
     }
 
-    // Count active comments on unlocked videos
+    // Count active comments in the engagement scope (unlocked or voted videos)
     const totalComments = await db.comment.count({
       where: {
         status: "ACTIVE",
-        videoId: { in: unlockedVideoIds },
+        videoId: { in: Array.from(videoIdSet) },
       },
     });
 
-    // Count user's votes on comments from unlocked videos
-    const votesCast = await db.commentMemberVote.count({
-      where: {
-        voterId: user.id,
-        comment: {
-          videoId: { in: unlockedVideoIds },
-        },
-      },
-    });
+    // Count distinct votes on active comments (member + mod)
+    const votesCast = votedCommentIds.size;
 
     // Calculate percentage (handle division by zero)
     const percentage = totalComments > 0

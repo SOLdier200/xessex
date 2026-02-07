@@ -34,7 +34,9 @@ export default function VotingParticipationStat() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/stats/voting-participation");
+        const res = await fetch("/api/stats/voting-participation", {
+          cache: "no-store",
+        });
         const json = await res.json();
         if (json.ok) {
           setData(json);
@@ -48,9 +50,20 @@ export default function VotingParticipationStat() {
 
     fetchData();
 
-    // Refresh every 5 minutes
+    // Re-fetch when page becomes visible (covers tab switch + in-app navigation)
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        fetchData();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
+    // Also refresh every 5 minutes as fallback
     const interval = setInterval(fetchData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading) {

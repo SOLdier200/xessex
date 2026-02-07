@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { getAccessContext } from "@/lib/access";
+import { signR2GetUrl } from "@/lib/r2";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,16 @@ export async function GET() {
 
   const u = access.user;
 
+  // Get avatar URL if user has a profile picture
+  let avatarUrl: string | null = null;
+  if (u.profilePictureKey) {
+    try {
+      avatarUrl = await signR2GetUrl(u.profilePictureKey, 3600);
+    } catch {
+      // Silent fail - avatar just won't display
+    }
+  }
+
   return NextResponse.json(
     {
       ok: true,
@@ -57,6 +68,7 @@ export async function GET() {
 
         walletAddress: u.walletAddress,
         username: u.username ?? null,
+        avatarUrl,
       },
 
       // Wallet status

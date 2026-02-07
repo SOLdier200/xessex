@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ export default function LogoutModal({
   walletAddress,
   creditBalance,
   username,
+  avatarUrl,
 }: {
   open: boolean;
   onClose: () => void;
@@ -21,9 +22,16 @@ export default function LogoutModal({
   tier?: "member" | "diamond" | "free" | null;
   creditBalance?: number;
   username?: string | null;
+  avatarUrl?: string | null;
 }) {
   const [loading, setLoading] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const { disconnect, connected } = useWallet();
+
+  // Reset img error state when avatarUrl changes
+  useEffect(() => {
+    setImgFailed(false);
+  }, [avatarUrl]);
 
   const handleLogout = async () => {
     if (loading) return;
@@ -73,13 +81,30 @@ export default function LogoutModal({
         {/* Show logged in user info */}
         {walletAddress && (
           <div className="mb-4 pb-4 border-b border-white/10">
-            <div className="text-xs text-white/50 uppercase tracking-wide mb-2">Logged in as</div>
-            {/* Show username if available */}
-            {username && (
-              <div className="text-lg font-semibold text-pink-400 mb-2">
-                {username}
+            <div className="flex items-center gap-3 mb-3">
+              {/* Avatar */}
+              {avatarUrl && !imgFailed ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="w-14 h-14 rounded-full object-cover border-2 border-pink-500/50"
+                  onError={() => setImgFailed(true)}
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500/30 to-purple-500/30 flex items-center justify-center text-white/60 text-xl font-semibold border-2 border-white/20">
+                  {username ? username.charAt(0).toUpperCase() : walletAddress.slice(0, 2)}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-white/50 uppercase tracking-wide mb-1">Logged in as</div>
+                {/* Show username if available */}
+                {username && (
+                  <div className="text-lg font-semibold text-pink-400 truncate">
+                    {username}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
             <button
               onClick={handleCopyWallet}
               className="w-full text-left text-sm text-cyan-400 hover:text-cyan-300 font-mono break-all transition cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2"

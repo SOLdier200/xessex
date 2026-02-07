@@ -184,9 +184,8 @@ export async function GET() {
 
         const receiptInfo = await connection.getAccountInfo(receiptV2Pda);
         if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-          console.log(`[rewards/pending] Epoch ${epochRow.epoch} already claimed on-chain, syncing DB (marking ALL unclaimed)`);
           // Sync DB: mark ALL unclaimed rewards as claimed since on-chain receipt exists
-          await db.rewardEvent.updateMany({
+          const synced = await db.rewardEvent.updateMany({
             where: {
               userId,
               status: "PAID",
@@ -195,6 +194,9 @@ export async function GET() {
             },
             data: { claimedAt: new Date() },
           });
+          if (synced.count > 0) {
+            console.log(`[rewards/pending] Epoch ${epochRow.epoch} already claimed on-chain, synced ${synced.count} reward rows`);
+          }
           continue;
         }
       } catch (err) {

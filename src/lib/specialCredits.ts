@@ -11,16 +11,17 @@ import { XESS_MULTIPLIER, CREDIT_MICRO } from "./rewardsConstants";
 // Tier 0 = no tier (below minimum)
 // Tiers 1-9 = increasing benefits
 export const TIER_TABLE: { minBalance: bigint; monthlyCredits: bigint }[] = [
-  { minBalance: 0n, monthlyCredits: 0n },                               // Tier 0: Below 10k → 0 credits/mo
-  { minBalance: 10_000n * XESS_MULTIPLIER, monthlyCredits: 80n },       // Tier 1: 10k XESS → 80 credits/mo
-  { minBalance: 25_000n * XESS_MULTIPLIER, monthlyCredits: 240n },      // Tier 2: 25k XESS → 240 credits/mo
-  { minBalance: 50_000n * XESS_MULTIPLIER, monthlyCredits: 480n },      // Tier 3: 50k XESS → 480 credits/mo
-  { minBalance: 100_000n * XESS_MULTIPLIER, monthlyCredits: 1_600n },   // Tier 4: 100k XESS → 1,600 credits/mo
-  { minBalance: 250_000n * XESS_MULTIPLIER, monthlyCredits: 4_000n },   // Tier 5: 250k XESS → 4,000 credits/mo
-  { minBalance: 500_000n * XESS_MULTIPLIER, monthlyCredits: 8_000n },   // Tier 6: 500k XESS → 8,000 credits/mo
-  { minBalance: 1_000_000n * XESS_MULTIPLIER, monthlyCredits: 16_000n }, // Tier 7: 1M XESS → 16,000 credits/mo
-  { minBalance: 2_500_000n * XESS_MULTIPLIER, monthlyCredits: 24_000n }, // Tier 8: 2.5M XESS → 24,000 credits/mo
-  { minBalance: 5_000_000n * XESS_MULTIPLIER, monthlyCredits: 32_000n }, // Tier 9: 5M XESS → 32,000 credits/mo
+  { minBalance: 0n, monthlyCredits: 0n },                                // Tier 0: Below 10k → 0 credits/mo
+  { minBalance: 10_000n * XESS_MULTIPLIER, monthlyCredits: 160n },       // Tier 1: 10k XESS → 160 credits/mo
+  { minBalance: 25_000n * XESS_MULTIPLIER, monthlyCredits: 480n },       // Tier 2: 25k XESS → 480 credits/mo
+  { minBalance: 50_000n * XESS_MULTIPLIER, monthlyCredits: 960n },       // Tier 3: 50k XESS → 960 credits/mo
+  { minBalance: 100_000n * XESS_MULTIPLIER, monthlyCredits: 3_200n },    // Tier 4: 100k XESS → 3,200 credits/mo
+  { minBalance: 250_000n * XESS_MULTIPLIER, monthlyCredits: 8_000n },    // Tier 5: 250k XESS → 8,000 credits/mo
+  { minBalance: 500_000n * XESS_MULTIPLIER, monthlyCredits: 16_000n },   // Tier 6: 500k XESS → 16,000 credits/mo
+  { minBalance: 1_000_000n * XESS_MULTIPLIER, monthlyCredits: 32_000n }, // Tier 7: 1M XESS → 32,000 credits/mo
+  { minBalance: 2_500_000n * XESS_MULTIPLIER, monthlyCredits: 48_000n }, // Tier 8: 2.5M XESS → 48,000 credits/mo
+  { minBalance: 5_000_000n * XESS_MULTIPLIER, monthlyCredits: 64_000n }, // Tier 9: 5M XESS → 64,000 credits/mo
+  { minBalance: 10_000_000n * XESS_MULTIPLIER, monthlyCredits: 80_000n }, // Tier 10: 10M XESS → 80,000 credits/mo
 ];
 
 /**

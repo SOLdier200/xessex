@@ -410,6 +410,49 @@ export async function POST(req: NextRequest) {
 
   const comment = { comment: newComment, creditsAwarded };
 
+  // Step 4: Check if this is the user's 5th comment and they don't have an avatar
+  // Send a friendly system message prompting them to set one
+  try {
+    const totalComments = await db.comment.count({
+      where: { authorId: userId },
+    });
+
+    if (totalComments === 5) {
+      // Check if user already has a profile picture
+      const userProfile = await db.user.findUnique({
+        where: { id: userId },
+        select: { profilePictureKey: true },
+      });
+
+      if (!userProfile?.profilePictureKey) {
+        // Check if we've already sent this message (prevent duplicates)
+        const existingMessage = await db.userMessage.findFirst({
+          where: {
+            userId,
+            type: "SYSTEM",
+            subject: "Add a profile picture?",
+          },
+        });
+
+        if (!existingMessage) {
+          await db.userMessage.create({
+            data: {
+              userId,
+              senderId: null,
+              type: "SYSTEM",
+              subject: "Add a profile picture?",
+              body: `Great job! You've posted 5 comments already. Want to stand out in the community? You can add a profile picture to personalize your account!\n\n[AVATAR_PROMPT]\n\nYou can always set or change your avatar later from your Profile page.`,
+            },
+          });
+          console.log("[comments] Sent avatar prompt message to user:", userId);
+        }
+      }
+    }
+  } catch (err) {
+    // Non-critical - log but don't fail
+    console.error("[comments] Avatar prompt message failed (non-critical):", err);
+  }
+
   // Generate avatar URL for the newly created comment
   let authorAvatarUrl: string | null = null;
   if (comment.comment.author.profilePictureKey) {

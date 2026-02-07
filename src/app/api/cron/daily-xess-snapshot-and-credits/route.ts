@@ -80,6 +80,8 @@ export async function POST(req: NextRequest) {
         weekKey,
         usersProcessed: 0,
         snapshotsCreated: 0,
+        snapshotsUpdated: 0,
+        snapshotsSkipped: 0,
         creditsAccrued: 0,
         elapsed: Date.now() - startTime,
       });
@@ -101,6 +103,7 @@ export async function POST(req: NextRequest) {
     const balances = await getXessAtomicBalances(wallets);
 
     let snapshotsCreated = 0;
+    let snapshotsUpdated = 0;
     let snapshotsSkipped = 0;
     let creditsAccrued = 0n;
     const errors: string[] = [];
@@ -117,6 +120,17 @@ export async function POST(req: NextRequest) {
           where: { wallet_dateKey: { wallet, dateKey } },
         });
 
+        // Track prior tier for carry reset if needed
+        let priorTier: number | undefined = existingSnapshot?.tier;
+        if (priorTier === undefined) {
+          const lastSnapshot = await db.walletBalanceSnapshot.findFirst({
+            where: { wallet },
+            orderBy: { dateKey: "desc" },
+            select: { tier: true },
+          });
+          priorTier = lastSnapshot?.tier;
+        }
+
         if (!existingSnapshot) {
           await db.walletBalanceSnapshot.create({
             data: {
@@ -129,12 +143,39 @@ export async function POST(req: NextRequest) {
             },
           });
           snapshotsCreated++;
+        } else if (existingSnapshot.balanceAtomic !== balanceAtomic || existingSnapshot.tier !== tier) {
+          await db.walletBalanceSnapshot.update({
+            where: { id: existingSnapshot.id },
+            data: {
+              balanceAtomic,
+              tier,
+              weekKey,
+            },
+          });
+          snapshotsUpdated++;
         } else {
           snapshotsSkipped++;
         }
 
+        const tierChanged = priorTier !== undefined && priorTier !== tier;
+        const tierDowngraded = priorTier !== undefined && priorTier > tier;
+
         // Skip credit accrual if tier is 0 (below minimum balance)
-        if (tier === 0) continue;
+        if (tier === 0) {
+          // If user downgraded to tier 0, clear carry to prevent stale over-accrual later
+          if (tierDowngraded) {
+            const existingAccount = await db.specialCreditAccount.findUnique({
+              where: { userId },
+            });
+            if (existingAccount && existingAccount.carryMicro !== 0n) {
+              await db.specialCreditAccount.update({
+                where: { id: existingAccount.id },
+                data: { carryMicro: 0n },
+              });
+            }
+          }
+          continue;
+        }
 
         // Get or create SpecialCreditAccount
         let account = await db.specialCreditAccount.findUnique({
@@ -154,14 +195,20 @@ export async function POST(req: NextRequest) {
         });
 
         if (existingLedger) {
-          // Already processed this slot
+          // Already processed this slot; if tier changed since then, reset carry to avoid over-accrual
+          if (tierChanged && account.carryMicro !== 0n) {
+            await db.specialCreditAccount.update({
+              where: { id: account.id },
+              data: { carryMicro: 0n },
+            });
+          }
           continue;
         }
 
         // Calculate twice-daily accrual (half of daily amount)
         const { accrualMicro, newCarryMicro } = calculateTwiceDailyAccrual(
           tier,
-          account.carryMicro,
+          tierChanged ? 0n : account.carryMicro,
           daysInMonth
         );
 
@@ -201,7 +248,8 @@ export async function POST(req: NextRequest) {
     const elapsed = Date.now() - startTime;
     console.log(
       `[TWICE_DAILY_SNAPSHOT] Complete (${timeSlot}): ${snapshotsCreated} snapshots created, ` +
-        `${snapshotsSkipped} skipped, ${creditsAccrued.toString()} microcredits accrued in ${elapsed}ms`
+        `${snapshotsUpdated} updated, ${snapshotsSkipped} skipped, ` +
+        `${creditsAccrued.toString()} microcredits accrued in ${elapsed}ms`
     );
 
     return NextResponse.json({
@@ -211,6 +259,7 @@ export async function POST(req: NextRequest) {
       weekKey,
       usersProcessed: wallets.length,
       snapshotsCreated,
+      snapshotsUpdated,
       snapshotsSkipped,
       creditsAccruedMicro: creditsAccrued.toString(),
       errors: errors.length > 0 ? errors.slice(0, 10) : undefined,

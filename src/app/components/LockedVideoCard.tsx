@@ -147,13 +147,6 @@ export default function LockedVideoCard({
             )}
           </div>
         )}
-        {size !== "small" && (
-          <div className="p-2 md:p-3">
-            <div className="font-semibold text-white/50 text-[10px] md:text-xs italic">
-              🔒 Unlock to reveal
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Unlock Confirmation Modal */}

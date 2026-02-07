@@ -27,6 +27,12 @@ export async function GET() {
     return fracStr.length ? `${whole}.${fracStr}` : `${whole}`;
   };
 
+  const displayName = (user?: { username?: string | null; walletAddress?: string | null }) => {
+    const name = user?.username?.trim();
+    if (name) return name;
+    return truncWallet(user?.walletAddress ?? null, null);
+  };
+
   // MVM: comments used in VideoScoreAdjustment, grouped by author
   const utilized = await db.videoScoreAdjustment.findMany({
     include: { comment: true },
@@ -42,12 +48,12 @@ export async function GET() {
 
   const mvmUsers = await db.user.findMany({
     where: { id: { in: [...utilizedByAuthor.keys()] } },
-    select: { id: true, walletAddress: true, email: true },
+    select: { id: true, walletAddress: true, username: true },
   });
 
   const mvm = mvmUsers
     .map((u) => ({
-      user: truncWallet(u.walletAddress, u.email),
+      user: displayName(u),
       utilizedComments: utilizedByAuthor.get(u.id) ?? 0,
     }))
     .sort((a, b) => b.utilizedComments - a.utilizedComments)
@@ -82,12 +88,12 @@ export async function GET() {
 
   const karatUsers = await db.user.findMany({
     where: { id: { in: [...scoreByAuthor.keys()] } },
-    select: { id: true, walletAddress: true, email: true },
+    select: { id: true, walletAddress: true, username: true },
   });
 
   const karat = karatUsers
     .map((u) => ({
-      user: truncWallet(u.walletAddress, u.email),
+      user: displayName(u),
       totalScore: scoreByAuthor.get(u.id) ?? 0,
     }))
     .sort((a, b) => b.totalScore - a.totalScore)
@@ -127,7 +133,7 @@ export async function GET() {
 
     const users = await db.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, walletAddress: true, email: true },
+      select: { id: true, walletAddress: true, username: true },
     });
 
     const userMap = new Map(users.map((u) => [u.id, u]));
@@ -161,7 +167,7 @@ export async function GET() {
         });
 
       return {
-        user: user ? truncWallet(user.walletAddress, user.email) : "Anonymous",
+        user: displayName(user),
         xessEarnedAtomic: totalAtomic.toString(),
         xessEarned: formatXess(totalAtomic),
         breakdown,
@@ -194,7 +200,7 @@ export async function GET() {
   const referrers = referrerIds.length
     ? await db.user.findMany({
         where: { id: { in: referrerIds } },
-        select: { id: true, walletAddress: true, email: true },
+        select: { id: true, walletAddress: true, username: true },
       })
     : [];
 
@@ -203,7 +209,7 @@ export async function GET() {
     const id = r.referredById as string;
     const user = referrerMap.get(id);
     return {
-      user: user ? truncWallet(user.walletAddress, user.email) : "Anonymous",
+      user: displayName(user),
       referralCount: r._count._all,
     };
   });
