@@ -34,8 +34,6 @@ function getTimeSlot(): "AM" | "PM" {
   return hour < 12 ? "AM" : "PM";
 }
 
-const CRON_SECRET = process.env.CRON_SECRET || "";
-
 const CreditReason = {
   DAILY_ACCRUAL: "DAILY_ACCRUAL",
   RAFFLE_BUY: "RAFFLE_BUY",
@@ -44,8 +42,9 @@ const CreditReason = {
 } as const;
 
 export async function POST(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET || "";
   const authHeader = req.headers.get("x-cron-secret");
-  if (!CRON_SECRET || authHeader !== CRON_SECRET) {
+  if (!cronSecret || authHeader !== cronSecret) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 

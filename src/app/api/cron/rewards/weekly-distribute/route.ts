@@ -8,8 +8,7 @@ import { Prisma, BatchStatus } from "@prisma/client";
 // Stale batch threshold (30 minutes) - RUNNING batches older than this can be force-reset
 const STALE_BATCH_MS = 30 * 60 * 1000;
 
-// Verify cron secret
-const CRON_SECRET = process.env.CRON_SECRET || "";
+// Cron secret read at runtime to avoid build-time inlining
 
 // RewardEvent.amount is stored with 6 decimals (same as your current file)
 const EMISSION_DECIMALS = 6n;
@@ -261,8 +260,9 @@ function poolPrefix(pool: Pool) {
  */
 export async function POST(req: NextRequest) {
   // Verify cron secret
+  const cronSecret = process.env.CRON_SECRET || "";
   const authHeader = req.headers.get("x-cron-secret");
-  if (!CRON_SECRET || authHeader !== CRON_SECRET) {
+  if (!cronSecret || authHeader !== cronSecret) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 

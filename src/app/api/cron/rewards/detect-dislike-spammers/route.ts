@@ -14,12 +14,12 @@ import { notifyMods, getUserDisplayString } from "@/lib/modNotifications";
 
 export const runtime = "nodejs";
 
-const CRON_SECRET = process.env.CRON_SECRET || "";
 const THREE_WEEKS_MS = 21 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET || "";
   const authHeader = req.headers.get("x-cron-secret");
-  if (!CRON_SECRET || authHeader !== CRON_SECRET) {
+  if (!cronSecret || authHeader !== cronSecret) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
 
