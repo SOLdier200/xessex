@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   if (!access.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
-  if (access.user.role !== "MOD" && access.user.role !== "ADMIN") {
+  if (!access.isAdminOrMod) {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 

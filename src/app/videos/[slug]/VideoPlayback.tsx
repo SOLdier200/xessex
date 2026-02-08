@@ -5,6 +5,7 @@ import Link from "next/link";
 import Comments from "@/app/components/Comments";
 import StarRating from "@/app/components/StarRating";
 import ViewTracker from "@/app/components/ViewTracker";
+import AddToPlaylistButton from "@/app/components/AddToPlaylistButton";
 
 const COUNTDOWN_SECONDS = 5;
 
@@ -459,13 +460,17 @@ export default function VideoPlayback({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <Link
             href="/videos"
             className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
           >
             Back to Videos
           </Link>
+          <AddToPlaylistButton
+            videoId={currentVideo.id}
+            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition"
+          />
           {isFirefoxMobile && currentVideo.embedUrl && (
             <a
               href={currentVideo.embedUrl}

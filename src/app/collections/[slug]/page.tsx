@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import type { Metadata } from "next";
 import TopNav from "../../components/TopNav";
+import CollectionVideoCard from "../../components/CollectionVideoCard";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 
@@ -250,52 +251,21 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
             {videos.map((v) => {
               const locked = isVideoLocked(v.viewkey);
+              const videoId = videoIdMap.get(v.viewkey) || "";
               return (
-                <Link
+                <CollectionVideoCard
                   key={v.viewkey}
-                  href={`/videos/${v.viewkey}`}
-                  className="neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition group"
-                >
-                  <div className="relative aspect-video bg-black/60">
-                    {v.primary_thumb ? (
-                      <img
-                        src={v.primary_thumb}
-                        alt={locked ? "Locked video" : v.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white/30 text-[8px]">
-                        No Thumbnail
-                      </div>
-                    )}
-                    {/* Lock overlay for locked videos */}
-                    {locked && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="text-xl">🔒</span>
-                      </div>
-                    )}
-                    {/* Rank Badge */}
-                    {v.rank != null && (
-                      <div className="absolute top-0.5 left-0.5 md:top-1 md:left-1 min-w-[16px] md:min-w-[18px] h-4 flex items-center justify-center text-[8px] md:text-[10px] font-bold px-0.5 md:px-1 rounded bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white/90 backdrop-blur-sm shadow-md">
-                        #{v.rank}
-                      </div>
-                    )}
-                    <div className="absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
-                      {formatDuration(v.duration)}
-                    </div>
-                    {v.favorite === 1 && (
-                      <div className="absolute top-0.5 right-0.5 md:top-1 md:right-1 bg-yellow-500/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-black font-semibold">
-                        ★
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-1.5 md:p-2">
-                    <div className="text-[8px] md:text-[10px] text-white/50">
-                      {formatViews(v.views)} views
-                    </div>
-                  </div>
-                </Link>
+                  videoId={videoId}
+                  viewkey={v.viewkey}
+                  title={v.title}
+                  thumb={v.primary_thumb}
+                  duration={formatDuration(v.duration)}
+                  rank={v.rank}
+                  locked={locked}
+                  isAuthed={access.isAuthed}
+                  views={formatViews(v.views)}
+                  isFavorite={v.favorite === 1}
+                />
               );
             })}
           </div>

@@ -650,93 +650,111 @@ export default function ReviewApprovedPage() {
 
       {/* Video Modal */}
       {selectedVideo && (
-        <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain modal-scroll modal-safe min-h-[100svh] min-h-[100dvh] z-50">
-          <div className="bg-[#0a0f1e] neon-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-emerald-400/30 flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-white">{selectedVideo.title}</h2>
-                <div className="mt-1 text-sm text-white/60">
-                  viewkey: {selectedVideo.viewkey}
+        <div
+          className="fixed inset-0 bg-black/80 z-50 overflow-y-auto"
+          onClick={(e) => e.target === e.currentTarget && setSelectedVideo(null)}
+        >
+          <div className="min-h-full flex items-start sm:items-center justify-center px-4 py-6">
+            <div className="bg-[#0a0f1e] neon-border rounded-2xl max-w-5xl w-full my-auto">
+              {/* Modal Header */}
+              <div className="p-4 border-b border-emerald-400/30 flex items-start justify-between sticky top-0 bg-[#0a0f1e] z-10 rounded-t-2xl">
+                <div className="flex-1 min-w-0 pr-4">
+                  <h2 className="text-xl font-bold text-white truncate">{selectedVideo.title}</h2>
+                  <div className="mt-1 text-sm text-white/60">
+                    viewkey: {selectedVideo.viewkey}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a
+                    href={getEmbedUrl(selectedVideo.viewkey)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 text-sm font-semibold hover:bg-emerald-500/30 transition"
+                    title="Open in new tab (fullscreen)"
+                  >
+                    Open Full ↗
+                  </a>
+                  <button
+                    onClick={() => setSelectedVideo(null)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 text-white/60 hover:text-white hover:bg-white/20 text-xl leading-none transition"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedVideo(null)}
-                className="text-white/60 hover:text-white text-2xl leading-none"
-              >
-                ×
-              </button>
-            </div>
 
-            {/* Video Embed */}
-            <div className="p-4">
-              <div className="bg-black rounded-xl overflow-hidden aspect-video">
-                <iframe
-                  src={getEmbedUrl(selectedVideo.viewkey)}
-                  frameBorder={0}
-                  width="100%"
-                  height="100%"
-                  allowFullScreen
-                />
+              {/* Video Embed */}
+              <div className="p-4">
+                <div className="bg-black rounded-xl overflow-hidden aspect-video">
+                  <iframe
+                    src={getEmbedUrl(selectedVideo.viewkey)}
+                    frameBorder={0}
+                    width="100%"
+                    height="100%"
+                    allowFullScreen
+                    allow="fullscreen"
+                    style={{ minHeight: "400px" }}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Details */}
-            <div className="p-4 border-t border-emerald-400/30 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-white/50">Duration:</span>{" "}
-                <span className="text-white">{formatDuration(selectedVideo.duration)}</span>
-              </div>
-              <div>
-                <span className="text-white/50">Views:</span>{" "}
-                <span className="text-white">{selectedVideo.views?.toLocaleString() || "--"}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-white/50">Performers:</span>{" "}
-                <span className="text-white">{selectedVideo.performers || "N/A"}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-white/50">Categories:</span>{" "}
-                <span className="text-white">{selectedVideo.categories || "N/A"}</span>
-              </div>
-              {selectedVideo.note && (
+              {/* Details */}
+              <div className="p-4 border-t border-emerald-400/30 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-white/50">Duration:</span>{" "}
+                  <span className="text-white">{formatDuration(selectedVideo.duration)}</span>
+                </div>
+                <div>
+                  <span className="text-white/50">Views:</span>{" "}
+                  <span className="text-white">{selectedVideo.views?.toLocaleString() || "--"}</span>
+                </div>
                 <div className="col-span-2">
-                  <span className="text-white/50">Note:</span>{" "}
-                  <span className="text-white">{selectedVideo.note}</span>
+                  <span className="text-white/50">Performers:</span>{" "}
+                  <span className="text-white">{selectedVideo.performers || "N/A"}</span>
                 </div>
-              )}
-            </div>
+                <div className="col-span-2">
+                  <span className="text-white/50">Categories:</span>{" "}
+                  <span className="text-white">{selectedVideo.categories || "N/A"}</span>
+                </div>
+                {selectedVideo.note && (
+                  <div className="col-span-2">
+                    <span className="text-white/50">Note:</span>{" "}
+                    <span className="text-white">{selectedVideo.note}</span>
+                  </div>
+                )}
+              </div>
 
-            {/* Actions */}
-            <div className="p-4 border-t border-emerald-400/30 flex gap-3">
-              <button
-                onClick={() => updateVideo(selectedVideo.viewkey, { status: "pending" })}
-                className="flex-1 px-4 py-2 rounded-xl font-semibold bg-white/10 text-white border border-white/30 hover:bg-white/20 transition"
-              >
-                Move to Pending
-              </button>
-              <button
-                onClick={() => updateVideo(selectedVideo.viewkey, { status: "maybe" })}
-                className="flex-1 px-4 py-2 rounded-xl font-semibold bg-yellow-500/20 text-yellow-300 border border-yellow-400/50 hover:bg-yellow-500/30 transition"
-              >
-                Move to Maybe
-              </button>
-              <button
-                onClick={() => updateVideo(selectedVideo.viewkey, { status: "rejected" })}
-                className="flex-1 px-4 py-2 rounded-xl font-semibold bg-red-500/20 text-red-300 border border-red-400/50 hover:bg-red-500/30 transition"
-              >
-                Reject
-              </button>
-              <button
-                onClick={() => updateVideo(selectedVideo.viewkey, { favorite: selectedVideo.favorite !== 1 })}
-                className={`px-4 py-2 rounded-xl font-semibold transition ${
-                  selectedVideo.favorite === 1
-                    ? "bg-yellow-500/30 text-yellow-300 border border-yellow-400"
-                    : "bg-black/40 text-white border border-white/30 hover:border-yellow-400"
-                }`}
-              >
-                ★
-              </button>
+              {/* Actions */}
+              <div className="p-4 border-t border-emerald-400/30 flex flex-wrap gap-3">
+                <button
+                  onClick={() => updateVideo(selectedVideo.viewkey, { status: "pending" })}
+                  className="flex-1 min-w-[120px] px-4 py-2 rounded-xl font-semibold bg-white/10 text-white border border-white/30 hover:bg-white/20 transition"
+                >
+                  Move to Pending
+                </button>
+                <button
+                  onClick={() => updateVideo(selectedVideo.viewkey, { status: "maybe" })}
+                  className="flex-1 min-w-[120px] px-4 py-2 rounded-xl font-semibold bg-yellow-500/20 text-yellow-300 border border-yellow-400/50 hover:bg-yellow-500/30 transition"
+                >
+                  Move to Maybe
+                </button>
+                <button
+                  onClick={() => updateVideo(selectedVideo.viewkey, { status: "rejected" })}
+                  className="flex-1 min-w-[120px] px-4 py-2 rounded-xl font-semibold bg-red-500/20 text-red-300 border border-red-400/50 hover:bg-red-500/30 transition"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => updateVideo(selectedVideo.viewkey, { favorite: selectedVideo.favorite !== 1 })}
+                  className={`px-4 py-2 rounded-xl font-semibold transition ${
+                    selectedVideo.favorite === 1
+                      ? "bg-yellow-500/30 text-yellow-300 border border-yellow-400"
+                      : "bg-black/40 text-white border border-white/30 hover:border-yellow-400"
+                  }`}
+                >
+                  ★
+                </button>
+              </div>
             </div>
           </div>
         </div>

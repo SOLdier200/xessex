@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import AddToPlaylistButton from "./AddToPlaylistButton";
 
 type Video = {
   viewkey: string;
@@ -39,6 +40,7 @@ interface VideoSearchProps {
   creditBalance?: number;
   initialUnlockedCount?: number;
   initialNextCost?: number;
+  videoIdMap?: Record<string, string>;
 }
 
 // Session storage key for scroll position
@@ -52,6 +54,7 @@ export default function VideoSearch({
   creditBalance = 0,
   initialUnlockedCount = 0,
   initialNextCost = 10,
+  videoIdMap = {},
 }: VideoSearchProps) {
   const VIDEOS_PER_PAGE = 50;
   const router = useRouter();
@@ -538,48 +541,61 @@ export default function VideoSearch({
                 );
               }
 
+              const videoId = videoIdMap[v.viewkey] || "";
               return (
-                <Link
-                  key={v.viewkey}
-                  href={`/videos/${v.viewkey}`}
-                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group"
-                >
-                  <div className="relative aspect-video bg-black/60">
-                    {v.primary_thumb ? (
-                      <img
-                        src={v.primary_thumb}
-                        alt={v.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white/30">
-                        No Thumbnail
+                <div key={v.viewkey} className="relative group">
+                  <Link
+                    href={`/videos/${v.viewkey}`}
+                    className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition block"
+                  >
+                    <div className="relative aspect-video bg-black/60">
+                      {v.primary_thumb ? (
+                        <img
+                          src={v.primary_thumb}
+                          alt={v.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/30">
+                          No Thumbnail
+                        </div>
+                      )}
+                      {/* Rank Badge */}
+                      {v.rank != null && (
+                        <div
+                          className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                          style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                        >
+                          #{v.rank}
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                        {formatDuration(v.duration)}
                       </div>
-                    )}
-                    {/* Rank Badge */}
-                    {v.rank != null && (
-                      <div
-                        className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
-                        style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
-                      >
-                        #{v.rank}
-                      </div>
-                    )}
-                    <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
-                      {formatDuration(v.duration)}
+                      {v.favorite === 1 && (
+                        <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
+                          ★
+                        </div>
+                      )}
                     </div>
-                    {v.favorite === 1 && (
-                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
-                        ★
-                      </div>
-                    )}
-                  </div>
 
-                  <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
-                    <span>{formatDuration(v.duration)}</span>
-                    <span>{formatViews(v.views)} views</span>
-                  </div>
-                </Link>
+                    <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+                      <span>{formatDuration(v.duration)}</span>
+                      <span>{formatViews(v.views)} views</span>
+                    </div>
+                  </Link>
+
+                  {/* Playlist button - shown on hover for unlocked videos */}
+                  {isAuthed && videoId && (
+                    <div className="absolute top-1 right-1 md:top-2 md:right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <AddToPlaylistButton
+                        videoId={videoId}
+                        iconOnly
+                        className="p-1 bg-black/70 hover:bg-black/90 rounded-md backdrop-blur-sm"
+                      />
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

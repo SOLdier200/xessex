@@ -121,6 +121,7 @@ export default function TopNav() {
     { type: "token", img: "/logos/textlogo/siteset3/token100.png", alt: "Xess Token", h: 36 },
     ...(isLoggedIn
       ? ([
+          { type: "link", href: "/playlists", img: "/logos/textlogo/siteset3/playlist200.png", alt: "Playlists", h: 45 },
           { type: "link", href: "/profile", img: "/logos/textlogo/siteset3/profile100.png", alt: "Profile", h: 30 },
           { type: "messages", img: "/logos/textlogo/siteset3/messages110.png", alt: "Messages", h: 34 },
         ] as TopItem[])

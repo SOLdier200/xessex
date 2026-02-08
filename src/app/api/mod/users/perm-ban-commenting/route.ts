@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 
-function isAdminOrMod(role: string) {
-  return role === "ADMIN" || role === "MOD";
-}
-
 /**
  * POST /api/mod/users/perm-ban-commenting
  * Body: { userId: string, reason?: string }
@@ -18,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!access.user) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
   }
-  if (!isAdminOrMod(access.user.role)) {
+  if (!access.isAdminOrMod) {
     return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
   }
 

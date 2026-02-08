@@ -7,6 +7,7 @@ import LockedVideoCard from "./components/LockedVideoCard";
 import LockedFeaturedCard from "./components/LockedFeaturedCard";
 import RoadmapMarquee from "./components/RoadmapMarquee";
 import HoverPreviewVideo from "./components/HoverPreviewVideo";
+import VideoCardWithPlaylist from "./components/VideoCardWithPlaylist";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -62,14 +63,15 @@ export default async function HomePage() {
 
   // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, unlockCost: true, viewsCount: true, thumbnailUrl: true },
+    select: { id: true, slug: true, rank: true, unlockCost: true, viewsCount: true, thumbnailUrl: true },
     orderBy: { rank: "asc" },
   });
 
-  // Create a map of slug -> rank
+  // Create maps for video data
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
   const viewCountMap = new Map(dbVideos.map((v) => [v.slug, v.viewsCount ?? 0]));
   const thumbMap = new Map(dbVideos.map((v) => [v.slug, v.thumbnailUrl]));
+  const idMap = new Map(dbVideos.map((v) => [v.slug, v.id]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
 
   // Get XESSEX videos (original content)
@@ -108,6 +110,7 @@ export default async function HomePage() {
   const videos = approvedVideos
     .map((v) => ({
       ...v,
+      videoId: idMap.get(v.viewkey) ?? null,
       rank: rankMap.get(v.viewkey) ?? null,
       xessViews: viewCountMap.get(v.viewkey) ?? 0,
       primary_thumb: v.primary_thumb || thumbMap.get(v.viewkey) || null,
@@ -166,47 +169,20 @@ export default async function HomePage() {
               }
 
               return (
-                <Link
+                <VideoCardWithPlaylist
                   key={v.viewkey}
-                  href={`/videos/${v.viewkey}`}
-                  className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group w-full max-w-full sm:max-w-[98%] sm:mx-auto"
-                >
-                  <div className="relative aspect-video bg-black/60">
-                    {v.primary_thumb ? (
-                      <img
-                        src={v.primary_thumb}
-                        alt={v.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white/30">
-                        No Thumbnail
-                      </div>
-                    )}
-                    {v.rank != null && (
-                      <div
-                        className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
-                        style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
-                      >
-                        #{v.rank}
-                      </div>
-                    )}
-                    {v.favorite === 1 && (
-                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-yellow-500/80 px-2 py-0.5 rounded text-xs text-black font-semibold">
-                        ★
-                      </div>
-                    )}
-                    {isFree && !isAuthed && (
-                      <div className="absolute top-1 right-1 md:top-2 md:right-2 bg-emerald-500/80 px-2 py-0.5 rounded text-xs text-white font-semibold">
-                        FREE
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
-                    <span>{formatDuration(v.duration)}</span>
-                    <span>{formatViews(v.xessViews ?? 0)} XESS Views</span>
-                  </div>
-                </Link>
+                  videoId={v.videoId || ""}
+                  viewkey={v.viewkey}
+                  title={v.title}
+                  thumb={v.primary_thumb}
+                  duration={formatDuration(v.duration)}
+                  rank={v.rank}
+                  isFree={isFree}
+                  isAuthed={isAuthed}
+                  viewsCount={v.xessViews ?? 0}
+                  isFavorite={v.favorite === 1}
+                  className="w-full max-w-full sm:max-w-[98%] sm:mx-auto"
+                />
               );
             })}
           </div>

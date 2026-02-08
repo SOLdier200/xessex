@@ -60,7 +60,7 @@ export default async function VideosPage() {
 
   // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, unlockCost: true, thumbnailUrl: true },
+    select: { id: true, slug: true, rank: true, unlockCost: true, thumbnailUrl: true },
     orderBy: { rank: "asc" },
   });
 
@@ -68,6 +68,11 @@ export default async function VideosPage() {
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
   const thumbMap = new Map(dbVideos.map((v) => [v.slug, v.thumbnailUrl]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
+  // Create a map of slug -> video ID for playlist feature
+  const videoIdMap: Record<string, string> = {};
+  for (const v of dbVideos) {
+    videoIdMap[v.slug] = v.id;
+  }
 
   // Get user's unlocked videos if authenticated
   let unlockedSlugs: string[] = [];
@@ -133,6 +138,7 @@ export default async function VideosPage() {
           creditBalance={access.creditBalance}
           initialUnlockedCount={unlockedCount}
           initialNextCost={nextCost}
+          videoIdMap={videoIdMap}
         />
       </div>
     </main>

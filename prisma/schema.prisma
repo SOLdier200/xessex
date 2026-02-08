@@ -114,6 +114,9 @@ model User {
   dailyActive          UserDailyActive[]
   flatActionLedger     FlatActionLedger[]
 
+  // Playlists
+  playlists            Playlist[]
+
   @@index([referredById])
   @@index([commentBanStatus])
   @@index([voteBanStatus])
@@ -226,11 +229,12 @@ model Video {
   mediaUrl     String?                             // For XESSEX-owned content
   posterUrl    String?
 
-  comments     Comment[]
-  sourceGrades CommentSourceGrade[]
-  adjustments  VideoScoreAdjustment[]
-  starRatings  VideoStarRating[]
-  unlocks      VideoUnlock[]
+  comments      Comment[]
+  sourceGrades  CommentSourceGrade[]
+  adjustments   VideoScoreAdjustment[]
+  starRatings   VideoStarRating[]
+  unlocks       VideoUnlock[]
+  playlistItems PlaylistItem[]
 
   @@index([rank])
   @@index([kind, isActive, sortOrder])
@@ -1205,4 +1209,37 @@ model SaleContribution {
   @@index([wallet])
   @@index([phase])
   @@index([status])
+}
+
+// ========== Playlist System ==========
+
+model Playlist {
+  id          String         @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       PlaylistItem[]
+
+  @@index([userId])
+  @@index([isPublic, createdAt])
+}
+
+model PlaylistItem {
+  id         String   @id @default(cuid())
+  playlistId String
+  videoId    String
+  position   Int      @default(0)
+  addedAt    DateTime @default(now())
+
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, videoId])
+  @@index([videoId])
+  @@index([playlistId, position])
 }
