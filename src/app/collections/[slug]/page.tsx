@@ -135,11 +135,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   // Fetch all video ranks and unlock costs from DB
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, unlockCost: true, id: true },
+    select: { slug: true, rank: true, unlockCost: true, id: true, thumbnailUrl: true },
   });
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
   const unlockCostMap = new Map(dbVideos.map((v) => [v.slug, v.unlockCost]));
   const videoIdMap = new Map(dbVideos.map((v) => [v.slug, v.id]));
+  const thumbMap = new Map(dbVideos.map((v) => [v.slug, v.thumbnailUrl]));
 
   // Get user's unlocked videos if logged in
   const userUnlockedSet = new Set<string>();
@@ -167,6 +168,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const allVideos = allApprovedVideos.map((v) => ({
     ...v,
     rank: rankMap.get(v.viewkey) ?? null,
+    primary_thumb: v.primary_thumb || thumbMap.get(v.viewkey) || null,
   }));
 
   // Filter/sort videos based on category

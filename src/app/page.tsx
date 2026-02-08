@@ -62,13 +62,14 @@ export default async function HomePage() {
 
   // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, unlockCost: true, viewsCount: true },
+    select: { slug: true, rank: true, unlockCost: true, viewsCount: true, thumbnailUrl: true },
     orderBy: { rank: "asc" },
   });
 
   // Create a map of slug -> rank
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
   const viewCountMap = new Map(dbVideos.map((v) => [v.slug, v.viewsCount ?? 0]));
+  const thumbMap = new Map(dbVideos.map((v) => [v.slug, v.thumbnailUrl]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
 
   // Get XESSEX videos (original content)
@@ -109,6 +110,7 @@ export default async function HomePage() {
       ...v,
       rank: rankMap.get(v.viewkey) ?? null,
       xessViews: viewCountMap.get(v.viewkey) ?? 0,
+      primary_thumb: v.primary_thumb || thumbMap.get(v.viewkey) || null,
     }))
     .sort((a, b) => {
       // Determine if each video is unlocked (free or user-unlocked)

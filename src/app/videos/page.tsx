@@ -60,12 +60,13 @@ export default async function VideosPage() {
 
   // Get free video slugs and all video ranks from database
   const dbVideos = await db.video.findMany({
-    select: { slug: true, rank: true, unlockCost: true },
+    select: { slug: true, rank: true, unlockCost: true, thumbnailUrl: true },
     orderBy: { rank: "asc" },
   });
 
   // Create a map of slug -> rank
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
+  const thumbMap = new Map(dbVideos.map((v) => [v.slug, v.thumbnailUrl]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
 
   // Get user's unlocked videos if authenticated
@@ -85,7 +86,11 @@ export default async function VideosPage() {
 
   // Merge rank into approved videos and sort by rank
   const videos = approvedVideos
-    .map((v) => ({ ...v, rank: rankMap.get(v.viewkey) ?? null }))
+    .map((v) => ({
+      ...v,
+      rank: rankMap.get(v.viewkey) ?? null,
+      primary_thumb: v.primary_thumb || thumbMap.get(v.viewkey) || null,
+    }))
     .sort((a, b) => {
       if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
       if (a.rank !== null) return -1;
