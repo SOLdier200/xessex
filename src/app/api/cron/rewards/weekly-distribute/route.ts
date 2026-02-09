@@ -4,6 +4,7 @@ import { db } from "@/lib/prisma";
 import { monthKeyUTC, parsePeriodKey } from "@/lib/weekKey";
 import { getAdminConfig } from "@/lib/adminConfig";
 import { Prisma, BatchStatus } from "@prisma/client";
+import { unauthorizedIfBadCron } from "@/lib/cronAuth";
 
 // Stale batch threshold (30 minutes) - RUNNING batches older than this can be force-reset
 const STALE_BATCH_MS = 30 * 60 * 1000;
@@ -260,11 +261,8 @@ function poolPrefix(pool: Pool) {
  */
 export async function POST(req: NextRequest) {
   // Verify cron secret
-  const cronSecret = process.env.CRON_SECRET || "";
-  const authHeader = req.headers.get("x-cron-secret");
-  if (!cronSecret || authHeader !== cronSecret) {
-    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
-  }
+  const denied = unauthorizedIfBadCron(req);
+  if (denied) return denied;
 
   const { searchParams } = new URL(req.url);
 

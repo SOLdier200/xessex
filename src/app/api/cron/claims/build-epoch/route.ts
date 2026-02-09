@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { assertCronSecret } from "@/lib/cronAuth";
 import { buildAndStoreClaimEpoch, getLatestEpoch } from "@/lib/claimEpochBuilder";
 import { getNextEpochNumber } from "@/lib/epochRoot";
 
@@ -16,15 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function assertCron(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) throw new Error("CRON_SECRET not set");
-
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-
-  if (token !== secret) {
-    throw new Error("unauthorized");
-  }
+  assertCronSecret(req);
 }
 
 export async function POST(req: Request) {

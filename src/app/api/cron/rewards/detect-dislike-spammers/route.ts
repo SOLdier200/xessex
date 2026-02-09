@@ -11,17 +11,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { notifyMods, getUserDisplayString } from "@/lib/modNotifications";
+import { unauthorizedIfBadCron } from "@/lib/cronAuth";
 
 export const runtime = "nodejs";
 
 const THREE_WEEKS_MS = 21 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET || "";
-  const authHeader = req.headers.get("x-cron-secret");
-  if (!cronSecret || authHeader !== cronSecret) {
-    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
-  }
+  const denied = unauthorizedIfBadCron(req);
+  if (denied) return denied;
 
   const voteStats = await db.commentMemberVote.groupBy({
     by: ["voterId"],

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { unauthorizedIfBadCron } from "@/lib/cronAuth";
 
 // Claims older than 30 minutes are considered stale
 const STALE_THRESHOLD_MS = 30 * 60 * 1000;
@@ -13,11 +14,8 @@ const STALE_THRESHOLD_MS = 30 * 60 * 1000;
  */
 export async function POST(req: NextRequest) {
   // Verify cron secret
-  const cronSecret = process.env.CRON_SECRET || "";
-  const authHeader = req.headers.get("x-cron-secret");
-  if (!cronSecret || authHeader !== cronSecret) {
-    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
-  }
+  const denied = unauthorizedIfBadCron(req);
+  if (denied) return denied;
 
   try {
     const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_MS);

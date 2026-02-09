@@ -18,6 +18,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { assertCronSecret } from "@/lib/cronAuth";
 import crypto from "crypto";
 import { raffleWeekInfo, getPrevWeekKey } from "@/lib/raffleWeekPT";
 import { ensureWeekRaffles } from "@/lib/rafflesEnsure";
@@ -39,9 +40,7 @@ async function withPgAdvisoryLock<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 function assertCron(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  const got = req.headers.get("x-cron-secret") || "";
-  if (!secret || got !== secret) throw new Error("unauthorized");
+  assertCronSecret(req);
 }
 
 // Simple weighted draw without replacement

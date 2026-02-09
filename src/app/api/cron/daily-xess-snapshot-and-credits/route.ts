@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { unauthorizedIfBadCron } from "@/lib/cronAuth";
 import { getXessAtomicBalances } from "@/lib/xessBalance";
 import { getDateKeyPT, raffleWeekInfo } from "@/lib/raffleWeekPT";
 import {
@@ -42,11 +43,8 @@ const CreditReason = {
 } as const;
 
 export async function POST(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET || "";
-  const authHeader = req.headers.get("x-cron-secret");
-  if (!cronSecret || authHeader !== cronSecret) {
-    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
-  }
+  const denied = unauthorizedIfBadCron(req);
+  if (denied) return denied;
 
   const startTime = Date.now();
 
