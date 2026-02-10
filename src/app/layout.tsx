@@ -121,8 +121,11 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <Toaster
           position="top-center"
-          expand={true}
+          expand={false}
           richColors
+          duration={3000}
+          closeButton
+          visibleToasts={3}
           toastOptions={{
             style: {
               background: "rgba(0, 0, 0, 0.95)",
