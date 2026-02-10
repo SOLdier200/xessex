@@ -67,7 +67,7 @@ export default function LeaderboardPage() {
     { id: "karat", label: "Karat Kruncher", desc: "Highest Score" },
     { id: "mvm", label: "MVM", desc: "Most Valuable Member" },
     { id: "xessex", label: "Xessex", desc: "XESS Earned from Xessex Content" },
-    { id: "embeds", label: "Embeds", desc: "XESS Earned from Embedded Videos" },
+    { id: "embeds", label: "Tokens", desc: "XESS Earned from Videos" },
     { id: "rewards", label: "All Rewards", desc: "Total XESS Earned (All Pools)" },
     { id: "referrals", label: "Referrals", desc: "Members Referred" },
   ] as const;
@@ -255,7 +255,7 @@ export default function LeaderboardPage() {
                 <>
                   {(data.embedRewards?.length ?? 0) === 0 ? (
                     <div className="p-8 text-center text-white/50">
-                      No embed rewards data yet
+                      No token rewards data yet
                     </div>
                   ) : (
                     data.embedRewards.map((entry, idx) => (
@@ -277,7 +277,7 @@ export default function LeaderboardPage() {
                           <div className="font-bold text-orange-400">
                             {entry.xessEarned.toLocaleString()} XESS
                           </div>
-                          <div className="text-xs text-white/50">from Embeds</div>
+                          <div className="text-xs text-white/50">XESS earned from videos</div>
                         </div>
                       </div>
                     ))
@@ -356,26 +356,6 @@ export default function LeaderboardPage() {
           </section>
         )}
 
-        {/* Call to Action (non-Diamond only) */}
-        {!isDiamond && (
-          <section className="mt-6 neon-border rounded-2xl p-4 md:p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-center">
-            <h3 className="text-lg md:text-xl font-bold text-white">
-              Want to climb the Diamond Ladder?
-            </h3>
-            <p className="mt-2 text-sm md:text-base text-white/70">
-              Connect your wallet and start earning{" "}
-              <span className="text-green-400 font-bold">XESS</span> for your
-              contributions!
-            </p>
-            <Link
-              href="/login/diamond"
-              className="inline-block mt-4 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-extrabold hover:from-purple-400 hover:to-pink-400 transition shadow-lg"
-              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
-            >
-              Connect Wallet
-            </Link>
-          </section>
-        )}
       </div>
     </main>
   );

@@ -8,8 +8,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
+import { getSolPriceUsd, computeLamportsPerXess } from "@/lib/solPrice";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
@@ -105,7 +107,6 @@ export async function GET() {
           usdcAtomic: totalUsdcAtomic.toString(),
         },
         contributions: formattedContributions,
-        stats,
       },
       { headers: noCache }
     );
@@ -207,6 +208,25 @@ export async function POST(req: NextRequest) {
       where: { id: cfg.id },
       data: updateData,
     });
+
+    // Auto-compute lamportsPerXess from live SOL price to keep DB fallback fresh
+    const solPrice = await getSolPriceUsd();
+    if (solPrice && solPrice > 0) {
+      const updatedCfg = await db.saleConfig.findFirst();
+      if (updatedCfg) {
+        const privateLpx = computeLamportsPerXess(updatedCfg.privatePriceUsdMicros, solPrice);
+        const publicLpx = computeLamportsPerXess(updatedCfg.publicPriceUsdMicros, solPrice);
+        if (privateLpx > 0n && publicLpx > 0n) {
+          await db.saleConfig.update({
+            where: { id: updatedCfg.id },
+            data: {
+              privateLamportsPerXess: privateLpx,
+              publicLamportsPerXess: publicLpx,
+            },
+          });
+        }
+      }
+    }
 
     return NextResponse.json({ ok: true }, { headers: noCache });
   } catch (err) {

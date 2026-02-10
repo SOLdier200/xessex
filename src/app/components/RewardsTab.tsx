@@ -36,13 +36,17 @@ type WeekDetailResponse = {
 };
 
 function formatWeekLabel(weekKey: string): string {
-  const d = new Date(weekKey + "T00:00:00Z");
-  return d.toLocaleDateString("en-US", {
+  // Strip period suffix (-P1 / -P2) if present
+  const dateStr = weekKey.replace(/-P[12]$/, "");
+  const period = weekKey.match(/-P([12])$/)?.[1];
+  const d = new Date(dateStr + "T00:00:00Z");
+  const label = d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
     timeZone: "UTC",
   });
+  return period ? `${label} (P${period})` : label;
 }
 
 function shortenSig(sig: string, left = 6, right = 6) {

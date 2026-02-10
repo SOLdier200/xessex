@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
+import { getSolPriceUsd, computeLamportsPerXess } from "@/lib/solPrice";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
@@ -223,11 +224,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Compute required payment
-    const requiredLamports = phase === "private"
-      ? cfg.privateLamportsPerXess * xessAmount
-      : cfg.publicLamportsPerXess * xessAmount;
-
     const priceUsdMicros = phase === "private" ? cfg.privatePriceUsdMicros : cfg.publicPriceUsdMicros;
+
+    // For SOL: use live Pyth price, fall back to DB value if unavailable
+    let requiredLamports: bigint;
+    const solPrice = await getSolPriceUsd();
+    if (solPrice && solPrice > 0) {
+      const liveLamportsPerXess = computeLamportsPerXess(priceUsdMicros, solPrice);
+      requiredLamports = liveLamportsPerXess * xessAmount;
+    } else {
+      // Fallback to stored DB value
+      requiredLamports = phase === "private"
+        ? cfg.privateLamportsPerXess * xessAmount
+        : cfg.publicLamportsPerXess * xessAmount;
+    }
+
+    // Apply 3% slippage tolerance for SOL payments
+    const minAcceptableLamports = requiredLamports * 9700n / 10000n;
+
     const requiredUsdcAtomic = (priceUsdMicros * xessAmount) / 1_000_000n;
 
     // On-chain verification
@@ -249,9 +263,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "tx_not_found" }, { status: 400, headers: noCache });
     }
 
-    // Verify payment instruction
+    // Verify payment instruction (SOL uses slippage-tolerant minimum)
     const paymentVerified = asset === "SOL"
-      ? isSystemTransferTo(parsedTx, TREASURY_WALLET, sessionWallet, requiredLamports)
+      ? isSystemTransferTo(parsedTx, TREASURY_WALLET, sessionWallet, minAcceptableLamports)
       : isSplTransferTo(parsedTx, USDC_ATA, sessionWallet, requiredUsdcAtomic);
 
     if (!paymentVerified) {

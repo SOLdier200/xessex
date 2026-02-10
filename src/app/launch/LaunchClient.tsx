@@ -14,6 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import RoadmapMarquee from "@/app/components/RoadmapMarquee";
 import TopNav from "@/app/components/TopNav";
+import PythPriceTicker from "@/components/PythPriceTicker";
 
 // Treasury addresses
 const TREASURY_SOL = "FuG1tCeK53s17nQxvNcpKKo5bvESnPdHduhemHLu7aeS";
@@ -37,11 +38,26 @@ type SaleConfig = {
   publicPriceUsdMicros: string;
   privateLamportsPerXess: string;
   publicLamportsPerXess: string;
+  solPriceUsd: number | null;
+  computedPrivateLamportsPerXess: string | null;
+  computedPublicLamportsPerXess: string | null;
   privateStartsAt: string | null;
   privateEndsAt: string | null;
   publicStartsAt: string | null;
   publicEndsAt: string | null;
   acceptedAssets: Array<"SOL" | "USDC">;
+};
+
+type WalletContribution = {
+  id: string;
+  phase: string;
+  asset: string;
+  xessAmount: string;
+  paidLamports: string | null;
+  paidUsdcAtomic: string | null;
+  txSig: string | null;
+  status: string;
+  createdAt: string;
 };
 
 type WalletStatus = {
@@ -51,6 +67,7 @@ type WalletStatus = {
   totalAllocatedXess: string;
   remainingCapXess: string;
   atCap: boolean;
+  contributions?: WalletContribution[];
 };
 
 type WhitelistProof = {
@@ -138,6 +155,23 @@ export default function LaunchClient() {
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [solPrice, setSolPrice] = React.useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = React.useState(false);
+
+  // Last successful purchase receipt
+  const [lastReceipt, setLastReceipt] = React.useState<{
+    txSig: string;
+    xessAmount: string;
+    asset: "SOL" | "USDC";
+    paid: string;
+  } | null>(null);
+
+  // Check admin status
+  React.useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (d?.ok && d?.user?.role === "ADMIN") setIsAdmin(true); })
+      .catch(() => {});
+  }, []);
 
   // Fetch sale config
   React.useEffect(() => {
@@ -149,14 +183,19 @@ export default function LaunchClient() {
       .catch(() => setCfg(null));
   }, []);
 
-  // Fetch SOL price for conversion
+  // Fetch SOL price from Pyth proxy with 30s refresh
   React.useEffect(() => {
-    fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.solana?.usd) setSolPrice(data.solana.usd);
-      })
-      .catch(() => setSolPrice(null));
+    function fetchSolPrice() {
+      fetch("/api/pyth/prices")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok && data.SOL_USD?.price) setSolPrice(data.SOL_USD.price);
+        })
+        .catch(() => {});
+    }
+    fetchSolPrice();
+    const iv = setInterval(fetchSolPrice, 30_000);
+    return () => clearInterval(iv);
   }, []);
 
   // Fetch wallet status when connected
@@ -223,11 +262,16 @@ export default function LaunchClient() {
     let xessAmount: bigint;
 
     if (asset === "SOL") {
-      // For SOL: xessAmount = lamports / lamportsPerXess
+      // For SOL: use live-computed lamportsPerXess from Pyth, fall back to DB value
       const lamports = BigInt(Math.floor(numAmount * LAMPORTS_PER_SOL));
-      const lamportsPerXess = cfg.activePhase === "private"
-        ? BigInt(cfg.privateLamportsPerXess)
-        : BigInt(cfg.publicLamportsPerXess);
+      const computedLpx = cfg.activePhase === "private"
+        ? cfg.computedPrivateLamportsPerXess
+        : cfg.computedPublicLamportsPerXess;
+      const lamportsPerXess = computedLpx
+        ? BigInt(computedLpx)
+        : cfg.activePhase === "private"
+          ? BigInt(cfg.privateLamportsPerXess)
+          : BigInt(cfg.publicLamportsPerXess);
 
       if (lamportsPerXess === 0n) {
         setXessPreview(null);
@@ -249,7 +293,7 @@ export default function LaunchClient() {
     }
 
     setXessPreview(xessAmount.toString());
-  }, [cfg, amount, asset]);
+  }, [cfg, amount, asset, solPrice]);
 
   // Handle contribution
   async function handleContribute() {
@@ -366,6 +410,12 @@ export default function LaunchClient() {
 
       if (data.ok) {
         toast.success(`Contribution verified! ${formatNumber(xessPreview)} XESS allocated`);
+        setLastReceipt({
+          txSig,
+          xessAmount: xessPreview,
+          asset,
+          paid: amount,
+        });
         setAmount("");
 
         // Refresh wallet status
@@ -409,19 +459,34 @@ export default function LaunchClient() {
     <main className="min-h-screen bg-black text-white">
       <TopNav />
 
+      {/* Live price ticker (Pyth) */}
+      <div className="mx-auto max-w-6xl px-4 pt-3 pb-1">
+        <PythPriceTicker refreshMs={2500} />
+      </div>
+
       <section className="mx-auto max-w-6xl px-4 pt-6 pb-10">
         <div className="flex flex-col gap-6">
           {/* Header */}
           <div className="flex flex-col gap-2">
-            <h1>
-              <Image
-                src="/logos/textlogo/siteset3/TokenLaunch100.png"
-                alt="XESS Token Launch"
-                width={400}
-                height={100}
-                className="h-[50px] w-auto"
-              />
-            </h1>
+            <div className="flex items-center justify-between">
+              <h1>
+                <Image
+                  src="/logos/textlogo/siteset3/TokenLaunch100.png"
+                  alt="XESS Token Launch"
+                  width={400}
+                  height={100}
+                  className="h-[50px] w-auto"
+                />
+              </h1>
+              {isAdmin && (
+                <Link
+                  href="/admin/presale"
+                  className="px-4 py-2 bg-pink-500/20 text-pink-400 rounded-lg hover:bg-pink-500/30 transition text-sm"
+                >
+                  Presale Admin
+                </Link>
+              )}
+            </div>
             <div className="mt-2">
               <Image
                 src="/logos/1,000,000,000Xess100.png"
@@ -461,6 +526,10 @@ export default function LaunchClient() {
                 />
                 <Row k="Accepted" v="SOL + USDC" />
                 <Row k="Vesting" v="None - Immediate delivery" />
+                <CopyRow label="Mint" value="HvfmE1stqxvBfUXtKX4L4w3BeMMjcDM48Qh6ZfGtgrpE" />
+                <CopyRow label="Treasury" value="FuG1tCeK53s17nQxvNcpKKo5bvESnPdHduhemHLu7aeS" />
+                <CopyRow label="Treasury ATA" value="JE5hwKVw1YAiQC2vpkFWN1mstfgHgmrfvBXTDHQr2iwj" />
+                <CopyRow label="USDC ATA" value="ADcttJuZHpXjsdHgsKVQ1iGRbrBPrCF5U55Feg8eeCAE" />
               </div>
 
               {/* Progress bar */}
@@ -559,6 +628,67 @@ export default function LaunchClient() {
                 </div>
               )}
 
+              {/* Purchase History */}
+              {wallet.connected && walletStatus?.contributions && walletStatus.contributions.length > 0 && (
+                <div className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4">
+                  <h3 className="text-sm font-medium text-white/80 mb-2">Your Purchases</h3>
+                  <div className="space-y-2">
+                    {walletStatus.contributions.map((c) => (
+                      <div key={c.id} className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-emerald-400 font-medium">{formatNumber(c.xessAmount)} XESS</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                            c.status === "CONFIRMED"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : c.status === "PENDING"
+                              ? "bg-yellow-500/20 text-yellow-300"
+                              : "bg-red-500/20 text-red-300"
+                          }`}>
+                            {c.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 text-white/50">
+                          <span>
+                            {c.asset === "SOL" && c.paidLamports
+                              ? `${(Number(c.paidLamports) / 1e9).toFixed(4)} SOL`
+                              : c.asset === "USDC" && c.paidUsdcAtomic
+                              ? `$${(Number(c.paidUsdcAtomic) / 1e6).toFixed(2)} USDC`
+                              : c.asset}
+                          </span>
+                          <span>{new Date(c.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        {c.txSig && (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-white/40">TxID:</span>
+                            <a
+                              href={`https://solscan.io/tx/${c.txSig}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-mono text-cyan-400 hover:text-cyan-300 transition truncate"
+                            >
+                              {c.txSig.slice(0, 16)}...{c.txSig.slice(-6)}
+                            </a>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(c.txSig!);
+                                toast.success("TxID copied!");
+                              }}
+                              className="shrink-0 text-white/40 hover:text-white/70 transition"
+                              title="Copy TxID"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Contribution Form */}
               {wallet.connected && canParticipate && (
                 <div className="mt-4 space-y-3">
@@ -625,6 +755,57 @@ export default function LaunchClient() {
                         ? "Private sale requires whitelist approval. Wallet caps enforced."
                         : "Public sale is open to all. Wallet caps enforced."}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Transaction Receipt */}
+              {lastReceipt && (
+                <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-emerald-400">Purchase Receipt</h3>
+                    <button
+                      onClick={() => setLastReceipt(null)}
+                      className="text-white/40 hover:text-white/70 text-xs transition"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/60">XESS Received</span>
+                      <span className="text-emerald-400 font-medium">{formatNumber(lastReceipt.xessAmount)} XESS</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/60">Paid</span>
+                      <span className="text-white/90">{lastReceipt.paid} {lastReceipt.asset}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-white/60 shrink-0">TxID</span>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://solscan.io/tx/${lastReceipt.txSig}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-xs text-cyan-400 hover:text-cyan-300 transition truncate"
+                        >
+                          {lastReceipt.txSig.slice(0, 20)}...{lastReceipt.txSig.slice(-8)}
+                        </a>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(lastReceipt.txSig);
+                            toast.success("TxID copied!");
+                          }}
+                          className="shrink-0 text-white/40 hover:text-white/70 transition"
+                          title="Copy TxID"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -712,6 +893,25 @@ function Row({ k, v }: { k: string; v: string }) {
     <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/35 px-3 py-2">
       <span className="text-white/55">{k}</span>
       <span className="text-white/85">{v}</span>
+    </div>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const short = `${value.slice(0, 5)}...${value.slice(-5)}`;
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/35 px-3 py-2">
+      <span className="text-white/55">{label}</span>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(value);
+          toast.success(`${label} copied!`);
+        }}
+        className="text-white/85 font-mono text-xs hover:text-cyan-400 transition cursor-pointer"
+        title={`Click to copy: ${value}`}
+      >
+        {short}
+      </button>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import Link from "next/link";
 interface UserData {
   id: string;
   email: string | null;
+  username: string | null;
   walletAddress: string | null;
   role: string;
   createdAt: string;
@@ -330,7 +331,7 @@ export default function UsersPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by email or wallet..."
+              placeholder="Search by email, username, or wallet..."
               className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 w-64"
             />
             <button
@@ -379,6 +380,9 @@ export default function UsersPage() {
                           <div className="font-medium text-white">
                             {user.email || `User ${user.id.slice(0, 8)}...`}
                           </div>
+                          {user.username && (
+                            <div className="text-sm text-pink-400">@{user.username}</div>
+                          )}
                           <div className="text-xs text-gray-500">
                             Joined {new Date(user.createdAt).toLocaleDateString()}
                           </div>

@@ -245,6 +245,25 @@ export default function AdminControlsPage() {
             View Actions
           </Link>
         </div>
+
+        {/* Wallet Whitelist Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-400/50 flex items-center justify-center">
+              <span className="text-2xl">🛡️</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Wallet Whitelist</h2>
+              <p className="text-sm text-white/60">Approve wallets for private sale</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/whitelist"
+            className="block w-full px-4 py-3 rounded-xl border border-teal-400/50 bg-teal-500/20 text-teal-200 font-semibold hover:bg-teal-500/30 transition text-center"
+          >
+            Manage Whitelist
+          </Link>
+        </div>
       </div>
 
       {/* Site Stats Panel */}

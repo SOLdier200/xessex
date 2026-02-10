@@ -188,8 +188,9 @@ export default function ProfilePage() {
       weekKey: string;
       activity: { scoreReceived: number; diamondComments: number; mvmPoints: number; votesCast: number };
       estimatedPending: string;
+      isActualPayout?: boolean;
     };
-    nextPayout: { countdown: string; date: string };
+    nextPayout: { countdown: string; date: string; label?: string };
     unclaimedWeeks: Array<{ epoch: number; weekKey: string; amount: string; amountAtomic: string }>;
     totalUnclaimed: string;
     totalUnclaimedAtomic: string;
@@ -1447,9 +1448,17 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="mt-4 p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/40 rounded-xl">
-                    <div className="text-xs text-yellow-300/80 uppercase tracking-wide mb-1">This Week&apos;s Estimate</div>
-                    <div className="text-xl font-bold text-yellow-400">~{livePending?.currentWeek?.estimatedPending ?? "0"} XESS</div>
-                    <div className="text-xs text-white/50 mt-1">Distributed next Monday</div>
+                    <div className="text-xs text-yellow-300/80 uppercase tracking-wide mb-1">
+                      {livePending?.currentWeek?.isActualPayout ? "This Week\u2019s Payout" : "This Week\u2019s Estimate"}
+                    </div>
+                    <div className="text-xl font-bold text-yellow-400">
+                      {livePending?.currentWeek?.isActualPayout ? "" : "~"}{livePending?.currentWeek?.estimatedPending ?? "0"} XESS
+                    </div>
+                    <div className="text-xs text-white/50 mt-1">
+                      {livePending?.currentWeek?.isActualPayout
+                        ? (livePending.currentWeek.estimatedPending === "0" ? "Claimed" : "Ready to claim")
+                        : `Next payout: ${livePending?.nextPayout?.countdown ?? ""}${livePending?.nextPayout?.label ? ` (${livePending.nextPayout.label})` : ""}`}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1465,7 +1474,7 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-white/60">Current Week ({livePending.currentWeek.weekKey})</span>
                         <span className="text-xs text-purple-400">
-                          Next payout: {livePending.nextPayout.countdown}
+                          Next payout: {livePending.nextPayout.countdown}{livePending.nextPayout.label ? ` (${livePending.nextPayout.label})` : ""}
                         </span>
                       </div>
                       <div className="grid grid-cols-4 gap-2 text-center text-xs">
@@ -1487,8 +1496,12 @@ export default function ProfilePage() {
                         </div>
                       </div>
                       <div className="mt-3 p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-lg">
-                        <span className="text-xs text-green-300/80">Estimated payout: </span>
-                        <span className="text-sm font-bold text-green-400">~{livePending.currentWeek.estimatedPending} XESS</span>
+                        <span className="text-xs text-green-300/80">
+                          {livePending.currentWeek.isActualPayout ? "Payout: " : "Estimated payout: "}
+                        </span>
+                        <span className="text-sm font-bold text-green-400">
+                          {livePending.currentWeek.isActualPayout ? "" : "~"}{livePending.currentWeek.estimatedPending} XESS
+                        </span>
                       </div>
                     </div>
                   )}

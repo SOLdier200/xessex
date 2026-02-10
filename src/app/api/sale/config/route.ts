@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
+import { getSolPriceUsd, computeLamportsPerXess } from "@/lib/solPrice";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,22 @@ export async function GET() {
     const cfg = await db.saleConfig.findFirst();
     if (!cfg) {
       return NextResponse.json({ error: "missing_config" }, { status: 500, headers: noCache });
+    }
+
+    // Compute live SOL-based lamports from Pyth price
+    const solPriceUsd = await getSolPriceUsd();
+    let computedPrivateLamportsPerXess: string | null = null;
+    let computedPublicLamportsPerXess: string | null = null;
+
+    if (solPriceUsd && solPriceUsd > 0) {
+      computedPrivateLamportsPerXess = computeLamportsPerXess(
+        cfg.privatePriceUsdMicros,
+        solPriceUsd,
+      ).toString();
+      computedPublicLamportsPerXess = computeLamportsPerXess(
+        cfg.publicPriceUsdMicros,
+        solPriceUsd,
+      ).toString();
     }
 
     return NextResponse.json({
@@ -33,6 +50,9 @@ export async function GET() {
       publicPriceUsdMicros: cfg.publicPriceUsdMicros.toString(),
       privateLamportsPerXess: cfg.privateLamportsPerXess.toString(),
       publicLamportsPerXess: cfg.publicLamportsPerXess.toString(),
+      solPriceUsd: solPriceUsd ?? null,
+      computedPrivateLamportsPerXess,
+      computedPublicLamportsPerXess,
       privateStartsAt: cfg.privateStartsAt?.toISOString() ?? null,
       privateEndsAt: cfg.privateEndsAt?.toISOString() ?? null,
       publicStartsAt: cfg.publicStartsAt?.toISOString() ?? null,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
-import { weekKeyUTC } from "@/lib/weekKey";
+import { weekKeyUTC, weekKeySundayMidnightPT, getPayoutPeriod } from "@/lib/weekKey";
 import { ALL_REWARD_TYPES } from "@/lib/claimables";
 import { fromHex32 } from "@/lib/merkleSha256";
 
@@ -76,13 +76,51 @@ export async function GET() {
   const currentWeekKey = weekKeyUTC(now);
   const weekIndex = getWeekIndex(currentWeekKey);
 
-  // Calculate next Monday 00:00 UTC
-  const nextMonday = new Date(`${currentWeekKey}T00:00:00Z`);
-  nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
-  const msUntilPayout = nextMonday.getTime() - now.getTime();
-  const hoursUntil = Math.floor(msUntilPayout / (1000 * 60 * 60));
-  const daysUntil = Math.floor(hoursUntil / 24);
-  const remainingHours = hoursUntil % 24;
+  // Calculate next payout time (twice-weekly: Wed evening PT for P1, Sat evening PT for P2)
+  // Get current PT day of week
+  const ptParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    weekday: "short",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+  const ptDayName = ptParts.find(p => p.type === "weekday")?.value ?? "Mon";
+  const ptHour = parseInt(ptParts.find(p => p.type === "hour")?.value ?? "0", 10);
+  const ptDowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const ptDow = ptDowMap[ptDayName] ?? 1;
+
+  // P1 pays out Wednesday ~midnight PT (23:59), P2 pays out Saturday ~midnight PT (23:59)
+  let daysUntilPayout: number;
+  let payoutLabel: string;
+  const period = getPayoutPeriod(now);
+
+  if (period === 1) {
+    // Sun-Wed → target = Wednesday 23:59 PT
+    daysUntilPayout = 3 - ptDow; // Wed(3) - current
+    if (daysUntilPayout < 0 || (daysUntilPayout === 0 && ptHour >= 23)) {
+      // Past Wed evening → next payout is Saturday
+      daysUntilPayout = 6 - ptDow;
+      payoutLabel = "Saturday evening PT";
+    } else {
+      payoutLabel = "Wednesday evening PT";
+    }
+  } else {
+    // Thu-Sat → target = Saturday 23:59 PT
+    daysUntilPayout = 6 - ptDow; // Sat(6) - current
+    if (daysUntilPayout < 0 || (daysUntilPayout === 0 && ptHour >= 23)) {
+      // Past Sat evening → next payout is Wednesday (4 days from Sun)
+      daysUntilPayout = 3 + (7 - ptDow);
+      payoutLabel = "Wednesday evening PT";
+    } else {
+      payoutLabel = "Saturday evening PT";
+    }
+  }
+
+  if (daysUntilPayout < 0) daysUntilPayout = 0;
+  const msUntilPayout = daysUntilPayout * 24 * 60 * 60 * 1000;
+  const hoursUntil = daysUntilPayout * 24;
+  const daysUntil = daysUntilPayout;
+  const remainingHours = 0;
 
   // Get current week stats (aggregate across pools)
   const currentStats = await db.weeklyUserStat.findFirst({
@@ -96,31 +134,56 @@ export async function GET() {
     orderBy: { votesCast: "desc" },
   });
 
-  // Estimate current week pending (rough estimate based on activity)
-  const emission = getWeeklyEmission(weekIndex);
-  const likesPool = (emission * LIKES_POOL_BPS) / 10000n;
-  const commentsPool = (emission * COMMENTS_POOL_BPS) / 10000n;
+  // Check for actual PAID RewardEvents for this week's periods (P1 and P2)
+  // RewardEvent.weekKey stores periodKey like "2026-02-02-P1"
+  const sundayKey = weekKeySundayMidnightPT(now);
+  const actualRewards = await db.rewardEvent.findMany({
+    where: {
+      userId,
+      weekKey: { startsWith: sundayKey },
+      status: "PAID",
+      type: { in: ALL_REWARD_TYPES },
+    },
+    select: { amount: true, claimedAt: true },
+  });
 
-  // Simple estimate: assume user is sole participant (max possible)
-  // Real distribution happens in weekly-distribute with rankings
-  let estimatedPending6 = 0n;
+  // Sum actual rewards (6 decimals) — both claimed and unclaimed
+  const actualTotal6 = actualRewards.reduce((sum, r) => sum + r.amount, 0n);
+  // Sum only unclaimed rewards
+  const actualUnclaimed6 = actualRewards.filter(r => !r.claimedAt).reduce((sum, r) => sum + r.amount, 0n);
+
+  let estimatedPending9: bigint;
   let estimateNote = "";
+  let isActualPayout = false;
 
-  if (currentStats) {
-    // Rough estimate: proportional share if user had similar activity to others
-    // This is just for display - actual distribution uses rankings
-    if (currentStats.scoreReceived > 0) {
-      // Assume top 50 distribution, user gets proportional share
-      estimatedPending6 += (likesPool * 8500n) / 10000n / 50n; // Rough avg for top 50
-      estimateNote = "Based on current score activity";
+  if (actualTotal6 > 0n) {
+    // Real payout data exists — show actual unclaimed amount (not a rough guess)
+    estimatedPending9 = actualUnclaimed6 * 1000n; // convert 6→9 decimals
+    isActualPayout = true;
+    estimateNote = actualUnclaimed6 === 0n
+      ? "All rewards for this week have been claimed"
+      : "Based on actual payout calculation";
+  } else {
+    // No payout yet — fall back to rough estimate
+    const emission = getWeeklyEmission(weekIndex);
+    const likesPool = (emission * LIKES_POOL_BPS) / 10000n;
+    const commentsPool = (emission * COMMENTS_POOL_BPS) / 10000n;
+
+    let estimatedPending6 = 0n;
+
+    if (currentStats) {
+      if (currentStats.scoreReceived > 0) {
+        estimatedPending6 += (likesPool * 8500n) / 10000n / 50n;
+        estimateNote = "Based on current score activity";
+      }
+      if (currentStats.diamondComments > 0) {
+        estimatedPending6 += (commentsPool * BigInt(currentStats.diamondComments)) / 10n;
+      }
     }
-    if (currentStats.diamondComments > 0) {
-      estimatedPending6 += (commentsPool * BigInt(currentStats.diamondComments)) / 10n; // Assume 10 total commenters
-    }
+
+    estimatedPending9 = estimatedPending6 * 1000n;
+    if (!estimateNote) estimateNote = "Estimate based on current activity";
   }
-
-  // Convert to 9 decimals for display
-  const estimatedPending9 = estimatedPending6 * 1000n;
 
   // Get all unclaimed weeks (finalized but not claimed)
   // A week is unclaimed if: ClaimEpoch exists with setOnChain=true AND user has ClaimLeaf
@@ -233,11 +296,13 @@ export async function GET() {
       pendingAtomic: currentStats?.pendingAtomic?.toString() ?? "0",
       estimatedPending: format9(estimatedPending9),
       estimatedPendingAtomic: estimatedPending9.toString(),
-      estimateNote: estimateNote || "Estimate based on current activity",
+      estimateNote,
+      isActualPayout,
     },
     nextPayout: {
-      date: nextMonday.toISOString(),
-      countdown: `${daysUntil}d ${remainingHours}h`,
+      date: new Date(now.getTime() + msUntilPayout).toISOString(),
+      countdown: daysUntil > 0 ? `${daysUntil}d` : "Today",
+      label: payoutLabel,
       msRemaining: msUntilPayout,
     },
     unclaimedWeeks,

@@ -1211,6 +1211,16 @@ model SaleContribution {
   @@index([status])
 }
 
+model SaleWhitelist {
+  id      String   @id @default(cuid())
+  wallet  String   @unique // lowercased base58
+  note    String?  // optional admin note
+  addedBy String?  // admin who added
+  addedAt DateTime @default(now())
+
+  @@index([wallet])
+}
+
 // ========== Playlist System ==========
 
 model Playlist {

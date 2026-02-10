@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
     ? {
         OR: [
           { email: { contains: search, mode: "insensitive" as const } },
+          { username: { contains: search, mode: "insensitive" as const } },
           { walletAddress: { contains: search, mode: "insensitive" as const } },
           { id: { contains: search, mode: "insensitive" as const } },
         ],
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       email: true,
+      username: true,
       walletAddress: true,
       role: true,
       createdAt: true,
@@ -102,6 +104,7 @@ export async function GET(req: NextRequest) {
       return {
         id: u.id,
         email: u.email,
+        username: u.username,
         walletAddress: u.walletAddress,
         role: u.role,
         createdAt: u.createdAt.toISOString(),

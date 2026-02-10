@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import Link from "next/link";
 
 type SaleConfig = {
   id: string;
@@ -79,30 +81,43 @@ function shortenTx(txSig: string | null): string {
   return `${txSig.slice(0, 8)}...`;
 }
 
+/** Client-side lamports computation matching server logic */
+function computeLamports(usdMicrosStr: string, solPriceUsd: number): string {
+  try {
+    const micros = BigInt(usdMicrosStr);
+    const solMicros = BigInt(Math.round(solPriceUsd * 1_000_000));
+    if (solMicros === 0n) return "—";
+    return ((micros * 1_000_000_000n) / solMicros).toString();
+  } catch {
+    return "—";
+  }
+}
+
 export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
   const [data, setData] = useState<PresaleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [solPrice, setSolPrice] = useState<number | null>(null);
 
-  // Edit form state
+  // Edit form state (USD prices only — lamports are auto-computed)
   const [editPhase, setEditPhase] = useState("");
   const [editWalletCap, setEditWalletCap] = useState("");
-  const [editPrivateLamports, setEditPrivateLamports] = useState("");
-  const [editPublicLamports, setEditPublicLamports] = useState("");
+  const [editPrivateUsdMicros, setEditPrivateUsdMicros] = useState("");
+  const [editPublicUsdMicros, setEditPublicUsdMicros] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/presale");
+      const res = await fetch("/api/admin/presale", { credentials: "include" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Failed to load");
       setData(json);
 
-      // Initialize edit fields
+      // Initialize edit fields (no lamports — they're auto-computed)
       setEditPhase(json.config.activePhase);
       setEditWalletCap(json.config.walletCapXess);
-      setEditPrivateLamports(json.config.privateLamportsPerXess);
-      setEditPublicLamports(json.config.publicLamportsPerXess);
+      setEditPrivateUsdMicros(json.config.privatePriceUsdMicros);
+      setEditPublicUsdMicros(json.config.publicPriceUsdMicros);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -114,25 +129,55 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
     fetchData();
   }, [fetchData]);
 
+  // Fetch live SOL price from Pyth proxy
+  useEffect(() => {
+    function fetchSolPrice() {
+      fetch("/api/pyth/prices")
+        .then((r) => r.json())
+        .then((d) => { if (d.ok && d.SOL_USD?.price) setSolPrice(d.SOL_USD.price); })
+        .catch(() => {});
+    }
+    fetchSolPrice();
+    const iv = setInterval(fetchSolPrice, 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
   const handleSave = async () => {
     if (!isAdmin) return;
     setSaving(true);
     try {
       const res = await fetch("/api/admin/presale", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           activePhase: editPhase,
           walletCapXess: editWalletCap,
-          privateLamportsPerXess: editPrivateLamports,
-          publicLamportsPerXess: editPublicLamports,
+          privatePriceUsdMicros: editPrivateUsdMicros,
+          publicPriceUsdMicros: editPublicUsdMicros,
         }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Failed to save");
-      await fetchData();
+
+      // Refetch to get server state
+      const freshRes = await fetch("/api/admin/presale", { credentials: "include", cache: "no-store" });
+      const freshJson = await freshRes.json();
+
+      if (freshJson.ok) {
+        setData(freshJson);
+        setEditPhase(freshJson.config.activePhase);
+        setEditWalletCap(freshJson.config.walletCapXess);
+        setEditPrivateUsdMicros(freshJson.config.privatePriceUsdMicros);
+        setEditPublicUsdMicros(freshJson.config.publicPriceUsdMicros);
+        toast.success("Config saved! Lamports auto-computed from live SOL price.");
+      } else {
+        toast.error("Saved but failed to refresh: " + freshJson.error);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      const msg = err instanceof Error ? err.message : "Failed to save";
+      setError(msg);
+      toast.error(`Save failed: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -164,7 +209,15 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="min-h-screen bg-black p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-white">Presale Administration</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-white">Presale Administration</h1>
+          <Link
+            href="/launch"
+            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition text-sm"
+          >
+            View Launch Page
+          </Link>
+        </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -265,7 +318,7 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
             <h2 className="text-xl font-semibold text-pink-300 mb-4">
               Configuration
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm text-white/70 mb-1">
                   Active Phase
@@ -293,28 +346,54 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
               </div>
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Private (lamports/XESS)
+                  Private USD Price (micros)
                 </label>
                 <input
                   type="text"
-                  value={editPrivateLamports}
-                  onChange={(e) => setEditPrivateLamports(e.target.value)}
+                  value={editPrivateUsdMicros}
+                  onChange={(e) => setEditPrivateUsdMicros(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-black border border-white/20 text-white"
+                  placeholder="e.g. 39 = $0.000039"
                 />
               </div>
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Public (lamports/XESS)
+                  Public USD Price (micros)
                 </label>
                 <input
                   type="text"
-                  value={editPublicLamports}
-                  onChange={(e) => setEditPublicLamports(e.target.value)}
+                  value={editPublicUsdMicros}
+                  onChange={(e) => setEditPublicUsdMicros(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-black border border-white/20 text-white"
+                  placeholder="e.g. 46 = $0.000046"
                 />
               </div>
+              <div>
+                <label className="block text-sm text-white/70 mb-1">
+                  Live SOL/USD (Pyth)
+                </label>
+                <div className="w-full px-3 py-2 rounded-lg bg-black/60 border border-white/10 text-cyan-400 font-mono">
+                  {solPrice ? `$${solPrice.toFixed(2)}` : "Loading..."}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-white/70 mb-1">
+                  Computed lamports/XESS
+                </label>
+                <div className="w-full px-3 py-2 rounded-lg bg-black/60 border border-white/10 text-white/70 font-mono text-xs">
+                  {solPrice && editPrivateUsdMicros ? (
+                    <>
+                      <span className="text-yellow-300">Priv:</span>{" "}
+                      {computeLamports(editPrivateUsdMicros, solPrice)}
+                      {" / "}
+                      <span className="text-emerald-300">Pub:</span>{" "}
+                      {computeLamports(editPublicUsdMicros, solPrice)}
+                    </>
+                  ) : "—"}
+                </div>
+              </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 flex items-center gap-4">
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -322,6 +401,9 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
               >
                 {saving ? "Saving..." : "Save Changes"}
               </button>
+              <span className="text-xs text-white/40">
+                Lamports are auto-computed from USD price + live SOL rate on save
+              </span>
             </div>
           </div>
         )}
@@ -331,7 +413,7 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
           <h2 className="text-xl font-semibold text-white mb-4">
             Current Pricing
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
             <div>
               <span className="text-white/50">Private Price (USD):</span>
               <div className="text-white font-mono">
@@ -345,16 +427,28 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
               </div>
             </div>
             <div>
+              <span className="text-white/50">SOL/USD (Pyth live):</span>
+              <div className="text-cyan-400 font-mono">
+                {solPrice ? `$${solPrice.toFixed(2)}` : "—"}
+              </div>
+            </div>
+            <div>
               <span className="text-white/50">Private (lamports/XESS):</span>
               <div className="text-white font-mono">
-                {config.privateLamportsPerXess}
+                {solPrice
+                  ? computeLamports(config.privatePriceUsdMicros, solPrice)
+                  : config.privateLamportsPerXess}
               </div>
+              <div className="text-white/30 text-xs">DB fallback: {config.privateLamportsPerXess}</div>
             </div>
             <div>
               <span className="text-white/50">Public (lamports/XESS):</span>
               <div className="text-white font-mono">
-                {config.publicLamportsPerXess}
+                {solPrice
+                  ? computeLamports(config.publicPriceUsdMicros, solPrice)
+                  : config.publicLamportsPerXess}
               </div>
+              <div className="text-white/30 text-xs">DB fallback: {config.publicLamportsPerXess}</div>
             </div>
           </div>
         </div>
