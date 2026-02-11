@@ -12,10 +12,13 @@ type TokenLink =
   | { label: string; href: string; action?: never }
   | { label: string; action: "wallet"; href?: never };
 
+const PRESALE_ORIGIN = "https://presale.xessex.me";
+const MAIN_ORIGIN = "https://xessex.me";
+
 const tokenLinks: TokenLink[] = [
   { label: "Wallet", action: "wallet" },
-  { label: "Token Launch", href: "/launch" },
-  { label: "Tokenomics", href: "/tokenomics" },
+  { label: "Token Launch", href: `${PRESALE_ORIGIN}/launch` },
+  { label: "Tokenomics", href: `${PRESALE_ORIGIN}/tokenomics` },
   { label: "Whitepaper", href: "/whitepaper" },
   { label: "Rewards", href: "/rewards" },
   { label: "Win Free Credits!", href: "/rewards-drawing" },
@@ -32,6 +35,11 @@ type TopItem =
 
 export default function TopNav() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPresale, setIsPresale] = useState(false);
+
+  useEffect(() => {
+    setIsPresale(window.location.hostname.startsWith("presale."));
+  }, []);
 
   // Menu open/close (replaces old token dropdown and mobile hamburger)
   const [menuOpen, setMenuOpen] = useState(false);
@@ -175,7 +183,7 @@ export default function TopNav() {
       <div className="flex items-start justify-between gap-3">
         {/* Left: Logo */}
         <Link
-          href="/"
+          href={isPresale ? MAIN_ORIGIN : "/"}
           onClick={() => {
             setMenuOpen(false);
             setTokenSubOpen(false);
