@@ -83,6 +83,8 @@ export function proxy(req: NextRequest) {
       !isPresalePath(pathname) &&
       !pathname.startsWith("/_next") &&
       !pathname.startsWith("/logos/") &&
+      !pathname.startsWith("/api/auth") &&
+      !pathname.startsWith("/login") &&
       pathname !== "/favicon.ico" &&
       pathname !== "/age" &&
       !pathname.startsWith("/age")

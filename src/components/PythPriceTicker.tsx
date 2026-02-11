@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { presaleUrl } from "@/lib/presaleOrigin";
+import { fetchPresale } from "@/lib/fetchByHost";
 
 type PricesResponse = {
   ok: boolean;
@@ -28,7 +28,7 @@ export default function PythPriceTicker({
 
   async function load() {
     try {
-      const r = await fetch(presaleUrl("/api/pyth/prices"), { cache: "no-store" });
+      const r = await fetchPresale("/api/pyth/prices", { cache: "no-store" });
       const j = (await r.json()) as PricesResponse;
       setData(j);
     } catch (e: any) {

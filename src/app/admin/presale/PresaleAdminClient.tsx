@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { presaleUrl } from "@/lib/presaleOrigin";
+import { fetchPresale } from "@/lib/fetchByHost";
 
 type SaleConfig = {
   id: string;
@@ -109,7 +109,7 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(presaleUrl("/api/admin/presale"), { credentials: "include" });
+      const res = await fetchPresale("/api/admin/presale", { credentials: "include" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "Failed to load");
       setData(json);
@@ -133,7 +133,7 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
   // Fetch live SOL price from Pyth proxy
   useEffect(() => {
     function fetchSolPrice() {
-      fetch(presaleUrl("/api/pyth/prices"))
+      fetchPresale("/api/pyth/prices")
         .then((r) => r.json())
         .then((d) => { if (d.ok && d.SOL_USD?.price) setSolPrice(d.SOL_USD.price); })
         .catch(() => {});
@@ -147,7 +147,7 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
     if (!isAdmin) return;
     setSaving(true);
     try {
-      const res = await fetch(presaleUrl("/api/admin/presale"), {
+      const res = await fetchPresale("/api/admin/presale", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -162,7 +162,7 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
       if (!json.ok) throw new Error(json.error || "Failed to save");
 
       // Refetch to get server state
-      const freshRes = await fetch(presaleUrl("/api/admin/presale"), { credentials: "include", cache: "no-store" });
+      const freshRes = await fetchPresale("/api/admin/presale", { credentials: "include", cache: "no-store" });
       const freshJson = await freshRes.json();
 
       if (freshJson.ok) {

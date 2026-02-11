@@ -7,13 +7,11 @@ import WalletStatus from "./WalletStatus";
 import MessagesModal from "./MessagesModal";
 import WalletBalancesModal from "./WalletBalancesModal";
 import { AnimatePresence, motion } from "framer-motion";
+import { PRESALE_ORIGIN, MAIN_ORIGIN } from "@/lib/origins";
 
 type TokenLink =
   | { label: string; href: string; action?: never }
   | { label: string; action: "wallet"; href?: never };
-
-const PRESALE_ORIGIN = "https://presale.xessex.me";
-const MAIN_ORIGIN = "https://xessex.me";
 
 const tokenLinks: TokenLink[] = [
   { label: "Wallet", action: "wallet" },

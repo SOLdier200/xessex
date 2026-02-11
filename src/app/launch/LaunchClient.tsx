@@ -176,7 +176,7 @@ export default function LaunchClient() {
 
   // Fetch sale config
   React.useEffect(() => {
-    fetch(presaleUrl("/api/sale/config"))
+    fetchPresale("/api/sale/config")
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) setCfg(data);
@@ -187,7 +187,7 @@ export default function LaunchClient() {
   // Fetch SOL price from Pyth proxy with 30s refresh
   React.useEffect(() => {
     function fetchSolPrice() {
-      fetch(presaleUrl("/api/pyth/prices"))
+      fetchPresale("/api/pyth/prices")
         .then((r) => r.json())
         .then((data) => {
           if (data.ok && data.SOL_USD?.price) setSolPrice(data.SOL_USD.price);
@@ -211,7 +211,7 @@ export default function LaunchClient() {
     const walletStr = wallet.publicKey.toBase58();
 
     // Fetch wallet status
-    fetch(presaleUrl(`/api/sale/wallet-status?wallet=${walletStr}`))
+    fetchPresale(`/api/sale/wallet-status?wallet=${walletStr}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) setWalletStatus(data);
@@ -220,7 +220,7 @@ export default function LaunchClient() {
 
     // Fetch whitelist proof if private phase
     if (cfg?.activePhase === "private") {
-      fetch(presaleUrl(`/api/sale/whitelist-proof?wallet=${walletStr}`))
+      fetchPresale(`/api/sale/whitelist-proof?wallet=${walletStr}`)
         .then((r) => r.json())
         .then(async (data: WhitelistProof) => {
           setWhitelistProof(data);
@@ -394,7 +394,7 @@ export default function LaunchClient() {
       toast.dismiss("tx");
 
       // Submit contribution to backend with on-chain verification
-      const res = await fetch(presaleUrl("/api/sale/contribute"), {
+      const res = await fetchPresale("/api/sale/contribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Important: send session cookie
@@ -420,12 +420,12 @@ export default function LaunchClient() {
         setAmount("");
 
         // Refresh wallet status
-        const statusRes = await fetch(presaleUrl(`/api/sale/wallet-status?wallet=${walletPubkey.toBase58()}`));
+        const statusRes = await fetchPresale(`/api/sale/wallet-status?wallet=${walletPubkey.toBase58()}`);
         const statusData = await statusRes.json();
         if (statusData.ok) setWalletStatus(statusData);
 
         // Refresh config to update sold amounts
-        const cfgRes = await fetch(presaleUrl("/api/sale/config"));
+        const cfgRes = await fetchPresale("/api/sale/config");
         const cfgData = await cfgRes.json();
         if (cfgData.ok) setCfg(cfgData);
       } else {
