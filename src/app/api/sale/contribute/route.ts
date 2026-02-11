@@ -14,7 +14,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import {
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction as createSplTransfer,
+} from "@solana/spl-token";
 import { db } from "@/lib/prisma";
 import { getAccessContext } from "@/lib/access";
 import { getSolPriceUsd, computeLamportsPerXess } from "@/lib/solPrice";
@@ -51,6 +56,19 @@ function verifyMerkleProof(wallet: string, rootHex: string, proofHex: string[]):
   }
 
   return acc.toString("hex") === rootHex.toLowerCase().replace(/^0x/, "");
+}
+
+// XESS token has 9 decimals
+const XESS_DECIMALS = 9n;
+const XESS_ATOMIC_MULT = 10n ** XESS_DECIMALS; // 1_000_000_000n
+
+function loadKeypair(raw: string): Keypair {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[")) {
+    const arr = JSON.parse(trimmed) as number[];
+    return Keypair.fromSecretKey(Uint8Array.from(arr));
+  }
+  throw new Error("XESS_TREASURY_KEYPAIR must be a JSON array");
 }
 
 // On-chain verification helpers
@@ -279,8 +297,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Record contribution and update sold counters in a transaction
-    await db.$transaction(async (tx) => {
-      await tx.saleContribution.create({
+    const contribution = await db.$transaction(async (tx) => {
+      const contrib = await tx.saleContribution.create({
         data: {
           phase,
           wallet: sessionWallet.toLowerCase(),
@@ -305,14 +323,95 @@ export async function POST(req: NextRequest) {
           data: { soldPublicXess: cfg.soldPublicXess + xessAmount },
         });
       }
+
+      return contrib;
     });
+
+    // ─── Deliver XESS tokens to buyer ─────────────────────────
+    let deliverySig: string | null = null;
+    try {
+      const xessMintStr = process.env.XESS_MINT;
+      const treasuryKeyStr = process.env.XESS_TREASURY_KEYPAIR;
+
+      if (!xessMintStr || !treasuryKeyStr) {
+        throw new Error("Missing XESS_MINT or XESS_TREASURY_KEYPAIR env vars");
+      }
+
+      const xessMint = new PublicKey(xessMintStr);
+      const treasuryKeypair = loadKeypair(treasuryKeyStr);
+      const buyer = new PublicKey(sessionWallet);
+
+      const treasuryAta = await getAssociatedTokenAddress(xessMint, treasuryKeypair.publicKey);
+      const buyerAta = await getAssociatedTokenAddress(xessMint, buyer);
+
+      // Convert whole XESS → atomic units (9 decimals)
+      const xessAtomic = xessAmount * XESS_ATOMIC_MULT;
+
+      const ixs: Parameters<Transaction["add"]> = [];
+
+      // Buyer should have created their XESS ATA in the payment tx.
+      // Fallback: treasury creates it if somehow missing.
+      const buyerAtaInfo = await connection.getAccountInfo(buyerAta);
+      if (!buyerAtaInfo) {
+        console.warn(`Buyer ATA missing for ${sessionWallet} — treasury creating as fallback`);
+        ixs.push(
+          createAssociatedTokenAccountInstruction(
+            treasuryKeypair.publicKey,
+            buyerAta,
+            buyer,
+            xessMint,
+          )
+        );
+      }
+
+      // Transfer XESS from treasury ATA → buyer ATA
+      ixs.push(
+        createSplTransfer(
+          treasuryAta,
+          buyerAta,
+          treasuryKeypair.publicKey,
+          xessAtomic,
+        )
+      );
+
+      const deliveryTx = new Transaction().add(...ixs);
+      deliveryTx.feePayer = treasuryKeypair.publicKey;
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      deliveryTx.recentBlockhash = blockhash;
+      deliveryTx.lastValidBlockHeight = lastValidBlockHeight;
+
+      deliverySig = await sendAndConfirmTransaction(
+        connection,
+        deliveryTx,
+        [treasuryKeypair],
+        { commitment: "confirmed" },
+      );
+
+      // Store delivery sig in DB
+      await db.saleContribution.update({
+        where: { id: contribution.id },
+        data: { deliveryTxSig: deliverySig },
+      });
+    } catch (deliveryErr) {
+      console.error("XESS delivery failed (payment was recorded):", deliveryErr);
+      // Payment is verified and recorded — admin can retry delivery later
+      return NextResponse.json({
+        ok: true,
+        xessAmount: xessAmount.toString(),
+        asset,
+        paymentSig: txSig,
+        xessSig: null,
+        deliveryPending: true,
+      }, { headers: noCache });
+    }
 
     return NextResponse.json({
       ok: true,
       xessAmount: xessAmount.toString(),
       asset,
-      requiredLamports: requiredLamports.toString(),
-      requiredUsdcAtomic: requiredUsdcAtomic.toString(),
+      paymentSig: txSig,
+      xessSig: deliverySig,
     }, { headers: noCache });
   } catch (err) {
     console.error("Contribution error:", err);

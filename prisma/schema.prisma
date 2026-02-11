@@ -1201,6 +1201,7 @@ model SaleContribution {
 
   // On-chain verification
   txSig          String?  @unique
+  deliveryTxSig  String?  // XESS token delivery transaction signature
 
   // Status
   status         String   @default("PENDING") // "PENDING" | "CONFIRMED" | "FAILED"

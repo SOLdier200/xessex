@@ -6,6 +6,7 @@ import { WalletMultiButton, useWalletModal } from "@solana/wallet-adapter-react-
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction,
   createTransferInstruction,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -21,6 +22,7 @@ import { fetchPresale } from "@/lib/fetchByHost";
 const TREASURY_SOL = "FuG1tCeK53s17nQxvNcpKKo5bvESnPdHduhemHLu7aeS";
 const TREASURY_USDC_ATA = "ADcttJuZHpXjsdHgsKVQ1iGRbrBPrCF5U55Feg8eeCAE";
 const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // Mainnet USDC
+const XESS_MINT_ADDR = process.env.NEXT_PUBLIC_XESS_MINT || "HvfmE1stqxvBfUXtKX4L4w3BeMMjcDM48Qh6ZfGtgrpE";
 
 // RPC endpoint (same as providers.tsx)
 const RPC_ENDPOINT = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
@@ -161,9 +163,11 @@ export default function LaunchClient() {
   // Last successful purchase receipt
   const [lastReceipt, setLastReceipt] = React.useState<{
     txSig: string;
+    xessSig: string | null;
     xessAmount: string;
     asset: "SOL" | "USDC";
     paid: string;
+    deliveryPending?: boolean;
   } | null>(null);
 
   // Check admin status
@@ -337,16 +341,31 @@ export default function LaunchClient() {
       const connection = new Connection(RPC_ENDPOINT, "confirmed");
       const walletPubkey = wallet.publicKey;
 
-      let tx: Transaction;
+      const instructions: Parameters<Transaction["add"]> = [];
       let paidLamports: bigint | null = null;
       let paidUsdcAtomic: bigint | null = null;
+
+      // Ensure buyer has a XESS ATA before payment (buyer pays rent)
+      const xessMint = new PublicKey(XESS_MINT_ADDR);
+      const buyerXessAta = getAssociatedTokenAddressSync(xessMint, walletPubkey);
+      const buyerAtaInfo = await connection.getAccountInfo(buyerXessAta);
+      if (!buyerAtaInfo) {
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            walletPubkey, // buyer pays ATA rent
+            buyerXessAta,
+            walletPubkey,
+            xessMint,
+          )
+        );
+      }
 
       if (asset === "SOL") {
         // SOL transfer
         const lamports = BigInt(Math.floor(numAmount * LAMPORTS_PER_SOL));
         paidLamports = lamports;
 
-        tx = new Transaction().add(
+        instructions.push(
           SystemProgram.transfer({
             fromPubkey: walletPubkey,
             toPubkey: new PublicKey(TREASURY_SOL),
@@ -362,7 +381,7 @@ export default function LaunchClient() {
         const senderAta = getAssociatedTokenAddressSync(usdcMint, walletPubkey);
         const treasuryAta = new PublicKey(TREASURY_USDC_ATA);
 
-        tx = new Transaction().add(
+        instructions.push(
           createTransferInstruction(
             senderAta,
             treasuryAta,
@@ -373,6 +392,8 @@ export default function LaunchClient() {
           )
         );
       }
+
+      const tx = new Transaction().add(...instructions);
 
       // Get recent blockhash
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
@@ -410,12 +431,18 @@ export default function LaunchClient() {
       const data = await res.json();
 
       if (data.ok) {
-        toast.success(`Contribution verified! ${formatNumber(xessPreview)} XESS allocated`);
+        if (data.deliveryPending) {
+          toast.warning("Payment verified but token delivery is pending. Contact support if not received shortly.");
+        } else {
+          toast.success(`${formatNumber(xessPreview)} XESS delivered to your wallet!`);
+        }
         setLastReceipt({
           txSig,
+          xessSig: data.xessSig ?? null,
           xessAmount: xessPreview,
           asset,
           paid: amount,
+          deliveryPending: data.deliveryPending ?? false,
         });
         setAmount("");
 
@@ -762,9 +789,17 @@ export default function LaunchClient() {
 
               {/* Transaction Receipt */}
               {lastReceipt && (
-                <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                <div className={`mt-4 rounded-2xl border p-4 ${
+                  lastReceipt.deliveryPending
+                    ? "border-yellow-500/30 bg-yellow-500/5"
+                    : "border-emerald-500/30 bg-emerald-500/5"
+                }`}>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium text-emerald-400">Purchase Receipt</h3>
+                    <h3 className={`text-sm font-medium ${
+                      lastReceipt.deliveryPending ? "text-yellow-400" : "text-emerald-400"
+                    }`}>
+                      {lastReceipt.deliveryPending ? "Payment Received — Delivery Pending" : "Purchase Receipt"}
+                    </h3>
                     <button
                       onClick={() => setLastReceipt(null)}
                       className="text-white/40 hover:text-white/70 text-xs transition"
@@ -774,39 +809,23 @@ export default function LaunchClient() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">XESS Received</span>
+                      <span className="text-white/60">XESS Amount</span>
                       <span className="text-emerald-400 font-medium">{formatNumber(lastReceipt.xessAmount)} XESS</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/60">Paid</span>
                       <span className="text-white/90">{lastReceipt.paid} {lastReceipt.asset}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-white/60 shrink-0">TxID</span>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`https://solscan.io/tx/${lastReceipt.txSig}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono text-xs text-cyan-400 hover:text-cyan-300 transition truncate"
-                        >
-                          {lastReceipt.txSig.slice(0, 20)}...{lastReceipt.txSig.slice(-8)}
-                        </a>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(lastReceipt.txSig);
-                            toast.success("TxID copied!");
-                          }}
-                          className="shrink-0 text-white/40 hover:text-white/70 transition"
-                          title="Copy TxID"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
+                    <TxRow label="Payment" sig={lastReceipt.txSig} />
+                    {lastReceipt.xessSig && (
+                      <TxRow label="Delivery" sig={lastReceipt.xessSig} />
+                    )}
+                    {lastReceipt.deliveryPending && (
+                      <p className="text-xs text-yellow-300/80 mt-2">
+                        Your payment was verified. Token delivery is being processed.
+                        If you don&apos;t receive tokens within a few minutes, contact Support@xessex.me.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -913,6 +932,37 @@ function CopyRow({ label, value }: { label: string; value: string }) {
       >
         {short}
       </button>
+    </div>
+  );
+}
+
+function TxRow({ label, sig }: { label: string; sig: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-white/60 shrink-0">{label}</span>
+      <div className="flex items-center gap-2">
+        <a
+          href={`https://solscan.io/tx/${sig}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-xs text-cyan-400 hover:text-cyan-300 transition truncate"
+        >
+          {sig.slice(0, 16)}...{sig.slice(-6)}
+        </a>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(sig);
+            toast.success(`${label} TxID copied!`);
+          }}
+          className="shrink-0 text-white/40 hover:text-white/70 transition"
+          title="Copy TxID"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
