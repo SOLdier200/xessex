@@ -8,8 +8,8 @@ function xmlEscape(s: string) {
 }
 
 export async function GET() {
-  // Use BUILD_TIME env for stable lastmod (set at deploy time)
-  const lastmod = process.env.BUILD_TIME ?? new Date().toISOString();
+  const lastmod = process.env.BUILD_TIME;
+  const lastmodTag = lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : "";
 
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>` +
@@ -17,8 +17,7 @@ export async function GET() {
     COLLECTION_SLUGS.map(
       (slug) => `
   <url>
-    <loc>${xmlEscape(`${base}/collections/${slug}`)}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${xmlEscape(`${base}/collections/${slug}`)}</loc>${lastmodTag}
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>`

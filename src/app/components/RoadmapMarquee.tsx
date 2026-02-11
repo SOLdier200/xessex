@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { PRESALE_ORIGIN } from "@/lib/origins";
 import {
   motion,
   useMotionValue,
@@ -48,8 +49,8 @@ const PHASES: RoadmapPhase[] = [
   },
   {
     id: "phase1",
-    status: "now",
-    title: "Phase 1 — Now",
+    status: "done",
+    title: "Phase 1 — Complete",
     subtitle: "Mainnet Launch",
     bullets: [
       "Public roadmap + transparency panel",
@@ -61,14 +62,12 @@ const PHASES: RoadmapPhase[] = [
   },
   {
     id: "phase2",
-    status: "next",
-    title: "Phase 2 — Expansion",
-    subtitle: "Platform growth",
+    status: "now",
+    title: "Phase 2 — Now",
+    subtitle: "Expansion",
     bullets: [
-      <>Private Presale — <Link href="/launch" className="text-pink-400 hover:text-pink-300 underline underline-offset-2">Join Presale</Link></>,
+      <>Presale Live Now! — <Link href={`${PRESALE_ORIGIN}/launch`} className="text-pink-400 hover:text-pink-300 underline underline-offset-2">Join Presale</Link></>,
       "Public Presale",
-      "Liquidity seeded & locked",
-      "Mainnet rewards activation",
       "First owned content deployed",
       "Automated anti-abuse systems",
     ],
@@ -77,9 +76,19 @@ const PHASES: RoadmapPhase[] = [
     id: "phase3",
     status: "next",
     title: "Phase 3 — Growth",
+    subtitle: "Platform growth",
+    bullets: [
+      "Liquidity seeded & locked",
+      "Mainnet rewards activation",
+      "Weekly content additions",
+    ],
+  },
+  {
+    id: "phase4",
+    status: "next",
+    title: "Phase 4 — Scale",
     subtitle: "Scaling up",
     bullets: [
-      "Weekly content additions",
       "Partner onboarding",
       "Partner embed system",
       "Governance experiments",

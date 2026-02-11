@@ -10,9 +10,15 @@ const PAGES = [
   { loc: `${base}/stars`, changefreq: "weekly", priority: "0.8" },
   { loc: `${base}/leaderboard`, changefreq: "daily", priority: "0.7" },
   { loc: `${base}/earn-crypto-watching-porn`, changefreq: "monthly", priority: "0.7" },
+  { loc: `${base}/rewards-drawing`, changefreq: "weekly", priority: "0.6" },
+  { loc: `${base}/faq`, changefreq: "monthly", priority: "0.4" },
+  { loc: `${base}/launch`, changefreq: "monthly", priority: "0.4" },
+  { loc: `${base}/tokenomics`, changefreq: "monthly", priority: "0.4" },
   { loc: `${base}/terms`, changefreq: "yearly", priority: "0.2" },
   { loc: `${base}/privacy`, changefreq: "yearly", priority: "0.2" },
   { loc: `${base}/parental-controls`, changefreq: "yearly", priority: "0.2" },
+  { loc: `${base}/contact`, changefreq: "yearly", priority: "0.2" },
+  { loc: `${base}/2257`, changefreq: "yearly", priority: "0.2" },
 ];
 
 function xmlEscape(s: string) {
@@ -20,8 +26,8 @@ function xmlEscape(s: string) {
 }
 
 export async function GET() {
-  // Use BUILD_TIME env for stable lastmod (set at deploy time)
-  const lastmod = process.env.BUILD_TIME ?? new Date().toISOString();
+  const lastmod = process.env.BUILD_TIME;
+  const lastmodTag = lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : "";
 
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>` +
@@ -29,8 +35,7 @@ export async function GET() {
     PAGES.map(
       (p) => `
   <url>
-    <loc>${xmlEscape(p.loc)}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <loc>${xmlEscape(p.loc)}</loc>${lastmodTag}
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`

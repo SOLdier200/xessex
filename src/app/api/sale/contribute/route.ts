@@ -348,6 +348,16 @@ export async function POST(req: NextRequest) {
       // Convert whole XESS → atomic units (9 decimals)
       const xessAtomic = xessAmount * XESS_ATOMIC_MULT;
 
+      console.log("[contribute] DELIVERY DEBUG", {
+        mint: xessMintStr,
+        treasuryPubkey: treasuryKeypair.publicKey.toBase58(),
+        treasuryAta: treasuryAta.toBase58(),
+        buyer: buyer.toBase58(),
+        buyerAta: buyerAta.toBase58(),
+        xessAtomic: xessAtomic.toString(),
+        rpc: RPC_URL,
+      });
+
       const ixs: Parameters<Transaction["add"]> = [];
 
       // Buyer should have created their XESS ATA in the payment tx.

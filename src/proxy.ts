@@ -53,7 +53,7 @@ function isAllowlistedPath(pathname: string) {
     pathname.startsWith("/login") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml" ||
+    (pathname.startsWith("/sitemap") && pathname.endsWith(".xml")) ||
     pathname.startsWith("/logos/")
   );
 }
