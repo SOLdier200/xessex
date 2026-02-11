@@ -132,6 +132,7 @@ function isSplTransferTo(
 }
 
 export async function POST(req: NextRequest) {
+  console.log("[contribute] HIT", new Date().toISOString());
   const noCache = { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
   // Require authenticated session with wallet
