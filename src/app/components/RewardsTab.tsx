@@ -203,13 +203,15 @@ export default function RewardsTab() {
               <div className="text-sm text-gray-400 mb-3">Pool Breakdown</div>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(weekDetail.byType).map(([type, data]) => {
-                  const refColor = getRefLevelColor(type);
+                  // Strip pool suffix for ref color lookup
+                  const baseType = type.replace(/:(?:xessex|embed)$/, "");
+                  const refColor = getRefLevelColor(baseType);
                   return (
                     <div
                       key={type}
                       className="flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2 overflow-hidden min-w-0"
                     >
-                      <div className={`text-sm truncate mr-2 ${refColor ?? "text-gray-300"}`}>{rewardTypeLabel(type)}</div>
+                      <div className={`text-sm truncate mr-2 ${refColor ?? "text-gray-300"}`}>{rewardTypeLabel(baseType, (data as any).refType)}</div>
                       <div className={`text-sm font-medium flex-shrink-0 ${refColor ?? "text-white"}`}>
                         {formatXess6(data.amount)}
                       </div>

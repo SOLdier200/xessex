@@ -207,20 +207,35 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
   }
 
   if (variant === "inline") {
-    const Tag = onClick ? "button" : "span";
+    const Tag = onClick ? "button" : "div";
+    const inlineSparkCount = isMobile ? 0 : Math.min(sparkCount, 4);
     return (
       <Tag
         onClick={onClick}
         className={[
-          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 md:px-2 md:py-1 whitespace-nowrap border",
-          "text-[9px] md:text-[11px] leading-tight",
+          "relative overflow-hidden inline-flex items-center gap-1 md:gap-1.5 rounded-md border whitespace-nowrap",
+          "px-1.5 py-0.5 md:px-3 md:py-1.5 lg:px-4 lg:py-2",
+          "text-[9px] md:text-xs lg:text-sm leading-tight",
           `bg-gradient-to-r ${bgGrad} ${borderClass}`,
-          onClick ? "cursor-pointer hover:brightness-125 active:scale-95 transition-all" : "",
+          stage >= 3 && !isMobile ? "countdown-shimmer" : "",
+          stage === 7 ? "animate-celebrate" : "",
+          onClick ? "cursor-pointer hover:brightness-125 active:scale-[0.97] transition-all text-left" : "",
           className,
         ].filter(Boolean).join(" ")}
       >
-        <span className="text-white/50 font-medium">XESS:</span>
-        <span className={`${color} ${glowClass} font-bold`}>{countdown}</span>
+        {inlineSparkCount > 0 && (
+          <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+            {Array.from({ length: inlineSparkCount }).map((_, i) => (
+              <span
+                key={i}
+                className={`spark spark-${(i % 6) + 1} ${sparkColor}`}
+                style={{ top: `${20 + (i * 27) % 60}%`, left: `${10 + (i * 31) % 80}%` }}
+              />
+            ))}
+          </div>
+        )}
+        <span className="relative z-10 text-white/50 font-medium"><span className="md:hidden">Xess:</span><span className="hidden md:inline">Xess Payout:</span></span>
+        <span className={`relative z-10 ${color} ${glowClass} font-bold`}>{countdown}</span>
       </Tag>
     );
   }

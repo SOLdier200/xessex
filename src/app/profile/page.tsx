@@ -1415,24 +1415,21 @@ function ProfilePageInner() {
                     {(() => {
                       const tc = getTierColor(data.xessTier ?? 0);
                       return (
-                        <div className={`mt-3 flex items-center justify-between ${tc.bg} border ${tc.border} rounded-lg px-3 py-2`}>
+                        <button
+                          onClick={() => setShowCreditsModal(true)}
+                          className={`mt-3 w-full flex items-center justify-between ${tc.bg} border ${tc.border} rounded-lg px-3 py-2 cursor-pointer hover:brightness-125 transition`}
+                        >
                           <span className="text-xs text-white/70">Credit Tier</span>
                           <span className={`text-sm font-bold ${tc.text}`}>
                             {data.xessTier > 0 ? `Tier ${data.xessTier}` : "No Tier"}
                           </span>
-                        </div>
+                        </button>
                       );
                     })()}
 
                     <p className="text-xs mt-3 leading-relaxed">
                       <span className="animate-pulse-pink-white-black">Hold over 10k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
                     </p>
-                    <button
-                      onClick={() => setShowCreditsModal(true)}
-                      className="text-xs text-cyan-400 hover:text-cyan-300 underline transition mt-1"
-                    >
-                      View the Special Credit Earning Formula here
-                    </button>
                   </div>
                 ) : (
                   /* Prompt to link wallet if not linked */

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
 import CreditManagementModal from "./CreditManagementModal";
+import { getTierColor } from "@/lib/tierColors";
 
 export default function LogoutModal({
   open,
@@ -12,6 +13,7 @@ export default function LogoutModal({
   email,
   walletAddress,
   creditBalance,
+  xessTier,
   username,
   avatarUrl,
 }: {
@@ -21,6 +23,7 @@ export default function LogoutModal({
   email?: string | null;
   walletAddress?: string | null;
   creditBalance?: number;
+  xessTier?: number;
   username?: string | null;
   avatarUrl?: string | null;
 }) {
@@ -119,15 +122,25 @@ export default function LogoutModal({
                 {email}
               </div>
             )}
-            {/* Show credit balance — clickable to open Credit Ranking */}
-            {creditBalance !== undefined && (
+            {/* Tier + Credits row — clickable to open Credit Ranking */}
+            {(creditBalance !== undefined || (xessTier !== undefined && xessTier > 0)) && (
               <button
                 onClick={() => setShowCreditModal(true)}
                 className="mt-3 w-full flex items-center justify-between bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg p-3 transition cursor-pointer group"
               >
-                <span className="text-xs text-white/70">Special Credits</span>
+                <div className="flex items-center gap-2">
+                  {xessTier !== undefined && xessTier > 0 && (() => {
+                    const tc = getTierColor(xessTier);
+                    return (
+                      <span className={`px-1.5 py-0.5 rounded bg-gradient-to-r border text-xs font-bold ${tc.badge}`}>
+                        T{xessTier}
+                      </span>
+                    );
+                  })()}
+                  <span className="text-xs text-white/70">Credits</span>
+                </div>
                 <span className="flex items-center gap-1.5">
-                  <span className="text-lg font-bold text-yellow-400">{creditBalance}</span>
+                  <span className="text-lg font-bold text-yellow-400">{creditBalance ?? 0}</span>
                   <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>

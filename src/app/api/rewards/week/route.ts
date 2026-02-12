@@ -35,13 +35,17 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "asc" },
   });
 
-  // Group by type
-  const byType: Record<string, { amount: string; status: string; count: number }> = {};
+  // Group by type+pool so Xessex and Embed entries show separately
+  const byType: Record<string, { amount: string; status: string; count: number; refType?: string }> = {};
 
   for (const r of rewards) {
-    const key = r.type;
+    // Use refType pool prefix to distinguish pool-specific rewards
+    let key = r.type;
+    if (r.refType?.startsWith("xessex:")) key = `${r.type}:xessex`;
+    else if (r.refType?.startsWith("embed:")) key = `${r.type}:embed`;
+
     if (!byType[key]) {
-      byType[key] = { amount: "0", status: r.status, count: 0 };
+      byType[key] = { amount: "0", status: r.status, count: 0, refType: r.refType ?? undefined };
     }
     byType[key].amount = (BigInt(byType[key].amount) + r.amount).toString();
     byType[key].count++;

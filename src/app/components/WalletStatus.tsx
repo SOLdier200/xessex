@@ -157,7 +157,7 @@ export default function WalletStatus() {
     <>
       <button
         onClick={handleClick}
-        className={`neon-border rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 cursor-pointer transition ${bgClass} ${borderClass}`}
+        className={`border-2 border-[var(--neon-pink)] rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 cursor-pointer transition ${bgClass}`}
       >
         {authed ? (
           // State 3: Signed in - show username or pubkey + tier + credits
@@ -228,6 +228,7 @@ export default function WalletStatus() {
         email={null}
         walletAddress={fullWalletAddress ?? null}
         creditBalance={auth?.creditBalance}
+        xessTier={auth?.xessTier}
         username={auth?.username}
         avatarUrl={auth?.avatarUrl}
       />

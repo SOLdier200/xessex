@@ -241,6 +241,12 @@ export default function ClaimAllButton({ onSuccess, className }: Props) {
             ))}
           </div>
         </div>
+        <button
+          onClick={() => setResult(null)}
+          className="w-full py-2.5 rounded-xl bg-white/5 border border-white/20 text-white/70 font-semibold hover:bg-white/10 transition text-sm"
+        >
+          Claim More XESS
+        </button>
       </div>
     );
   }

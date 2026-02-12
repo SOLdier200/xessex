@@ -174,6 +174,35 @@ export default function CreditManagementModal({ open, onClose }: Props) {
           </button>
         </div>
 
+        <p className="text-sm font-semibold mb-4 leading-relaxed">
+          {"Hold 10k+ Xess Tokens to start earning credits".split("").map((char, i) => (
+            <span
+              key={i}
+              className="inline-block rainbow-letter"
+              style={{
+                animationDelay: `${i * 0.07}s`,
+              }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </span>
+          ))}
+        </p>
+        <style jsx>{`
+          @keyframes rainbowShift {
+            0%   { color: #ec4899; }
+            14%  { color: #a855f7; }
+            28%  { color: #06b6d4; }
+            42%  { color: #22c55e; }
+            57%  { color: #eab308; }
+            71%  { color: #f97316; }
+            85%  { color: #ef4444; }
+            100% { color: #ec4899; }
+          }
+          .rainbow-letter {
+            animation: rainbowShift 2.5s ease-in-out infinite;
+          }
+        `}</style>
+
         {loading && (
           <div className="flex-1 flex items-center justify-center py-12">
             <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
@@ -274,56 +303,11 @@ export default function CreditManagementModal({ open, onClose }: Props) {
               )}
             </div>
 
-            {/* Credits Earned */}
+            {/* Credits Spent */}
             <div>
-              <div className="text-xs text-green-400/70 uppercase tracking-wide mb-2">Credits Earned</div>
-              {data.entries.filter((e) => e.amountDisplay >= 0).length === 0 ? (
-                <div className="text-sm text-white/30 text-center py-3">No credits earned yet</div>
-              ) : (
-                <div className="space-y-3">
-                  {groupByDay(data.entries.filter((e) => e.amountDisplay >= 0)).map((group) => (
-                    <div key={group.date}>
-                      <div className="text-xs text-white/40 mb-1.5 sticky top-0 bg-black/90 py-1">
-                        {group.date}
-                      </div>
-                      <div className="space-y-1">
-                        {group.entries.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white/5 transition"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="text-sm text-white/80 truncate">
-                                {formatRefType(entry.refType)}
-                              </div>
-                              <div className="text-xs text-white/30">
-                                {new Date(entry.createdAt).toLocaleTimeString("en-US", {
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })}
-                              </div>
-                            </div>
-                            <div className="text-sm font-medium ml-3 text-green-400">
-                              +{entry.amountDisplay.toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2,
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Credits Deducted */}
-            <div>
-              <div className="text-xs text-red-400/70 uppercase tracking-wide mb-2">Credits Deducted</div>
+              <div className="text-xs text-red-400/70 uppercase tracking-wide mb-2">Credits Spent</div>
               {data.entries.filter((e) => e.amountDisplay < 0).length === 0 ? (
-                <div className="text-sm text-white/30 text-center py-3">No deductions</div>
+                <div className="text-sm text-white/30 text-center py-3">No credits spent yet</div>
               ) : (
                 <div className="space-y-3">
                   {groupByDay(data.entries.filter((e) => e.amountDisplay < 0)).map((group) => (
@@ -350,7 +334,7 @@ export default function CreditManagementModal({ open, onClose }: Props) {
                               </div>
                             </div>
                             <div className="text-sm font-medium ml-3 text-red-400">
-                              {entry.amountDisplay.toLocaleString(undefined, {
+                              {Math.abs(entry.amountDisplay).toLocaleString(undefined, {
                                 minimumFractionDigits: 0,
                                 maximumFractionDigits: 2,
                               })}

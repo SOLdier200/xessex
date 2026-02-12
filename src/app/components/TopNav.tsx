@@ -223,20 +223,17 @@ export default function TopNav() {
 
         {/* Right: WalletStatus + countdowns + menu icon */}
         <div className="flex flex-col items-end gap-1.5 mt-[10px]">
-          {/* Inline countdowns row */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
-            <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
-          </div>
-
-          {/* WalletStatus — always visible (mobile + desktop) with subtle slide on menu open */}
+          {/* Countdowns + WalletStatus in one row */}
           <motion.div
             animate={{
               y: menuOpen ? 2 : 0,
               opacity: 1,
             }}
             transition={{ duration: 0.18, ease: "easeOut" }}
+            className="flex items-center gap-2 md:gap-3"
           >
+            <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
+            <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
             <WalletStatus />
           </motion.div>
 

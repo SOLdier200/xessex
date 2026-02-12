@@ -78,10 +78,32 @@ export function formatXess6(amount6Str: string, decimals = 2): string {
  * @param refType - Optional refType for more specific categorization (e.g., "embed:flat_total")
  */
 export function rewardTypeLabel(type: string, refType?: string | null): string {
-  // Check refType first for flat rate rewards
-  if (refType?.endsWith(":flat_total")) {
-    const pool = refType.startsWith("xessex:") ? "Xessex" : "Embed";
-    return `Flat Rate (${pool})`;
+  // Check refType for pool-specific labels
+  if (refType) {
+    if (refType.endsWith(":flat_total")) {
+      const pool = refType.startsWith("xessex:") ? "Xessex" : "Embed";
+      return `Flat Rate (${pool})`;
+    }
+    if (type === "ALLTIME_LIKES") {
+      if (refType.startsWith("xessex:")) return "All-Time Likes (Xessex)";
+      if (refType.startsWith("embed:")) return "All-Time Likes (Embed)";
+    }
+    if (type === "WEEKLY_LIKES") {
+      if (refType.startsWith("xessex:")) return "Weekly Likes (Xessex)";
+      if (refType.startsWith("embed:")) return "Weekly Likes (Embed)";
+    }
+    if (type === "WEEKLY_MVM") {
+      if (refType.startsWith("xessex:")) return "Weekly MVM (Xessex)";
+      if (refType.startsWith("embed:")) return "Weekly MVM (Embed)";
+    }
+    if (type === "WEEKLY_VOTER") {
+      if (refType.startsWith("xessex:")) return "Weekly Voter (Xessex)";
+      if (refType.startsWith("embed:")) return "Weekly Voter (Embed)";
+    }
+    if (type === "WEEKLY_COMMENTS" && !refType.endsWith(":flat_total")) {
+      if (refType.startsWith("xessex:")) return "Weekly Comments (Xessex)";
+      if (refType.startsWith("embed:")) return "Weekly Comments (Embed)";
+    }
   }
 
   // Legacy check for type field
