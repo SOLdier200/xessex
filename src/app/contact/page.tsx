@@ -56,15 +56,33 @@ export default function ContactPage() {
               <span>Sacramento, CA 95834</span>
             </div>
             <div>
-              <span className="text-white/60">Admin:</span>{" "}
-              <a href="mailto:admin@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-                admin@xessex.me
+              <span className="text-white/60">General Contact:</span>{" "}
+              <a href="mailto:contact@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                contact@xessex.me
               </a>
             </div>
             <div>
-              <span className="text-white/60">Support:</span>{" "}
-              <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-                support@xessex.me
+              <span className="text-white/60">Help &amp; Support:</span>{" "}
+              <a href="mailto:help@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                help@xessex.me
+              </a>
+            </div>
+            <div>
+              <span className="text-white/60">Legal Inquiries:</span>{" "}
+              <a href="mailto:legal@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                legal@xessex.me
+              </a>
+            </div>
+            <div>
+              <span className="text-white/60">Complaints:</span>{" "}
+              <a href="mailto:complaints@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                complaints@xessex.me
+              </a>
+            </div>
+            <div>
+              <span className="text-white/60">Admin:</span>{" "}
+              <a href="mailto:admin@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                admin@xessex.me
               </a>
             </div>
           </div>

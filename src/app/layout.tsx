@@ -206,9 +206,17 @@ export default function RootLayout({
             <div className="text-center">
               <p>© {new Date().getFullYear()} Xessex. All rights reserved.</p>
               <p className="mt-2 text-white/40">
-                For any issues at all please email{" "}
-                <a href="mailto:support@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-                  support@xessex.me
+                Need help? Email{" "}
+                <a href="mailto:help@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                  help@xessex.me
+                </a>
+                {" · "}
+                <a href="mailto:contact@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                  contact@xessex.me
+                </a>
+                {" · "}
+                <a href="mailto:complaints@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
+                  complaints@xessex.me
                 </a>
               </p>
             </div>

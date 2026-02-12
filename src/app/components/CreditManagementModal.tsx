@@ -205,12 +205,18 @@ export default function CreditManagementModal({ open, onClose }: Props) {
 
             {/* Tier Info */}
             <div className="bg-white/5 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Current Tier</span>
+              <button
+                onClick={() => setShowTiers(true)}
+                className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg -mx-1 px-1 py-0.5 transition cursor-pointer group"
+              >
+                <span className="text-sm text-white/70 flex items-center gap-1">
+                  Current Tier
+                  <span className="text-white/30 group-hover:text-white/50 transition text-xs">→</span>
+                </span>
                 <span className={`px-2 py-0.5 rounded-full bg-gradient-to-r border text-sm font-semibold ${TIER_COLORS[effectiveTier]?.badge ?? TIER_COLORS[0].badge}`}>
                   {effectiveTier === 0 ? "No Tier" : `Tier ${effectiveTier}`}
                 </span>
-              </div>
+              </button>
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/70">XESS Holdings</span>

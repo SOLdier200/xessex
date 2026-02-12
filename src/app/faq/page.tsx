@@ -281,7 +281,13 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "How do I contact the team?",
-        a: "Use the contact form on the website or reach out via official social channels. Do not trust DMs claiming to be team members.",
+        a: [
+          <>For help &amp; support: <a href="mailto:help@xessex.me" className="text-cyan-400 hover:text-cyan-300">help@xessex.me</a></>,
+          <>For general contact: <a href="mailto:contact@xessex.me" className="text-cyan-400 hover:text-cyan-300">contact@xessex.me</a></>,
+          <>For legal inquiries: <a href="mailto:legal@xessex.me" className="text-cyan-400 hover:text-cyan-300">legal@xessex.me</a></>,
+          <>For complaints: <a href="mailto:complaints@xessex.me" className="text-cyan-400 hover:text-cyan-300">complaints@xessex.me</a></>,
+          "Do not trust DMs claiming to be team members.",
+        ],
       },
       {
         q: "Is this project legitimate?",

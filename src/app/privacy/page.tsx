@@ -57,7 +57,10 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-xl font-semibold text-white mb-3">Contact</h2>
           <p>
-            For privacy-related inquiries, please contact us at privacy@xessex.me.
+            For privacy-related inquiries: <a href="mailto:legal@xessex.me" className="text-pink-400 hover:underline">legal@xessex.me</a>
+          </p>
+          <p className="mt-1">
+            For general help: <a href="mailto:help@xessex.me" className="text-pink-400 hover:underline">help@xessex.me</a>
           </p>
         </section>
 

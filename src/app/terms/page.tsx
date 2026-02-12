@@ -200,10 +200,13 @@ export default function TermsPage() {
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-3">14. Contact</h2>
-          <p>For legal, compliance, or support inquiries:</p>
-          <p className="mt-2">
-            <a href="mailto:support@xessex.me" className="text-pink-400 hover:underline">support@xessex.me</a>
-          </p>
+          <p>Reach us at the appropriate address:</p>
+          <div className="mt-2 space-y-1">
+            <p>Help &amp; Support: <a href="mailto:help@xessex.me" className="text-pink-400 hover:underline">help@xessex.me</a></p>
+            <p>Legal &amp; Compliance: <a href="mailto:legal@xessex.me" className="text-pink-400 hover:underline">legal@xessex.me</a></p>
+            <p>General Contact: <a href="mailto:contact@xessex.me" className="text-pink-400 hover:underline">contact@xessex.me</a></p>
+            <p>Complaints: <a href="mailto:complaints@xessex.me" className="text-pink-400 hover:underline">complaints@xessex.me</a></p>
+          </div>
         </section>
       </div>
     </main>
