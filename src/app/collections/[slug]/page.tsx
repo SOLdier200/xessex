@@ -134,8 +134,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const access = await getAccessContext();
   const userId = access.user?.id || null;
 
-  // Fetch all video ranks and unlock costs from DB
+  // Fetch all active video ranks and unlock costs from DB
   const dbVideos = await db.video.findMany({
+    where: { isActive: true },
     select: { slug: true, rank: true, unlockCost: true, id: true, thumbnailUrl: true },
   });
   const rankMap = new Map(dbVideos.map((v) => [v.slug, v.rank]));
@@ -167,8 +168,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     return true;
   };
 
+  // Only show videos that exist in DB and are active
+  const dbSlugSet = new Set(dbVideos.map((v) => v.slug));
+  const activeApproved = allApprovedVideos.filter((v) => dbSlugSet.has(v.viewkey));
+
   // Merge rank into approved videos
-  const allVideos = allApprovedVideos.map((v) => ({
+  const allVideos = activeApproved.map((v) => ({
     ...v,
     rank: rankMap.get(v.viewkey) ?? null,
     primary_thumb: v.primary_thumb || thumbMap.get(v.viewkey) || null,
@@ -252,22 +257,22 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           </div>
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-3">
-            {videos.map((v) => {
+            {videos.map((v, i) => {
               const locked = isVideoLocked(v.viewkey);
               const videoId = videoIdMap.get(v.viewkey) || "";
               return (
                 <CollectionVideoCard
-                  key={v.viewkey}
-                  videoId={videoId}
-                  viewkey={v.viewkey}
-                  title={v.title}
+                  key={locked ? `locked-${i}` : v.viewkey}
+                  videoId={locked ? "" : videoId}
+                  viewkey={locked ? "" : v.viewkey}
+                  title={locked ? "Locked Video" : v.title}
                   thumb={v.primary_thumb}
-                  duration={formatDuration(v.duration)}
-                  rank={v.rank}
+                  duration={locked ? "" : formatDuration(v.duration)}
+                  rank={locked ? null : v.rank}
                   locked={locked}
                   isAuthed={access.isAuthed}
-                  views={formatViews(v.views)}
-                  isFavorite={v.favorite === 1}
+                  views={locked ? "" : formatViews(v.views)}
+                  isFavorite={!locked && v.favorite === 1}
                 />
               );
             })}

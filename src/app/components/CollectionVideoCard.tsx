@@ -28,10 +28,11 @@ export default function CollectionVideoCard({
   views,
   isFavorite,
 }: Props) {
-  const Wrapper = locked ? "div" : Link;
-  const wrapperProps = locked
-    ? { className: "neon-border rounded-xl bg-black/30 overflow-hidden opacity-60 cursor-not-allowed block" }
-    : { href: `/videos/${viewkey}`, className: "neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition block" };
+  const canLink = !locked && viewkey;
+  const Wrapper = canLink ? Link : "div";
+  const wrapperProps = canLink
+    ? { href: `/videos/${viewkey}`, className: "neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition block" }
+    : { className: "neon-border rounded-xl bg-black/30 overflow-hidden opacity-60 cursor-not-allowed block" };
 
   return (
     <div className="relative group">
