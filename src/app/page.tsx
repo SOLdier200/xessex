@@ -145,7 +145,7 @@ export default async function HomePage() {
             <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[51px] w-auto" />
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-y-1.5 md:gap-y-2 gap-x-1 md:gap-x-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-y-2 sm:gap-x-1.5">
             {videos.slice(0, 21).map((v) => {
               const isFree = freeSet.has(v.viewkey);
               const hasUnlocked = unlockedSet.has(v.viewkey);
@@ -322,7 +322,7 @@ export default async function HomePage() {
                 ) : (
                   <Link
                     href={`/videos/${topRanked.viewkey}`}
-                    className="neon-border-blue rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group block"
+                    className="neon-border-blue rounded-lg sm:rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group block"
                   >
                     <div className="relative aspect-video bg-black/60">
                       {topRanked.primary_thumb ? (
@@ -383,7 +383,7 @@ export default async function HomePage() {
 
                 return (
                   <Link href={`/videos/${xv.slug}`} className="block">
-                    <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group">
+                    <div className="neon-border-gold rounded-lg sm:rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group">
                       {xv.mediaUrl ? (
                         <HoverPreviewVideo
                           src={xv.mediaUrl}

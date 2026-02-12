@@ -9,6 +9,40 @@ import WalletBalancesModal from "./WalletBalancesModal";
 import { AnimatePresence, motion } from "framer-motion";
 import { PRESALE_ORIGIN, MAIN_ORIGIN } from "@/lib/origins";
 
+/** Absolute URLs (http/https/protocol-relative) get a plain <a>, relative paths get next/link */
+function isAbsoluteUrl(href: string) {
+  const h = (href || "").trim();
+  return /^https?:\/\//i.test(h) || h.startsWith("//");
+}
+
+function NavHref({
+  href: rawHref,
+  className,
+  onClick,
+  title,
+  children,
+}: {
+  href: string;
+  className?: string;
+  onClick?: () => void;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  const href = (rawHref || "").trim();
+  if (isAbsoluteUrl(href)) {
+    return (
+      <a href={href} className={className} onClick={onClick} title={title}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className} onClick={onClick} title={title}>
+      {children}
+    </Link>
+  );
+}
+
 type TokenLink =
   | { label: string; href: string; action?: never }
   | { label: string; action: "wallet"; href?: never };
@@ -121,19 +155,24 @@ export default function TopNav() {
     return () => clearInterval(interval);
   }, [isLoggedIn, fetchUnreadCount]);
 
+  // On presale, main-site links need full origin to avoid proxy redirect
+  const m = isPresale ? MAIN_ORIGIN : "";
+
   const TOP_ITEMS: TopItem[] = [
-    { type: "link", href: "/login/diamond", img: "/logos/textlogo/siteset3/login100.png", alt: "Connect Wallet", h: 32 },
-    { type: "link", href: "/collections", img: "/logos/textlogo/siteset3/collect1001.png", alt: "Collections", h: 30 },
-    { type: "link", href: "/leaderboard", img: "/logos/textlogo/siteset3/diamondladdea.png", alt: "Diamond Ladder", h: 40 },
+    { type: "link", href: `${m}/login/diamond`, img: "/logos/textlogo/siteset3/login100.png", alt: "Connect Wallet", h: 32 },
+    { type: "link", href: `${m}/collections`, img: "/logos/textlogo/siteset3/collect1001.png", alt: "Collections", h: 30 },
+    { type: "link", href: `${m}/leaderboard`, img: "/logos/textlogo/siteset3/diamondladdea.png", alt: "Diamond Ladder", h: 40 },
     { type: "token", img: "/logos/textlogo/siteset3/token100.png", alt: "Xess Token", h: 36 },
     ...(isLoggedIn
       ? ([
-          { type: "link", href: "/playlists", img: "/logos/textlogo/siteset3/playlistfinal2.png", alt: "Playlists", h: 36 },
-          { type: "link", href: "/profile", img: "/logos/textlogo/siteset3/profile100.png", alt: "Profile", h: 30 },
+          { type: "link", href: `${m}/playlists`, img: "/logos/textlogo/siteset3/playlistfinal2.png", alt: "Playlists", h: 36 },
+          { type: "link", href: `${m}/profile`, img: "/logos/textlogo/siteset3/profile100.png", alt: "Profile", h: 30 },
           { type: "messages", img: "/logos/textlogo/siteset3/messages110.png", alt: "Messages", h: 34 },
         ] as TopItem[])
       : []),
   ];
+
+  const closeMenu = () => { setMenuOpen(false); setTokenSubOpen(false); };
 
   // Motion variants (menu drops items in one-by-one)
   const menuContainer = {
@@ -153,22 +192,6 @@ export default function TopNav() {
     exit: { opacity: 0, y: -8, transition: { duration: 0.08 } },
   };
 
-  const subContainer = {
-    hidden: { opacity: 0, height: 0 },
-    show: {
-      opacity: 1,
-      height: "auto",
-      transition: { duration: 0.10, when: "beforeChildren" as const, staggerChildren: 0.045 },
-    },
-    exit: { opacity: 0, height: 0, transition: { duration: 0.08 } },
-  };
-
-  const subItem = {
-    hidden: { opacity: 0, y: -8 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.12 } },
-    exit: { opacity: 0, y: -6, transition: { duration: 0.06 } },
-  };
-
   return (
     <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
       {/* Preload images so they're ready when needed */}
@@ -181,12 +204,9 @@ export default function TopNav() {
       {/* Single unified layout (works for desktop + mobile) */}
       <div className="flex items-start justify-between gap-3">
         {/* Left: Logo */}
-        <Link
+        <NavHref
           href={isPresale ? MAIN_ORIGIN : "/"}
-          onClick={() => {
-            setMenuOpen(false);
-            setTokenSubOpen(false);
-          }}
+          onClick={closeMenu}
           title="Click for homepage"
           className="shrink-0"
         >
@@ -198,7 +218,7 @@ export default function TopNav() {
             className="h-[77px] lg:h-[132px] w-auto"
             priority
           />
-        </Link>
+        </NavHref>
 
         {/* Right: WalletStatus + menu icon */}
         <div className="flex flex-col items-end gap-2 mt-[10px]">
@@ -277,12 +297,9 @@ export default function TopNav() {
                   {TOP_ITEMS.map((it) => (
                     <motion.div key={it.alt} variants={menuItem} className="px-3">
                       {it.type === "link" ? (
-                        <Link
+                        <NavHref
                           href={it.href}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            setTokenSubOpen(false);
-                          }}
+                          onClick={closeMenu}
                           className="flex items-center justify-center rounded-xl py-2 hover:bg-white/5 transition-colors"
                         >
                           <Image
@@ -293,12 +310,11 @@ export default function TopNav() {
                             style={{ height: it.h }}
                             className="w-auto object-contain"
                           />
-                        </Link>
+                        </NavHref>
                       ) : it.type === "messages" ? (
                         <button
                           onClick={() => {
-                            setMenuOpen(false);
-                            setTokenSubOpen(false);
+                            closeMenu();
                             setMessagesModalOpen(true);
                           }}
                           className="relative flex w-full items-center justify-center rounded-xl py-2 hover:bg-white/5 transition-colors"
@@ -349,8 +365,7 @@ export default function TopNav() {
                                     {link.action === "wallet" ? (
                                       <button
                                         onClick={() => {
-                                          setMenuOpen(false);
-                                          setTokenSubOpen(false);
+                                          closeMenu();
                                           setWalletModalOpen(true);
                                         }}
                                         className="block w-full px-4 py-3 text-sm text-white/90 hover:bg-white/10 active:bg-white/15 transition-colors text-center lg:text-left"
@@ -358,16 +373,13 @@ export default function TopNav() {
                                         {link.label}
                                       </button>
                                     ) : (
-                                      <Link
+                                      <NavHref
                                         href={link.href!}
-                                        onClick={() => {
-                                          setMenuOpen(false);
-                                          setTokenSubOpen(false);
-                                        }}
+                                        onClick={closeMenu}
                                         className="block px-4 py-3 text-sm text-white/90 hover:bg-white/10 active:bg-white/15 transition-colors text-center lg:text-left"
                                       >
                                         {link.label}
-                                      </Link>
+                                      </NavHref>
                                     )}
                                   </div>
                                 ))}

@@ -40,7 +40,7 @@ export default function VideoCardWithPlaylist({
     <div className={`relative group ${className || ""}`}>
       <Link
         href={`/videos/${viewkey}`}
-        className="neon-border rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition block"
+        className="neon-border rounded-lg sm:rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition block"
       >
         <div className="relative aspect-video bg-black/60">
           {thumb ? (
