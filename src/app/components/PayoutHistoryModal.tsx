@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatXess6 } from "@/lib/formatXess";
 import ClaimAllButton from "./ClaimAllButton";
 
@@ -72,7 +73,13 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
       <div className="relative w-full max-w-lg rounded-2xl neon-border bg-black/90 p-6 max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">XESS Payout History</h2>
+          <Image
+            src="/logos/textlogo/siteset3/xesstokenpayments.png"
+            alt="XESS Payout History"
+            width={938}
+            height={276}
+            className="h-[28px] sm:h-[32px] w-auto"
+          />
           <button
             onClick={onClose}
             className="text-white/50 hover:text-white transition text-xl leading-none p-1"

@@ -1087,7 +1087,7 @@ function ProfilePageInner() {
             <>
               {/* Account Info Card */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
-                <h2 className="text-lg font-semibold text-white mb-4">Account Information</h2>
+                <Image src="/logos/textlogo/siteset3/accountinformation.png" alt="Account Information" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto mb-4" />
 
                 <div className="space-y-4">
                   {data.email && (
@@ -1775,7 +1775,7 @@ function ProfilePageInner() {
               {/* Your Referral Link Card */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <h2 className="text-lg font-semibold text-white">Your Referral Link</h2>
+                  <Image src="/logos/textlogo/siteset3/referrals.png" alt="Your Referral Link" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto" />
                   {isAuthed && (
                     <button
                       onClick={() => setShowBenefitsModal(true)}
@@ -2060,7 +2060,7 @@ function ProfilePageInner() {
           {/* History Tab Content (Member and Diamond) */}
           {activeTab === "history" && isAuthed && (
             <div className="neon-border rounded-2xl p-3 sm:p-6 bg-black/30">
-              <h2 className="text-lg font-semibold text-white mb-4">XESS History</h2>
+              <Image src="/logos/textlogo/siteset3/tokenallocation.png" alt="XESS History" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto mb-4" />
               <RewardsTab />
             </div>
           )}

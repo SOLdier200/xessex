@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { TIER_COLORS, getTierColor } from "@/lib/tierColors";
 import CreditPayoutHistoryModal from "./CreditPayoutHistoryModal";
@@ -165,7 +166,13 @@ export default function CreditManagementModal({ open, onClose }: Props) {
       <div className="relative w-full max-w-md rounded-2xl neon-border bg-black/90 p-4 sm:p-6 max-h-[80vh] sm:max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Credit Ranking</h2>
+          <Image
+            src="/logos/textlogo/siteset3/creditranking.png"
+            alt="Credit Ranking"
+            width={938}
+            height={276}
+            className="h-[28px] sm:h-[32px] w-auto"
+          />
           <button
             onClick={onClose}
             className="text-white/50 hover:text-white transition text-xl leading-none p-1"
