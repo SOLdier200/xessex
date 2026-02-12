@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   for (const r of rewards) {
     // Use refType pool prefix to distinguish pool-specific rewards
-    let key = r.type;
+    let key: string = r.type;
     if (r.refType?.startsWith("xessex:")) key = `${r.type}:xessex`;
     else if (r.refType?.startsWith("embed:")) key = `${r.type}:embed`;
 
