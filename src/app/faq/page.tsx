@@ -20,6 +20,44 @@ type FAQSection = {
   items: FAQItem[];
 };
 
+const CREDIT_TIERS = [
+  { tier: 1,  min: "10,000",     monthly: 160,    color: { text: "text-gray-300",   bg: "bg-gray-500/10",   border: "border-gray-400/30" } },
+  { tier: 2,  min: "25,000",     monthly: 480,    color: { text: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-400/30" } },
+  { tier: 3,  min: "50,000",     monthly: 960,    color: { text: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-400/30" } },
+  { tier: 4,  min: "100,000",    monthly: 3_200,  color: { text: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-400/30" } },
+  { tier: 5,  min: "250,000",    monthly: 8_000,  color: { text: "text-pink-400",   bg: "bg-pink-500/10",   border: "border-pink-400/30" } },
+  { tier: 6,  min: "500,000",    monthly: 16_000, color: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-400/30" } },
+  { tier: 7,  min: "1,000,000",  monthly: 32_000, color: { text: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-400/30" } },
+  { tier: 8,  min: "2,500,000",  monthly: 48_000, color: { text: "text-cyan-400",   bg: "bg-cyan-500/10",   border: "border-cyan-400/30" } },
+  { tier: 9,  min: "5,000,000",  monthly: 64_000, color: { text: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-400/30" } },
+  { tier: 10, min: "10,000,000", monthly: 80_000, color: { text: "text-yellow-300", bg: "bg-yellow-500/10", border: "border-yellow-400/30" } },
+];
+
+function CreditTierTable() {
+  const daysInMonth = 30;
+  return (
+    <div className="grid gap-2 mt-2">
+      {CREDIT_TIERS.map((t) => {
+        const daily = (t.monthly / daysInMonth).toLocaleString(undefined, { maximumFractionDigits: 1 });
+        return (
+          <div
+            key={t.tier}
+            className={`rounded-xl ${t.color.bg} border ${t.color.border} px-3 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold ${t.color.text} shrink-0 w-10`}>T{t.tier}</span>
+              <span className="text-white/90 text-sm font-medium">{t.min} XESS</span>
+            </div>
+            <span className={`text-sm font-semibold ${t.color.text} sm:text-right`}>
+              {daily} credits/day
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const FAQ_SECTIONS: FAQSection[] = [
   {
     id: "general",
@@ -109,17 +147,8 @@ const FAQ_SECTIONS: FAQSection[] = [
       {
         q: "How do credit tiers work?",
         a: [
-          "Your monthly credit allocation depends on your XESS balance:",
-          "• 10,000 XESS → 160 credits/month (Tier 1)",
-          "• 25,000 XESS → 480 credits/month (Tier 2)",
-          "• 50,000 XESS → 960 credits/month (Tier 3)",
-          "• 100,000 XESS → 3,200 credits/month (Tier 4)",
-          "• 250,000 XESS → 8,000 credits/month (Tier 5)",
-          "• 500,000 XESS → 16,000 credits/month (Tier 6)",
-          "• 1,000,000 XESS → 32,000 credits/month (Tier 7)",
-          "• 2,500,000 XESS → 48,000 credits/month (Tier 8)",
-          "• 5,000,000 XESS → 64,000 credits/month (Tier 9)",
-          "• 10,000,000 XESS → 80,000 credits/month (Tier 10)",
+          "Your daily credit allocation depends on your XESS balance:",
+          <CreditTierTable />,
         ],
       },
       {

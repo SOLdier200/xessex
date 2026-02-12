@@ -910,7 +910,7 @@ export default function LaunchClient() {
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/35 px-3 py-2">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/10 bg-black/35 px-3 py-2 gap-0.5 sm:gap-2">
       <span className="text-white/55">{k}</span>
       <span className="text-white/85">{v}</span>
     </div>
@@ -920,14 +920,14 @@ function Row({ k, v }: { k: string; v: string }) {
 function CopyRow({ label, value }: { label: string; value: string }) {
   const short = `${value.slice(0, 5)}...${value.slice(-5)}`;
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/35 px-3 py-2">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/10 bg-black/35 px-3 py-2 gap-0.5 sm:gap-2">
       <span className="text-white/55">{label}</span>
       <button
         onClick={() => {
           navigator.clipboard.writeText(value);
           toast.success(`${label} copied!`);
         }}
-        className="text-white/85 font-mono text-xs hover:text-cyan-400 transition cursor-pointer"
+        className="text-white/85 font-mono text-xs hover:text-cyan-400 transition cursor-pointer text-left"
         title={`Click to copy: ${value}`}
       >
         {short}

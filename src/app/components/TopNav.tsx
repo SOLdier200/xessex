@@ -13,17 +13,18 @@ type TokenLink =
   | { label: string; href: string; action?: never }
   | { label: string; action: "wallet"; href?: never };
 
+// Links that only exist on the main site need MAIN_ORIGIN prefix when viewed on presale
 const tokenLinks: TokenLink[] = [
   { label: "Wallet", action: "wallet" },
   { label: "Token Launch", href: `${PRESALE_ORIGIN}/launch` },
   { label: "Tokenomics", href: `${PRESALE_ORIGIN}/tokenomics` },
-  { label: "Whitepaper", href: "/whitepaper" },
-  { label: "Rewards", href: "/rewards" },
-  { label: "Win Free Credits!", href: "/rewards-drawing" },
-  { label: "Swap", href: "/swap" },
-  { label: "Burned", href: "/burned" },
-  { label: "Xess News", href: "/xess-news" },
-  { label: "FAQ", href: "/faq" },
+  { label: "Whitepaper", href: `${MAIN_ORIGIN}/whitepaper` },
+  { label: "Rewards", href: `${MAIN_ORIGIN}/rewards` },
+  { label: "Win Free Credits!", href: `${MAIN_ORIGIN}/rewards-drawing` },
+  { label: "Swap", href: `${MAIN_ORIGIN}/swap` },
+  { label: "Burned", href: `${MAIN_ORIGIN}/burned` },
+  { label: "Xess News", href: `${MAIN_ORIGIN}/xess-news` },
+  { label: "FAQ", href: `${MAIN_ORIGIN}/faq` },
 ];
 
 type TopItem =
@@ -333,19 +334,18 @@ export default function TopNav() {
                             />
                           </button>
 
-                          {/* Token submenu */}
+                          {/* Token submenu — no per-item y-animation to avoid iOS touch target misalignment */}
                           <AnimatePresence>
                             {tokenSubOpen && (
                               <motion.div
                                 key="token-submenu"
-                                initial="hidden"
-                                animate="show"
-                                exit="exit"
-                                variants={subContainer}
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto", transition: { duration: 0.15 } }}
+                                exit={{ opacity: 0, height: 0, transition: { duration: 0.1 } }}
                                 className="mt-1 mb-2 overflow-hidden rounded-xl border border-white/10 bg-white/5"
                               >
                                 {tokenLinks.map((link) => (
-                                  <motion.div key={link.action || link.href} variants={subItem}>
+                                  <div key={link.action || link.href} className="relative">
                                     {link.action === "wallet" ? (
                                       <button
                                         onClick={() => {
@@ -353,7 +353,7 @@ export default function TopNav() {
                                           setTokenSubOpen(false);
                                           setWalletModalOpen(true);
                                         }}
-                                        className="block w-full px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors text-center lg:text-left"
+                                        className="block w-full px-4 py-3 text-sm text-white/90 hover:bg-white/10 active:bg-white/15 transition-colors text-center lg:text-left"
                                       >
                                         {link.label}
                                       </button>
@@ -364,12 +364,12 @@ export default function TopNav() {
                                           setMenuOpen(false);
                                           setTokenSubOpen(false);
                                         }}
-                                        className="block px-4 py-3 text-sm text-white/90 hover:bg-white/10 transition-colors text-center lg:text-left"
+                                        className="block px-4 py-3 text-sm text-white/90 hover:bg-white/10 active:bg-white/15 transition-colors text-center lg:text-left"
                                       >
                                         {link.label}
                                       </Link>
                                     )}
-                                  </motion.div>
+                                  </div>
                                 ))}
                               </motion.div>
                             )}

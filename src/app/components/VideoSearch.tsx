@@ -529,7 +529,7 @@ export default function VideoSearch({
                           #{v.rank}
                         </div>
                       )}
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                      <div className="hidden md:block absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
                         {formatDuration(v.duration)}
                       </div>
                     </div>
@@ -569,7 +569,7 @@ export default function VideoSearch({
                           #{v.rank}
                         </div>
                       )}
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
+                      <div className="hidden md:block absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-xs text-white">
                         {formatDuration(v.duration)}
                       </div>
                       {v.favorite === 1 && (

@@ -33,11 +33,15 @@ export async function GET() {
 
   // Get referrer info if user was referred
   let referredByEmail: string | null = null;
+  let referredByUsername: string | null = null;
+  let referredByWallet: string | null = null;
   if (user.referredById) {
     const referrer = await db.user.findUnique({
       where: { id: user.referredById },
-      select: { email: true },
+      select: { email: true, username: true, walletAddress: true },
     });
+    referredByUsername = referrer?.username ?? null;
+    referredByWallet = referrer?.walletAddress ?? null;
     if (referrer?.email) {
       // Mask the email for privacy
       const [local, domain] = referrer.email.split("@");
@@ -104,6 +108,8 @@ export async function GET() {
       referralCount,
       referredById: user.referredById ?? null,
       referredByEmail,
+      referredByUsername,
+      referredByWallet,
     },
     creditBalance,
     creditBalanceMicro: creditBalanceMicro.toString(),

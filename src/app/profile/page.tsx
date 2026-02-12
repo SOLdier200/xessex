@@ -49,6 +49,8 @@ type ProfileData = {
     referralCount: number;
     referredById: string | null;
     referredByEmail: string | null;
+    referredByUsername: string | null;
+    referredByWallet: string | null;
   };
   creditBalanceMicro: string;
   xessTier: number;
@@ -157,6 +159,7 @@ function ProfilePageInner() {
   const validTabs = ["profile", "analytics", "referrals", "history", "wallet"] as const;
   const initialTab = validTabs.includes(tabParam as typeof validTabs[number]) ? (tabParam as typeof validTabs[number]) : "profile";
   const [activeTab, setActiveTab] = useState<typeof validTabs[number]>(initialTab);
+  const [showTabDropdown, setShowTabDropdown] = useState(false);
 
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -998,73 +1001,72 @@ function ProfilePageInner() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex justify-center mb-6 -mx-4 px-4">
-            <div className="inline-flex rounded-xl border border-white/10 bg-black/40 p-1 overflow-x-auto max-w-full scrollbar-hide">
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                  activeTab === "profile"
-                    ? "bg-white/10 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                Profile
-              </button>
+          {/* Tabs — dropdown on mobile, inline on desktop */}
+          {(() => {
+            const tabs = [
+              { key: "profile" as const, label: "Profile" },
+              { key: "history" as const, label: "History" },
+              { key: "referrals" as const, label: "Referrals" },
+              ...(isAuthed ? [{ key: "analytics" as const, label: "Analytics" }] : []),
+              ...(isAuthed ? [{ key: "wallet" as const, label: "Wallet" }] : []),
+            ];
+            const activeLabel = tabs.find((t) => t.key === activeTab)?.label ?? "Profile";
 
-              {/* History tab */}
-              <button
-                onClick={() => setActiveTab("history")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                  activeTab === "history"
-                    ? "bg-white/10 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                History
-              </button>
+            return (
+              <>
+                {/* Mobile: dropdown selector */}
+                <div className="sm:hidden mb-6 -mx-4 px-4">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowTabDropdown((v) => !v)}
+                      className="w-full flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-semibold text-white"
+                    >
+                      <span>{activeTab === "analytics" ? <><span className="text-pink-500">Anal</span>ytics</> : activeLabel}</span>
+                      <svg className={`w-4 h-4 text-white/50 transition-transform ${showTabDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {showTabDropdown && (
+                      <div className="absolute z-30 mt-1 w-full rounded-xl border border-white/10 bg-gray-900/95 backdrop-blur-sm overflow-hidden shadow-lg">
+                        {tabs.map((t) => (
+                          <button
+                            key={t.key}
+                            onClick={() => { setActiveTab(t.key); setShowTabDropdown(false); }}
+                            className={`w-full text-left px-4 py-3 text-sm font-semibold transition ${
+                              activeTab === t.key
+                                ? "bg-white/10 text-white"
+                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            {t.key === "analytics" ? <><span className="text-pink-500">Anal</span>ytics</> : t.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-              {/* Referrals tab */}
-              <button
-                onClick={() => setActiveTab("referrals")}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                  activeTab === "referrals"
-                    ? "bg-white/10 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                Referrals
-              </button>
-
-              {/* Analytics tab */}
-              {isAuthed && (
-                <button
-                  onClick={() => setActiveTab("analytics")}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                    activeTab === "analytics"
-                      ? "bg-white/10 text-white"
-                      : "text-white/50 hover:text-white"
-                  }`}
-                >
-                  <span className="text-pink-500">Anal</span>ytics
-                </button>
-              )}
-
-              {/* Wallet tab */}
-              {isAuthed && (
-                <button
-                  onClick={() => setActiveTab("wallet")}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-                    activeTab === "wallet"
-                      ? "bg-white/10 text-white"
-                      : "text-white/50 hover:text-white"
-                  }`}
-                >
-                  Wallet
-                </button>
-              )}
-            </div>
-          </div>
+                {/* Desktop: inline tabs */}
+                <div className="hidden sm:flex justify-center mb-6">
+                  <div className="inline-flex rounded-xl border border-white/10 bg-black/40 p-1">
+                    {tabs.map((t) => (
+                      <button
+                        key={t.key}
+                        onClick={() => setActiveTab(t.key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                          activeTab === t.key
+                            ? "bg-white/10 text-white"
+                            : "text-white/50 hover:text-white"
+                        }`}
+                      >
+                        {t.key === "analytics" ? <><span className="text-pink-500">Anal</span>ytics</> : t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           {/* Profile Tab Content */}
           {activeTab === "profile" && (
@@ -1372,7 +1374,8 @@ function ProfilePageInner() {
                 {/* Show balance and drawing link if wallet is linked */}
                 {data.walletAddress ? (
                   <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-3 sm:p-4">
-                    <div className="flex items-center justify-between gap-2">
+                    {/* Balance + Enter Drawing: stacked on mobile, side-by-side on sm+ */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <button
                         onClick={() => setShowCreditMgmtModal(true)}
                         className="text-left group cursor-pointer hover:opacity-80 transition min-w-0"
@@ -1383,13 +1386,13 @@ function ProfilePageInner() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
-                        <div className="text-xl sm:text-2xl font-bold text-cyan-400 mt-1 whitespace-nowrap">
+                        <div className="text-xl sm:text-2xl font-bold text-cyan-400 mt-1">
                           {(Number(data.creditBalanceMicro || "0") / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
                         </div>
                       </button>
                       <Link
                         href="/rewards-drawing"
-                        className="px-3 sm:px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-xs sm:text-sm flex-shrink-0 whitespace-nowrap"
+                        className="px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm text-center flex-shrink-0"
                       >
                         Enter Drawing
                       </Link>
@@ -1402,15 +1405,15 @@ function ProfilePageInner() {
                       </span>
                     </div>
 
-                    <p className="text-xs mt-3">
+                    <p className="text-xs mt-3 leading-relaxed">
                       <span className="animate-pulse-pink-white-black">Hold over 10k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
-                      <button
-                        onClick={() => setShowCreditsModal(true)}
-                        className="text-cyan-400 hover:text-cyan-300 underline transition"
-                      >
-                        View the Special Credit Earning Formula here
-                      </button>
                     </p>
+                    <button
+                      onClick={() => setShowCreditsModal(true)}
+                      className="text-xs text-cyan-400 hover:text-cyan-300 underline transition mt-1"
+                    >
+                      View the Special Credit Earning Formula here
+                    </button>
                   </div>
                 ) : (
                   /* Prompt to link wallet if not linked */
@@ -1910,10 +1913,14 @@ function ProfilePageInner() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="text-emerald-400 font-semibold">Referred by</div>
-                        <div className="text-white/70 text-sm">
-                          {data.referral.referredByEmail || "A fellow member"}
+                        <div className="text-white/70 text-sm truncate">
+                          {data.referral.referredByUsername
+                            ? data.referral.referredByUsername
+                            : data.referral.referredByWallet
+                            ? `${data.referral.referredByWallet.slice(0, 4)}...${data.referral.referredByWallet.slice(-4)}`
+                            : data.referral.referredByEmail || "A fellow member"}
                         </div>
                       </div>
                     </div>
@@ -2508,68 +2515,78 @@ function ProfilePageInner() {
                         You haven&apos;t posted any comments yet.
                       </p>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-left text-white/50 border-b border-white/10">
-                              <th className="pb-3 font-medium">ID</th>
-                              <th className="pb-3 font-medium">Comment</th>
-                              <th className="pb-3 font-medium text-center">Score</th>
-                              <th className="pb-3 font-medium text-center">Likes</th>
-                              <th className="pb-3 font-medium text-center">Status</th>
-                              <th className="pb-3 font-medium">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(analyticsData.comments ?? []).map((c) => (
-                              <tr
-                                key={c.sourceId}
-                                className="border-b border-white/5 hover:bg-white/5"
-                              >
-                                <td className="py-3 font-mono text-xs text-white/60">
-                                  #{c.sourceId.slice(-6)}
-                                </td>
-                                <td className="py-3 max-w-[150px] truncate text-white/80">
-                                  {c.body}
-                                </td>
-                                <td className="py-3 text-center">
-                                  <span
-                                    className={`font-semibold ${
-                                      c.score > 0
-                                        ? "text-green-400"
-                                        : c.score < 0
-                                        ? "text-red-400"
-                                        : "text-white/50"
-                                    }`}
-                                  >
-                                    {c.score > 0 ? "+" : ""}
-                                    {c.score}
-                                  </span>
-                                </td>
-                                <td className="py-3 text-center">
-                                  <span className="text-green-400">{c.memberLikes}</span>
-                                  <span className="text-white/30 mx-1">/</span>
-                                  <span className="text-red-400">{c.memberDislikes}</span>
-                                </td>
-                                <td className="py-3 text-center">
-                                  {c.utilized ? (
-                                    <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                                      Sourced
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded text-xs bg-white/10 text-white/40">
-                                      N/A
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="py-3 text-white/50 text-xs">
-                                  {new Date(c.createdAt).toLocaleDateString()}
-                                </td>
+                      <>
+                        {/* Scroll hint – visible only on small screens */}
+                        <div className="flex items-center justify-end gap-1.5 mb-2 md:hidden text-white/40 text-xs">
+                          <span>Scroll for more</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce-x">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-x-auto scrollbar-thin">
+                          <table className="w-full text-sm min-w-[520px]">
+                            <thead>
+                              <tr className="text-left text-white/50 border-b border-white/10">
+                                <th className="pb-3 font-medium">ID</th>
+                                <th className="pb-3 font-medium">Comment</th>
+                                <th className="pb-3 font-medium text-center">Score</th>
+                                <th className="pb-3 font-medium text-center">Likes</th>
+                                <th className="pb-3 font-medium text-center">Status</th>
+                                <th className="pb-3 font-medium">Date</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {(analyticsData.comments ?? []).map((c) => (
+                                <tr
+                                  key={c.sourceId}
+                                  className="border-b border-white/5 hover:bg-white/5"
+                                >
+                                  <td className="py-3 font-mono text-xs text-white/60 whitespace-nowrap">
+                                    #{c.sourceId.slice(-6)}
+                                  </td>
+                                  <td className="py-3 max-w-[150px] truncate text-white/80">
+                                    {c.body}
+                                  </td>
+                                  <td className="py-3 text-center whitespace-nowrap">
+                                    <span
+                                      className={`font-semibold ${
+                                        c.score > 0
+                                          ? "text-green-400"
+                                          : c.score < 0
+                                          ? "text-red-400"
+                                          : "text-white/50"
+                                      }`}
+                                    >
+                                      {c.score > 0 ? "+" : ""}
+                                      {c.score}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 text-center whitespace-nowrap">
+                                    <span className="text-green-400">{c.memberLikes}</span>
+                                    <span className="text-white/30 mx-1">/</span>
+                                    <span className="text-red-400">{c.memberDislikes}</span>
+                                  </td>
+                                  <td className="py-3 text-center whitespace-nowrap">
+                                    {c.utilized ? (
+                                      <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                                        Sourced
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded text-xs bg-white/10 text-white/40">
+                                        N/A
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 text-white/50 text-xs whitespace-nowrap">
+                                    {new Date(c.createdAt).toLocaleDateString()}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
 

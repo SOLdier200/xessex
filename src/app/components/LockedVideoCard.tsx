@@ -140,7 +140,7 @@ export default function LockedVideoCard({
           )}
         </div>
         {showMetaBelow && (
-          <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+          <div className="hidden md:flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
             <span>{duration}</span>
             {viewsCount != null && (
               <span>{formatViews(viewsCount)} XESS Views</span>

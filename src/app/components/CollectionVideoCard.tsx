@@ -58,7 +58,7 @@ export default function CollectionVideoCard({
               #{rank}
             </div>
           )}
-          <div className="absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
+          <div className="hidden md:block absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
             {duration}
           </div>
           {isFavorite && (

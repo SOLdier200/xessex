@@ -49,36 +49,12 @@ function formatWeekLabel(weekKey: string): string {
   return period ? `${label} (P${period})` : label;
 }
 
-function shortenSig(sig: string, left = 6, right = 6) {
-  if (!sig) return "";
-  if (sig.length <= left + right + 3) return sig;
-  return `${sig.slice(0, left)}...${sig.slice(-right)}`;
-}
-
 function solanaExplorerTxUrl(sig: string) {
   const cluster = process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "mainnet-beta";
   const qp = cluster === "mainnet-beta" ? "" : `?cluster=${encodeURIComponent(cluster)}`;
   return `https://explorer.solana.com/tx/${sig}${qp}`;
 }
 
-function csvEscape(val: string) {
-  return `"${String(val ?? "").replace(/"/g, '""')}"`;
-}
-
-function downloadCsv(filename: string, rows: string[][]) {
-  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  URL.revokeObjectURL(url);
-}
 
 export default function RewardsTab() {
   const [loading, setLoading] = useState(true);
@@ -188,39 +164,13 @@ export default function RewardsTab() {
         <div className="space-y-4">
           {/* Week Totals */}
           <div className="bg-gray-800/50 rounded-lg p-4 overflow-hidden">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="text-sm text-gray-400 mb-1 truncate">
-                  Week of {formatWeekLabel(weekDetail.weekKey)}
-                </div>
-                <div className="text-xl font-bold text-white whitespace-nowrap">
-                  {formatXess6(weekDetail.totals.total)} XESS
-                </div>
+            <div>
+              <div className="text-sm text-gray-400 mb-1 truncate">
+                Week of {formatWeekLabel(weekDetail.weekKey)}
               </div>
-
-              <button
-                onClick={() => {
-                  const rows: string[][] = [
-                    ["createdAt", "type", "category", "amount", "status", "paidAt", "txSig"],
-                    ...weekDetail.rewards.map((r) => [
-                      r.createdAt,
-                      rewardTypeLabel(r.type, r.refType),
-                      r.refType ?? r.type,
-                      r.amount,
-                      r.status,
-                      r.paidAt ?? "",
-                      r.txSig ?? "",
-                    ]),
-                  ];
-
-                  downloadCsv(`xessex-history-${weekDetail.weekKey}.csv`, rows);
-                }}
-                disabled={!weekDetail.rewards?.length}
-                className="px-3 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
-                title="Export individual history rows for this week"
-              >
-                Export CSV
-              </button>
+              <div className="text-xl font-bold text-white whitespace-nowrap">
+                {formatXess6(weekDetail.totals.total)} XESS
+              </div>
             </div>
 
             <div className="flex gap-4 mt-2 text-sm">

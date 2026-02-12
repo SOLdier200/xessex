@@ -218,7 +218,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           ← Back to Collections
         </Link>
 
-        <section className="neon-border rounded-2xl p-3 md:p-4 bg-black/30 mb-4 md:mb-6 inline-block">
+        <section className="mb-4 md:mb-6">
           {categoryInfo.image ? (
             <div className="flex flex-col items-center">
               <img
@@ -231,7 +231,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center gap-3">
               <span className="text-3xl md:text-4xl">{categoryInfo.icon}</span>
               <div>
                 <h1 className="text-xl md:text-2xl font-semibold neon-text">{categoryInfo.name}</h1>
@@ -241,6 +241,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               </div>
             </div>
           )}
+          <div className="mt-4 border-t border-white/10" />
         </section>
 
         {videos.length === 0 ? (

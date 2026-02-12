@@ -41,6 +41,7 @@ export default function LeaderboardPage() {
     "mvm" | "karat" | "rewards" | "xessex" | "embeds" | "referrals"
   >("karat");
   const [isDiamond, setIsDiamond] = useState(false);
+  const [showTabDropdown, setShowTabDropdown] = useState(false);
 
   useEffect(() => {
     fetch("/api/leaderboard")
@@ -107,8 +108,45 @@ export default function LeaderboardPage() {
           </div>
         </section>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        {/* Tabs — dropdown on mobile, inline on desktop */}
+        {/* Mobile: dropdown selector */}
+        <div className="sm:hidden mb-4">
+          <div className="relative">
+            <button
+              onClick={() => setShowTabDropdown((v) => !v)}
+              className="w-full flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm font-semibold text-white"
+            >
+              <div>
+                <span>{tabs.find((t) => t.id === activeTab)?.label}</span>
+                <span className="ml-2 text-white/40 text-xs font-normal">{tabs.find((t) => t.id === activeTab)?.desc}</span>
+              </div>
+              <svg className={`w-4 h-4 text-white/50 transition-transform ${showTabDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showTabDropdown && (
+              <div className="absolute z-30 mt-1 w-full rounded-xl border border-white/10 bg-gray-900/95 backdrop-blur-sm overflow-hidden shadow-lg">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setShowTabDropdown(false); }}
+                    className={`w-full text-left px-4 py-3 text-sm font-semibold transition ${
+                      activeTab === tab.id
+                        ? "bg-pink-500/20 text-white"
+                        : "text-white/60 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <div>{tab.label}</div>
+                    <div className="text-xs font-normal text-white/40">{tab.desc}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop: inline tabs */}
+        <div className="hidden sm:flex flex-wrap gap-2 mb-6">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -124,8 +162,8 @@ export default function LeaderboardPage() {
           ))}
         </div>
 
-        {/* Tab Description */}
-        <div className="mb-4 text-sm text-white/50">
+        {/* Tab Description (desktop only — mobile shows it in the dropdown) */}
+        <div className="hidden sm:block mb-4 text-sm text-white/50">
           {tabs.find((t) => t.id === activeTab)?.desc}
         </div>
 

@@ -73,7 +73,7 @@ export default function VideoCardWithPlaylist({
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+        <div className="hidden md:flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
           <span>{duration}</span>
           <span>{formatViews(viewsCount)} XESS Views</span>
         </div>
