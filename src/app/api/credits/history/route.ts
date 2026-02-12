@@ -19,11 +19,10 @@ export async function GET() {
   // Fetch live on-chain XESS balance for accurate tier display
   let xessBalanceAtomic = 0n;
   if (user.walletAddress) {
-    xessBalanceAtomic = await getXessAtomicBalance(user.walletAddress);
+    const liveBalance = await getXessAtomicBalance(user.walletAddress);
 
-    // getXessAtomicBalance silently returns 0n on RPC errors,
-    // so fall back to latest snapshot if live returned 0 but snapshot has data
-    if (xessBalanceAtomic === 0n) {
+    // Fall back to latest snapshot if RPC failed (null) or returned 0
+    if (liveBalance === null || liveBalance === 0n) {
       const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
         where: { userId: user.id },
         orderBy: { createdAt: "desc" },
@@ -31,6 +30,8 @@ export async function GET() {
       if (latestSnapshot && BigInt(latestSnapshot.balanceAtomic) > 0n) {
         xessBalanceAtomic = BigInt(latestSnapshot.balanceAtomic);
       }
+    } else {
+      xessBalanceAtomic = liveBalance;
     }
   }
 

@@ -50,6 +50,22 @@ export async function GET(req: NextRequest) {
 
     // Convert to human-readable
     const solBalance = solLamports / LAMPORTS_PER_SOL;
+
+    if (xessAtomic === null) {
+      return NextResponse.json({
+        ok: false,
+        error: "rpc_unavailable",
+        wallet,
+        balances: {
+          sol: {
+            lamports: solLamports,
+            formatted: solBalance.toFixed(4),
+          },
+          xess: null,
+        },
+      }, { status: 503 });
+    }
+
     const xessBalance = formatXess(xessAtomic, 2);
 
     return NextResponse.json({

@@ -52,7 +52,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Get on-chain balance and calculate tier
-    const balanceAtomic = await getXessAtomicBalance(wallet);
+    const rawBalance = await getXessAtomicBalance(wallet);
+    if (rawBalance === null) {
+      return NextResponse.json({ ok: false, error: "RPC unavailable, cannot determine tier" }, { status: 503 });
+    }
+    const balanceAtomic = rawBalance;
     const tier = getTierFromBalance(balanceAtomic);
 
     if (tier === 0) {

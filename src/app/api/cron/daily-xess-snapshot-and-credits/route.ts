@@ -109,7 +109,14 @@ export async function POST(req: NextRequest) {
     // Process each user
     for (const wallet of wallets) {
       const userId = walletToUser.get(wallet)!;
-      const balanceAtomic = balances.get(wallet) || 0n;
+      const balanceAtomic = balances.get(wallet);
+
+      // Unknown balance (RPC failure) — skip this user entirely, don't downgrade
+      if (balanceAtomic === null || balanceAtomic === undefined) {
+        snapshotsSkipped++;
+        continue;
+      }
+
       const tier = getTierFromBalance(balanceAtomic);
 
       try {

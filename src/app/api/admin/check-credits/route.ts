@@ -42,8 +42,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Get on-chain XESS balance
-    const balanceAtomic = await getXessAtomicBalance(wallet);
+    // Get on-chain XESS balance (null = RPC failure)
+    const rawBalance = await getXessAtomicBalance(wallet);
+    const balanceLive = rawBalance !== null;
+    const balanceAtomic = rawBalance ?? 0n;
     const balanceXess = Number(balanceAtomic / XESS_MULTIPLIER);
     const tier = getTierFromBalance(balanceAtomic);
     const tierInfo = getTierInfo(tier);
@@ -72,6 +74,7 @@ export async function GET(req: NextRequest) {
       ok: true,
       wallet,
       onChain: {
+        live: balanceLive,
         balanceAtomic: balanceAtomic.toString(),
         balanceXess,
         balanceFormatted: formatXess(balanceAtomic),
@@ -148,7 +151,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Get on-chain balance and calculate tier
-    const balanceAtomic = await getXessAtomicBalance(wallet);
+    const rawBalance = await getXessAtomicBalance(wallet);
+    if (rawBalance === null) {
+      return NextResponse.json({ ok: false, error: "RPC unavailable, cannot determine tier" }, { status: 503 });
+    }
+    const balanceAtomic = rawBalance;
     const tier = getTierFromBalance(balanceAtomic);
 
     if (tier === 0) {

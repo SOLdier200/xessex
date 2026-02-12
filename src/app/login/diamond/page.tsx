@@ -28,16 +28,42 @@ const WALLETS = [
   },
 ];
 
+/** Detect which wallet's in-app browser we're running inside */
+function detectInAppWallet(): string | null {
+  if (typeof window === "undefined") return null;
+  const w = window as any;
+  if (w.phantom?.solana?.isPhantom) return "Phantom";
+  if (w.solflare?.isSolflare) return "Solflare";
+  if (w.backpack) return "Backpack";
+  return null;
+}
+
+function isMobileUA(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return ua.includes("android") || ua.includes("iphone") || ua.includes("ipad")
+    || (ua.includes("mac") && (navigator as any).maxTouchPoints > 1);
+}
+
 export default function DiamondLoginPage() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMod, setIsMod] = useState(false);
   const [isAdminRole, setIsAdminRole] = useState(false);
   const [currentUrl, setCurrentUrl] = useState("https://xessex.me/login/diamond");
+  const [inAppWallet, setInAppWallet] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     // Set current URL on client
     setCurrentUrl(window.location.href);
+
+    // Detect if we're inside a wallet's in-app browser
+    setIsMobile(isMobileUA());
+    // Small delay to let wallet providers inject into window
+    const timer = setTimeout(() => {
+      setInAppWallet(detectInAppWallet());
+    }, 300);
 
     fetch("/api/me/is-admin")
       .then((res) => res.json())
@@ -51,6 +77,8 @@ export default function DiamondLoginPage() {
         setIsMod(false);
         setIsAdminRole(false);
       });
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -69,6 +97,24 @@ export default function DiamondLoginPage() {
                 className="h-[62px] w-auto"
               />
             </div>
+            {/* In-App Browser Detection Banner */}
+            {inAppWallet && isMobile && (
+              <div className="mb-4 rounded-xl border border-green-400/50 bg-green-500/10 px-4 py-3 animate-in-app-fade-in">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+                  </span>
+                  <span className="text-sm font-semibold text-green-300">
+                    {inAppWallet} Browser Active
+                  </span>
+                </div>
+                <p className="text-xs text-green-200/70 leading-relaxed">
+                  You&apos;re inside {inAppWallet}&apos;s built-in browser. Tap <span className="font-semibold text-green-200">&quot;Select Wallet&quot;</span> below then <span className="font-semibold text-green-200">&quot;Sign in with Wallet&quot;</span> to connect.
+                </p>
+              </div>
+            )}
+
             <div className="mb-4">
               <WalletActions mode="WALLET_LOGIN" />
             </div>
@@ -76,8 +122,8 @@ export default function DiamondLoginPage() {
               Connect your wallet to sign in.
             </p>
 
-            {/* Mobile Deep Links - hidden on desktop (lg and up) */}
-            <div className="mt-4 pt-4 border-t border-white/10 lg:hidden">
+            {/* Mobile Deep Links - hidden on desktop, hidden when already in wallet browser */}
+            <div className={`mt-4 pt-4 border-t border-white/10 lg:hidden ${inAppWallet ? "hidden" : ""}`}>
               <p className="text-sm text-white/60 mb-4 text-center">
                 On mobile? Open this page in your wallet app:
               </p>
@@ -182,6 +228,16 @@ export default function DiamondLoginPage() {
       </div>
 
       {/* Wallet Download Modal */}
+      <style jsx global>{`
+        @keyframes inAppFadeIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in-app-fade-in {
+          animation: inAppFadeIn 0.4s ease-out;
+        }
+      `}</style>
+
       {showWalletModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           {/* Backdrop */}

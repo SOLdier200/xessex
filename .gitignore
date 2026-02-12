@@ -62,3 +62,7 @@ backups/
 deploy.sh
 ecosystem.config.cjs
 scripts/
+
+# Private keys and secrets
+keypairs/
+private/

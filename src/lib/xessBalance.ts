@@ -32,12 +32,12 @@ function getConnection(): Connection {
 
 /**
  * Get the XESS balance for a wallet address in atomic units (9 decimals)
- * Returns 0n if the token account doesn't exist
+ * Returns 0n if the token account doesn't exist, null on RPC failure
  *
  * @param wallet - Base58 Solana wallet address
- * @returns XESS balance in atomic units (bigint)
+ * @returns XESS balance in atomic units (bigint), or null if RPC failed
  */
-export async function getXessAtomicBalance(wallet: string): Promise<bigint> {
+export async function getXessAtomicBalance(wallet: string): Promise<bigint | null> {
   try {
     const connection = getConnection();
     const walletPubkey = new PublicKey(wallet);
@@ -60,7 +60,7 @@ export async function getXessAtomicBalance(wallet: string): Promise<bigint> {
     return BigInt(tokenBalance.value.amount);
   } catch (error) {
     console.error(`[xessBalance] Error getting balance for ${wallet}:`, error);
-    return 0n;
+    return null;
   }
 }
 
@@ -69,12 +69,12 @@ export async function getXessAtomicBalance(wallet: string): Promise<bigint> {
  * More efficient than individual calls for large sets
  *
  * @param wallets - Array of base58 wallet addresses
- * @returns Map of wallet → atomic balance
+ * @returns Map of wallet → atomic balance (null means RPC failure for that wallet)
  */
 export async function getXessAtomicBalances(
   wallets: string[]
-): Promise<Map<string, bigint>> {
-  const results = new Map<string, bigint>();
+): Promise<Map<string, bigint | null>> {
+  const results = new Map<string, bigint | null>();
 
   if (wallets.length === 0) return results;
 
@@ -133,10 +133,10 @@ export async function getXessAtomicBalances(
       }
     } catch (error) {
       console.error(`[xessBalance] Batch fetch error:`, error);
-      // Set 0 for all wallets in failed batch
+      // Set null for all wallets in failed batch — callers must handle unknown balances
       for (const ata of batch) {
         const wallet = ataToWallet.get(ata.toBase58());
-        if (wallet) results.set(wallet, 0n);
+        if (wallet) results.set(wallet, null);
       }
     }
   }

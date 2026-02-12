@@ -297,8 +297,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "tx_already_used" }, { status: 409, headers: noCache });
     }
 
-    // Record contribution and update sold counters in a transaction
+    // Record contribution and update sold counters atomically with row lock
     const contribution = await db.$transaction(async (tx) => {
+      // Lock the SaleConfig row to prevent concurrent overselling
+      await tx.$executeRaw`SELECT id FROM "SaleConfig" WHERE id = ${cfg.id} FOR UPDATE`;
+
+      // Re-read config with lock held
+      const lockedCfg = await tx.saleConfig.findUniqueOrThrow({ where: { id: cfg.id } });
+
+      // Re-check phase allocation remaining under lock
+      const lockedRemaining = phase === "private"
+        ? lockedCfg.privateAllocation - lockedCfg.soldPrivateXess
+        : lockedCfg.publicAllocation - lockedCfg.soldPublicXess;
+
+      if (xessAmount > lockedRemaining) {
+        throw new Error("SOLD_OUT");
+      }
+
+      // Re-check wallet cap under lock
+      const lockedExisting = await tx.saleContribution.aggregate({
+        where: {
+          wallet: sessionWallet.toLowerCase(),
+          status: { in: ["PENDING", "CONFIRMED"] },
+        },
+        _sum: { xessAmount: true },
+      });
+
+      const lockedAlready = lockedExisting._sum.xessAmount ?? 0n;
+      if (lockedAlready + xessAmount > lockedCfg.walletCapXess) {
+        throw new Error("CAP_EXCEEDED");
+      }
+
       const contrib = await tx.saleContribution.create({
         data: {
           phase,
@@ -315,13 +344,13 @@ export async function POST(req: NextRequest) {
 
       if (phase === "private") {
         await tx.saleConfig.update({
-          where: { id: cfg.id },
-          data: { soldPrivateXess: cfg.soldPrivateXess + xessAmount },
+          where: { id: lockedCfg.id },
+          data: { soldPrivateXess: { increment: xessAmount } },
         });
       } else {
         await tx.saleConfig.update({
-          where: { id: cfg.id },
-          data: { soldPublicXess: cfg.soldPublicXess + xessAmount },
+          where: { id: lockedCfg.id },
+          data: { soldPublicXess: { increment: xessAmount } },
         });
       }
 
@@ -425,6 +454,14 @@ export async function POST(req: NextRequest) {
       xessSig: deliverySig,
     }, { headers: noCache });
   } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === "SOLD_OUT") {
+        return NextResponse.json({ ok: false, error: "sold_out" }, { status: 409, headers: noCache });
+      }
+      if (err.message === "CAP_EXCEEDED") {
+        return NextResponse.json({ ok: false, error: "cap_exceeded" }, { status: 400, headers: noCache });
+      }
+    }
     console.error("Contribution error:", err);
     return NextResponse.json({ ok: false, error: "internal_error" }, { status: 500, headers: noCache });
   }

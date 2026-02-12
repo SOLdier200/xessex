@@ -55,11 +55,11 @@ export async function GET() {
   let xessBalance = "0";
   const xessWallet = user.walletAddress;
   if (xessWallet) {
-    let balanceAtomic = await getXessAtomicBalance(xessWallet);
+    const liveBalance = await getXessAtomicBalance(xessWallet);
+    let balanceAtomic = liveBalance ?? 0n;
 
-    // getXessAtomicBalance silently returns 0n on RPC errors,
-    // so fall back to latest snapshot if live returned 0 but snapshot has data
-    if (balanceAtomic === 0n) {
+    // Fall back to latest snapshot if RPC failed (null) or returned 0
+    if (liveBalance === null || liveBalance === 0n) {
       const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
         where: { wallet: xessWallet },
         orderBy: { dateKey: "desc" },

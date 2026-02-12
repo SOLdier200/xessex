@@ -111,12 +111,12 @@ export async function POST(req: Request) {
 
     const weekKey = leaf.weekKey;
 
-    // Helper function to mark as claimed
-    // Mark ALL unclaimed rewards for the user (from all weekKeys, since test epochs aggregate all)
+    // Mark unclaimed rewards for this period only
     async function markClaimedInDbV2(txSig: string) {
       const updated = await db.rewardEvent.updateMany({
         where: {
           userId: ctx.user!.id,
+          weekKey,
           claimedAt: null,
           status: "PAID",
           type: { in: ALL_REWARD_TYPES },

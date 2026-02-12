@@ -210,14 +210,6 @@ export default function RootLayout({
                 <a href="mailto:help@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
                   help@xessex.me
                 </a>
-                {" · "}
-                <a href="mailto:contact@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-                  contact@xessex.me
-                </a>
-                {" · "}
-                <a href="mailto:complaints@xessex.me" className="text-sky-400 hover:text-sky-300 transition">
-                  complaints@xessex.me
-                </a>
               </p>
             </div>
           </div>
