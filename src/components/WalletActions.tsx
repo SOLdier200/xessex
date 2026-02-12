@@ -231,7 +231,7 @@ export default function WalletActions({
     if (typeof window === "undefined") return;
     const url = encodeURIComponent(window.location.href);
     const ref = encodeURIComponent(window.location.origin);
-    window.location.href = `https://phantom.app/ul/browse/${url}?ref=${ref}`;
+    window.location.href = `https://phantom.com/ul/browse/${url}?ref=${ref}`;
   };
 
   async function walletLogin() {

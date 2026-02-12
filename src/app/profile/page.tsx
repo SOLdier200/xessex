@@ -1848,7 +1848,7 @@ function ProfilePageInner() {
               {/* Referral Earnings + Network */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <h2 className="text-lg font-semibold text-white">Referral Earnings</h2>
+                  <img src="/logos/textlogo/siteset3/referralearnings.png" alt="Referral Earnings" className="h-[28px] w-auto" />
                   {referralLoading && (
                     <span className="text-xs text-white/50">Loading…</span>
                   )}

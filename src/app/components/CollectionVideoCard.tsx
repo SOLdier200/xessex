@@ -28,18 +28,20 @@ export default function CollectionVideoCard({
   views,
   isFavorite,
 }: Props) {
+  const Wrapper = locked ? "div" : Link;
+  const wrapperProps = locked
+    ? { className: "neon-border rounded-xl bg-black/30 overflow-hidden opacity-60 cursor-not-allowed block" }
+    : { href: `/videos/${viewkey}`, className: "neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition block" };
+
   return (
     <div className="relative group">
-      <Link
-        href={`/videos/${viewkey}`}
-        className="neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition block"
-      >
+      <Wrapper {...(wrapperProps as any)}>
         <div className="relative aspect-video bg-black/60">
           {thumb ? (
             <img
               src={thumb}
               alt={locked ? "Locked video" : title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              className={`w-full h-full object-cover ${locked ? "blur-sm" : "group-hover:scale-105"} transition-transform`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/30 text-[8px]">
@@ -48,30 +50,35 @@ export default function CollectionVideoCard({
           )}
           {/* Lock overlay for locked videos */}
           {locked && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1">
               <span className="text-xl">🔒</span>
+              <span className="text-[8px] md:text-[10px] text-white/70 font-medium">Locked</span>
             </div>
           )}
           {/* Rank Badge */}
-          {rank != null && (
+          {rank != null && !locked && (
             <div className="absolute top-0.5 left-0.5 md:top-1 md:left-1 min-w-[16px] md:min-w-[18px] h-4 flex items-center justify-center text-[8px] md:text-[10px] font-bold px-0.5 md:px-1 rounded bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white/90 backdrop-blur-sm shadow-md">
               #{rank}
             </div>
           )}
-          <div className="hidden md:block absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
-            {duration}
-          </div>
-          {isFavorite && (
+          {!locked && (
+            <div className="hidden md:block absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
+              {duration}
+            </div>
+          )}
+          {isFavorite && !locked && (
             <div className="absolute top-0.5 right-0.5 md:top-1 md:right-1 bg-yellow-500/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-black font-semibold">
               ★
             </div>
           )}
         </div>
 
-        <div className="p-1.5 md:p-2">
-          <div className="text-[8px] md:text-[10px] text-white/50">{views} views</div>
-        </div>
-      </Link>
+        {!locked && (
+          <div className="p-1.5 md:p-2">
+            <div className="text-[8px] md:text-[10px] text-white/50">{views} views</div>
+          </div>
+        )}
+      </Wrapper>
 
       {/* Playlist button - shown on hover for unlocked videos */}
       {isAuthed && !locked && videoId && (

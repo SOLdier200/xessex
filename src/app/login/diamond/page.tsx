@@ -129,7 +129,7 @@ export default function DiamondLoginPage() {
               </p>
               <div className="flex flex-col gap-3">
                 <a
-                  href={`https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
+                  href={`https://phantom.com/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
                   onClick={() => toast("Opening Phantom...")}
                   className="flex items-center gap-3 w-full px-5 py-4 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-200 text-base font-semibold hover:bg-purple-500/30 transition"
                 >
@@ -137,7 +137,7 @@ export default function DiamondLoginPage() {
                   Open in Phantom
                 </a>
                 <a
-                  href={`https://solflare.com/ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
+                  href={`solflare://ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent("https://xessex.me")}`}
                   onClick={() => toast("Opening Solflare...")}
                   className="flex items-center gap-3 w-full px-5 py-4 rounded-xl bg-orange-500/20 border border-orange-400/50 text-orange-200 text-base font-semibold hover:bg-orange-500/30 transition"
                 >
