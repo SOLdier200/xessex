@@ -4,38 +4,29 @@ import { useEffect, useState, useMemo } from "react";
 
 /**
  * Computes milliseconds until the next XESS reward payout.
- * P1 pays out Wednesday 23:59 PT, P2 pays out Saturday 23:59 PT.
+ * Crons run at fixed UTC times (CRON_TZ=UTC):
+ *   P1: Wednesday 08:04 UTC
+ *   P2: Saturday  08:04 UTC
+ * That's ~midnight PT (00:04 PST / 01:04 PDT).
  */
 function getNextPayout(): { ms: number; label: string } {
   const now = new Date();
+  const utcDow = now.getUTCDay(); // 0=Sun … 6=Sat
+  const utcH = now.getUTCHours();
+  const utcM = now.getUTCMinutes();
+  const utcS = now.getUTCSeconds();
 
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-
-  const dayName = parts.find((p) => p.type === "weekday")?.value ?? "Mon";
-  const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
-  const minute = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-  const second = parseInt(parts.find((p) => p.type === "second")?.value ?? "0", 10);
-
-  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  const dow = dowMap[dayName] ?? 1;
-  const currentSecs = hour * 3600 + minute * 60 + second;
-  const TARGET_SECS = 23 * 3600 + 59 * 60; // 23:59:00 PT
+  const currentUtcSecs = utcH * 3600 + utcM * 60 + utcS;
+  const targetUtcSecs = 8 * 3600 + 4 * 60; // 08:04:00 UTC
 
   function daysUntil(targetDow: number): number {
-    let d = (targetDow - dow + 7) % 7;
-    if (d === 0 && currentSecs >= TARGET_SECS) d = 7;
+    let d = (targetDow - utcDow + 7) % 7;
+    if (d === 0 && currentUtcSecs >= targetUtcSecs) d = 7;
     return d;
   }
 
-  const daysToWed = daysUntil(3);
-  const daysToSat = daysUntil(6);
+  const daysToWed = daysUntil(3); // Wednesday
+  const daysToSat = daysUntil(6); // Saturday
 
   let days: number;
   let label: string;
@@ -47,8 +38,8 @@ function getNextPayout(): { ms: number; label: string } {
     label = "Saturday";
   }
 
-  const remainingSecs = days * 86400 + (TARGET_SECS - currentSecs);
-  return { ms: remainingSecs * 1000, label: `${label} evening PT` };
+  const remainingSecs = days * 86400 + (targetUtcSecs - currentUtcSecs);
+  return { ms: remainingSecs * 1000, label: `${label} ~midnight PT` };
 }
 
 function formatCountdown(ms: number, showSeconds = false): string {

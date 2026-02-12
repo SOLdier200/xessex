@@ -78,7 +78,7 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
             alt="XESS Payout History"
             width={938}
             height={276}
-            className="h-[28px] sm:h-[32px] w-auto"
+            className="h-[34px] sm:h-[38px] w-auto"
           />
           <button
             onClick={onClose}

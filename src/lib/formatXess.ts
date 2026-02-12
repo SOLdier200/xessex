@@ -81,28 +81,28 @@ export function rewardTypeLabel(type: string, refType?: string | null): string {
   // Check refType for pool-specific labels
   if (refType) {
     if (refType.endsWith(":flat_total")) {
-      const pool = refType.startsWith("xessex:") ? "Xessex" : "Embed";
+      const pool = refType.startsWith("xessex:") ? "Xessex" : "Videos";
       return `Flat Rate (${pool})`;
     }
     if (type === "ALLTIME_LIKES") {
       if (refType.startsWith("xessex:")) return "All-Time Likes (Xessex)";
-      if (refType.startsWith("embed:")) return "All-Time Likes (Embed)";
+      if (refType.startsWith("embed:")) return "All-Time Likes (Videos)";
     }
     if (type === "WEEKLY_LIKES") {
       if (refType.startsWith("xessex:")) return "Weekly Likes (Xessex)";
-      if (refType.startsWith("embed:")) return "Weekly Likes (Embed)";
+      if (refType.startsWith("embed:")) return "Weekly Likes (Videos)";
     }
     if (type === "WEEKLY_MVM") {
       if (refType.startsWith("xessex:")) return "Weekly MVM (Xessex)";
-      if (refType.startsWith("embed:")) return "Weekly MVM (Embed)";
+      if (refType.startsWith("embed:")) return "Weekly MVM (Videos)";
     }
     if (type === "WEEKLY_VOTER") {
       if (refType.startsWith("xessex:")) return "Weekly Voter (Xessex)";
-      if (refType.startsWith("embed:")) return "Weekly Voter (Embed)";
+      if (refType.startsWith("embed:")) return "Weekly Voter (Videos)";
     }
     if (type === "WEEKLY_COMMENTS" && !refType.endsWith(":flat_total")) {
       if (refType.startsWith("xessex:")) return "Weekly Comments (Xessex)";
-      if (refType.startsWith("embed:")) return "Weekly Comments (Embed)";
+      if (refType.startsWith("embed:")) return "Weekly Comments (Videos)";
     }
   }
 

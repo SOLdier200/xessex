@@ -1087,7 +1087,7 @@ function ProfilePageInner() {
             <>
               {/* Account Info Card */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
-                <Image src="/logos/textlogo/siteset3/accountinformation.png" alt="Account Information" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto mb-4" />
+                <Image src="/logos/textlogo/siteset3/accouintinfoirmation.png" alt="Account Information" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto mb-4" />
 
                 <div className="space-y-4">
                   {data.email && (
@@ -2060,7 +2060,7 @@ function ProfilePageInner() {
           {/* History Tab Content (Member and Diamond) */}
           {activeTab === "history" && isAuthed && (
             <div className="neon-border rounded-2xl p-3 sm:p-6 bg-black/30">
-              <Image src="/logos/textlogo/siteset3/tokenallocation.png" alt="XESS History" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto mb-4" />
+              <Image src="/logos/textlogo/siteset3/tokenallocation.png" alt="XESS History" width={938} height={276} className="h-[37px] sm:h-[44px] w-auto mb-4" />
               <RewardsTab />
             </div>
           )}

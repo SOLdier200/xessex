@@ -3,9 +3,9 @@
 import { useEffect, useState, useMemo } from "react";
 
 /**
- * Computes milliseconds until the next credit accrual window.
- * AM accrual happens sometime before noon PT → next window = noon PT
- * PM accrual happens sometime after noon PT → next window = midnight PT (next day)
+ * Computes milliseconds until the next credit accrual payout.
+ * AM payout runs at 8:00 AM PT (04:00 UTC)
+ * PM payout runs at 8:00 PM PT (16:00 UTC)
  */
 function getNextAccrual(): { ms: number; label: string } {
   const now = new Date();
@@ -24,16 +24,22 @@ function getNextAccrual(): { ms: number; label: string } {
 
   const currentSecs = hour * 3600 + minute * 60 + second;
 
-  if (hour < 12) {
-    // Before noon PT → next accrual window is noon PT (12:00:00)
-    const noonSecs = 12 * 3600;
-    const remainingSecs = noonSecs - currentSecs;
-    return { ms: remainingSecs * 1000, label: "PM accrual window" };
+  const amPayoutSecs = 8 * 3600;  // 8:00 AM PT
+  const pmPayoutSecs = 20 * 3600; // 8:00 PM PT
+
+  if (currentSecs < amPayoutSecs) {
+    // Before 8 AM PT → next payout is 8 AM PT
+    const remainingSecs = amPayoutSecs - currentSecs;
+    return { ms: remainingSecs * 1000, label: "8 AM PT payout" };
+  } else if (currentSecs < pmPayoutSecs) {
+    // Between 8 AM and 8 PM PT → next payout is 8 PM PT
+    const remainingSecs = pmPayoutSecs - currentSecs;
+    return { ms: remainingSecs * 1000, label: "8 PM PT payout" };
   } else {
-    // After noon PT → next accrual window is midnight PT (00:00:00 next day)
+    // After 8 PM PT → next payout is 8 AM PT next day
     const midnightSecs = 24 * 3600;
-    const remainingSecs = midnightSecs - currentSecs;
-    return { ms: remainingSecs * 1000, label: "AM accrual window" };
+    const remainingSecs = (midnightSecs - currentSecs) + amPayoutSecs;
+    return { ms: remainingSecs * 1000, label: "8 AM PT payout" };
   }
 }
 

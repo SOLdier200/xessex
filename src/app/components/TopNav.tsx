@@ -172,6 +172,7 @@ export default function TopNav() {
     { type: "token", img: "/logos/textlogo/siteset3/token100.png", alt: "Xess Token", h: 36 },
     ...(isLoggedIn
       ? ([
+          { type: "link", href: `${m}/xessex-content`, img: "/logos/textlogo/siteset3/xessexnav.png", alt: "Xessex Content", h: 36 },
           { type: "link", href: `${m}/playlists`, img: "/logos/textlogo/siteset3/playlistfinal2.png", alt: "Playlists", h: 36 },
           { type: "link", href: `${m}/profile`, img: "/logos/textlogo/siteset3/profile100.png", alt: "Profile", h: 30 },
           { type: "messages", img: "/logos/textlogo/siteset3/messages110.png", alt: "Messages", h: 34 },
