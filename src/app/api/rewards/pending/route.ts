@@ -280,18 +280,19 @@ export async function GET() {
 
         const receiptInfo = await connection.getAccountInfo(receiptV2Pda);
         if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-          // Sync DB: mark ALL unclaimed rewards as claimed since on-chain receipt exists
+          // Sync DB: mark only THIS epoch's weekKey rewards as claimed
           const synced = await db.rewardEvent.updateMany({
             where: {
               userId,
+              weekKey: epochRow.weekKey,
               status: "PAID",
               claimedAt: null,
               type: { in: ALL_REWARD_TYPES },
             },
-            data: { claimedAt: new Date() },
+            data: { claimedAt: new Date(), txSig: "synced-from-onchain" },
           });
           if (synced.count > 0) {
-            console.log(`[rewards/pending] Epoch ${epochRow.epoch} already claimed on-chain, synced ${synced.count} reward rows`);
+            console.log(`[rewards/pending] Epoch ${epochRow.epoch} (${epochRow.weekKey}) already claimed on-chain, synced ${synced.count} reward rows`);
           }
           continue;
         }
