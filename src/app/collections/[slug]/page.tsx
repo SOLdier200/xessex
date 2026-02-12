@@ -157,7 +157,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   // Helper to check if video is locked for this user
   const isVideoLocked = (viewkey: string): boolean => {
-    const unlockCost = unlockCostMap.get(viewkey) ?? 0;
+    const unlockCost = unlockCostMap.get(viewkey);
+    // SECURITY: If video has no DB entry, treat as locked (never default to free)
+    if (unlockCost == null) return true;
     if (unlockCost === 0) return false; // Free video
     if (access.isAdminOrMod) return false; // Admin/mod can see all
     const videoId = videoIdMap.get(viewkey);

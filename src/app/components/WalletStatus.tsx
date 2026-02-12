@@ -179,15 +179,15 @@ export default function WalletStatus() {
               if (tier > 0 && credits > 0) {
                 return (
                   <div className="text-[10px] md:text-xs font-semibold whitespace-nowrap">
-                    <span className={tc.text}>T{tier}</span>
-                    <span className="text-white/30 mx-0.5">&middot;</span>
+                    <span className={`hidden md:inline ${tc.text}`}>T{tier}</span>
+                    <span className="hidden md:inline text-white/30 mx-0.5">&middot;</span>
                     <span className="text-yellow-400">{credits} credits</span>
                   </div>
                 );
               }
               if (tier > 0) {
                 return (
-                  <div className={`text-[10px] md:text-xs font-semibold whitespace-nowrap ${tc.text}`}>
+                  <div className={`hidden md:block text-[10px] md:text-xs font-semibold whitespace-nowrap ${tc.text}`}>
                     T{tier}
                   </div>
                 );

@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { requireAdminOrMod } from "@/lib/adminActions";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const admin = await requireAdminOrMod();
+  if (!admin) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   const file = path.join(process.cwd(), "data", "approved.json");
 
   if (!fs.existsSync(file)) {

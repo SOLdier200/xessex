@@ -61,6 +61,7 @@ export default function HoverPreviewVideo({
 
   const [duration, setDuration] = useState<number | null>(null);
   const [isVideoVisible, setIsVideoVisible] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
 
   // --- Stop handler (so others can tell this instance to stop)
   useEffect(() => {
@@ -206,6 +207,7 @@ export default function HoverPreviewVideo({
 
   const startPreview = () => {
     hoveringRef.current = true;
+    setShouldLoad(true); // mount the video source on first hover
 
     // Stop all other previews immediately (no overlap ever)
     broadcastStopOthers();
@@ -249,8 +251,6 @@ export default function HoverPreviewVideo({
       className={`relative ${className ?? ""}`}
       onMouseEnter={startPreview}
       onMouseLeave={stopPreview}
-      onFocus={startPreview}
-      onBlur={stopPreview}
       aria-label={alt}
     >
       {/* Always-visible thumbnail */}
@@ -267,33 +267,35 @@ export default function HoverPreviewVideo({
         </div>
       )}
 
-      {/* Video overlay: only visible while hovering */}
-      <video
-        ref={videoRef}
-        preload="metadata"
-        muted
-        playsInline
-        controls={false}
-        className={[
-          "absolute inset-0 w-full h-full object-cover",
-          "transition-opacity",
-          isVideoVisible ? "opacity-100" : "opacity-0",
-          videoClassName ?? "",
-        ].join(" ")}
-        style={{ transitionDuration: `${fadeDurationMs}ms` }}
-        onLoadedMetadata={() => {
-          const v = videoRef.current;
-          if (!v) return;
+      {/* Video overlay: only mounted after first hover to prevent autoplay */}
+      {shouldLoad && (
+        <video
+          ref={videoRef}
+          preload="metadata"
+          muted
+          playsInline
+          controls={false}
+          className={[
+            "absolute inset-0 w-full h-full object-cover",
+            "transition-opacity",
+            isVideoVisible ? "opacity-100" : "opacity-0",
+            videoClassName ?? "",
+          ].join(" ")}
+          style={{ transitionDuration: `${fadeDurationMs}ms` }}
+          onLoadedMetadata={() => {
+            const v = videoRef.current;
+            if (!v) return;
 
-          const dur = v.duration;
-          if (Number.isFinite(dur) && dur > 1) {
-            setDuration(dur);
-            if (hoveringRef.current && canPreviewRef.current) beginJumpCycle(dur);
-          }
-        }}
-      >
-        <source src={src} type="video/mp4" />
-      </video>
+            const dur = v.duration;
+            if (Number.isFinite(dur) && dur > 1) {
+              setDuration(dur);
+              if (hoveringRef.current && canPreviewRef.current) beginJumpCycle(dur);
+            }
+          }}
+        >
+          <source src={src} type="video/mp4" />
+        </video>
+      )}
     </div>
   );
 }

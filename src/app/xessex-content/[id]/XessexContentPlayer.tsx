@@ -100,7 +100,6 @@ export default function XessexContentPlayer({
             <video
               src={videoUrl}
               controls
-              autoPlay
               playsInline
               className="absolute inset-0 w-full h-full"
             />

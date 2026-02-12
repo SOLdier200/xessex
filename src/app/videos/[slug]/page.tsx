@@ -28,7 +28,10 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug } = await params;
 
-  const video = await db.video.findFirst({ where: { slug } });
+  const video = await db.video.findFirst({
+    where: { slug },
+    select: { slug: true, title: true, thumbnailUrl: true },
+  });
   if (!video) {
     return {
       title: "Video not found – Xessex",
@@ -54,9 +57,8 @@ export async function generateMetadata(
       title,
       description,
       images: [{ url: image }],
-      videos: video.embedUrl
-        ? [{ url: video.embedUrl, type: "text/html" }]
-        : undefined,
+      // SECURITY: Never include embedUrl in OG metadata — generateMetadata
+      // cannot check user session, so it would leak playback URLs for locked videos.
     },
     twitter: {
       card: "summary_large_image",

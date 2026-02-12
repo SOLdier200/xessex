@@ -35,6 +35,7 @@ function formatViews(views: number | null): string {
 interface VideoSearchProps {
   videos: Video[];
   isAuthed?: boolean;
+  isAdminOrMod?: boolean;
   freeSlugs?: string[];
   unlockedSlugs?: string[];
   creditBalance?: number;
@@ -49,6 +50,7 @@ const SCROLL_KEY = "xessex_videos_scroll";
 export default function VideoSearch({
   videos,
   isAuthed = false,
+  isAdminOrMod = false,
   freeSlugs = [],
   unlockedSlugs = [],
   creditBalance = 0,
@@ -480,8 +482,8 @@ export default function VideoSearch({
             {paginatedVideos.map((v) => {
               const isFree = freeSlugs.includes(v.viewkey);
               const hasUnlocked = localUnlockedSlugs.includes(v.viewkey);
-              // Video is locked unless it's free OR user has unlocked it
-              const isLocked = !isFree && !hasUnlocked;
+              // Video is locked unless it's free, user has unlocked it, or user is admin/mod
+              const isLocked = !isAdminOrMod && !isFree && !hasUnlocked;
 
               if (isLocked) {
                 return (

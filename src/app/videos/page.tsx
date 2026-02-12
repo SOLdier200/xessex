@@ -133,6 +133,7 @@ export default async function VideosPage() {
         <VideoSearch
           videos={videos}
           isAuthed={isAuthed}
+          isAdminOrMod={access.isAdminOrMod}
           freeSlugs={freeSlugs}
           unlockedSlugs={unlockedSlugs}
           creditBalance={access.creditBalance}

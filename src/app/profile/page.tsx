@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -247,6 +247,7 @@ function ProfilePageInner() {
   const [showRecoveryEmailForm, setShowRecoveryEmailForm] = useState(false);
 
   // Avatar state
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Username state
@@ -1166,16 +1167,22 @@ function ProfilePageInner() {
                           {(data.username || data.walletAddress || "?").slice(0, 2).toUpperCase()}
                         </div>
                       )}
-                      <label className="px-3 py-1 text-sm rounded-lg bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          onChange={handleAvatarUpload}
-                          className="hidden"
-                          disabled={avatarUploading}
-                        />
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                        disabled={avatarUploading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={avatarUploading}
+                        className="px-3 py-1 text-sm rounded-lg bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition cursor-pointer disabled:opacity-50"
+                      >
                         {avatarUploading ? "Uploading..." : data.avatarUrl ? "Change" : "Upload"}
-                      </label>
+                      </button>
                       {data.avatarUrl && (
                         <button
                           onClick={handleAvatarRemove}

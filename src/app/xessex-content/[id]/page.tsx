@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
+import TopNav from "@/app/components/TopNav";
 import { getContentById } from "@/lib/xessexContent";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
@@ -40,7 +41,9 @@ export default async function XessexContentWatchPage({
   }
 
   return (
-    <XessexContentPlayer
+    <main className="min-h-screen">
+      <TopNav />
+      <XessexContentPlayer
       contentId={content.id}
       title={content.title}
       thumbnailUrl={content.thumbnailUrl}
@@ -51,5 +54,6 @@ export default async function XessexContentWatchPage({
       hasWallet={ctx.hasWallet}
       unlocked={unlocked}
     />
+    </main>
   );
 }

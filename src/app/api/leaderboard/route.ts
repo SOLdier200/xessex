@@ -205,12 +205,33 @@ export async function GET() {
     : [];
 
   const referrerMap = new Map(referrers.map((u) => [u.id, u]));
+
+  // Sum referral rewards (REF_L1, REF_L2, REF_L3) for each referrer
+  const refRewardTotals = referrerIds.length
+    ? await db.rewardEvent.groupBy({
+        by: ["userId"],
+        where: {
+          status: RewardStatus.PAID,
+          userId: { in: referrerIds },
+          type: { in: ["REF_L1", "REF_L2", "REF_L3"] },
+        },
+        _sum: { amount: true },
+      })
+    : [];
+
+  const refRewardMap = new Map(
+    refRewardTotals.map((r) => [r.userId, (r._sum.amount ?? 0n) as bigint])
+  );
+
   const referrals = referralsTop50.map((r) => {
     const id = r.referredById as string;
     const user = referrerMap.get(id);
+    const totalAtomic = refRewardMap.get(id) ?? 0n;
     return {
       user: displayName(user),
       referralCount: r._count._all,
+      xessEarnedAtomic: totalAtomic.toString(),
+      xessEarned: formatXess(totalAtomic),
     };
   });
 

@@ -13,7 +13,7 @@ type LeaderboardData = {
   rewards: RewardEntry[];
   xessexRewards: RewardEntry[];
   embedRewards: RewardEntry[];
-  referrals: { user: string; referralCount: number }[];
+  referrals: { user: string; referralCount: number; xessEarned: string | number }[];
 };
 
 function getRankStyle(rank: number): string {
@@ -70,7 +70,7 @@ export default function LeaderboardPage() {
     { id: "xessex", label: "Xessex", desc: "XESS Earned from Xessex Content" },
     { id: "embeds", label: "Tokens", desc: "XESS Earned from Videos" },
     { id: "rewards", label: "All Rewards", desc: "Total XESS Earned (All Pools)" },
-    { id: "referrals", label: "Referrals", desc: "Members Referred" },
+    { id: "referrals", label: "Referrals", desc: "Members Referred & XESS Earned" },
   ] as const;
 
   return (
@@ -381,9 +381,12 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-purple-400">
-                            {entry.referralCount}
+                            {entry.referralCount} <span className="text-xs font-normal text-white/50">referrals</span>
                           </div>
-                          <div className="text-xs text-white/50">referrals</div>
+                          <div className="text-xs text-yellow-400 font-semibold mt-0.5">
+                            {entry.xessEarned.toLocaleString()} XESS
+                          </div>
+                          <div className="text-[10px] text-white/40">earned from referrals</div>
                         </div>
                       </div>
                     ))
