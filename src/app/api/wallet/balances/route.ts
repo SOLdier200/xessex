@@ -42,31 +42,34 @@ export async function GET(req: NextRequest) {
     const connection = new Connection(getRpcUrl(), "confirmed");
     const walletPubkey = new PublicKey(wallet);
 
-    // Fetch SOL and XESS balances in parallel
+    // Fetch SOL and XESS balances in parallel — each independently safe
+    function safe<T>(p: Promise<T>): Promise<T | null> {
+      return p.then((v) => v).catch(() => null);
+    }
+
     const [solLamports, xessAtomic] = await Promise.all([
-      connection.getBalance(walletPubkey),
-      getXessAtomicBalance(wallet),
+      safe(connection.getBalance(walletPubkey)),
+      safe(getXessAtomicBalance(wallet)),
     ]);
 
-    // Convert to human-readable
-    const solBalance = solLamports / LAMPORTS_PER_SOL;
-
-    if (xessAtomic === null) {
+    // If either is null, return partial data with 503
+    if (solLamports === null || xessAtomic === null) {
       return NextResponse.json({
         ok: false,
-        error: "rpc_unavailable",
         wallet,
+        error: "RPC_UNAVAILABLE",
         balances: {
-          sol: {
+          sol: solLamports === null ? null : {
             lamports: solLamports,
-            formatted: solBalance.toFixed(4),
+            formatted: (solLamports / LAMPORTS_PER_SOL).toFixed(4),
           },
-          xess: null,
+          xess: xessAtomic === null ? null : {
+            atomic: xessAtomic.toString(),
+            formatted: formatXess(xessAtomic, 2),
+          },
         },
       }, { status: 503 });
     }
-
-    const xessBalance = formatXess(xessAtomic, 2);
 
     return NextResponse.json({
       ok: true,
@@ -74,11 +77,11 @@ export async function GET(req: NextRequest) {
       balances: {
         sol: {
           lamports: solLamports,
-          formatted: solBalance.toFixed(4),
+          formatted: (solLamports / LAMPORTS_PER_SOL).toFixed(4),
         },
         xess: {
           atomic: xessAtomic.toString(),
-          formatted: xessBalance,
+          formatted: formatXess(xessAtomic, 2),
         },
       },
     });

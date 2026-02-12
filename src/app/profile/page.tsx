@@ -974,12 +974,12 @@ function ProfilePageInner() {
   return (
     <main className="min-h-screen">
       <TopNav />
-      <div className="px-6 pb-10">
+      <div className="px-3 sm:px-6 pb-10">
         <Link href="/" className="text-gray-400 hover:text-white mb-6 inline-block">
           &larr; Back to Home
         </Link>
 
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto overflow-hidden">
           <div className="text-center mb-6">
             <div className="relative inline-block">
               <Image
@@ -1070,28 +1070,28 @@ function ProfilePageInner() {
           {activeTab === "profile" && (
             <>
               {/* Account Info Card */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Account Information</h2>
 
                 <div className="space-y-4">
                   {data.email && (
-                    <div className="flex justify-between items-center py-2 border-b border-white/10">
-                      <span className="text-white/60">Email</span>
-                      <span className="text-white">{data.email}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-white/10 gap-2">
+                      <span className="text-white/60 flex-shrink-0">Email</span>
+                      <span className="text-white truncate min-w-0 text-right text-sm">{data.email}</span>
                     </div>
                   )}
 
                   {data.walletAddress && (
-                    <div className="flex justify-between items-center py-2 border-b border-white/10">
-                      <span className="text-white/60">Wallet</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-white font-mono text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-white/10 gap-2">
+                      <span className="text-white/60 flex-shrink-0">Wallet</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-white font-mono text-sm truncate">
                           {truncateWallet(data.walletAddress)}
                         </span>
                         <button
                           onClick={handleLogout}
                           disabled={logoutBusy}
-                          className="px-3 py-1 text-xs rounded-lg bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition disabled:opacity-50"
+                          className="px-3 py-1 text-xs rounded-lg bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition disabled:opacity-50 flex-shrink-0"
                         >
                           {logoutBusy ? "..." : "Logout"}
                         </button>
@@ -1099,9 +1099,9 @@ function ProfilePageInner() {
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/60">Member Since</span>
-                    <span className="text-white">{formatDate(data.stats.accountCreated)}</span>
+                  <div className="flex justify-between items-center py-2 border-b border-white/10 gap-2">
+                    <span className="text-white/60 flex-shrink-0">Member Since</span>
+                    <span className="text-white text-sm text-right">{formatDate(data.stats.accountCreated)}</span>
                   </div>
 
                   {/* Change Password - only for email users */}
@@ -1127,17 +1127,17 @@ function ProfilePageInner() {
 
                   {/* Member ID */}
                   {data.memberId && (
-                    <div className="flex justify-between items-center py-2 border-t border-white/10">
-                      <span className="text-white/60">Member ID</span>
-                      <span className="text-white font-mono text-sm break-all">
+                    <div className="flex justify-between items-center py-2 border-t border-white/10 gap-2">
+                      <span className="text-white/60 flex-shrink-0">Member ID</span>
+                      <span className="text-white font-mono text-sm truncate min-w-0">
                         {data.memberId}
                       </span>
                     </div>
                   )}
 
                   {/* Profile Picture */}
-                  <div className="flex justify-between items-center py-4 border-t border-white/10">
-                    <span className="text-white/60">Profile Picture</span>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-4 border-t border-white/10">
+                    <span className="text-white/60 flex-shrink-0">Profile Picture</span>
                     <div className="flex items-center gap-3">
                       {data.avatarUrl ? (
                         <img
@@ -1173,9 +1173,9 @@ function ProfilePageInner() {
                   </div>
 
                   {/* Username */}
-                  <div className="flex justify-between items-center py-4 border-t border-white/10">
-                    <span className="text-white/60">Username</span>
-                    <div className="flex items-center gap-3">
+                  <div className="flex justify-between items-center py-4 border-t border-white/10 gap-2">
+                    <span className="text-white/60 flex-shrink-0">Username</span>
+                    <div className="flex items-center gap-2 min-w-0">
                       {data.username ? (
                         <span className="text-white font-semibold">{data.username}</span>
                       ) : (
@@ -1196,11 +1196,11 @@ function ProfilePageInner() {
 
                   {/* Recovery Email */}
                   <div className="py-2 border-t border-white/10">
-                    <div className="flex justify-between items-center">
-                      <span className="text-white/60">Recovery Email</span>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-white/60 flex-shrink-0">Recovery Email</span>
                       {data.recoveryEmail ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-white text-sm">{data.recoveryEmail}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-white text-sm truncate min-w-0">{data.recoveryEmail}</span>
                           {data.recoveryEmailVerified && (
                             <span className="text-xs text-green-400">Verified</span>
                           )}
@@ -1353,7 +1353,7 @@ function ProfilePageInner() {
               </div>
 
               {/* Stats Card */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Activity</h2>
 
                 <div className="grid gap-4 grid-cols-2">
@@ -1366,16 +1366,16 @@ function ProfilePageInner() {
               </div>
 
               {/* Special Credits Card */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Special Credits</h2>
 
                 {/* Show balance and drawing link if wallet is linked */}
                 {data.walletAddress ? (
-                  <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-4">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-3 sm:p-4">
+                    <div className="flex items-center justify-between gap-2">
                       <button
                         onClick={() => setShowCreditMgmtModal(true)}
-                        className="text-left group cursor-pointer hover:opacity-80 transition"
+                        className="text-left group cursor-pointer hover:opacity-80 transition min-w-0"
                       >
                         <div className="text-xs text-cyan-400/80 uppercase tracking-wide flex items-center gap-1">
                           Balance
@@ -1383,13 +1383,13 @@ function ProfilePageInner() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
-                        <div className="text-2xl font-bold text-cyan-400 mt-1">
+                        <div className="text-xl sm:text-2xl font-bold text-cyan-400 mt-1 whitespace-nowrap">
                           {(Number(data.creditBalanceMicro || "0") / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
                         </div>
                       </button>
                       <Link
                         href="/rewards-drawing"
-                        className="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm"
+                        className="px-3 sm:px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-xs sm:text-sm flex-shrink-0 whitespace-nowrap"
                       >
                         Enter Drawing
                       </Link>
@@ -1450,16 +1450,16 @@ function ProfilePageInner() {
 
               {/* XESS Rewards Card */}
               {isAuthed && (analyticsData?.totals || memberRewards) && (
-                <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                   <h2 className="text-lg font-semibold text-white mb-4">XESS Rewards</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/5 border border-yellow-400/30 rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
+                    <div className="bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/5 border border-yellow-400/30 rounded-xl p-3 sm:p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <div className="text-xs text-yellow-400/80 uppercase tracking-wide">
                             Total XESS Claimed
                           </div>
-                          <div className="text-2xl font-bold text-yellow-400 mt-1">
+                          <div className="text-xl sm:text-2xl font-bold text-yellow-400 mt-1 whitespace-nowrap">
                             {(memberRewards?.totalPaid ?? analyticsData?.totals?.totalXessClaimed ?? 0).toLocaleString()} XESS
                           </div>
                         </div>
@@ -1472,13 +1472,13 @@ function ProfilePageInner() {
                         />
                       </div>
                     </div>
-                    <div className="bg-gradient-to-r from-green-500/10 via-black/0 to-green-500/5 border border-green-400/30 rounded-xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
+                    <div className="bg-gradient-to-r from-green-500/10 via-black/0 to-green-500/5 border border-green-400/30 rounded-xl p-3 sm:p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                           <div className="text-xs text-green-400/80 uppercase tracking-wide">
                             Ready to Claim
                           </div>
-                          <div className="text-2xl font-bold text-green-400 mt-1">
+                          <div className="text-xl sm:text-2xl font-bold text-green-400 mt-1 whitespace-nowrap">
                             {livePending?.totalUnclaimed ?? memberRewards?.pendingXess?.toLocaleString() ?? "0"} XESS
                           </div>
                         </div>
@@ -1513,34 +1513,34 @@ function ProfilePageInner() {
 
               {/* Live Pending & Claim Section */}
               {isAuthed && livePending && (
-                <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+                <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                   <h2 className="text-lg font-semibold text-white mb-4">Current Activity & Claims</h2>
 
                   {/* Current Week Activity */}
                   {livePending?.currentWeek && (
-                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 via-black/0 to-pink-500/10 border border-purple-400/20 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-white/60">Current Week ({livePending.currentWeek.weekKey})</span>
-                        <span className="text-xs">
+                    <div className="mb-4 p-3 sm:p-4 bg-gradient-to-r from-purple-500/10 via-black/0 to-pink-500/10 border border-purple-400/20 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
+                        <span className="text-xs sm:text-sm text-white/60 truncate">Current Week ({livePending.currentWeek.weekKey})</span>
+                        <span className="text-xs flex-shrink-0">
                           Payout in <PayoutCountdown variant="compact" />
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                        <div className="bg-black/30 rounded-lg p-2">
-                          <div className="text-white font-semibold">{livePending.currentWeek.activity.scoreReceived}</div>
-                          <div className="text-white/40">Score</div>
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs">
+                        <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.scoreReceived}</div>
+                          <div className="text-white/40 text-[10px] sm:text-xs">Score</div>
                         </div>
-                        <div className="bg-black/30 rounded-lg p-2">
-                          <div className="text-white font-semibold">{livePending.currentWeek.activity.diamondComments}</div>
-                          <div className="text-white/40">Comments</div>
+                        <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.diamondComments}</div>
+                          <div className="text-white/40 text-[10px] sm:text-xs">Comments</div>
                         </div>
-                        <div className="bg-black/30 rounded-lg p-2">
-                          <div className="text-white font-semibold">{livePending.currentWeek.activity.mvmPoints}</div>
-                          <div className="text-white/40">MVM</div>
+                        <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.mvmPoints}</div>
+                          <div className="text-white/40 text-[10px] sm:text-xs">MVM</div>
                         </div>
-                        <div className="bg-black/30 rounded-lg p-2">
-                          <div className="text-white font-semibold">{livePending.currentWeek.activity.votesCast}</div>
-                          <div className="text-white/40">Votes</div>
+                        <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.votesCast}</div>
+                          <div className="text-white/40 text-[10px] sm:text-xs">Votes</div>
                         </div>
                       </div>
                       <div className="mt-3 p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-lg">
@@ -1593,20 +1593,20 @@ function ProfilePageInner() {
 
                   {/* Unclaimed Weeks */}
                   {livePending && livePending.unclaimedWeeks.length > 0 && !claimSuccess && (
-                    <div className="mb-4 p-4 bg-green-500/10 border border-green-400/30 rounded-xl">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <span className="text-green-400 font-semibold">
+                    <div className="mb-4 p-3 sm:p-4 bg-green-500/10 border border-green-400/30 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                        <div className="min-w-0">
+                          <span className="text-green-400 font-semibold text-sm">
                             {livePending.unclaimedWeeks.length} Unclaimed Week{livePending.unclaimedWeeks.length > 1 ? "s" : ""}
                           </span>
-                          <span className="text-white/60 text-sm ml-2">
+                          <span className="text-white/60 text-xs sm:text-sm ml-2">
                             Total: {livePending.totalUnclaimed} XESS
                           </span>
                         </div>
                         <button
                           onClick={onClaimAllUnclaimed}
                           disabled={claimAllBusy || claimBusy}
-                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition flex-shrink-0 ${
                             claimAllBusy || claimBusy
                               ? "bg-white/10 text-white/50 cursor-not-allowed"
                               : "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-400 hover:to-emerald-400"
@@ -1620,9 +1620,9 @@ function ProfilePageInner() {
                       )}
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {livePending.unclaimedWeeks.map((week) => (
-                          <div key={week.epoch} className="flex justify-between text-xs text-white/70">
-                            <span>Week {week.weekKey} (Epoch {week.epoch})</span>
-                            <span className="text-green-400">{week.amount} XESS</span>
+                          <div key={week.epoch} className="flex justify-between text-xs text-white/70 gap-2">
+                            <span className="truncate min-w-0">Week {week.weekKey} (Epoch {week.epoch})</span>
+                            <span className="text-green-400 flex-shrink-0 whitespace-nowrap">{week.amount} XESS</span>
                           </div>
                         ))}
                       </div>
@@ -1735,8 +1735,8 @@ function ProfilePageInner() {
           {activeTab === "referrals" && isAuthed && (
             <>
               {/* Your Referral Link Card */}
-              <div className="neon-border rounded-2xl p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
+                <div className="flex items-center justify-between gap-2 mb-4">
                   <h2 className="text-lg font-semibold text-white">Your Referral Link</h2>
                   {isAuthed && (
                     <button
@@ -1808,8 +1808,8 @@ function ProfilePageInner() {
               </div>
 
               {/* Referral Earnings + Network */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
+                <div className="flex items-center justify-between gap-2 mb-4">
                   <h2 className="text-lg font-semibold text-white">Referral Earnings</h2>
                   {referralLoading && (
                     <span className="text-xs text-white/50">Loading…</span>
@@ -1899,7 +1899,7 @@ function ProfilePageInner() {
               </div>
 
               {/* Your Referrer Card */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30 mb-6">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Your Referrer</h2>
 
                 {data.referral.referredById ? (
@@ -1989,7 +1989,7 @@ function ProfilePageInner() {
               </div>
 
               {/* How It Works Card */}
-              <div className="neon-border rounded-2xl p-6 bg-black/30">
+              <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30">
                 <h2 className="text-lg font-semibold text-white mb-4">How Referrals Work</h2>
                 <div className="space-y-4 text-sm text-white/70">
                   <div className="flex gap-3">
@@ -2017,7 +2017,7 @@ function ProfilePageInner() {
 
           {/* History Tab Content (Member and Diamond) */}
           {activeTab === "history" && isAuthed && (
-            <div className="neon-border rounded-2xl p-6 bg-black/30">
+            <div className="neon-border rounded-2xl p-3 sm:p-6 bg-black/30">
               <h2 className="text-lg font-semibold text-white mb-4">XESS History</h2>
               <RewardsTab />
             </div>
@@ -2467,33 +2467,33 @@ function ProfilePageInner() {
               {analyticsData?.totals && (
                 <>
                   {/* Stats Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                    <div className="neon-border rounded-xl p-4 bg-black/30">
-                      <div className="text-2xl font-bold text-white">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-6">
+                    <div className="neon-border rounded-xl p-3 sm:p-4 bg-black/30">
+                      <div className="text-xl sm:text-2xl font-bold text-white">
                         {analyticsData.totals?.totalComments ?? 0}
                       </div>
-                      <div className="text-xs text-white/60 mt-1">Total Comments</div>
+                      <div className="text-[10px] sm:text-xs text-white/60 mt-1">Total Comments</div>
                     </div>
 
-                    <div className="neon-border rounded-xl p-4 bg-black/30 border-green-400/30">
-                      <div className="text-2xl font-bold text-green-400">
+                    <div className="neon-border rounded-xl p-3 sm:p-4 bg-black/30 border-green-400/30">
+                      <div className="text-xl sm:text-2xl font-bold text-green-400">
                         {analyticsData.totals?.utilizedComments ?? 0}
                       </div>
-                      <div className="text-xs text-white/60 mt-1">Sourced</div>
+                      <div className="text-[10px] sm:text-xs text-white/60 mt-1">Sourced</div>
                     </div>
 
-                    <div className="neon-border rounded-xl p-4 bg-black/30">
-                      <div className="text-2xl font-bold text-white">
+                    <div className="neon-border rounded-xl p-3 sm:p-4 bg-black/30">
+                      <div className="text-xl sm:text-2xl font-bold text-white">
                         {analyticsData.totals?.totalMemberLikes ?? 0}
                       </div>
-                      <div className="text-xs text-white/60 mt-1">Member Likes</div>
+                      <div className="text-[10px] sm:text-xs text-white/60 mt-1">Member Likes</div>
                     </div>
 
-                    <div className="neon-border rounded-xl p-4 bg-black/30">
-                      <div className="text-2xl font-bold text-white">
+                    <div className="neon-border rounded-xl p-3 sm:p-4 bg-black/30">
+                      <div className="text-xl sm:text-2xl font-bold text-white">
                         {analyticsData.totals?.totalModLikes ?? 0}
                       </div>
-                      <div className="text-xs text-white/60 mt-1">Mod Likes</div>
+                      <div className="text-[10px] sm:text-xs text-white/60 mt-1">Mod Likes</div>
                     </div>
                   </div>
 

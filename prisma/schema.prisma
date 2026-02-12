@@ -437,6 +437,7 @@ model RewardEvent {
   @@unique([refType, refId])
   @@index([weekKey, status])
   @@index([userId, status])
+  @@index([userId, weekKey, status])
   @@index([referralFromUserId])
   @@index([type, status])
 }

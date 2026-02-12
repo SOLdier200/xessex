@@ -150,9 +150,9 @@ export default function RewardsTab() {
   return (
     <div className="space-y-6">
       {/* All-Time Summary */}
-      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-4">
+      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-4 overflow-hidden">
         <div className="text-sm text-gray-400 mb-1">All-Time History</div>
-        <div className="text-2xl font-bold text-white">
+        <div className="text-2xl font-bold text-white whitespace-nowrap">
           {formatXess6(allTime.total)} <span className="text-purple-400">XESS</span>
         </div>
         {BigInt(allTime.paid) > 0n && (
@@ -187,13 +187,13 @@ export default function RewardsTab() {
       ) : weekDetail ? (
         <div className="space-y-4">
           {/* Week Totals */}
-          <div className="bg-gray-800/50 rounded-lg p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-sm text-gray-400 mb-1">
+          <div className="bg-gray-800/50 rounded-lg p-4 overflow-hidden">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-gray-400 mb-1 truncate">
                   Week of {formatWeekLabel(weekDetail.weekKey)}
                 </div>
-                <div className="text-xl font-bold text-white">
+                <div className="text-xl font-bold text-white whitespace-nowrap">
                   {formatXess6(weekDetail.totals.total)} XESS
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function RewardsTab() {
                   downloadCsv(`xessex-history-${weekDetail.weekKey}.csv`, rows);
                 }}
                 disabled={!weekDetail.rewards?.length}
-                className="px-3 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-3 py-2 rounded-lg bg-purple-500/20 border border-purple-400/50 text-purple-300 font-semibold hover:bg-purple-500/30 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
                 title="Export individual history rows for this week"
               >
                 Export CSV
@@ -245,10 +245,10 @@ export default function RewardsTab() {
                 {Object.entries(weekDetail.byType).map(([type, data]) => (
                   <div
                     key={type}
-                    className="flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2"
+                    className="flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2 overflow-hidden min-w-0"
                   >
-                    <div className="text-sm text-gray-300">{rewardTypeLabel(type)}</div>
-                    <div className="text-sm font-medium text-white">
+                    <div className="text-sm text-gray-300 truncate mr-2">{rewardTypeLabel(type)}</div>
+                    <div className="text-sm font-medium text-white flex-shrink-0">
                       {formatXess6(data.amount)}
                     </div>
                   </div>
@@ -264,19 +264,17 @@ export default function RewardsTab() {
               return (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between bg-gray-800/30 rounded-lg p-3"
+                  className="flex items-center justify-between bg-gray-800/30 rounded-lg p-3 overflow-hidden"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="min-w-0">
-                      <div className="text-white truncate">{rewardTypeLabel(r.type, r.refType)}</div>
-                      <div className="text-xs text-white/50">
-                        {new Date(r.createdAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
-                      </div>
+                  <div className="min-w-0 flex-1 mr-3">
+                    <div className="text-white text-sm truncate">{rewardTypeLabel(r.type, r.refType)}</div>
+                    <div className="text-xs text-white/50 truncate">
+                      {new Date(r.createdAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
                     </div>
                   </div>
 
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-white font-medium">{formatXess6(r.amount)} XESS</div>
+                  <div className="text-right flex-shrink-0 max-w-[45%]">
+                    <div className="text-white font-medium text-sm whitespace-nowrap">{formatXess6(r.amount)} XESS</div>
 
                     {isPaid ? (
                       r.txSig ? (
@@ -284,10 +282,10 @@ export default function RewardsTab() {
                           href={solanaExplorerTxUrl(r.txSig)}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-green-400 hover:underline"
+                          className="text-xs text-green-400 hover:underline truncate block"
                           title={r.txSig}
                         >
-                          Claimed • View Tx {shortenSig(r.txSig)}
+                          Claimed
                         </a>
                       ) : (
                         <div className="text-xs text-green-400">Paid</div>
