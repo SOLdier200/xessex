@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     if (updated.count === 0) {
       const syntheticRefId = `claim-v2-${ctx.user!.id}-${weekKey}`;
       // Convert from 9 decimals (on-chain atomic) to 6 decimals (RewardEvent.amount)
-      const amountAtomic6 = leaf.amountAtomic / 1_000n;
+      const amountAtomic6 = leaf!.amountAtomic / 1_000n;
       await db.rewardEvent.upsert({
         where: {
           refType_refId: {
