@@ -6,6 +6,10 @@ import Image from "next/image";
 import WalletStatus from "./WalletStatus";
 import MessagesModal from "./MessagesModal";
 import WalletBalancesModal from "./WalletBalancesModal";
+import PayoutCountdown from "./PayoutCountdown";
+import CreditAccrualCountdown from "./CreditAccrualCountdown";
+import CreditManagementModal from "./CreditManagementModal";
+import PayoutHistoryModal from "./PayoutHistoryModal";
 import { AnimatePresence, motion } from "framer-motion";
 import { PRESALE_ORIGIN, MAIN_ORIGIN } from "@/lib/origins";
 
@@ -82,6 +86,8 @@ export default function TopNav() {
 
   const [messagesModalOpen, setMessagesModalOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [creditRankingModalOpen, setCreditRankingModalOpen] = useState(false);
+  const [payoutHistoryModalOpen, setPayoutHistoryModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -160,6 +166,7 @@ export default function TopNav() {
 
   const TOP_ITEMS: TopItem[] = [
     { type: "link", href: `${m}/login/diamond`, img: "/logos/textlogo/siteset3/login100.png", alt: "Connect Wallet", h: 32 },
+    { type: "link", href: `${m}/signup`, img: "/logos/textlogo/siteset3/signup5.png", alt: "Sign Up", h: 32 },
     { type: "link", href: `${m}/collections`, img: "/logos/textlogo/siteset3/collect1001.png", alt: "Collections", h: 30 },
     { type: "link", href: `${m}/leaderboard`, img: "/logos/textlogo/siteset3/diamondladdea.png", alt: "Leaderboard", h: 40 },
     { type: "token", img: "/logos/textlogo/siteset3/token100.png", alt: "Xess Token", h: 36 },
@@ -214,8 +221,14 @@ export default function TopNav() {
           />
         </NavHref>
 
-        {/* Right: WalletStatus + menu icon */}
-        <div className="flex flex-col items-end gap-2 mt-[10px]">
+        {/* Right: WalletStatus + countdowns + menu icon */}
+        <div className="flex flex-col items-end gap-1.5 mt-[10px]">
+          {/* Inline countdowns row */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
+            <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
+          </div>
+
           {/* WalletStatus — always visible (mobile + desktop) with subtle slide on menu open */}
           <motion.div
             animate={{
@@ -223,7 +236,6 @@ export default function TopNav() {
               opacity: 1,
             }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="mb-1 lg:mb-0"
           >
             <WalletStatus />
           </motion.div>
@@ -402,6 +414,18 @@ export default function TopNav() {
       <WalletBalancesModal
         isOpen={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
+      />
+
+      {/* Credit Ranking Modal */}
+      <CreditManagementModal
+        open={creditRankingModalOpen}
+        onClose={() => setCreditRankingModalOpen(false)}
+      />
+
+      {/* XESS Payout History Modal */}
+      <PayoutHistoryModal
+        open={payoutHistoryModalOpen}
+        onClose={() => setPayoutHistoryModalOpen(false)}
       />
     </header>
   );

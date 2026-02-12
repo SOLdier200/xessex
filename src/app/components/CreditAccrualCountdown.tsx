@@ -138,11 +138,12 @@ function getSparkCount(stage: number, isMobile: boolean): number {
 }
 
 type Props = {
-  variant?: "compact" | "card";
+  variant?: "compact" | "card" | "inline";
   className?: string;
+  onClick?: () => void;
 };
 
-export default function CreditAccrualCountdown({ variant = "card", className = "" }: Props) {
+export default function CreditAccrualCountdown({ variant = "card", className = "", onClick }: Props) {
   const [ms, setMs] = useState<number | null>(null);
   const [label, setLabel] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -182,6 +183,25 @@ export default function CreditAccrualCountdown({ variant = "card", className = "
     );
   }
 
+  if (variant === "inline") {
+    const Tag = onClick ? "button" : "span";
+    return (
+      <Tag
+        onClick={onClick}
+        className={[
+          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 md:px-2 md:py-1 whitespace-nowrap border",
+          "text-[9px] md:text-[11px] leading-tight",
+          `bg-gradient-to-r ${bgGrad} ${borderClass}`,
+          onClick ? "cursor-pointer hover:brightness-125 active:scale-95 transition-all" : "",
+          className,
+        ].filter(Boolean).join(" ")}
+      >
+        <span className="text-white/50 font-medium">Credits:</span>
+        <span className={`${color} ${glowClass} font-bold`}>{countdown}</span>
+      </Tag>
+    );
+  }
+
   return (
     <div
       className={[
@@ -212,7 +232,7 @@ export default function CreditAccrualCountdown({ variant = "card", className = "
 
       <div className="relative z-10">
         <div className={`text-[9px] sm:text-[10px] uppercase tracking-wide ${stage >= 4 ? color : "text-yellow-300/60"} ${stage >= 5 ? "opacity-80" : "opacity-100"}`}>
-          {stage === 7 ? "Credits Accruing!" : "Next Credit Accrual"}
+          {stage === 7 ? "Credits Accruing!" : "Next Credit Payout"}
         </div>
         <div className={`text-xs sm:text-sm font-bold mt-0.5 ${color} ${glowClass}`}>
           {countdown}

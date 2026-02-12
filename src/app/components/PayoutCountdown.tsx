@@ -159,7 +159,7 @@ function getSparkCount(stage: number, isMobile: boolean): number {
 }
 
 type PayoutCountdownProps = {
-  variant?: "compact" | "card";
+  variant?: "compact" | "card" | "inline";
   className?: string;
   onClick?: () => void;
   showSeconds?: boolean;
@@ -203,6 +203,25 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
       <span className={`${color} ${glowClass} font-bold ${className}`}>
         {countdown}
       </span>
+    );
+  }
+
+  if (variant === "inline") {
+    const Tag = onClick ? "button" : "span";
+    return (
+      <Tag
+        onClick={onClick}
+        className={[
+          "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 md:px-2 md:py-1 whitespace-nowrap border",
+          "text-[9px] md:text-[11px] leading-tight",
+          `bg-gradient-to-r ${bgGrad} ${borderClass}`,
+          onClick ? "cursor-pointer hover:brightness-125 active:scale-95 transition-all" : "",
+          className,
+        ].filter(Boolean).join(" ")}
+      >
+        <span className="text-white/50 font-medium">XESS:</span>
+        <span className={`${color} ${glowClass} font-bold`}>{countdown}</span>
+      </Tag>
     );
   }
 

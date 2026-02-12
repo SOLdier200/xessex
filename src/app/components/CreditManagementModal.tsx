@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { TIER_COLORS, getTierColor } from "@/lib/tierColors";
+import CreditPayoutHistoryModal from "./CreditPayoutHistoryModal";
+import PayoutHistoryModal from "./PayoutHistoryModal";
 
 // Tier thresholds in whole XESS tokens
 const TIER_THRESHOLDS = [
@@ -102,6 +104,8 @@ export default function CreditManagementModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTiers, setShowTiers] = useState(false);
+  const [showCreditPayoutHistory, setShowCreditPayoutHistory] = useState(false);
+  const [showXessPayoutHistory, setShowXessPayoutHistory] = useState(false);
   const [liveXess, setLiveXess] = useState<number | null>(null);
 
   useEffect(() => {
@@ -207,19 +211,31 @@ export default function CreditManagementModal({ open, onClose }: Props) {
                 </span>
               </button>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">XESS Holdings</span>
+              <button
+                onClick={() => setShowXessPayoutHistory(true)}
+                className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg -mx-1 px-1 py-0.5 transition cursor-pointer group"
+              >
+                <span className="text-sm text-white/70 flex items-center gap-1">
+                  XESS Holdings
+                  <span className="text-white/30 group-hover:text-white/50 transition text-xs">→</span>
+                </span>
                 <span className="text-sm font-medium text-cyan-400">
                   {xessBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} XESS
                 </span>
-              </div>
+              </button>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Daily Credits</span>
+              <button
+                onClick={() => setShowCreditPayoutHistory(true)}
+                className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg -mx-1 px-1 py-0.5 transition cursor-pointer group"
+              >
+                <span className="text-sm text-white/70 flex items-center gap-1">
+                  Daily Credits
+                  <span className="text-white/30 group-hover:text-white/50 transition text-xs">→</span>
+                </span>
                 <span className="text-sm font-medium text-yellow-400">
                   {(effectiveMonthlyCredits / daysInMonth).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                 </span>
-              </div>
+              </button>
 
               {effectiveNextTier !== null && (
                 <button
@@ -350,6 +366,18 @@ export default function CreditManagementModal({ open, onClose }: Props) {
           </div>
         )}
       </div>
+
+      {/* Credit Payout History Modal — sits on top at z-[80] */}
+      <CreditPayoutHistoryModal
+        open={showCreditPayoutHistory}
+        onClose={() => setShowCreditPayoutHistory(false)}
+      />
+
+      {/* XESS Payout History Modal — sits on top at z-[80] */}
+      <PayoutHistoryModal
+        open={showXessPayoutHistory}
+        onClose={() => setShowXessPayoutHistory(false)}
+      />
 
       {/* Tier Rates Modal — sits on top at z-[80] */}
       {showTiers && (

@@ -5,11 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import LogoutModal from "./LogoutModal";
 import { useWalletSessionAutoFix } from "@/hooks/useWalletSessionAutoFix";
+import { getTierColor } from "@/lib/tierColors";
 
 type AuthData = {
   authed: boolean;
   walletAddress: string | null;
   creditBalance: number;
+  xessTier: number;
   username: string | null;
   avatarUrl: string | null;
 };
@@ -35,6 +37,7 @@ export default function WalletStatus() {
               authed: true,
               walletAddress: d.walletAddress ?? null,
               creditBalance: d.creditBalance ?? 0,
+              xessTier: d.xessTier ?? 0,
               username: d.user?.username ?? null,
               avatarUrl: d.user?.avatarUrl ?? null,
             });
@@ -157,7 +160,7 @@ export default function WalletStatus() {
         className={`neon-border rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 cursor-pointer transition ${bgClass} ${borderClass}`}
       >
         {authed ? (
-          // State 3: Signed in - show username or pubkey
+          // State 3: Signed in - show username or pubkey + tier + credits
           <div className="flex items-center gap-2">
             {auth?.username ? (
               <div className={`text-[10px] md:text-xs font-semibold ${textColor}`}>
@@ -169,11 +172,35 @@ export default function WalletStatus() {
                 <span className="lg:hidden">{truncatedWalletAddress ?? "Connected"}</span>
               </div>
             )}
-            {auth?.creditBalance !== undefined && auth.creditBalance > 0 && (
-              <div className="text-[10px] md:text-xs font-semibold text-yellow-400 whitespace-nowrap">
-                {auth.creditBalance} credits
-              </div>
-            )}
+            {(() => {
+              const tier = auth?.xessTier ?? 0;
+              const credits = auth?.creditBalance ?? 0;
+              const tc = getTierColor(tier);
+              if (tier > 0 && credits > 0) {
+                return (
+                  <div className="text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                    <span className={tc.text}>T{tier}</span>
+                    <span className="text-white/30 mx-0.5">&middot;</span>
+                    <span className="text-yellow-400">{credits} credits</span>
+                  </div>
+                );
+              }
+              if (tier > 0) {
+                return (
+                  <div className={`text-[10px] md:text-xs font-semibold whitespace-nowrap ${tc.text}`}>
+                    T{tier}
+                  </div>
+                );
+              }
+              if (credits > 0) {
+                return (
+                  <div className="text-[10px] md:text-xs font-semibold text-yellow-400 whitespace-nowrap">
+                    {credits} credits
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         ) : walletConnected ? (
           // State 2: Wallet connected but not signed in

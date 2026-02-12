@@ -55,6 +55,16 @@ function solanaExplorerTxUrl(sig: string) {
   return `https://explorer.solana.com/tx/${sig}${qp}`;
 }
 
+/** Referral level colors matching the Referrals tab */
+function getRefLevelColor(type: string): string | null {
+  switch (type) {
+    case "REF_L1": return "text-purple-400";
+    case "REF_L2": return "text-pink-400";
+    case "REF_L3": return "text-yellow-400";
+    default: return null;
+  }
+}
+
 
 export default function RewardsTab() {
   const [loading, setLoading] = useState(true);
@@ -192,17 +202,20 @@ export default function RewardsTab() {
             <div className="bg-gray-800/50 rounded-lg p-4">
               <div className="text-sm text-gray-400 mb-3">Pool Breakdown</div>
               <div className="grid grid-cols-2 gap-3">
-                {Object.entries(weekDetail.byType).map(([type, data]) => (
-                  <div
-                    key={type}
-                    className="flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2 overflow-hidden min-w-0"
-                  >
-                    <div className="text-sm text-gray-300 truncate mr-2">{rewardTypeLabel(type)}</div>
-                    <div className="text-sm font-medium text-white flex-shrink-0">
-                      {formatXess6(data.amount)}
+                {Object.entries(weekDetail.byType).map(([type, data]) => {
+                  const refColor = getRefLevelColor(type);
+                  return (
+                    <div
+                      key={type}
+                      className="flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2 overflow-hidden min-w-0"
+                    >
+                      <div className={`text-sm truncate mr-2 ${refColor ?? "text-gray-300"}`}>{rewardTypeLabel(type)}</div>
+                      <div className={`text-sm font-medium flex-shrink-0 ${refColor ?? "text-white"}`}>
+                        {formatXess6(data.amount)}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -211,20 +224,21 @@ export default function RewardsTab() {
           <div className="space-y-2">
             {weekDetail.rewards.map((r) => {
               const isPaid = r.status === "PAID";
+              const refColor = getRefLevelColor(r.type);
               return (
                 <div
                   key={r.id}
                   className="flex items-center justify-between bg-gray-800/30 rounded-lg p-3 overflow-hidden"
                 >
                   <div className="min-w-0 flex-1 mr-3">
-                    <div className="text-white text-sm truncate">{rewardTypeLabel(r.type, r.refType)}</div>
+                    <div className={`text-sm truncate ${refColor ?? "text-white"}`}>{rewardTypeLabel(r.type, r.refType)}</div>
                     <div className="text-xs text-white/50 truncate">
                       {new Date(r.createdAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
                     </div>
                   </div>
 
                   <div className="text-right flex-shrink-0 max-w-[45%]">
-                    <div className="text-white font-medium text-sm whitespace-nowrap">{formatXess6(r.amount)} XESS</div>
+                    <div className={`font-medium text-sm whitespace-nowrap ${refColor ?? "text-white"}`}>{formatXess6(r.amount)} XESS</div>
 
                     {isPaid ? (
                       r.txSig ? (

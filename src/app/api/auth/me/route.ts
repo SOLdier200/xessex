@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { getAccessContext } from "@/lib/access";
 import { signR2GetUrl } from "@/lib/r2";
+import { db } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,14 @@ export async function GET() {
 
   const u = access.user;
 
+  // Get latest tier from wallet balance snapshot (cheap DB read, no RPC)
+  const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
+    where: { userId: u.id },
+    orderBy: { createdAt: "desc" },
+    select: { tier: true },
+  });
+  const xessTier = latestSnapshot?.tier ?? 0;
+
   // Get avatar URL if user has a profile picture
   let avatarUrl: string | null = null;
   if (u.profilePictureKey) {
@@ -77,6 +86,9 @@ export async function GET() {
 
       // Credit balance
       creditBalance: access.creditBalance,
+
+      // XESS tier
+      xessTier,
 
       // Permissions
       canComment: access.canComment,
