@@ -357,6 +357,118 @@ a {
   animation: bounce-x 1s ease-in-out infinite;
 }
 
+/* ── Countdown Timer Dramatic Animations ── */
+
+/* Spark particles that shoot outward */
+@keyframes spark-fly-1 {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(28px, -32px) scale(0); opacity: 0; }
+}
+@keyframes spark-fly-2 {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(-24px, -28px) scale(0); opacity: 0; }
+}
+@keyframes spark-fly-3 {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(20px, 24px) scale(0); opacity: 0; }
+}
+@keyframes spark-fly-4 {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(-30px, 18px) scale(0); opacity: 0; }
+}
+@keyframes spark-fly-5 {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(15px, -38px) scale(0); opacity: 0; }
+}
+@keyframes spark-fly-6 {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(-18px, -22px) scale(0); opacity: 0; }
+}
+
+.spark { position: absolute; width: 3px; height: 3px; border-radius: 50%; pointer-events: none; }
+.spark-1 { animation: spark-fly-1 0.7s ease-out infinite; }
+.spark-2 { animation: spark-fly-2 0.8s ease-out infinite 0.1s; }
+.spark-3 { animation: spark-fly-3 0.6s ease-out infinite 0.2s; }
+.spark-4 { animation: spark-fly-4 0.75s ease-out infinite 0.15s; }
+.spark-5 { animation: spark-fly-5 0.65s ease-out infinite 0.25s; }
+.spark-6 { animation: spark-fly-6 0.7s ease-out infinite 0.3s; }
+
+/* Urgent border pulse */
+@keyframes border-urgency {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 8px rgba(239, 68, 68, 0.2); }
+  50% { border-color: rgba(251, 191, 36, 0.8); box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); }
+}
+.animate-border-urgency {
+  animation: border-urgency 1.5s ease-in-out infinite;
+}
+
+/* Critical border flash */
+@keyframes border-critical {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 12px rgba(239, 68, 68, 0.4), 0 0 30px rgba(239, 68, 68, 0.15); }
+  25% { border-color: rgba(251, 191, 36, 1); box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.2); }
+  75% { border-color: rgba(249, 115, 22, 1); box-shadow: 0 0 16px rgba(249, 115, 22, 0.5), 0 0 35px rgba(249, 115, 22, 0.15); }
+}
+.animate-border-critical {
+  animation: border-critical 1s ease-in-out infinite;
+}
+
+/* Final moments — intense flashing */
+@keyframes border-final {
+  0%, 100% { border-color: rgba(234, 179, 8, 1); box-shadow: 0 0 25px rgba(234, 179, 8, 0.6), 0 0 50px rgba(234, 179, 8, 0.2); }
+  33% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), 0 0 60px rgba(239, 68, 68, 0.25); }
+  66% { border-color: rgba(249, 115, 22, 1); box-shadow: 0 0 28px rgba(249, 115, 22, 0.65), 0 0 55px rgba(249, 115, 22, 0.2); }
+}
+.animate-border-final {
+  animation: border-final 0.6s ease-in-out infinite;
+}
+
+/* Text glow pulse */
+@keyframes text-glow {
+  0%, 100% { text-shadow: 0 0 4px currentColor; }
+  50% { text-shadow: 0 0 12px currentColor, 0 0 24px currentColor; }
+}
+.animate-text-glow {
+  animation: text-glow 1.2s ease-in-out infinite;
+}
+
+/* Intense text glow for critical moments */
+@keyframes text-glow-intense {
+  0%, 100% { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+  50% { text-shadow: 0 0 16px currentColor, 0 0 32px currentColor, 0 0 48px currentColor; }
+}
+.animate-text-glow-intense {
+  animation: text-glow-intense 0.8s ease-in-out infinite;
+}
+
+/* Celebration burst when hitting zero */
+@keyframes celebrate-burst {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.animate-celebrate {
+  animation: celebrate-burst 0.5s ease-in-out infinite;
+}
+
+/* Shimmer sweep across the card */
+@keyframes countdown-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.countdown-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: countdown-shimmer 2s linear infinite;
+}
+
+/* Reduced motion: disable heavy animations on mobile */
+@media (prefers-reduced-motion: reduce) {
+  .spark, .animate-border-urgency, .animate-border-critical, .animate-border-final,
+  .animate-text-glow, .animate-text-glow-intense, .animate-celebrate, .countdown-shimmer {
+    animation: none !important;
+  }
+}
+
 /* Thin scrollbar for horizontal scroll areas */
 .scrollbar-thin {
   scrollbar-width: thin;

@@ -122,17 +122,50 @@ export async function GET() {
   const daysUntil = daysUntilPayout;
   const remainingHours = 0;
 
-  // Get current week stats (aggregate across pools)
-  const currentStats = await db.weeklyUserStat.findFirst({
+  // Get current week stats per pool and aggregate
+  const allUserStats = await db.weeklyUserStat.findMany({
     where: { weekKey: currentWeekKey, userId },
-    orderBy: { scoreReceived: "desc" },
+  });
+  const allVoterStats = await db.weeklyVoterStat.findMany({
+    where: { weekKey: currentWeekKey, userId },
   });
 
-  // Get current week voter stats (aggregate across pools)
-  const currentVoterStats = await db.weeklyVoterStat.findFirst({
-    where: { weekKey: currentWeekKey, userId },
-    orderBy: { votesCast: "desc" },
+  // Aggregate across pools
+  const embedUserStat = allUserStats.find(s => s.pool === "EMBED");
+  const xessexUserStat = allUserStats.find(s => s.pool === "XESSEX");
+  const embedVoterStat = allVoterStats.find(s => s.pool === "EMBED");
+  const xessexVoterStat = allVoterStats.find(s => s.pool === "XESSEX");
+
+  const totalScoreReceived = allUserStats.reduce((s, r) => s + r.scoreReceived, 0);
+  const totalDiamondComments = allUserStats.reduce((s, r) => s + r.diamondComments, 0);
+  const totalMvmPoints = allUserStats.reduce((s, r) => s + r.mvmPoints, 0);
+  const totalVotesCast = allVoterStats.reduce((s, r) => s + r.votesCast, 0);
+
+  // Count ratings and 5-star ratings this week (from VideoStarRating)
+  const weekStart = new Date(`${currentWeekKey}T00:00:00Z`);
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const [totalRatings, fiveStarRatings] = await Promise.all([
+    db.videoStarRating.count({
+      where: { userId, createdAt: { gte: weekStart, lt: weekEnd } },
+    }),
+    db.videoStarRating.count({
+      where: { userId, createdAt: { gte: weekStart, lt: weekEnd }, stars: 5 },
+    }),
+  ]);
+
+  // Count ratings by pool (join through video.kind)
+  const ratingsByPool = await db.videoStarRating.findMany({
+    where: { userId, createdAt: { gte: weekStart, lt: weekEnd } },
+    select: { stars: true, video: { select: { kind: true } } },
   });
+  const xessexRatings = ratingsByPool.filter(r => r.video.kind === "XESSEX").length;
+  const xessexFiveStarRatings = ratingsByPool.filter(r => r.video.kind === "XESSEX" && r.stars === 5).length;
+
+  // Compat: keep a "currentStats" shape for the estimate logic below
+  const currentStats = allUserStats.length > 0
+    ? { scoreReceived: totalScoreReceived, diamondComments: totalDiamondComments, mvmPoints: totalMvmPoints }
+    : null;
 
   // Check for actual PAID RewardEvents for this week's periods (P1 and P2)
   // RewardEvent.weekKey stores periodKey like "2026-02-02-P1"
@@ -288,12 +321,28 @@ export async function GET() {
       weekKey: currentWeekKey,
       weekIndex,
       activity: {
-        scoreReceived: currentStats?.scoreReceived ?? 0,
-        diamondComments: currentStats?.diamondComments ?? 0,
-        mvmPoints: currentStats?.mvmPoints ?? 0,
-        votesCast: currentVoterStats?.votesCast ?? 0,
+        scoreReceived: totalScoreReceived,
+        diamondComments: totalDiamondComments,
+        mvmPoints: totalMvmPoints,
+        votesCast: totalVotesCast,
+        totalRatings,
+        fiveStarRatings,
+        // Per-pool breakdown
+        embed: {
+          scoreReceived: embedUserStat?.scoreReceived ?? 0,
+          diamondComments: embedUserStat?.diamondComments ?? 0,
+          mvmPoints: embedUserStat?.mvmPoints ?? 0,
+          votesCast: embedVoterStat?.votesCast ?? 0,
+        },
+        xessex: {
+          scoreReceived: xessexUserStat?.scoreReceived ?? 0,
+          diamondComments: xessexUserStat?.diamondComments ?? 0,
+          mvmPoints: xessexUserStat?.mvmPoints ?? 0,
+          votesCast: xessexVoterStat?.votesCast ?? 0,
+          ratings: xessexRatings,
+          fiveStarRatings: xessexFiveStarRatings,
+        },
       },
-      pendingAtomic: currentStats?.pendingAtomic?.toString() ?? "0",
       estimatedPending: format9(estimatedPending9),
       estimatedPendingAtomic: estimatedPending9.toString(),
       estimateNote,

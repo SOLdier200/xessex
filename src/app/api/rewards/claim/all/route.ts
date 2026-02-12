@@ -127,17 +127,9 @@ export async function GET() {
       ? await connection.getAccountInfo(receiptV2Pda)
       : null;
     if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-      console.log(`[claim/all] Epoch ${epoch} already claimed on-chain, syncing DB`);
-      // Sync DB: mark rewards as claimed since on-chain receipt exists
-      await db.rewardEvent.updateMany({
-        where: {
-          userId,
-          weekKey: leaf.weekKey,
-          claimedAt: null,
-          type: { in: ALL_REWARD_TYPES },
-        },
-        data: { claimedAt: new Date() },
-      });
+      console.log(`[claim/all] Epoch ${epoch} already claimed on-chain, skipping`);
+      // Skip — receipt exists on-chain so this epoch is not claimable.
+      // Do NOT write claimedAt here; only /claim/confirm should mark rewards as claimed.
       continue;
     }
 

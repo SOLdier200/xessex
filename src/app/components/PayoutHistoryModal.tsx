@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatXess6 } from "@/lib/formatXess";
+import ClaimAllButton from "./ClaimAllButton";
 
 type WeekSummary = {
   weekKey: string;
@@ -40,8 +41,7 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
   const [data, setData] = useState<WeeksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
+  const fetchData = useCallback(() => {
     setLoading(true);
     setError(null);
     fetch("/api/rewards/weeks")
@@ -55,9 +55,16 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    fetchData();
+  }, [open, fetchData]);
 
   if (!open) return null;
+
+  const hasUnclaimed = data && BigInt(data.allTime.pending) > 0n;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain min-h-[100dvh]">
@@ -109,6 +116,11 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Claim Button — shown when there are unclaimed rewards */}
+            {hasUnclaimed && (
+              <ClaimAllButton onSuccess={fetchData} />
+            )}
 
             {/* Week-by-Week List */}
             {data.weeks.length === 0 ? (

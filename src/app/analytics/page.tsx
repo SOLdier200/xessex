@@ -147,13 +147,13 @@ export default function AnalyticsPage() {
         <div className="px-4 md:px-6 pb-10">
           <div className="neon-border rounded-2xl p-8 bg-gradient-to-r from-yellow-500/10 via-black/0 to-yellow-500/10 text-center mt-8 border-yellow-400/30">
             <h2 className="text-2xl font-bold text-yellow-400 mb-4">
-              Diamond Members Only
+              Login Required
             </h2>
             <p className="text-white/70 mb-6">
               Analytics are exclusively available to authenticated users.
             </p>
             <Link
-              href="/login/diamond"
+              href="/login"
               className="inline-block px-6 py-3 rounded-xl bg-yellow-500/80 hover:bg-yellow-500 text-black font-medium transition"
             >
               Connect Wallet
@@ -190,7 +190,7 @@ export default function AnalyticsPage() {
             Your Analytics
           </h1>
           <p className="text-white/60 mt-1">
-            Diamond Member performance dashboard
+            Your performance dashboard
           </p>
         </div>
 

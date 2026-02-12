@@ -3,144 +3,124 @@
 import { useEffect, useState, useMemo } from "react";
 
 /**
- * Computes milliseconds until the next XESS reward payout.
- * P1 pays out Wednesday 23:59 PT, P2 pays out Saturday 23:59 PT.
+ * Computes milliseconds until the next credit accrual window.
+ * AM accrual happens sometime before noon PT → next window = noon PT
+ * PM accrual happens sometime after noon PT → next window = midnight PT (next day)
  */
-function getNextPayout(): { ms: number; label: string } {
+function getNextAccrual(): { ms: number; label: string } {
   const now = new Date();
 
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",
-    weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
   }).formatToParts(now);
 
-  const dayName = parts.find((p) => p.type === "weekday")?.value ?? "Mon";
   const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
   const minute = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
   const second = parseInt(parts.find((p) => p.type === "second")?.value ?? "0", 10);
 
-  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  const dow = dowMap[dayName] ?? 1;
   const currentSecs = hour * 3600 + minute * 60 + second;
-  const TARGET_SECS = 23 * 3600 + 59 * 60; // 23:59:00 PT
 
-  function daysUntil(targetDow: number): number {
-    let d = (targetDow - dow + 7) % 7;
-    if (d === 0 && currentSecs >= TARGET_SECS) d = 7;
-    return d;
-  }
-
-  const daysToWed = daysUntil(3);
-  const daysToSat = daysUntil(6);
-
-  let days: number;
-  let label: string;
-  if (daysToWed <= daysToSat) {
-    days = daysToWed;
-    label = "Wednesday";
+  if (hour < 12) {
+    // Before noon PT → next accrual window is noon PT (12:00:00)
+    const noonSecs = 12 * 3600;
+    const remainingSecs = noonSecs - currentSecs;
+    return { ms: remainingSecs * 1000, label: "PM accrual window" };
   } else {
-    days = daysToSat;
-    label = "Saturday";
+    // After noon PT → next accrual window is midnight PT (00:00:00 next day)
+    const midnightSecs = 24 * 3600;
+    const remainingSecs = midnightSecs - currentSecs;
+    return { ms: remainingSecs * 1000, label: "AM accrual window" };
   }
-
-  const remainingSecs = days * 86400 + (TARGET_SECS - currentSecs);
-  return { ms: remainingSecs * 1000, label: `${label} evening PT` };
 }
 
-function formatCountdown(ms: number, showSeconds = false): string {
+function formatCountdown(ms: number): string {
   if (ms <= 0) return "NOW!";
   const totalSecs = Math.floor(ms / 1000);
-  const d = Math.floor(totalSecs / 86400);
-  const h = Math.floor((totalSecs % 86400) / 3600);
+  const h = Math.floor(totalSecs / 3600);
   const m = Math.floor((totalSecs % 3600) / 60);
   const s = totalSecs % 60;
 
-  if (showSeconds) {
-    if (d > 0) return `${d}d ${h}h ${m}m ${s.toString().padStart(2, "0")}s`;
-    if (h > 0) return `${h}h ${m}m ${s.toString().padStart(2, "0")}s`;
-    return `${m}m ${s.toString().padStart(2, "0")}s`;
-  }
-  if (d > 0) return `${d}d ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s.toString().padStart(2, "0")}s`;
+  return `${m}m ${s.toString().padStart(2, "0")}s`;
 }
 
 /**
- * Intensity stages:
- * 0 = calm (>24h)     — purple/blue
- * 1 = warming (12-24h) — amber glow
- * 2 = heating (6-12h)  — orange, text glow starts
- * 3 = hot (3-6h)       — orange-red, sparks begin
- * 4 = urgent (1-3h)    — red, lots of sparks, border pulse
- * 5 = critical (<1h)   — intense red/gold, heavy sparks, border flash
- * 6 = final (<15m)     — maximum intensity, rapid flash
- * 7 = payout (0)       — green celebration
+ * Intensity stages (max 12h window):
+ * 0 = calm (>6h)      — yellow/amber
+ * 1 = warming (3-6h)   — gold
+ * 2 = heating (1-3h)   — orange, text glow starts
+ * 3 = hot (30m-1h)     — orange-red, sparks begin
+ * 4 = urgent (10-30m)  — red, border pulse, more sparks
+ * 5 = critical (<10m)  — intense, heavy sparks, border flash
+ * 6 = final (<3m)      — maximum intensity
+ * 7 = accrual (0)      — green celebration
  */
 function getStage(ms: number): number {
-  const h = ms / 3_600_000;
+  const mins = ms / 60_000;
   if (ms <= 0) return 7;
-  if (h < 0.25) return 6;  // <15 min
-  if (h < 1) return 5;     // <1 hour
-  if (h < 3) return 4;     // <3 hours
-  if (h < 6) return 3;     // <6 hours
-  if (h < 12) return 2;    // <12 hours
-  if (h < 24) return 1;    // <24 hours
-  return 0;                 // >24 hours
+  if (mins < 3) return 6;
+  if (mins < 10) return 5;
+  if (mins < 30) return 4;
+  if (mins < 60) return 3;
+  const h = ms / 3_600_000;
+  if (h < 3) return 2;
+  if (h < 6) return 1;
+  return 0;
 }
 
 function getTextColor(stage: number): string {
   switch (stage) {
-    case 0: return "text-purple-400";
-    case 1: return "text-amber-300";
+    case 0: return "text-yellow-300";
+    case 1: return "text-amber-400";
     case 2: return "text-orange-400";
     case 3: return "text-orange-500";
     case 4: return "text-red-400";
     case 5: return "text-red-500";
-    case 6: return "text-yellow-300";
+    case 6: return "text-yellow-200";
     case 7: return "text-green-400";
-    default: return "text-purple-400";
+    default: return "text-yellow-300";
   }
 }
 
 function getSparkColor(stage: number): string {
   switch (stage) {
-    case 3: return "bg-orange-400";
-    case 4: return "bg-red-400";
+    case 3: return "bg-amber-400";
+    case 4: return "bg-orange-400";
     case 5: return "bg-yellow-400";
     case 6: return "bg-yellow-300";
-    default: return "bg-orange-400";
+    default: return "bg-amber-400";
   }
 }
 
 function getBorderClass(stage: number): string {
   switch (stage) {
-    case 0: return "border-purple-400/30";
-    case 1: return "border-amber-400/40";
+    case 0: return "border-yellow-400/25";
+    case 1: return "border-amber-400/35";
     case 2: return "border-orange-400/40";
     case 3: return "border-orange-500/50";
     case 4: return "animate-border-urgency";
     case 5: return "animate-border-critical";
     case 6: return "animate-border-final";
     case 7: return "border-green-400/60";
-    default: return "border-purple-400/30";
+    default: return "border-yellow-400/25";
   }
 }
 
 function getBgGradient(stage: number): string {
   switch (stage) {
-    case 0: return "from-purple-500/10 to-purple-500/5";
-    case 1: return "from-amber-500/10 to-amber-500/5";
-    case 2: return "from-orange-500/12 to-orange-500/5";
+    case 0: return "from-yellow-500/10 to-amber-500/5";
+    case 1: return "from-amber-500/12 to-yellow-500/5";
+    case 2: return "from-orange-500/12 to-amber-500/5";
     case 3: return "from-orange-500/15 to-red-500/8";
     case 4: return "from-red-500/18 to-orange-500/10";
     case 5: return "from-red-500/22 to-yellow-500/10";
     case 6: return "from-yellow-500/20 to-red-500/15";
     case 7: return "from-green-500/20 to-emerald-500/10";
-    default: return "from-purple-500/10 to-purple-500/5";
+    default: return "from-yellow-500/10 to-amber-500/5";
   }
 }
 
@@ -150,22 +130,19 @@ function getTextGlowClass(stage: number): string {
   return "";
 }
 
-// How many sparks to render at each stage
 function getSparkCount(stage: number, isMobile: boolean): number {
   if (stage < 3) return 0;
-  const counts: Record<number, number> = { 3: 2, 4: 4, 5: 5, 6: 6 };
+  const counts: Record<number, number> = { 3: 2, 4: 3, 5: 5, 6: 6 };
   const n = counts[stage] ?? 0;
   return isMobile ? Math.min(n, 3) : n;
 }
 
-type PayoutCountdownProps = {
+type Props = {
   variant?: "compact" | "card";
   className?: string;
-  onClick?: () => void;
-  showSeconds?: boolean;
 };
 
-export default function PayoutCountdown({ variant = "card", className = "", onClick, showSeconds = false }: PayoutCountdownProps) {
+export default function CreditAccrualCountdown({ variant = "card", className = "" }: Props) {
   const [ms, setMs] = useState<number | null>(null);
   const [label, setLabel] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -176,22 +153,21 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
 
   useEffect(() => {
     function tick() {
-      const next = getNextPayout();
+      const next = getNextAccrual();
       setMs(next.ms);
       setLabel(next.label);
     }
     tick();
-    const interval = showSeconds ? 1_000 : 30_000;
-    const id = setInterval(tick, interval);
+    const id = setInterval(tick, 1_000);
     return () => clearInterval(id);
-  }, [showSeconds]);
+  }, []);
 
   const stage = ms !== null ? getStage(ms) : 0;
   const sparkCount = useMemo(() => getSparkCount(stage, isMobile), [stage, isMobile]);
 
   if (ms === null) return null;
 
-  const countdown = formatCountdown(ms, showSeconds);
+  const countdown = formatCountdown(ms);
   const color = getTextColor(stage);
   const glowClass = getTextGlowClass(stage);
   const borderClass = getBorderClass(stage);
@@ -206,11 +182,8 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
     );
   }
 
-  const Tag = onClick ? "button" : "div";
-
   return (
-    <Tag
-      onClick={onClick}
+    <div
       className={[
         "relative overflow-hidden bg-gradient-to-r rounded-lg px-2.5 py-2 sm:px-3 sm:py-2.5",
         bgGrad,
@@ -218,11 +191,10 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
         "border",
         stage >= 3 ? "countdown-shimmer" : "",
         stage === 7 ? "animate-celebrate" : "",
-        onClick ? "cursor-pointer hover:brightness-125 transition text-left w-full group" : "",
         className,
       ].filter(Boolean).join(" ")}
     >
-      {/* Spark particles — positioned around the card */}
+      {/* Spark particles */}
       {sparkCount > 0 && (
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           {Array.from({ length: sparkCount }).map((_, i) => (
@@ -230,8 +202,8 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
               key={i}
               className={`spark spark-${(i % 6) + 1} ${sparkColor}`}
               style={{
-                top: `${20 + (i * 27) % 60}%`,
-                left: `${10 + (i * 31) % 80}%`,
+                top: `${15 + (i * 23) % 65}%`,
+                left: `${8 + (i * 29) % 82}%`,
               }}
             />
           ))}
@@ -239,8 +211,8 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
       )}
 
       <div className="relative z-10">
-        <div className={`text-[9px] sm:text-[10px] uppercase tracking-wide ${stage >= 4 ? color : "text-white/60"} ${stage >= 5 ? "opacity-80" : "opacity-100"}`}>
-          {stage === 7 ? "XESS Payout!" : "Next XESS Payout"}
+        <div className={`text-[9px] sm:text-[10px] uppercase tracking-wide ${stage >= 4 ? color : "text-yellow-300/60"} ${stage >= 5 ? "opacity-80" : "opacity-100"}`}>
+          {stage === 7 ? "Credits Accruing!" : "Next Credit Accrual"}
         </div>
         <div className={`text-xs sm:text-sm font-bold mt-0.5 ${color} ${glowClass}`}>
           {countdown}
@@ -249,6 +221,6 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
           {label}
         </div>
       </div>
-    </Tag>
+    </div>
   );
 }

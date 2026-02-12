@@ -200,7 +200,6 @@ export default function WalletStatus() {
         onLogoutComplete={handleLogoutComplete}
         email={null}
         walletAddress={fullWalletAddress ?? null}
-        tier="diamond"
         creditBalance={auth?.creditBalance}
         username={auth?.username}
         avatarUrl={auth?.avatarUrl}

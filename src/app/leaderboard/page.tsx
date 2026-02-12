@@ -53,11 +53,11 @@ export default function LeaderboardPage() {
       })
       .finally(() => setLoading(false));
 
-    // Check if user is Diamond member
+    // Check if user is authenticated
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((d) => {
-        if (d.ok && d.membership === "DIAMOND") {
+        if (d.ok && d.authed) {
           setIsDiamond(true);
         }
       })
@@ -102,7 +102,7 @@ export default function LeaderboardPage() {
             <div>
               <Image src="/logos/textlogo/siteset3/diamondladdea.png" alt="Diamond Ladder" width={1308} height={286} priority fetchPriority="high" className="h-[42px] md:h-[52px] w-auto" />
               <p className="mt-1 text-sm md:text-base text-white/70">
-                Top ranked Diamond Members
+                Top ranked XESS holders
               </p>
             </div>
           </div>

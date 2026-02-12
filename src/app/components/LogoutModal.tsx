@@ -20,7 +20,6 @@ export default function LogoutModal({
   onLogoutComplete: () => void;
   email?: string | null;
   walletAddress?: string | null;
-  tier?: "member" | "diamond" | "free" | null;
   creditBalance?: number;
   username?: string | null;
   avatarUrl?: string | null;
@@ -140,8 +139,8 @@ export default function LogoutModal({
 
         <h2 className="text-lg font-semibold text-white mb-2">Log Out</h2>
         <p className="text-sm text-white/60 mb-6">
-          Are you sure you want to log out? You will be treated as a free user
-          until you log back in.
+          Are you sure you want to log out? You will need to sign back in to
+          access your account.
         </p>
 
         <div className="flex gap-3">

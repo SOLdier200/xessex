@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import PayoutCountdown from "./PayoutCountdown";
+import CreditAccrualCountdown from "./CreditAccrualCountdown";
 import CreditManagementModal from "./CreditManagementModal";
 import PayoutHistoryModal from "./PayoutHistoryModal";
+import { TIER_COLORS, getTierColor } from "@/lib/tierColors";
 
 const TIER_LABELS: Record<number, string> = {
   0: "No Tier",
@@ -34,16 +36,16 @@ function getTierFromXess(xessBalance: number): number {
 }
 
 const TIER_TABLE = [
-  { tier: 1, min: "10,000", credits: "160" },
-  { tier: 2, min: "25,000", credits: "480" },
-  { tier: 3, min: "50,000", credits: "960" },
-  { tier: 4, min: "100,000", credits: "3,200" },
-  { tier: 5, min: "250,000", credits: "8,000" },
-  { tier: 6, min: "500,000", credits: "16,000" },
-  { tier: 7, min: "1,000,000", credits: "32,000" },
-  { tier: 8, min: "2,500,000", credits: "48,000" },
-  { tier: 9, min: "5,000,000", credits: "64,000" },
-  { tier: 10, min: "10,000,000", credits: "80,000" },
+  { tier: 1, min: "10,000", monthly: 160 },
+  { tier: 2, min: "25,000", monthly: 480 },
+  { tier: 3, min: "50,000", monthly: 960 },
+  { tier: 4, min: "100,000", monthly: 3200 },
+  { tier: 5, min: "250,000", monthly: 8000 },
+  { tier: 6, min: "500,000", monthly: 16000 },
+  { tier: 7, min: "1,000,000", monthly: 32000 },
+  { tier: 8, min: "2,500,000", monthly: 48000 },
+  { tier: 9, min: "5,000,000", monthly: 64000 },
+  { tier: 10, min: "10,000,000", monthly: 80000 },
 ];
 
 export default function HomeStatusBar() {
@@ -87,41 +89,45 @@ export default function HomeStatusBar() {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
         {/* Credit Tier - clickable → tiers modal */}
-        <button
-          onClick={() => setShowTiersModal(true)}
-          className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-400/30 rounded-xl px-4 py-3 text-left hover:border-indigo-400/60 hover:from-indigo-500/20 hover:to-purple-500/20 transition cursor-pointer group"
-        >
-          <div className="text-[10px] text-indigo-300/70 uppercase tracking-wide flex items-center gap-1">
-            Credit Tier
-            <span className="text-indigo-400/40 group-hover:text-indigo-400/80 transition text-xs">→</span>
-          </div>
-          <div className="text-sm font-bold text-indigo-300 mt-0.5">
-            {tier > 0 ? TIER_LABELS[tier] ?? `Tier ${tier}` : "No Tier"}
-          </div>
-          <div className="text-[10px] text-indigo-300/40 mt-1 group-hover:text-indigo-300/60 transition">View all tiers</div>
-        </button>
+        {(() => {
+          const tc = getTierColor(tier ?? 0);
+          return (
+            <button
+              onClick={() => setShowTiersModal(true)}
+              className={`${tc.bg} border ${tc.border} rounded-lg px-2.5 py-2 sm:px-3 sm:py-2.5 text-left hover:brightness-125 transition cursor-pointer group`}
+            >
+              <div className={`text-[9px] sm:text-[10px] ${tc.text} opacity-60 uppercase tracking-wide`}>
+                Tier
+              </div>
+              <div className={`text-xs sm:text-sm font-bold ${tc.text} mt-0.5 truncate`}>
+                {tier > 0 ? `T${tier}` : "None"}
+              </div>
+            </button>
+          );
+        })()}
 
         {/* Credits - clickable → credit management modal */}
-        {credits !== null && (
+        {credits !== null ? (
           <button
             onClick={() => setShowCreditMgmt(true)}
-            className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-400/30 rounded-xl px-4 py-3 text-left hover:border-yellow-400/60 hover:from-yellow-500/20 hover:to-amber-500/20 transition cursor-pointer group"
+            className="bg-yellow-500/8 border border-yellow-400/25 rounded-lg px-2.5 py-2 sm:px-3 sm:py-2.5 text-left hover:border-yellow-400/50 hover:bg-yellow-500/15 transition cursor-pointer group"
           >
-            <div className="text-[10px] text-yellow-300/70 uppercase tracking-wide flex items-center gap-1">
+            <div className="text-[9px] sm:text-[10px] text-yellow-300/60 uppercase tracking-wide">
               Credits
-              <span className="text-yellow-400/40 group-hover:text-yellow-400/80 transition text-xs">→</span>
             </div>
-            <div className="text-sm font-bold text-yellow-300 mt-0.5">{credits}</div>
-            <div className="text-[10px] text-yellow-300/40 mt-1 group-hover:text-yellow-300/60 transition">View history</div>
+            <div className="text-xs sm:text-sm font-bold text-yellow-300 mt-0.5">{credits}</div>
           </button>
+        ) : (
+          <div />
         )}
 
         {/* Payout Countdown - clickable → payout history modal */}
-        <div className={credits !== null ? "col-span-2 sm:col-span-1" : ""}>
-          <PayoutCountdown variant="card" onClick={() => setShowPayoutHistory(true)} />
-        </div>
+        <PayoutCountdown variant="card" showSeconds onClick={() => setShowPayoutHistory(true)} />
+
+        {/* Credit Accrual Countdown */}
+        <CreditAccrualCountdown variant="card" />
       </div>
 
       {/* Tiers Modal */}
@@ -146,11 +152,12 @@ export default function HomeStatusBar() {
 
             {(() => {
               const effectiveTier = liveTier ?? tier ?? 0;
+              const tc = getTierColor(effectiveTier);
               return effectiveTier > 0 ? (
-                <div className="mb-3 p-2 sm:p-3 bg-green-500/20 border border-green-400/50 rounded-xl">
+                <div className={`mb-3 p-2 sm:p-3 ${tc.bg} border ${tc.border} rounded-xl`}>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-green-400 text-xs sm:text-sm font-semibold">
+                    <div className={`w-2 h-2 rounded-full ${tc.text.replace("text-", "bg-")} animate-pulse`} />
+                    <span className={`${tc.text} text-xs sm:text-sm font-semibold`}>
                       You are Tier {effectiveTier}
                     </span>
                   </div>
@@ -167,30 +174,31 @@ export default function HomeStatusBar() {
             <div className="space-y-1.5 mb-3 max-h-[40vh] sm:max-h-none overflow-y-auto">
               {TIER_TABLE.map((t) => {
                 const isCurrentTier = (liveTier ?? tier) === t.tier;
+                const tc = getTierColor(t.tier);
                 return (
                   <div
                     key={t.tier}
                     className={`rounded-lg p-2 sm:p-2.5 flex justify-between items-center transition-all ${
                       isCurrentTier
-                        ? "bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20"
-                        : "bg-cyan-500/10 border border-cyan-400/30"
+                        ? `${tc.bg} border-2 ${tc.border} shadow-lg`
+                        : `${tc.bg} border ${tc.border}`
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {isCurrentTier && (
-                        <svg className="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className={`w-4 h-4 ${tc.text} flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       )}
-                      <span className={`text-xs sm:text-sm font-bold ${isCurrentTier ? "text-cyan-300" : "text-purple-300"} mr-1.5`}>
+                      <span className={`text-xs sm:text-sm font-bold ${tc.text} mr-1.5`}>
                         T{t.tier}
                       </span>
                       <span className={`text-xs sm:text-sm font-semibold ${isCurrentTier ? "text-white" : "text-white/90"}`}>
                         {t.min}+ XESS
                       </span>
                     </div>
-                    <span className={`text-xs sm:text-sm font-bold ${isCurrentTier ? "text-cyan-300" : "text-cyan-400"}`}>
-                      {t.credits}/mo
+                    <span className={`text-xs sm:text-sm font-bold ${tc.text}`}>
+                      {(t.monthly / 30).toLocaleString(undefined, { maximumFractionDigits: 1 })}/day
                     </span>
                   </div>
                 );

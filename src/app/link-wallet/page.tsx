@@ -100,7 +100,7 @@ function LinkWalletContent() {
         )}
 
         <div className="mt-6">
-          {/* Payout wallet linking for MEMBER and DIAMOND users */}
+          {/* Payout wallet linking */}
           <WalletActions mode="PAYOUT_LINK" />
         </div>
 

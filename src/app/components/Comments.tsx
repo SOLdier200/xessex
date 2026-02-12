@@ -216,9 +216,9 @@ export default function Comments({
         }
       } else if (data.error === "ALREADY_COMMENTED") {
         setHasPostedComment(true);
-        toast.error("Only 1 comment per Member per Video!");
+        toast.error("Only 1 comment per user per video!");
       } else if (data.error === "DIAMOND_ONLY") {
-        toast.error("Only Diamond Members can post comments");
+        toast.error("You must be logged in to post comments");
       } else {
         toast.error(data.error || "Failed to post comment");
       }
@@ -587,7 +587,7 @@ export default function Comments({
               </button>
               {hasPostedComment && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-black/90 border border-white/20 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  Only 1 comment per Member per Video!
+                  Only 1 comment per user per video!
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black/90" />
                 </div>
               )}

@@ -161,7 +161,7 @@ export default function TopNav() {
   const TOP_ITEMS: TopItem[] = [
     { type: "link", href: `${m}/login/diamond`, img: "/logos/textlogo/siteset3/login100.png", alt: "Connect Wallet", h: 32 },
     { type: "link", href: `${m}/collections`, img: "/logos/textlogo/siteset3/collect1001.png", alt: "Collections", h: 30 },
-    { type: "link", href: `${m}/leaderboard`, img: "/logos/textlogo/siteset3/diamondladdea.png", alt: "Diamond Ladder", h: 40 },
+    { type: "link", href: `${m}/leaderboard`, img: "/logos/textlogo/siteset3/diamondladdea.png", alt: "Leaderboard", h: 40 },
     { type: "token", img: "/logos/textlogo/siteset3/token100.png", alt: "Xess Token", h: 36 },
     ...(isLoggedIn
       ? ([
@@ -194,12 +194,6 @@ export default function TopNav() {
 
   return (
     <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
-      {/* Preload images so they're ready when needed */}
-      <div className="hidden" aria-hidden="true">
-        <Image src="/logos/textlogo/siteset3/profile100.png" alt="" width={1} height={1} priority />
-        <Image src="/logos/textlogo/siteset3/diamond100.png" alt="" width={1} height={1} priority />
-        <Image src="/logos/textlogo/siteset3/member100.png" alt="" width={1} height={1} priority />
-      </div>
 
       {/* Single unified layout (works for desktop + mobile) */}
       <div className="flex items-start justify-between gap-3">

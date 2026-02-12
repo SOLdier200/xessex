@@ -11,6 +11,7 @@ import RewardsTab from "../components/RewardsTab";
 import VotingParticipationStat from "../components/VotingParticipationStat";
 import CreditManagementModal from "../components/CreditManagementModal";
 import PayoutCountdown from "../components/PayoutCountdown";
+import { getTierColor } from "@/lib/tierColors";
 import WalletBalancesModal from "../components/WalletBalancesModal";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import {
@@ -203,10 +204,23 @@ function ProfilePageInner() {
   const [claimErr, setClaimErr] = useState<string | null>(null);
 
   // Live pending state
+  type PoolActivity = {
+    scoreReceived: number;
+    diamondComments: number;
+    mvmPoints: number;
+    votesCast: number;
+    ratings?: number;
+    fiveStarRatings?: number;
+  };
   const [livePending, setLivePending] = useState<null | {
     currentWeek: {
       weekKey: string;
-      activity: { scoreReceived: number; diamondComments: number; mvmPoints: number; votesCast: number };
+      activity: PoolActivity & {
+        totalRatings: number;
+        fiveStarRatings: number;
+        embed: PoolActivity;
+        xessex: PoolActivity;
+      };
       estimatedPending: string;
       isActualPayout?: boolean;
     };
@@ -1398,12 +1412,17 @@ function ProfilePageInner() {
                       </Link>
                     </div>
                     {/* Current Tier */}
-                    <div className="mt-3 flex items-center justify-between bg-purple-500/10 border border-purple-400/30 rounded-lg px-3 py-2">
-                      <span className="text-xs text-white/70">Credit Tier</span>
-                      <span className="text-sm font-bold text-purple-300">
-                        {data.xessTier > 0 ? `Tier ${data.xessTier}` : "No Tier"}
-                      </span>
-                    </div>
+                    {(() => {
+                      const tc = getTierColor(data.xessTier ?? 0);
+                      return (
+                        <div className={`mt-3 flex items-center justify-between ${tc.bg} border ${tc.border} rounded-lg px-3 py-2`}>
+                          <span className="text-xs text-white/70">Credit Tier</span>
+                          <span className={`text-sm font-bold ${tc.text}`}>
+                            {data.xessTier > 0 ? `Tier ${data.xessTier}` : "No Tier"}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     <p className="text-xs mt-3 leading-relaxed">
                       <span className="animate-pulse-pink-white-black">Hold over 10k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
@@ -1498,7 +1517,7 @@ function ProfilePageInner() {
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/40 rounded-xl">
                       <div className="text-xs text-yellow-300/80 uppercase tracking-wide mb-1">
-                        {livePending?.currentWeek?.isActualPayout ? "This Week\u2019s Payout" : "This Week\u2019s Estimate"}
+                        {livePending?.currentWeek?.isActualPayout ? "This Period\u2019s Payout" : "This Period\u2019s Estimate"}
                       </div>
                       <div className="text-xl font-bold text-yellow-400">
                         {livePending?.currentWeek?.isActualPayout ? "" : "~"}{livePending?.currentWeek?.estimatedPending ?? "0"} XESS
@@ -1509,7 +1528,7 @@ function ProfilePageInner() {
                           : "Estimated from current activity"}
                       </div>
                     </div>
-                    <PayoutCountdown variant="card" />
+                    <PayoutCountdown variant="card" showSeconds />
                   </div>
                 </div>
               )}
@@ -1519,19 +1538,23 @@ function ProfilePageInner() {
                 <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                   <h2 className="text-lg font-semibold text-white mb-4">Current Activity & Claims</h2>
 
-                  {/* Current Week Activity */}
+                  {/* Current Period Activity */}
                   {livePending?.currentWeek && (
                     <div className="mb-4 p-3 sm:p-4 bg-gradient-to-r from-purple-500/10 via-black/0 to-pink-500/10 border border-purple-400/20 rounded-xl">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                        <span className="text-xs sm:text-sm text-white/60 truncate">Current Week ({livePending.currentWeek.weekKey})</span>
-                        <span className="text-xs flex-shrink-0">
-                          Payout in <PayoutCountdown variant="compact" />
-                        </span>
+                      {/* Header with live countdown */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
+                        <span className="text-xs sm:text-sm text-white/60 truncate">Current Period ({livePending.currentWeek.weekKey})</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-[10px] sm:text-xs text-white/40">Next claim in</span>
+                          <PayoutCountdown variant="compact" showSeconds />
+                        </div>
                       </div>
-                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs">
+
+                      {/* Stats Grid — 4 columns */}
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs mb-2">
                         <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
                           <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.scoreReceived}</div>
-                          <div className="text-white/40 text-[10px] sm:text-xs">Score</div>
+                          <div className="text-white/40 text-[10px] sm:text-xs">Comment Score</div>
                         </div>
                         <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
                           <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.diamondComments}</div>
@@ -1539,13 +1562,35 @@ function ProfilePageInner() {
                         </div>
                         <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
                           <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.mvmPoints}</div>
-                          <div className="text-white/40 text-[10px] sm:text-xs">MVM</div>
+                          <div className="text-white/40 text-[10px] sm:text-xs">MVM Score</div>
                         </div>
                         <div className="bg-black/30 rounded-lg p-1.5 sm:p-2">
                           <div className="text-white font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.votesCast}</div>
                           <div className="text-white/40 text-[10px] sm:text-xs">Votes</div>
                         </div>
                       </div>
+
+                      {/* Second row — Xessex-specific + Ratings */}
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs mb-2">
+                        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-cyan-400 font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.xessex.votesCast}</div>
+                          <div className="text-cyan-300/40 text-[10px] sm:text-xs">Xessex Votes</div>
+                        </div>
+                        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-cyan-400 font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.xessex.diamondComments}</div>
+                          <div className="text-cyan-300/40 text-[10px] sm:text-xs">Xessex Comments</div>
+                        </div>
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-yellow-400 font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.fiveStarRatings}</div>
+                          <div className="text-yellow-300/40 text-[10px] sm:text-xs">5-Star Ratings</div>
+                        </div>
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-1.5 sm:p-2">
+                          <div className="text-yellow-400 font-semibold text-xs sm:text-sm">{livePending.currentWeek.activity.xessex.fiveStarRatings ?? 0}</div>
+                          <div className="text-yellow-300/40 text-[10px] sm:text-xs">Xessex 5-Stars</div>
+                        </div>
+                      </div>
+
+                      {/* Estimated Payout */}
                       <div className="mt-3 p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-lg">
                         <span className="text-xs text-green-300/80">
                           {livePending.currentWeek.isActualPayout ? "Payout: " : "Estimated payout: "}
@@ -1667,13 +1712,6 @@ function ProfilePageInner() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <a
-                        href="/api/rewards/claims-csv"
-                        className="px-3 py-2 rounded-xl border border-white/10 bg-black/40 text-white/70 hover:text-white transition text-sm"
-                      >
-                        CSV
-                      </a>
-
                       <button
                         onClick={onClaimPendingXess}
                         disabled={
@@ -2104,61 +2142,67 @@ function ProfilePageInner() {
                 </p>
 
                 {/* User's current tier indicator */}
-                {data?.xessTier && data.xessTier > 0 ? (
-                  <div className="mb-3 p-2 sm:p-3 bg-green-500/20 border border-green-400/50 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                      <span className="text-green-400 text-xs sm:text-sm font-semibold">
-                        You are Tier {data.xessTier}
+                {(() => {
+                  const userTier = data?.xessTier ?? 0;
+                  const tc = getTierColor(userTier);
+                  return userTier > 0 ? (
+                    <div className={`mb-3 p-2 sm:p-3 ${tc.bg} border ${tc.border} rounded-xl`}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${tc.text.replace("text-", "bg-")} animate-pulse`} />
+                        <span className={`${tc.text} text-xs sm:text-sm font-semibold`}>
+                          You are Tier {userTier}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-3 p-2 sm:p-3 bg-white/5 border border-white/20 rounded-xl">
+                      <span className="text-white/50 text-xs sm:text-sm">
+                        Hold 10k+ XESS to start earning
                       </span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="mb-3 p-2 sm:p-3 bg-white/5 border border-white/20 rounded-xl">
-                    <span className="text-white/50 text-xs sm:text-sm">
-                      Hold 10k+ XESS to start earning
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Tier table - compact for mobile */}
                 <div className="space-y-1.5 mb-3 max-h-[40vh] sm:max-h-none overflow-y-auto">
                   {[
-                    { tier: 1, min: "10,000", credits: "40" },
-                    { tier: 2, min: "25,000", credits: "120" },
-                    { tier: 3, min: "50,000", credits: "240" },
-                    { tier: 4, min: "100,000", credits: "800" },
-                    { tier: 5, min: "250,000", credits: "2,000" },
-                    { tier: 6, min: "500,000", credits: "4,000" },
-                    { tier: 7, min: "1,000,000", credits: "8,000" },
-                    { tier: 8, min: "2,500,000", credits: "12,000" },
-                    { tier: 9, min: "5,000,000", credits: "16,000" },
+                    { tier: 1, min: "10,000", monthly: 160 },
+                    { tier: 2, min: "25,000", monthly: 480 },
+                    { tier: 3, min: "50,000", monthly: 960 },
+                    { tier: 4, min: "100,000", monthly: 3200 },
+                    { tier: 5, min: "250,000", monthly: 8000 },
+                    { tier: 6, min: "500,000", monthly: 16000 },
+                    { tier: 7, min: "1,000,000", monthly: 32000 },
+                    { tier: 8, min: "2,500,000", monthly: 48000 },
+                    { tier: 9, min: "5,000,000", monthly: 64000 },
+                    { tier: 10, min: "10,000,000", monthly: 80000 },
                   ].map((t) => {
                     const isCurrentTier = data?.xessTier === t.tier;
+                    const tc = getTierColor(t.tier);
                     return (
                       <div
                         key={t.tier}
                         className={`rounded-lg p-2 sm:p-2.5 flex justify-between items-center transition-all ${
                           isCurrentTier
-                            ? "bg-gradient-to-r from-cyan-500/30 to-blue-500/30 border-2 border-cyan-400 shadow-lg shadow-cyan-500/20"
-                            : "bg-cyan-500/10 border border-cyan-400/30"
+                            ? `${tc.bg} border-2 ${tc.border} shadow-lg`
+                            : `${tc.bg} border ${tc.border}`
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           {isCurrentTier && (
-                            <svg className="w-4 h-4 text-cyan-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className={`w-4 h-4 ${tc.text} flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           )}
-                          <span className={`text-xs sm:text-sm font-bold ${isCurrentTier ? "text-cyan-300" : "text-purple-300"} mr-1.5`}>
+                          <span className={`text-xs sm:text-sm font-bold ${tc.text} mr-1.5`}>
                             T{t.tier}
                           </span>
                           <span className={`text-xs sm:text-sm font-semibold ${isCurrentTier ? "text-white" : "text-white/90"}`}>
                             {t.min}+ XESS
                           </span>
                         </div>
-                        <span className={`text-xs sm:text-sm font-bold ${isCurrentTier ? "text-cyan-300" : "text-cyan-400"}`}>
-                          {t.credits}/mo
+                        <span className={`text-xs sm:text-sm font-bold ${tc.text}`}>
+                          {(t.monthly / 30).toLocaleString(undefined, { maximumFractionDigits: 1 })}/day
                         </span>
                       </div>
                     );
