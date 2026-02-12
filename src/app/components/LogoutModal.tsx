@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
+import CreditManagementModal from "./CreditManagementModal";
 
 export default function LogoutModal({
   open,
@@ -26,6 +27,7 @@ export default function LogoutModal({
 }) {
   const [loading, setLoading] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   const { disconnect, connected } = useWallet();
 
   // Reset img error state when avatarUrl changes
@@ -118,12 +120,20 @@ export default function LogoutModal({
                 {email}
               </div>
             )}
-            {/* Show credit balance */}
+            {/* Show credit balance — clickable to open Credit Ranking */}
             {creditBalance !== undefined && (
-              <div className="mt-3 flex items-center justify-between bg-yellow-500/10 rounded-lg p-3">
+              <button
+                onClick={() => setShowCreditModal(true)}
+                className="mt-3 w-full flex items-center justify-between bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg p-3 transition cursor-pointer group"
+              >
                 <span className="text-xs text-white/70">Special Credits</span>
-                <span className="text-lg font-bold text-yellow-400">{creditBalance}</span>
-              </div>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-lg font-bold text-yellow-400">{creditBalance}</span>
+                  <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </button>
             )}
           </div>
         )}
@@ -151,6 +161,10 @@ export default function LogoutModal({
           </button>
         </div>
       </div>
+      <CreditManagementModal
+        open={showCreditModal}
+        onClose={() => setShowCreditModal(false)}
+      />
     </div>
   );
 }

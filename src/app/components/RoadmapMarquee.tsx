@@ -51,7 +51,7 @@ const PHASES: RoadmapPhase[] = [
     id: "phase1",
     status: "done",
     title: "Phase 1 — Complete",
-    subtitle: "Mainnet Launch",
+    subtitle: "Devnet Launch",
     bullets: [
       "Public roadmap + transparency panel",
       "Rewards Drawing Implemented",
@@ -64,10 +64,9 @@ const PHASES: RoadmapPhase[] = [
     id: "phase2",
     status: "now",
     title: "Phase 2 — Now",
-    subtitle: "Expansion",
+    subtitle: "Public launch prep",
     bullets: [
-      <>Presale Live Now! — <Link href={`${PRESALE_ORIGIN}/launch`} className="text-pink-400 hover:text-pink-300 underline underline-offset-2">Join Presale</Link></>,
-      "Public Presale",
+      <>Private Presale Live — <Link href={`${PRESALE_ORIGIN}/launch`} className="text-pink-400 hover:text-pink-300 underline underline-offset-2">Join Now</Link></>,
       "First owned content deployed",
       "Automated anti-abuse systems",
     ],
@@ -78,6 +77,8 @@ const PHASES: RoadmapPhase[] = [
     title: "Phase 3 — Growth",
     subtitle: "Platform growth",
     bullets: [
+      "Public Presale",
+      "Mainnet Launch",
       "Liquidity seeded & locked",
       "Mainnet rewards activation",
       "Weekly content additions",
@@ -87,11 +88,25 @@ const PHASES: RoadmapPhase[] = [
     id: "phase4",
     status: "next",
     title: "Phase 4 — Scale",
-    subtitle: "Scaling up",
+    subtitle: "Expansion",
     bullets: [
       "Partner onboarding",
-      "Partner embed system",
       "Governance experiments",
+      "AI Content Generator",
+      "Generate your own AI Images",
+      "Mobile App Creation",
+    ],
+  },
+  {
+    id: "phase5",
+    status: "next",
+    title: "Phase 5 — Beyond",
+    subtitle: "Scaling Up",
+    bullets: [
+      "DAO Governance",
+      "DAO Voting System Development",
+      "Generate your own AI Videos",
+      "Multi-Chain Expansion",
     ],
   },
 ];

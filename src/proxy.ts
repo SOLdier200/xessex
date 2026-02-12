@@ -77,6 +77,14 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  // Presale host: block ALL cron endpoints
+  if (host === PRESALE_HOST && pathname.startsWith("/api/cron/")) {
+    return NextResponse.json(
+      { ok: false, error: "CRON_DISABLED" },
+      { status: 403 }
+    );
+  }
+
   // Presale host hitting a non-presale path → bounce to /launch
   if (host === PRESALE_HOST) {
     if (

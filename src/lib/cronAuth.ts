@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 
+/** Returns true when cron endpoints are disabled for this deployment (presale). */
+function isCronDisabled(): boolean {
+  const v = process.env.CRON_DISABLED;
+  return v === "1" || v === "true";
+}
+
 /**
  * Shared cron auth — accepts both x-cron-secret header and Authorization: Bearer.
  * Always .trim()s both sides to prevent CRLF / whitespace mismatches.
  */
 export function verifyCronSecret(req: Request): boolean {
+  if (isCronDisabled()) return false;
+
   const expected = (process.env.CRON_SECRET || "").trim();
   if (!expected) return false;
 

@@ -237,6 +237,26 @@ export default function RewardsTab() {
             </div>
           </div>
 
+          {/* Pool Breakdown */}
+          {weekDetail.byType && Object.keys(weekDetail.byType).length > 0 && (
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="text-sm text-gray-400 mb-3">Pool Breakdown</div>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(weekDetail.byType).map(([type, data]) => (
+                  <div
+                    key={type}
+                    className="flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2"
+                  >
+                    <div className="text-sm text-gray-300">{rewardTypeLabel(type)}</div>
+                    <div className="text-sm font-medium text-white">
+                      {formatXess6(data.amount)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* History */}
           <div className="space-y-2">
             {weekDetail.rewards.map((r) => {

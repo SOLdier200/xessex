@@ -407,12 +407,11 @@ export default function WhitepaperPage() {
                   <tbody>
                     <tr className="border-t border-white/10"><td className="py-2 px-3">Private Presale</td><td className="text-right py-2 px-3">20%</td><td className="text-right py-2 px-3">200,000,000</td></tr>
                     <tr className="border-t border-white/10"><td className="py-2 px-3">Public Sale</td><td className="text-right py-2 px-3">15%</td><td className="text-right py-2 px-3">150,000,000</td></tr>
-                    <tr className="border-t border-white/10"><td className="py-2 px-3">Liquidity Pools</td><td className="text-right py-2 px-3">15%</td><td className="text-right py-2 px-3">150,000,000</td></tr>
+                    <tr className="border-t border-white/10"><td className="py-2 px-3">Liquidity Pools</td><td className="text-right py-2 px-3">20%</td><td className="text-right py-2 px-3">200,000,000</td></tr>
                     <tr className="border-t border-white/10"><td className="py-2 px-3">Rewards Emissions</td><td className="text-right py-2 px-3">20%</td><td className="text-right py-2 px-3">200,000,000</td></tr>
-                    <tr className="border-t border-white/10"><td className="py-2 px-3">Rewards Drawings Pool</td><td className="text-right py-2 px-3">5%</td><td className="text-right py-2 px-3">50,000,000</td></tr>
                     <tr className="border-t border-white/10"><td className="py-2 px-3">Team / Creators</td><td className="text-right py-2 px-3">15%</td><td className="text-right py-2 px-3">150,000,000</td></tr>
                     <tr className="border-t border-white/10"><td className="py-2 px-3">Treasury / Ecosystem</td><td className="text-right py-2 px-3">5%</td><td className="text-right py-2 px-3">50,000,000</td></tr>
-                    <tr className="border-t border-white/10"><td className="py-2 px-3">Burn Reserve</td><td className="text-right py-2 px-3">5%</td><td className="text-right py-2 px-3">50,000,000</td></tr>
+                    <tr className="border-t border-white/10"><td className="py-2 px-3">A.I. Content</td><td className="text-right py-2 px-3">5%</td><td className="text-right py-2 px-3">50,000,000</td></tr>
                     <tr className="border-t border-white/20 bg-black/40 font-bold"><td className="py-2 px-3">Total</td><td className="text-right py-2 px-3">100%</td><td className="text-right py-2 px-3">1,000,000,000</td></tr>
                   </tbody>
                 </table>

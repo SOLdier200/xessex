@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import TopNav from "../components/TopNav";
+import UptimeTimer from "../components/UptimeTimer";
 
 export const metadata = {
   title: "FAQ | Xessex",
@@ -9,7 +10,7 @@ export const metadata = {
 
 type FAQItem = {
   q: string;
-  a: string | string[];
+  a: string | (string | React.ReactNode)[];
 };
 
 type FAQSection = {
@@ -64,9 +65,7 @@ const FAQ_SECTIONS: FAQSection[] = [
         q: "What is XESS used for?",
         a: [
           "1. Qualifying for Special Credit tiers (hold to earn Daily* Credits)",
-          "2. Receiving weekly reward distributions",
-          "3. Participating in weekly prize drawings",
-          "4. Future governance voting",
+          "2. Future governance voting",
         ],
       },
       {
@@ -96,6 +95,7 @@ const FAQ_SECTIONS: FAQSection[] = [
           "• MVM Pool (20%): Most Valued Members",
           "• Comments Pool (5%): Quality comments",
           "• Referrals Pool (5%): Bringing new users",
+          <><Link href="/rewards" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">View the Rewards page for more details</Link></>,
         ],
       },
       {
@@ -110,24 +110,21 @@ const FAQ_SECTIONS: FAQSection[] = [
         q: "How do credit tiers work?",
         a: [
           "Your monthly credit allocation depends on your XESS balance:",
-          "• 10,000 XESS → 80 credits/month (Tier 1)",
-          "• 25,000 XESS → 240 credits/month (Tier 2)",
-          "• 50,000 XESS → 480 credits/month (Tier 3)",
-          "• 100,000 XESS → 1,600 credits/month (Tier 4)",
-          "• 250,000 XESS → 4,000 credits/month (Tier 5)",
-          "• 500,000 XESS → 8,000 credits/month (Tier 6)",
-          "• 1,000,000 XESS → 16,000 credits/month (Tier 7)",
-          "• 2,500,000 XESS → 24,000 credits/month (Tier 8)",
-          "• 5,000,000 XESS → 32,000 credits/month (Tier 9)",
+          "• 10,000 XESS → 160 credits/month (Tier 1)",
+          "• 25,000 XESS → 480 credits/month (Tier 2)",
+          "• 50,000 XESS → 960 credits/month (Tier 3)",
+          "• 100,000 XESS → 3,200 credits/month (Tier 4)",
+          "• 250,000 XESS → 8,000 credits/month (Tier 5)",
+          "• 500,000 XESS → 16,000 credits/month (Tier 6)",
+          "• 1,000,000 XESS → 32,000 credits/month (Tier 7)",
+          "• 2,500,000 XESS → 48,000 credits/month (Tier 8)",
+          "• 5,000,000 XESS → 64,000 credits/month (Tier 9)",
+          "• 10,000,000 XESS → 80,000 credits/month (Tier 10)",
         ],
       },
       {
         q: "How do I claim my XESS rewards?",
-        a: "Weekly rewards are published as Merkle roots on-chain. You claim via the platform interface — your wallet signs the claim transaction.",
-      },
-      {
-        q: "What if I don't have a wallet linked when I earn rewards?",
-        a: "Rewards are tracked by user ID. You can link any wallet later and claim accumulated rewards.",
+        a: "Rewards are distributed twice a week. When your rewards are ready, you can claim them directly from the platform — just connect your wallet and hit the claim button.",
       },
     ],
   },
@@ -143,7 +140,6 @@ const FAQ_SECTIONS: FAQSection[] = [
           "• First video: 10 credits",
           "• Increases by 10 each unlock: 10, 20, 30, 40... up to 500",
           "• After 50 unlocks: capped at 500 credits per video",
-          "• Free videos: Always 0 credits",
           "Once unlocked, a video is yours forever.",
         ],
       },
@@ -156,12 +152,8 @@ const FAQ_SECTIONS: FAQSection[] = [
         a: "Only free videos (0-cost) are accessible without credits. To earn credits for paid unlocks, you need to hold XESS.",
       },
       {
-        q: "What can all authenticated users do?",
-        a: "All users with a connected wallet can: comment on videos, rate videos with stars, vote on comments, and participate in the community.",
-      },
-      {
         q: "Are there any restricted features?",
-        a: "Moderation tools are restricted to admins and mods. Everything else is open to all authenticated users.",
+        a: "Moderation tools are restricted to admins and mods. Everything else is open to all users.",
       },
     ],
   },
@@ -207,15 +199,18 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "When is the public sale?",
-        a: "After presale completion. 150M tokens (15%) will be available at public sale with immediate delivery.",
+        a: "After presale completion, expected March or April 2026. 150M tokens (15%) will be available at public sale with immediate delivery.",
       },
       {
         q: "Is there a minimum investment?",
-        a: "Minimum amounts are set per presale round. Contact the team for current round details.",
+        a: "There are no minimum amounts set. You can buy as much as 10 million XESS or as little as you want.",
       },
       {
         q: "How do I participate in presale?",
-        a: "Visit the presale page on the website or contact the team directly. Payments accepted in SOL and stablecoins.",
+        a: [
+          <>Visit the launch page at <a href="https://presale.xessex.me/launch" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">presale.xessex.me/launch</a> to participate. Payments are accepted in SOL and stablecoins.</>,
+          <>To get on the whitelist for the private sale, email <a href="mailto:support@xessex.me" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">support@xessex.me</a> with your wallet address.</>,
+        ],
       },
     ],
   },
@@ -237,13 +232,13 @@ const FAQ_SECTIONS: FAQSection[] = [
         a: [
           "• Q1 2026: Presale, token launch, core platform",
           "• Q2 2026: Rewards v2, creator tools",
-          "• Q3 2026: DAO governance, mobile apps",
+          "• Q3 2026: DAO governance, mobile app",
           "• Q4 2026: Multi-chain expansion",
         ],
       },
       {
         q: "Will Xessex expand beyond adult content?",
-        a: "The model is designed to work for any content vertical. Future expansion depends on community demand and governance votes.",
+        a: "Yes! We will be expanding beyond adult content into comedy and other verticals. The platform model is designed to work for any content type, and future categories will depend on community demand and governance votes.",
       },
     ],
   },
@@ -257,7 +252,6 @@ const FAQ_SECTIONS: FAQSection[] = [
         a: [
           "• Token price volatility — XESS may lose value",
           "• Regulatory uncertainty — crypto regulations evolve",
-          "• Platform risk — service may change or discontinue",
           "• Smart contract risk — bugs are possible despite audits",
           "• Market risk — no guaranteed liquidity",
         ],
@@ -291,7 +285,11 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "Is this project legitimate?",
-        a: "XESS is already minted on Solana mainnet with mint authority revoked. The token contract is immutable. Verify the mint address: HvfmE1stqxvBfUXtKX4L4w3BeMMjcDM48Qh6ZfGtgrpE",
+        a: [
+          "XESS is already minted on Solana mainnet with mint authority revoked. The token contract is immutable. Verify the mint address: HvfmE1stqxvBfUXtKX4L4w3BeMMjcDM48Qh6ZfGtgrpE",
+          <>Xessex has a <UptimeTimer /> history of honest operations and trusted by users since its inception.</>,
+          <><Link href="/contact" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Contact us</Link> if you have any questions.</>,
+        ],
       },
     ],
   },

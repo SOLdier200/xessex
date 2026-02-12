@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/prisma";
-import { CREDIT_MICRO } from "@/lib/rewardsConstants";
+import { CREDIT_MICRO, XESS_MULTIPLIER } from "@/lib/rewardsConstants";
 import { signR2GetUrl } from "@/lib/r2";
+import { getXessAtomicBalance } from "@/lib/xessBalance";
+import { getTierFromBalance } from "@/lib/specialCredits";
 
 export const runtime = "nodejs";
 
@@ -48,20 +50,28 @@ export async function GET() {
   const creditBalanceMicro = specialCreditAccount?.balanceMicro ?? 0n;
   const creditBalance = Number(creditBalanceMicro / CREDIT_MICRO);
 
-  // Get latest wallet snapshot to determine XESS tier
+  // Fetch live on-chain XESS balance for accurate tier display
   let xessTier = 0;
   let xessBalance = "0";
   const xessWallet = user.walletAddress;
   if (xessWallet) {
-    const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
-      where: { wallet: xessWallet },
-      orderBy: { dateKey: "desc" },
-      select: { tier: true, balanceAtomic: true },
-    });
-    if (latestSnapshot) {
-      xessTier = latestSnapshot.tier;
-      xessBalance = latestSnapshot.balanceAtomic.toString();
+    let balanceAtomic = await getXessAtomicBalance(xessWallet);
+
+    // getXessAtomicBalance silently returns 0n on RPC errors,
+    // so fall back to latest snapshot if live returned 0 but snapshot has data
+    if (balanceAtomic === 0n) {
+      const latestSnapshot = await db.walletBalanceSnapshot.findFirst({
+        where: { wallet: xessWallet },
+        orderBy: { dateKey: "desc" },
+        select: { tier: true, balanceAtomic: true },
+      });
+      if (latestSnapshot && BigInt(latestSnapshot.balanceAtomic) > 0n) {
+        balanceAtomic = BigInt(latestSnapshot.balanceAtomic);
+      }
     }
+
+    xessTier = getTierFromBalance(balanceAtomic);
+    xessBalance = balanceAtomic.toString();
   }
 
   // Get avatar URL if user has a profile picture

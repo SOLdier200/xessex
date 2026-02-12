@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Hide scrollbar but keep scrollability (iOS-safe) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --neon-pink: #ff2bd6;
   --baby-pink: #ffb6d9;

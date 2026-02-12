@@ -136,8 +136,8 @@ export async function GET(request: Request) {
   // Amounts are stored with 6 decimals - convert to whole XESS for display
   const DECIMALS = 1_000_000n;
   const totalXessPaid = Number((allPaidRewards._sum.amount ?? 0n) / DECIMALS);
-  const claimedXess = Number((claimedRewards._sum.amount ?? 0n) / DECIMALS);
-  const claimableXess = totalXessPaid - claimedXess;
+  const totalXessClaimed = Number((claimedRewards._sum.amount ?? 0n) / DECIMALS);
+  const claimableXess = totalXessPaid - totalXessClaimed;
 
   // ============================================
   // LIVE PENDING ESTIMATE (updates in real-time)
@@ -236,6 +236,7 @@ export async function GET(request: Request) {
       totalModDislikes,
       utilizedComments: utilizedSet.size,
       totalXessPaid,
+      totalXessClaimed,     // Actually claimed on-chain (claimedAt not null)
       claimableXess,        // From finalized RewardEvents (ready to claim)
       estimatedPendingXess, // Live estimate from current week activity
     },

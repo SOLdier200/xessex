@@ -29,6 +29,7 @@ interface Balances {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  inline?: boolean;
 }
 
 const RPC_ENDPOINT =
@@ -37,7 +38,7 @@ const XESS_MINT_STR = process.env.NEXT_PUBLIC_XESS_MINT ?? "";
 const XESS_DECIMALS = 9;
 const SOL_FEE_BUFFER = 0.005;
 
-export default function WalletBalancesModal({ isOpen, onClose }: Props) {
+export default function WalletBalancesModal({ isOpen, onClose, inline }: Props) {
   const { publicKey, connected, sendTransaction } = useWallet();
   const [balances, setBalances] = useState<Balances | null>(null);
   const [loading, setLoading] = useState(false);
@@ -250,47 +251,9 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
     }
   }
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 px-4"
-            onClick={onClose}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-2xl border border-white/10 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden my-auto"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-                <h2 className="text-xl font-bold text-white">Wallet Balances</h2>
-                <button
-                  onClick={onClose}
-                  className="text-white/60 hover:text-white transition-colors text-2xl leading-none"
-                >
-                  &times;
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="px-6 py-6">
-                {!connected ? (
+  const walletContent = (
+    <>
+      {!connected ? (
                   <div className="text-center py-8">
                     <p className="text-white/60 mb-4">No wallet connected</p>
                     <p className="text-sm text-white/40">
@@ -332,44 +295,44 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
                     </button>
 
                     {/* Balances Grid */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       {/* SOL Balance */}
-                      <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
+                      <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-3 sm:p-4 border border-purple-500/20 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <Image src="/logos/sol.jpg" alt="SOL" width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
-                          <span className="text-white/60 text-sm">Solana</span>
+                          <Image src="/logos/sol.jpg" alt="SOL" width={32} height={32} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover flex-shrink-0" />
+                          <span className="text-white/60 text-xs sm:text-sm">Solana</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-lg sm:text-2xl font-bold text-white truncate">
                           {balances.sol.formatted}
                         </p>
-                        <p className="text-xs text-white/40 mt-1">
+                        <p className="text-[10px] sm:text-xs text-white/40 mt-1">
                           ~${(parseFloat(balances.sol.formatted) * 76).toFixed(2)} USD
                         </p>
                         <button
                           onClick={() => openSendForm("sol")}
                           disabled={sending}
-                          className="mt-3 w-full py-1.5 text-xs font-medium bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-colors disabled:opacity-50"
+                          className="mt-2 sm:mt-3 w-full py-1.5 text-xs font-medium bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-colors disabled:opacity-50"
                         >
                           Send
                         </button>
                       </div>
 
                       {/* XESS Balance */}
-                      <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 rounded-xl p-4 border border-pink-500/20">
+                      <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 rounded-xl p-3 sm:p-4 border border-pink-500/20 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <Image src="/logos/xessexcoinlogo2.png" alt="XESS" width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
-                          <span className="text-white/60 text-sm">XESS</span>
+                          <Image src="/logos/xessexcoinlogo2.png" alt="XESS" width={32} height={32} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover flex-shrink-0" />
+                          <span className="text-white/60 text-xs sm:text-sm">XESS</span>
                         </div>
-                        <p className="text-2xl font-bold text-white">
-                          {Number(balances.xess.formatted).toLocaleString()}
+                        <p className="text-lg sm:text-2xl font-bold text-white truncate">
+                          {Number(balances.xess.formatted).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                         </p>
-                        <p className="text-xs text-white/40 mt-1">
+                        <p className="text-[10px] sm:text-xs text-white/40 mt-1">
                           XESS Token
                         </p>
                         <button
                           onClick={() => openSendForm("xess")}
                           disabled={sending}
-                          className="mt-3 w-full py-1.5 text-xs font-medium bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 rounded-lg transition-colors disabled:opacity-50"
+                          className="mt-2 sm:mt-3 w-full py-1.5 text-xs font-medium bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 rounded-lg transition-colors disabled:opacity-50"
                         >
                           Send
                         </button>
@@ -403,7 +366,7 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
                         />
 
                         {/* Amount + Max */}
-                        <div className="flex gap-2 mb-3">
+                        <div className="flex gap-1.5 sm:gap-2 mb-3">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -414,7 +377,7 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
                               if (/^\d*\.?\d*$/.test(v)) setSendAmount(v);
                             }}
                             disabled={sending}
-                            className="flex-1 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none text-sm disabled:opacity-50"
+                            className="flex-1 min-w-0 px-2 sm:px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-pink-500/50 focus:outline-none text-sm disabled:opacity-50"
                           />
                           <button
                             onClick={() => {
@@ -427,7 +390,7 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
                               }
                             }}
                             disabled={sending}
-                            className="px-3 py-2 text-xs font-medium bg-white/10 hover:bg-white/15 text-white/70 rounded-lg transition-colors disabled:opacity-50"
+                            className="px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium bg-white/10 hover:bg-white/15 text-white/70 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
                           >
                             25%
                           </button>
@@ -442,14 +405,14 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
                               }
                             }}
                             disabled={sending}
-                            className="px-3 py-2 text-xs font-medium bg-white/10 hover:bg-white/15 text-white/70 rounded-lg transition-colors disabled:opacity-50"
+                            className="px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium bg-white/10 hover:bg-white/15 text-white/70 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
                           >
                             50%
                           </button>
                           <button
                             onClick={handleMax}
                             disabled={sending}
-                            className="px-3 py-2 text-xs font-medium bg-white/10 hover:bg-white/15 text-white/70 rounded-lg transition-colors disabled:opacity-50"
+                            className="px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium bg-white/10 hover:bg-white/15 text-white/70 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
                           >
                             Max
                           </button>
@@ -480,7 +443,55 @@ export default function WalletBalancesModal({ isOpen, onClose }: Props) {
                     )}
 
                   </div>
-                ) : null}
+      ) : null}
+    </>
+  );
+
+  if (inline) {
+    return <div className="neon-border rounded-2xl p-4 md:p-6 bg-black/30">{walletContent}</div>;
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+            onClick={onClose}
+          />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 px-4"
+            onClick={onClose}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden my-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                <h2 className="text-xl font-bold text-white">Wallet Balances</h2>
+                <button
+                  onClick={onClose}
+                  className="text-white/60 hover:text-white transition-colors text-2xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-6">
+                {walletContent}
               </div>
             </div>
           </motion.div>

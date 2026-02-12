@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -9,6 +9,9 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import TopNav from "../components/TopNav";
 import RewardsTab from "../components/RewardsTab";
 import VotingParticipationStat from "../components/VotingParticipationStat";
+import CreditManagementModal from "../components/CreditManagementModal";
+import PayoutCountdown from "../components/PayoutCountdown";
+import WalletBalancesModal from "../components/WalletBalancesModal";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import {
   getAssociatedTokenAddressSync,
@@ -87,6 +90,7 @@ type AnalyticsData = {
     totalModDislikes: number;
     utilizedComments: number;
     totalXessPaid: number;
+    totalXessClaimed: number;
     claimableXess: number;
     estimatedPendingXess: number;
   };
@@ -136,11 +140,23 @@ function truncateWallet(address: string | null): string {
 }
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <ProfilePageInner />
+    </Suspense>
+  );
+}
+
+function ProfilePageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { publicKey: walletPublicKey, signTransaction, connected: walletConnected } = useWallet();
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "analytics" | "referrals" | "history">("profile");
+  const tabParam = searchParams.get("tab");
+  const validTabs = ["profile", "analytics", "referrals", "history", "wallet"] as const;
+  const initialTab = validTabs.includes(tabParam as typeof validTabs[number]) ? (tabParam as typeof validTabs[number]) : "profile";
+  const [activeTab, setActiveTab] = useState<typeof validTabs[number]>(initialTab);
 
   // Analytics state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -151,6 +167,7 @@ export default function ProfilePage() {
   const [showBenefitsModal, setShowBenefitsModal] = useState(false);
   // Special credits modal state
   const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [showCreditMgmtModal, setShowCreditMgmtModal] = useState(false);
   const [refCodeInput, setRefCodeInput] = useState("");
   const [refCodeLoading, setRefCodeLoading] = useState(false);
   const [refCodeError, setRefCodeError] = useState<string | null>(null);
@@ -982,11 +999,11 @@ export default function ProfilePage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-xl border border-white/10 bg-black/40 p-1">
+          <div className="flex justify-center mb-6 -mx-4 px-4">
+            <div className="inline-flex rounded-xl border border-white/10 bg-black/40 p-1 overflow-x-auto max-w-full scrollbar-hide">
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                   activeTab === "profile"
                     ? "bg-white/10 text-white"
                     : "text-white/50 hover:text-white"
@@ -998,7 +1015,7 @@ export default function ProfilePage() {
               {/* History tab */}
               <button
                 onClick={() => setActiveTab("history")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                   activeTab === "history"
                     ? "bg-white/10 text-white"
                     : "text-white/50 hover:text-white"
@@ -1010,7 +1027,7 @@ export default function ProfilePage() {
               {/* Referrals tab */}
               <button
                 onClick={() => setActiveTab("referrals")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                   activeTab === "referrals"
                     ? "bg-white/10 text-white"
                     : "text-white/50 hover:text-white"
@@ -1023,13 +1040,27 @@ export default function ProfilePage() {
               {isAuthed && (
                 <button
                   onClick={() => setActiveTab("analytics")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                     activeTab === "analytics"
                       ? "bg-white/10 text-white"
                       : "text-white/50 hover:text-white"
                   }`}
                 >
                   <span className="text-pink-500">Anal</span>ytics
+                </button>
+              )}
+
+              {/* Wallet tab */}
+              {isAuthed && (
+                <button
+                  onClick={() => setActiveTab("wallet")}
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
+                    activeTab === "wallet"
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  Wallet
                 </button>
               )}
             </div>
@@ -1342,14 +1373,20 @@ export default function ProfilePage() {
                 {data.walletAddress ? (
                   <div className="bg-gradient-to-r from-cyan-500/10 via-black/0 to-cyan-500/5 border border-cyan-400/30 rounded-xl p-4">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs text-cyan-400/80 uppercase tracking-wide">
+                      <button
+                        onClick={() => setShowCreditMgmtModal(true)}
+                        className="text-left group cursor-pointer hover:opacity-80 transition"
+                      >
+                        <div className="text-xs text-cyan-400/80 uppercase tracking-wide flex items-center gap-1">
                           Balance
+                          <svg className="w-3.5 h-3.5 text-white/30 group-hover:text-white/60 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
                         </div>
                         <div className="text-2xl font-bold text-cyan-400 mt-1">
                           {(Number(data.creditBalanceMicro || "0") / 1000).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Credits
                         </div>
-                      </div>
+                      </button>
                       <Link
                         href="/rewards-drawing"
                         className="px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-400 font-semibold hover:bg-cyan-500/30 transition text-sm"
@@ -1357,6 +1394,14 @@ export default function ProfilePage() {
                         Enter Drawing
                       </Link>
                     </div>
+                    {/* Current Tier */}
+                    <div className="mt-3 flex items-center justify-between bg-purple-500/10 border border-purple-400/30 rounded-lg px-3 py-2">
+                      <span className="text-xs text-white/70">Credit Tier</span>
+                      <span className="text-sm font-bold text-purple-300">
+                        {data.xessTier > 0 ? `Tier ${data.xessTier}` : "No Tier"}
+                      </span>
+                    </div>
+
                     <p className="text-xs mt-3">
                       <span className="animate-pulse-pink-white-black">Hold over 10k XESS tokens in your wallet to receive daily Special Credits (snapshot taken at random times).</span>{" "}
                       <button
@@ -1412,10 +1457,10 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xs text-yellow-400/80 uppercase tracking-wide">
-                            Total XESS Paid
+                            Total XESS Claimed
                           </div>
                           <div className="text-2xl font-bold text-yellow-400 mt-1">
-                            {(analyticsData?.totals?.totalXessPaid ?? memberRewards?.totalPaid ?? 0).toLocaleString()} XESS
+                            {(memberRewards?.totalPaid ?? analyticsData?.totals?.totalXessClaimed ?? 0).toLocaleString()} XESS
                           </div>
                         </div>
                         <Image
@@ -1447,18 +1492,21 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/40 rounded-xl">
-                    <div className="text-xs text-yellow-300/80 uppercase tracking-wide mb-1">
-                      {livePending?.currentWeek?.isActualPayout ? "This Week\u2019s Payout" : "This Week\u2019s Estimate"}
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/40 rounded-xl">
+                      <div className="text-xs text-yellow-300/80 uppercase tracking-wide mb-1">
+                        {livePending?.currentWeek?.isActualPayout ? "This Week\u2019s Payout" : "This Week\u2019s Estimate"}
+                      </div>
+                      <div className="text-xl font-bold text-yellow-400">
+                        {livePending?.currentWeek?.isActualPayout ? "" : "~"}{livePending?.currentWeek?.estimatedPending ?? "0"} XESS
+                      </div>
+                      <div className="text-xs text-white/50 mt-1">
+                        {livePending?.currentWeek?.isActualPayout
+                          ? (livePending.currentWeek.estimatedPending === "0" ? "Claimed" : "Ready to claim")
+                          : "Estimated from current activity"}
+                      </div>
                     </div>
-                    <div className="text-xl font-bold text-yellow-400">
-                      {livePending?.currentWeek?.isActualPayout ? "" : "~"}{livePending?.currentWeek?.estimatedPending ?? "0"} XESS
-                    </div>
-                    <div className="text-xs text-white/50 mt-1">
-                      {livePending?.currentWeek?.isActualPayout
-                        ? (livePending.currentWeek.estimatedPending === "0" ? "Claimed" : "Ready to claim")
-                        : `Next payout: ${livePending?.nextPayout?.countdown ?? ""}${livePending?.nextPayout?.label ? ` (${livePending.nextPayout.label})` : ""}`}
-                    </div>
+                    <PayoutCountdown variant="card" />
                   </div>
                 </div>
               )}
@@ -1473,8 +1521,8 @@ export default function ProfilePage() {
                     <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 via-black/0 to-pink-500/10 border border-purple-400/20 rounded-xl">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-white/60">Current Week ({livePending.currentWeek.weekKey})</span>
-                        <span className="text-xs text-purple-400">
-                          Next payout: {livePending.nextPayout.countdown}{livePending.nextPayout.label ? ` (${livePending.nextPayout.label})` : ""}
+                        <span className="text-xs">
+                          Payout in <PayoutCountdown variant="compact" />
                         </span>
                       </div>
                       <div className="grid grid-cols-4 gap-2 text-center text-xs">
@@ -2095,6 +2143,9 @@ export default function ProfilePage() {
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           )}
+                          <span className={`text-xs sm:text-sm font-bold ${isCurrentTier ? "text-cyan-300" : "text-purple-300"} mr-1.5`}>
+                            T{t.tier}
+                          </span>
                           <span className={`text-xs sm:text-sm font-semibold ${isCurrentTier ? "text-white" : "text-white/90"}`}>
                             {t.min}+ XESS
                           </span>
@@ -2121,6 +2172,15 @@ export default function ProfilePage() {
                   >
                     Rewards Drawing
                   </Link>
+                  <button
+                    onClick={() => {
+                      setShowCreditsModal(false);
+                      setShowCreditMgmtModal(true);
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-purple-500/20 border border-purple-400/50 text-purple-400 font-semibold hover:bg-purple-500/30 transition text-sm"
+                  >
+                    My Ranking
+                  </button>
                   <button
                     onClick={() => setShowCreditsModal(false)}
                     className="py-2.5 px-4 rounded-xl bg-white/5 border border-white/20 text-white/70 font-semibold hover:bg-white/10 transition text-sm"
@@ -2523,8 +2583,17 @@ export default function ProfilePage() {
               )}
             </>
           )}
+
+          {/* Wallet Tab Content */}
+          {activeTab === "wallet" && isAuthed && (
+            <WalletBalancesModal isOpen={true} onClose={() => setActiveTab("profile")} inline />
+          )}
         </div>
       </div>
+      <CreditManagementModal
+        open={showCreditMgmtModal}
+        onClose={() => setShowCreditMgmtModal(false)}
+      />
     </main>
   );
 }

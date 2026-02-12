@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   const weekKey = req.nextUrl.searchParams.get("weekKey");
-  if (!weekKey || !/^\d{4}-\d{2}-\d{2}$/.test(weekKey)) {
+  if (!weekKey || !/^\d{4}-\d{2}-\d{2}(-P[12])?$/.test(weekKey)) {
     return NextResponse.json({ ok: false, error: "INVALID_WEEK_KEY" }, { status: 400 });
   }
 
