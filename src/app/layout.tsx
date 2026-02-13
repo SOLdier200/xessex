@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import "./globals.css";
 import Providers from "./providers";
 import { PageViewTracker } from "./components/PageViewTracker";
 import IncognitoButton from "./components/IncognitoButton";
 import { Toaster } from "sonner";
+
+// Presale site has NEXT_PUBLIC_PRESALE_ORIGIN empty; main site has it set
+const IS_PRESALE = !process.env.NEXT_PUBLIC_PRESALE_ORIGIN;
+const SITE_ORIGIN = IS_PRESALE ? "https://presale.xessex.me" : "https://xessex.me";
+const MAIN_ORIGIN = "https://xessex.me";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -26,7 +30,7 @@ export const metadata: Metadata = {
     "adult crypto rewards",
     "premium adult videos",
   ],
-  metadataBase: new URL("https://xessex.me"),
+  metadataBase: new URL(SITE_ORIGIN),
   alternates: {
     canonical: "/",
   },
@@ -43,7 +47,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://xessex.me",
+    url: SITE_ORIGIN,
     siteName: "Xessex",
     title: "Earn Crypto Watching Videos – Xessex Adult Rewards Platform",
     description:
@@ -87,7 +91,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "AdultEntertainment",
               "name": "Xessex",
-              "url": "https://xessex.me",
+              "url": SITE_ORIGIN,
               "description": "Watch high-quality HD adult videos and earn crypto rewards for watching and grading content.",
               "publisher": {
                 "@type": "Organization",
@@ -103,7 +107,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "Xessex",
-              "url": "https://xessex.me",
+              "url": SITE_ORIGIN,
               "description": "Premium adult platform with HD videos, top ranked content, and crypto rewards.",
               "audience": {
                 "@type": "PeopleAudience",
@@ -156,29 +160,29 @@ export default function RootLayout({
               Tokenomics
             </Link>
             <span>•</span>
-            <Link href="/rewards-drawing" className="hover:text-white transition">
+            <a href={`${MAIN_ORIGIN}/rewards-drawing`} className="hover:text-white transition">
               Rewards Drawing
-            </Link>
+            </a>
             <span>•</span>
-            <Link href="/faq" className="hover:text-white transition">
+            <a href={`${MAIN_ORIGIN}/faq`} className="hover:text-white transition">
               FAQ
-            </Link>
+            </a>
             <span>•</span>
-            <Link href="/terms" className="hover:text-white transition">
+            <a href={`${MAIN_ORIGIN}/terms`} className="hover:text-white transition">
               Terms
-            </Link>
+            </a>
             <span>•</span>
-            <Link href="/privacy" className="hover:text-white transition">
+            <a href={`${MAIN_ORIGIN}/privacy`} className="hover:text-white transition">
               Privacy
-            </Link>
+            </a>
             <span>•</span>
-            <Link href="/2257" className="hover:text-white transition">
+            <a href={`${MAIN_ORIGIN}/2257`} className="hover:text-white transition">
               18 U.S.C. §2257
-            </Link>
+            </a>
             <span>•</span>
-            <Link href="/contact" className="hover:text-white transition">
+            <a href={`${MAIN_ORIGIN}/contact`} className="hover:text-white transition">
               Contact
-            </Link>
+            </a>
           </div>
 
           {/* RTA - Centered */}
@@ -216,14 +220,14 @@ export default function RootLayout({
 
           {/* Site Logo */}
           <div className="flex justify-center mt-4">
-            <Link href="/" className="opacity-80 hover:opacity-100 transition">
+            <a href={MAIN_ORIGIN} className="opacity-80 hover:opacity-100 transition">
               <img
                 src="/logos/mainsitelogo.png"
                 alt="Xessex"
                 className="h-[49px] w-auto"
                 loading="lazy"
               />
-            </Link>
+            </a>
           </div>
 
           {/* Donate Button */}
