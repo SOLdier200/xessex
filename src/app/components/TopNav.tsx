@@ -204,39 +204,42 @@ export default function TopNav() {
     <header className="px-4 lg:px-6 py-4 lg:py-5 safe-top">
 
       {/* Single unified layout (works for desktop + mobile) */}
-      <div className="flex items-start justify-between gap-3">
-        {/* Left: Logo */}
-        <NavHref
-          href={isPresale ? MAIN_ORIGIN : "/"}
-          onClick={closeMenu}
-          title="Click for homepage"
-          className="shrink-0"
-        >
-          <Image
-            src="/logos/mainsitelogo.png"
-            alt="Xessex"
-            width={285}
-            height={95}
-            className="h-[77px] lg:h-[132px] w-auto"
-            priority
-          />
-        </NavHref>
-
-        {/* Right: WalletStatus + countdowns + menu icon */}
-        <div className="flex flex-col items-end gap-1.5 mt-[10px]">
-          {/* Countdowns + WalletStatus in one row */}
-          <motion.div
-            animate={{
-              y: menuOpen ? 2 : 0,
-              opacity: 1,
-            }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="flex items-center gap-2 md:gap-3"
+      <div className="flex flex-col">
+        <div className="flex items-start justify-between gap-3">
+          {/* Left: Logo */}
+          <NavHref
+            href={isPresale ? MAIN_ORIGIN : "/"}
+            onClick={closeMenu}
+            title="Click for homepage"
+            className="shrink-0"
           >
-            <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
-            <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
-            <WalletStatus />
-          </motion.div>
+            <Image
+              src="/logos/mainsitelogo.png"
+              alt="Xessex"
+              width={285}
+              height={95}
+              className="h-[77px] lg:h-[132px] w-auto"
+              priority
+            />
+          </NavHref>
+
+          {/* Right: WalletStatus + countdowns (desktop) + menu icon */}
+          <div className="flex flex-col items-end gap-1.5 mt-[10px]">
+            {/* Countdowns (desktop only) + WalletStatus in one row */}
+            <motion.div
+              animate={{
+                y: menuOpen ? 2 : 0,
+                opacity: 1,
+              }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="flex items-center gap-2 md:gap-3"
+            >
+              <div className="hidden md:flex items-center gap-3">
+                <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
+                <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
+              </div>
+              <WalletStatus />
+            </motion.div>
 
           {/* Menu (dropdownlogo trigger) */}
           <div className="relative" ref={menuRef}>
@@ -398,6 +401,13 @@ export default function TopNav() {
               )}
             </AnimatePresence>
           </div>
+        </div>
+      </div>
+
+        {/* Mobile: countdowns stacked below logo */}
+        <div className="flex md:hidden flex-wrap gap-2 mt-1.5">
+          <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
+          <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
         </div>
       </div>
 

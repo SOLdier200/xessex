@@ -158,6 +158,7 @@ export default function HoverPreviewVideo({
     }
 
     try {
+      v.playbackRate = 1;
       v.currentTime = times[idx];
     } catch {}
 
@@ -168,7 +169,7 @@ export default function HoverPreviewVideo({
       idx = (idx + 1) % times.length;
       try {
         vv.currentTime = times[idx];
-        void vv.play().catch(() => {});
+        // DO NOT call play() here — already playing from actuallyStartPreview
       } catch {}
     }, Math.max(0.5, segmentLen) * 1000);
   };
@@ -251,6 +252,8 @@ export default function HoverPreviewVideo({
       className={`relative ${className ?? ""}`}
       onMouseEnter={startPreview}
       onMouseLeave={stopPreview}
+      onMouseDown={stopPreview}
+      onTouchStart={stopPreview}
       aria-label={alt}
     >
       {/* Always-visible thumbnail */}

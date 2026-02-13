@@ -37,6 +37,5 @@ export async function GET(
     canUnlock: access.unlocked || ctx.creditBalance >= access.unlockCost,
     isAuthed: ctx.isAuthed,
     hasWallet: ctx.hasWallet,
-    walletAddress: ctx.walletAddress,
   });
 }

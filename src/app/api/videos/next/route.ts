@@ -5,11 +5,12 @@ import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const VIDEO_SELECT = {
+// SECURITY: Never select embedUrl in the initial query.
+// Only fetch it in a second query after access is confirmed.
+const VIDEO_SELECT_SAFE = {
   id: true,
   slug: true,
   title: true,
-  embedUrl: true,
   viewsCount: true,
   sourceViews: true,
   avgStars: true,
@@ -18,11 +19,23 @@ const VIDEO_SELECT = {
 };
 
 /**
- * Pick a random free video (unlockCost = 0)
+ * Fetch embedUrl only after entitlement is confirmed.
+ */
+async function fetchEmbedUrl(videoId: string): Promise<string> {
+  const row = await db.video.findUnique({
+    where: { id: videoId },
+    select: { embedUrl: true },
+  });
+  return row?.embedUrl ?? "";
+}
+
+/**
+ * Pick a random free video (unlockCost = 0, active only)
  */
 async function pickFreeVideo(excludeViewkey: string | null) {
   const where = {
     unlockCost: 0,
+    isActive: true,
     ...(excludeViewkey ? { slug: { not: excludeViewkey } } : {}),
   };
 
@@ -32,7 +45,7 @@ async function pickFreeVideo(excludeViewkey: string | null) {
   const skip = Math.floor(Math.random() * total);
   const videos = await db.video.findMany({
     where,
-    select: VIDEO_SELECT,
+    select: VIDEO_SELECT_SAFE,
     orderBy: { rank: "asc" },
     skip,
     take: 1,
@@ -67,14 +80,6 @@ async function pickApprovedFromSqlite(excludeViewkey: string | null) {
   }
 }
 
-// SECURITY: Strip embedUrl unless video is actually accessible
-function safeVideoResponse(video: typeof VIDEO_SELECT extends infer T ? { [K in keyof T]: any } : never, canWatch: boolean) {
-  return {
-    ...video,
-    embedUrl: canWatch ? video.embedUrl : "",
-  };
-}
-
 export async function GET(req: NextRequest) {
   const excludeViewkey = req.nextUrl.searchParams.get("excludeViewkey") || null;
   const access = await getAccessContext();
@@ -88,9 +93,9 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-    // Free videos (unlockCost=0) are always watchable
-    const canWatch = video.unlockCost === 0;
-    const res = NextResponse.json({ ok: true, next: safeVideoResponse(video, canWatch) });
+    // Free video: fetch embedUrl since it's always playable
+    const embedUrl = await fetchEmbedUrl(video.id);
+    const res = NextResponse.json({ ok: true, next: { ...video, embedUrl } });
     res.headers.set("Cache-Control", "no-store");
     return res;
   }
@@ -104,16 +109,17 @@ export async function GET(req: NextRequest) {
     if (!viewkey) break;
 
     const video = await db.video.findFirst({
-      where: { slug: viewkey },
-      select: VIDEO_SELECT,
+      where: { slug: viewkey, isActive: true },
+      select: VIDEO_SELECT_SAFE,
     });
 
     if (video && userId) {
       // Check if user can access this video
       const accessCheck = await canAccessVideo(userId, video.id);
       if (accessCheck.canAccess) {
-        // User has access - can watch
-        const res = NextResponse.json({ ok: true, next: safeVideoResponse(video, true) });
+        // User has access - fetch embedUrl only now
+        const embedUrl = await fetchEmbedUrl(video.id);
+        const res = NextResponse.json({ ok: true, next: { ...video, embedUrl } });
         res.headers.set("Cache-Control", "no-store");
         return res;
       }
@@ -123,9 +129,8 @@ export async function GET(req: NextRequest) {
   // Fallback to free video if no unlocked video found
   const freeVideo = await pickFreeVideo(excludeViewkey);
   if (freeVideo) {
-    // Free videos are always watchable
-    const canWatch = freeVideo.unlockCost === 0;
-    const res = NextResponse.json({ ok: true, next: safeVideoResponse(freeVideo, canWatch) });
+    const embedUrl = await fetchEmbedUrl(freeVideo.id);
+    const res = NextResponse.json({ ok: true, next: { ...freeVideo, embedUrl } });
     res.headers.set("Cache-Control", "no-store");
     return res;
   }

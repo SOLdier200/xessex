@@ -159,21 +159,43 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   // Helper to check if video is locked for this user
   const isVideoLocked = (viewkey: string): boolean => {
     const unlockCost = unlockCostMap.get(viewkey);
-    // SECURITY: If video has no DB entry, treat as locked (never default to free)
+
+    // SECURITY: if it isn't in the DB map, treat as locked (never default to free)
     if (unlockCost == null) return true;
-    if (unlockCost === 0) return false; // Free video
-    if (access.isAdminOrMod) return false; // Admin/mod can see all
+
+    // Free video
+    if (unlockCost === 0) return false;
+
+    // TESTING: do NOT allow admin/mod bypass right now
+    // if (access.isAdminOrMod) return false;
+
     const videoId = videoIdMap.get(viewkey);
-    if (videoId && userUnlockedSet.has(videoId)) return false; // User unlocked it
+
+    // If somehow we have an unlockCost but no videoId, lock it
+    if (!videoId) return true;
+
+    // User must have an unlock record
+    if (userUnlockedSet.has(videoId)) return false;
+
     return true;
   };
 
-  // Only show videos that exist in DB and are active
+  // Only show videos that exist in DB and are active (hide phantom items)
   const dbSlugSet = new Set(dbVideos.map((v) => v.slug));
-  const activeApproved = allApprovedVideos.filter((v) => dbSlugSet.has(v.viewkey));
+  const approvedInDb = allApprovedVideos.filter((v) => dbSlugSet.has(v.viewkey));
+
+  // Debug log — remove after confirming fix
+  const missing = allApprovedVideos.filter((v) => !dbSlugSet.has(v.viewkey));
+  console.log("COLLECTION_DEBUG", {
+    category: slug,
+    approvedJsonTotal: allApprovedVideos.length,
+    dbTotal: dbVideos.length,
+    missingFromDb: missing.length,
+    sampleMissing: missing.slice(0, 5).map((v) => v.viewkey),
+  });
 
   // Merge rank into approved videos
-  const allVideos = activeApproved.map((v) => ({
+  const allVideos = approvedInDb.map((v) => ({
     ...v,
     rank: rankMap.get(v.viewkey) ?? null,
     primary_thumb: v.primary_thumb || thumbMap.get(v.viewkey) || null,
@@ -226,6 +248,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         </Link>
 
         <section className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-semibold neon-text text-center mb-3">{categoryInfo.name}</h1>
           {categoryInfo.image ? (
             <div className="flex flex-col items-center">
               <img
@@ -238,14 +261,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               </p>
             </div>
           ) : (
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex flex-col items-center">
               <span className="text-3xl md:text-4xl">{categoryInfo.icon}</span>
-              <div>
-                <h1 className="text-xl md:text-2xl font-semibold neon-text">{categoryInfo.name}</h1>
-                <p className="mt-1 text-sm text-white/70">
-                  {videos.length} videos
-                </p>
-              </div>
+              <p className="mt-1 text-sm text-white/70">
+                {videos.length} videos
+              </p>
             </div>
           )}
           <div className="mt-4 border-t border-white/10" />
