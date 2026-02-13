@@ -124,10 +124,14 @@ export default function HomeStatusBar() {
         )}
 
         {/* Payout Countdown - clickable → payout history modal */}
-        <PayoutCountdown variant="card" showSeconds onClick={() => setShowPayoutHistory(true)} />
+        <div className="col-span-2 sm:col-span-1">
+          <PayoutCountdown variant="card" showSeconds onClick={() => setShowPayoutHistory(true)} />
+        </div>
 
         {/* Credit Accrual Countdown */}
-        <CreditAccrualCountdown variant="card" />
+        <div className="col-span-2 sm:col-span-1">
+          <CreditAccrualCountdown variant="card" />
+        </div>
       </div>
 
       {/* Tiers Modal */}

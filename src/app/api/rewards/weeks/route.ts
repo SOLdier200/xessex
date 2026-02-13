@@ -15,12 +15,15 @@ export async function GET() {
   }
 
   // Get distinct week keys where user has rewards
-  const weeks = await db.rewardEvent.findMany({
+  const VALID_WEEK_KEY = /^\d{4}-\d{2}-\d{2}(-P[12])?$/;
+  const allWeeks = await db.rewardEvent.findMany({
     where: { userId: user.id },
     select: { weekKey: true },
     distinct: ["weekKey"],
     orderBy: { weekKey: "desc" },
   });
+  // Filter out test/malformed weekKeys
+  const weeks = allWeeks.filter((w) => VALID_WEEK_KEY.test(w.weekKey));
 
   // For each week, calculate totals
   const weekSummaries = await Promise.all(

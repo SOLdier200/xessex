@@ -63,6 +63,14 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
     fetchData();
   }, [open, fetchData]);
 
+  // Refresh when claims happen from other components (e.g. profile page)
+  useEffect(() => {
+    if (!open) return;
+    const handleClaimed = () => fetchData();
+    window.addEventListener("xess-claimed", handleClaimed);
+    return () => window.removeEventListener("xess-claimed", handleClaimed);
+  }, [open, fetchData]);
+
   if (!open) return null;
 
   const hasUnclaimed = data && BigInt(data.allTime.pending) > 0n;

@@ -27,7 +27,7 @@ export default function XessexContentGallery() {
               <div className="neon-border-gold rounded-2xl overflow-hidden bg-black/30">
                 <div className="relative w-full aspect-video">
                   <HoverPreviewVideo
-                    src={item.videoUrl}
+                    src={item.previewUrl}
                     poster={item.thumbnailUrl}
                     alt={item.title}
                     className="w-full h-full"

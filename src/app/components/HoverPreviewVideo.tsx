@@ -187,6 +187,7 @@ export default function HoverPreviewVideo({
 
       if (v.readyState < 1) v.load();
       if (startAt > 0) v.currentTime = startAt;
+      v.playbackRate = 1;
 
       await v.play();
     } catch {

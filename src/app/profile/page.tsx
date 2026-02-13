@@ -445,26 +445,10 @@ function ProfilePageInner() {
     }
   }, [activeTab, referralSummary, referralLoading]);
 
-  // Load rewards totals for all users (for XESS display on profile)
+  // Load rewards totals on mount (uses refreshMemberRewards defined below)
   useEffect(() => {
     if (!memberRewards) {
-      fetch("/api/rewards/weeks")
-        .then((res) => res.json())
-        .then((json) => {
-          if (json.ok && json.allTime) {
-            // Amounts are stored with 6 decimals
-            const DECIMALS = 1_000_000;
-            const paid = Number(BigInt(json.allTime.paid || "0") / BigInt(DECIMALS));
-            const pending = Number(BigInt(json.allTime.pending || "0") / BigInt(DECIMALS));
-            setMemberRewards({
-              totalPaid: paid,      // Actually claimed rewards
-              pendingXess: pending, // Ready to claim but not yet claimed
-            });
-          }
-        })
-        .catch(() => {
-          // Silent fail
-        });
+      refreshMemberRewards();
     }
   }, [memberRewards]);
 
@@ -553,6 +537,16 @@ function ProfilePageInner() {
     }, 240000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Listen for claim events from PayoutHistoryModal (or other components)
+  useEffect(() => {
+    const handleClaimed = () => {
+      refreshMemberRewards();
+      refreshLivePending();
+    };
+    window.addEventListener("xess-claimed", handleClaimed);
+    return () => window.removeEventListener("xess-claimed", handleClaimed);
   }, []);
 
   // Claim all unclaimed weeks handler
@@ -746,6 +740,9 @@ function ProfilePageInner() {
       } else {
         toast.error("Failed to claim any weeks");
       }
+
+      // Notify other components (e.g. PayoutHistoryModal) that claims changed
+      window.dispatchEvent(new Event("xess-claimed"));
 
       // Refresh all data to update UI
       await Promise.all([
@@ -957,6 +954,9 @@ function ProfilePageInner() {
           duration: 8000,
         });
       }
+
+      // Notify other components that claims changed
+      window.dispatchEvent(new Event("xess-claimed"));
 
       // Refresh all data to update UI
       await Promise.all([

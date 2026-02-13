@@ -53,18 +53,14 @@ export default async function XessexContentWatchPage({
   if (ctx.user) {
     creditBalance = ctx.creditBalance;
 
-    if (ctx.isAdminOrMod) {
-      unlocked = true;
-    } else {
-      const existing = await db.specialCreditLedger.findFirst({
-        where: {
-          refType: "XESSEX_CONTENT_UNLOCK",
-          refId: `${ctx.user.id}_${id}`,
-        },
-        select: { id: true },
-      });
-      unlocked = !!existing;
-    }
+    const existing = await db.specialCreditLedger.findFirst({
+      where: {
+        refType: "XESSEX_CONTENT_UNLOCK",
+        refId: `${ctx.user.id}_${id}`,
+      },
+      select: { id: true },
+    });
+    unlocked = !!existing;
   }
 
   // User permissions

@@ -107,8 +107,8 @@ export default function CreditPayoutHistoryModal({ open, onClose }: Props) {
         if (d.ok) {
           setRecentDays(d.recent);
           setMonths(d.months);
-          if (d.months.length > 0 && !selectedMonth) {
-            setSelectedMonth(d.months[0]);
+          if (d.months.length > 0) {
+            setSelectedMonth((prev) => prev || d.months[0]);
           }
         } else {
           throw new Error("Failed to load");
@@ -116,7 +116,7 @@ export default function CreditPayoutHistoryModal({ open, onClose }: Props) {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [selectedMonth]);
+  }, []);
 
   const fetchMonth = useCallback((m: string) => {
     setMonthLoading(true);
