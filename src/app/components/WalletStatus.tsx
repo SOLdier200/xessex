@@ -104,8 +104,13 @@ export default function WalletStatus() {
   // Handle click based on state
   const handleClick = () => {
     if (!authed) {
-      // Not logged in - redirect to wallet connect/sign-in
-      router.push("/login/diamond");
+      // Not logged in - redirect to wallet connect/sign-in on main site
+      const isPresale = typeof window !== "undefined" && window.location.hostname.startsWith("presale.");
+      if (isPresale) {
+        window.location.href = "https://xessex.me/login/diamond";
+      } else {
+        router.push("/login/diamond");
+      }
     } else {
       // Refresh auth data (gets fresh avatar signed URL) then show modal
       fetchAuth(0);

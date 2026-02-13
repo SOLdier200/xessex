@@ -339,6 +339,39 @@ export default function LaunchClient() {
     setIsSubmitting(true);
 
     try {
+      // Pre-flight: validate eligibility server-side BEFORE sending any funds
+      toast.loading("Verifying eligibility...", { id: "preflight" });
+      const preflightRes = await fetchPresale("/api/sale/contribute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          preflight: true,
+          phase: cfg.activePhase,
+          asset,
+          xessAmount: xessPreview,
+          whitelistProofHex: whitelistProof?.proofHex,
+        }),
+      });
+      toast.dismiss("preflight");
+
+      const preflightData = await preflightRes.json();
+      if (!preflightData.ok) {
+        const errorMessages: Record<string, string> = {
+          unauthorized: "Please sign in with your wallet first",
+          phase_not_active: "This sale phase is not currently active",
+          not_whitelisted: "Your wallet is not on the whitelist for this phase",
+          missing_whitelist_proof: "Your wallet is not on the whitelist for this phase",
+          cap_exceeded: "You've exceeded your wallet cap",
+          sold_out: "This phase is sold out",
+          invalid_phase: "Invalid sale phase",
+          amount_must_be_positive: "Amount must be positive",
+        };
+        toast.error(errorMessages[preflightData.error] || `Cannot proceed: ${preflightData.error}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       const connection = new Connection(RPC_ENDPOINT, "confirmed");
       const walletPubkey = wallet.publicKey;
 

@@ -150,6 +150,8 @@ export async function POST(req: NextRequest) {
     const txSig = String(body?.txSig ?? "").trim();
     const whitelistProofHex = body?.whitelistProofHex as string[] | null;
 
+    const preflight = !!body?.preflight;
+
     let xessAmount: bigint;
     try {
       xessAmount = BigInt(body?.xessAmount ?? 0);
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "invalid_xess_amount" }, { status: 400, headers: noCache });
     }
 
-    if (!txSig) {
+    if (!preflight && !txSig) {
       return NextResponse.json({ ok: false, error: "missing_tx_sig" }, { status: 400, headers: noCache });
     }
 
@@ -240,6 +242,11 @@ export async function POST(req: NextRequest) {
 
     if (xessAmount > remaining) {
       return NextResponse.json({ ok: false, error: "sold_out" }, { status: 409, headers: noCache });
+    }
+
+    // Preflight mode: all validation passed, return early before on-chain work
+    if (preflight) {
+      return NextResponse.json({ ok: true, preflight: true }, { headers: noCache });
     }
 
     // Compute required payment
