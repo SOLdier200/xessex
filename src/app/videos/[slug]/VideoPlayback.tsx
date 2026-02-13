@@ -41,7 +41,7 @@ type RelatedVideo = {
 };
 
 type VideoAccess =
-  | { ok: true; unlocked: true; reason: "free" | "unlocked" | "staff"; unlockCost: number }
+  | { ok: true; unlocked: true; reason: "free" | "unlocked"; unlockCost: number }
   | { ok: true; unlocked: false; reason: "locked"; unlockCost: number; creditBalance: number }
   | { ok: false; error: "not_found" | "not_authenticated" };
 

@@ -282,12 +282,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               const videoId = videoIdMap.get(v.viewkey) || "";
               return (
                 <CollectionVideoCard
-                  key={locked ? `locked-${i}` : v.viewkey}
-                  videoId={locked ? "" : videoId}
-                  viewkey={locked ? "" : v.viewkey}
+                  key={v.viewkey}
+                  videoId={videoId}
+                  viewkey={v.viewkey}
                   title={locked ? "Locked Video" : v.title}
                   thumb={v.primary_thumb}
-                  duration={locked ? "" : formatDuration(v.duration)}
+                  duration={formatDuration(v.duration)}
                   rank={locked ? null : v.rank}
                   locked={locked}
                   isAuthed={access.isAuthed}

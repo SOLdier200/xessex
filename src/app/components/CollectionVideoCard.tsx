@@ -28,10 +28,16 @@ export default function CollectionVideoCard({
   views,
   isFavorite,
 }: Props) {
-  const canLink = !locked && viewkey;
-  const Wrapper = canLink ? Link : "div";
-  const wrapperProps = canLink
-    ? { href: `/videos/${viewkey}`, className: "neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition block" }
+  // Always link to video page — even locked cards navigate to /videos/[slug]
+  // so the user can see the unlock button there
+  const Wrapper = viewkey ? Link : "div";
+  const wrapperProps = viewkey
+    ? {
+        href: `/videos/${viewkey}`,
+        className: locked
+          ? "neon-border rounded-xl bg-black/30 overflow-hidden opacity-60 block"
+          : "neon-border rounded-xl bg-black/30 overflow-hidden hover:bg-white/5 active:bg-white/10 transition block",
+      }
     : { className: "neon-border rounded-xl bg-black/30 overflow-hidden opacity-60 cursor-not-allowed block" };
 
   return (
@@ -42,7 +48,7 @@ export default function CollectionVideoCard({
             <img
               src={thumb}
               alt={locked ? "Locked video" : title}
-              className={`w-full h-full object-cover ${locked ? "blur-sm" : "group-hover:scale-105"} transition-transform`}
+              className={`w-full h-full object-cover ${locked ? "" : "group-hover:scale-105"} transition-transform`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/30 text-[8px]">
@@ -62,7 +68,7 @@ export default function CollectionVideoCard({
               #{rank}
             </div>
           )}
-          {!locked && (
+          {duration && (
             <div className="hidden md:block absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 bg-black/80 px-1 py-0.5 rounded text-[8px] md:text-[10px] text-white">
               {duration}
             </div>

@@ -483,7 +483,8 @@ export default function VideoSearch({
               const isFree = freeSlugs.includes(v.viewkey);
               const hasUnlocked = localUnlockedSlugs.includes(v.viewkey);
               // Video is locked unless it's free, user has unlocked it, or user is admin/mod
-              const isLocked = !isAdminOrMod && !isFree && !hasUnlocked;
+              // Everyone must pay — no admin/mod bypass
+              const isLocked = !isFree && !hasUnlocked;
 
               if (isLocked) {
                 return (

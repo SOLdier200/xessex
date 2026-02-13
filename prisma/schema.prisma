@@ -1170,6 +1170,7 @@ model SaleConfig {
 
   // Whitelist for private sale (Merkle root hex)
   privateMerkleRootHex  String?
+  privateMerkleProofsJson String? // JSON: { "wallet": ["proof1", "proof2", ...] }
 
   // Optional time gates
   privateStartsAt       DateTime?

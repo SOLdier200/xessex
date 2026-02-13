@@ -3,15 +3,13 @@
  *
  * POST /api/admin/whitelist/rebuild
  * Reads all wallets from SaleWhitelist, builds Merkle tree,
- * writes whitelist.merkle.json, and updates SaleConfig.
+ * stores proofs in SaleConfig, and updates the root.
  */
 
 import { NextResponse } from "next/server";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
 
 export const runtime = "nodejs";
 
@@ -75,19 +73,13 @@ export async function POST() {
     const wallets = entries.map((e) => e.wallet.toLowerCase());
 
     if (wallets.length === 0) {
-      // Clear merkle root if no wallets
+      // Clear merkle root and proofs if no wallets
       const cfg = await db.saleConfig.findFirst();
       if (cfg) {
         await db.saleConfig.update({
           where: { id: cfg.id },
-          data: { privateMerkleRootHex: null },
+          data: { privateMerkleRootHex: null, privateMerkleProofsJson: null },
         });
-      }
-
-      // Remove merkle file if exists
-      const outPath = path.join(process.cwd(), "private", "whitelist.merkle.json");
-      if (fs.existsSync(outPath)) {
-        fs.unlinkSync(outPath);
       }
 
       return NextResponse.json(
@@ -108,20 +100,15 @@ export async function POST() {
 
     const rootHex = root.toString("hex");
 
-    // Write merkle file
-    const outDir = path.join(process.cwd(), "private");
-    if (!fs.existsSync(outDir)) {
-      fs.mkdirSync(outDir, { recursive: true });
-    }
-    const outPath = path.join(outDir, "whitelist.merkle.json");
-    fs.writeFileSync(outPath, JSON.stringify({ root: rootHex, proofs }, null, 2));
-
-    // Update SaleConfig
+    // Store root and proofs in DB
     const cfg = await db.saleConfig.findFirst();
     if (cfg) {
       await db.saleConfig.update({
         where: { id: cfg.id },
-        data: { privateMerkleRootHex: rootHex },
+        data: {
+          privateMerkleRootHex: rootHex,
+          privateMerkleProofsJson: JSON.stringify(proofs),
+        },
       });
     }
 

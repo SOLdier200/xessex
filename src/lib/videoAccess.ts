@@ -9,7 +9,7 @@ import { CREDIT_MICRO } from "@/lib/rewardsConstants";
 import { getUnlockCostForNext } from "@/lib/unlockPricing";
 
 export type VideoAccessResult =
-  | { ok: true; unlocked: true; reason: "free" | "unlocked" | "staff"; unlockCost: number }
+  | { ok: true; unlocked: true; reason: "free" | "unlocked"; unlockCost: number }
   | { ok: true; unlocked: false; reason: "locked"; unlockCost: number; creditBalance: number }
   | { ok: false; error: "not_found" | "not_authenticated" };
 
@@ -68,11 +68,7 @@ export async function getVideoAccessWithData(params: {
     return { ok: true, unlocked: true, reason: "free", unlockCost };
   }
 
-  // Staff override
-  if (isAdminOrMod) {
-    return { ok: true, unlocked: true, reason: "staff", unlockCost };
-  }
-
+  // Everyone must pay — no staff bypass
   // Locked video requires auth
   if (!userId) {
     return { ok: false, error: "not_authenticated" };
@@ -125,11 +121,7 @@ export async function getVideoAccess(params: {
     return { ok: true, unlocked: true, reason: "free", unlockCost };
   }
 
-  // Staff override
-  if (userRole === "ADMIN" || userRole === "MOD") {
-    return { ok: true, unlocked: true, reason: "staff", unlockCost };
-  }
-
+  // Everyone must pay — no staff bypass
   // Must be logged in for locked videos
   if (!userId) {
     return { ok: false, error: "not_authenticated" };

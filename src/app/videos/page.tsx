@@ -89,8 +89,24 @@ export default async function VideosPage() {
   // Calculate next unlock cost from progressive ladder
   const nextCost = getUnlockCostForNext(unlockedCount);
 
+  // Debug: identify why videos may appear unlocked
+  console.log("VIDEOS_LOCK_DEBUG", {
+    isAuthed: access.isAuthed,
+    isAdminOrMod: access.isAdminOrMod,
+    userId: access.user?.id ?? null,
+    dbVideos: dbVideos.length,
+    freeSlugs: freeSlugs.length,
+    unlockedSlugs: unlockedSlugs.length,
+    sampleFree: freeSlugs.slice(0, 5),
+    sampleUnlocked: unlockedSlugs.slice(0, 5),
+  });
+
+  // Only show videos that exist in DB (so unlockCost is known)
+  const dbSlugSet = new Set(dbVideos.map((v) => v.slug));
+
   // Merge rank into approved videos and sort by rank
   const videos = approvedVideos
+    .filter((v) => dbSlugSet.has(v.viewkey))
     .map((v) => ({
       ...v,
       rank: rankMap.get(v.viewkey) ?? null,
@@ -133,7 +149,7 @@ export default async function VideosPage() {
         <VideoSearch
           videos={videos}
           isAuthed={isAuthed}
-          isAdminOrMod={access.isAdminOrMod}
+          isAdminOrMod={false}
           freeSlugs={freeSlugs}
           unlockedSlugs={unlockedSlugs}
           creditBalance={access.creditBalance}
