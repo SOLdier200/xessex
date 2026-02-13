@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
     // Apply 3% slippage tolerance for SOL payments
     const minAcceptableLamports = requiredLamports * 9700n / 10000n;
 
-    const requiredUsdcAtomic = (priceUsdMicros * xessAmount) / 1_000_000n;
+    const requiredUsdcAtomic = priceUsdMicros * xessAmount;
 
     // On-chain verification
     const connection = new Connection(RPC_URL, "confirmed");

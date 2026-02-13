@@ -284,7 +284,8 @@ export default function LaunchClient() {
       }
       xessAmount = lamports / lamportsPerXess;
     } else {
-      // For USDC: xessAmount = (usdcAtomic * 1_000_000) / priceUsdMicros
+      // For USDC: xessAmount = usdcAtomic / priceUsdMicros
+      // Both usdcAtomic and priceUsdMicros share the same 10^6 scaling, so they cancel out
       const usdcAtomic = BigInt(Math.floor(numAmount * 1_000_000));
       const priceUsdMicros = cfg.activePhase === "private"
         ? BigInt(cfg.privatePriceUsdMicros)
@@ -294,7 +295,7 @@ export default function LaunchClient() {
         setXessPreview(null);
         return;
       }
-      xessAmount = (usdcAtomic * 1_000_000n) / priceUsdMicros;
+      xessAmount = usdcAtomic / priceUsdMicros;
     }
 
     setXessPreview(xessAmount.toString());
