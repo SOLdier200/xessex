@@ -405,7 +405,7 @@ export default function TopNav() {
       </div>
 
         {/* Mobile: countdowns stacked below logo */}
-        <div className="flex md:hidden flex-wrap gap-2 mt-1.5">
+        <div className="flex md:hidden flex-col gap-1.5 mt-1.5">
           <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
           <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
         </div>

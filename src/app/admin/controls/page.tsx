@@ -246,6 +246,44 @@ export default function AdminControlsPage() {
           </Link>
         </div>
 
+        {/* Credit Accrual History Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-lime-500/20 border border-lime-400/50 flex items-center justify-center">
+              <span className="text-2xl">💎</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Credit Accrual History</h2>
+              <p className="text-sm text-white/60">View all credit accruals per user</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/credit-history"
+            className="block w-full px-4 py-3 rounded-xl border border-lime-400/50 bg-lime-500/20 text-lime-200 font-semibold hover:bg-lime-500/30 transition text-center"
+          >
+            View Credit History
+          </Link>
+        </div>
+
+        {/* XESS Token Payment History Card */}
+        <div className="neon-border rounded-2xl p-6 bg-black/30">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center">
+              <span className="text-2xl">🧾</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">XESS Token Payments</h2>
+              <p className="text-sm text-white/60">Twice-weekly payout history per user</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/xess-payments"
+            className="block w-full px-4 py-3 rounded-xl border border-amber-400/50 bg-amber-500/20 text-amber-200 font-semibold hover:bg-amber-500/30 transition text-center"
+          >
+            View Payments
+          </Link>
+        </div>
+
         {/* Wallet Whitelist Card */}
         <div className="neon-border rounded-2xl p-6 bg-black/30">
           <div className="flex items-center gap-3 mb-4">

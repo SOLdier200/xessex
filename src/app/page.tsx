@@ -268,7 +268,7 @@ export default async function HomePage() {
           })()}
 
           {/* Top Ranked Video — hidden until Top 20 reveal */}
-          <RevealGate delay={3200}>
+          <RevealGate delay={4000}>
             {videos.length > 0 && (() => {
               const topRanked = videos.find((v) => v.rank === 1) || videos[0];
               const isTopFree = freeSet.has(topRanked.viewkey);

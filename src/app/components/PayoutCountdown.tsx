@@ -226,7 +226,7 @@ export default function PayoutCountdown({ variant = "card", className = "", onCl
           </div>
         )}
         <span className="relative z-10 text-white/50 font-medium">Xess Payout:</span>
-        <span className={`relative z-10 ${color} ${glowClass} font-bold`}>{countdown}</span>
+        <span className={`relative z-10 ${color} ${glowClass} font-bold tabular-nums`}>{countdown}</span>
       </Tag>
     );
   }

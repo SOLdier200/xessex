@@ -218,7 +218,7 @@ export default function CreditAccrualCountdown({ variant = "card", className = "
           </div>
         )}
         <span className="relative z-10 text-white/50 font-medium">Credit Payout:</span>
-        <span className={`relative z-10 ${color} ${glowClass} font-bold`}>{countdown}</span>
+        <span className={`relative z-10 ${color} ${glowClass} font-bold tabular-nums`}>{countdown}</span>
       </Tag>
     );
   }
