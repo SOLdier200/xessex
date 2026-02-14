@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
       status: true,
       createdAt: true,
       paidAt: true,
+      claimedAt: true,
       txSig: true,
     },
     orderBy: { createdAt: "asc" },
@@ -44,25 +45,25 @@ export async function GET(req: NextRequest) {
     if (r.refType?.startsWith("xessex:")) key = `${r.type}:xessex`;
     else if (r.refType?.startsWith("embed:")) key = `${r.type}:embed`;
 
+    const userStatus = r.claimedAt ? "CLAIMED" : r.status === "PAID" ? "PENDING_CLAIM" : r.status;
+
     if (!byType[key]) {
-      byType[key] = { amount: "0", status: r.status, count: 0, refType: r.refType ?? undefined };
+      byType[key] = { amount: "0", status: userStatus, count: 0, refType: r.refType ?? undefined };
     }
     byType[key].amount = (BigInt(byType[key].amount) + r.amount).toString();
     byType[key].count++;
-    // If any reward is still PENDING, mark the type as PENDING
-    if (r.status === "PENDING") {
-      byType[key].status = "PENDING";
+    // If any reward is not yet claimed, mark the type as not claimed
+    if (userStatus !== "CLAIMED") {
+      byType[key].status = userStatus;
     }
   }
 
-  // Calculate totals
+  // Calculate totals — "paid" means actually claimed by user (claimedAt set)
   const total = rewards.reduce((sum, r) => sum + r.amount, 0n);
-  const pending = rewards
-    .filter((r) => r.status === "PENDING")
+  const claimed = rewards
+    .filter((r) => r.claimedAt !== null)
     .reduce((sum, r) => sum + r.amount, 0n);
-  const paid = rewards
-    .filter((r) => r.status === "PAID")
-    .reduce((sum, r) => sum + r.amount, 0n);
+  const pending = total - claimed;
 
   return NextResponse.json({
     ok: true,
@@ -72,16 +73,17 @@ export async function GET(req: NextRequest) {
       type: r.type,
       refType: r.refType,
       amount: r.amount.toString(),
-      status: r.status,
+      status: r.claimedAt ? "CLAIMED" : r.status === "PAID" ? "PENDING_CLAIM" : r.status,
       createdAt: r.createdAt.toISOString(),
       paidAt: r.paidAt?.toISOString() ?? null,
+      claimedAt: r.claimedAt?.toISOString() ?? null,
       txSig: r.txSig,
     })),
     byType,
     totals: {
       total: total.toString(),
       pending: pending.toString(),
-      paid: paid.toString(),
+      paid: claimed.toString(),
     },
   });
 }

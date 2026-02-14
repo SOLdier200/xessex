@@ -1,7 +1,6 @@
 import Link from "next/link";
 import TopNav from "../components/TopNav";
 import { XESSEX_CONTENT } from "@/lib/xessexContent";
-import HoverPreviewVideo from "@/app/components/HoverPreviewVideo";
 
 export const metadata = {
   title: "Xessex Content",
@@ -26,11 +25,11 @@ export default function XessexContentGallery() {
             >
               <div className="neon-border-gold rounded-2xl overflow-hidden bg-black/30">
                 <div className="relative w-full aspect-video">
-                  <HoverPreviewVideo
-                    src={item.previewUrl}
-                    poster={item.thumbnailUrl}
+                  <img
+                    src={item.thumbnailUrl}
                     alt={item.title}
-                    className="w-full h-full"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    draggable={false}
                   />
                 </div>
 

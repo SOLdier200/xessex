@@ -225,7 +225,8 @@ export default function RewardsTab() {
           {/* History */}
           <div className="space-y-2">
             {weekDetail.rewards.map((r) => {
-              const isPaid = r.status === "PAID";
+              const isClaimed = r.status === "CLAIMED";
+              const isPendingClaim = r.status === "PENDING_CLAIM";
               const refColor = getRefLevelColor(r.type);
               return (
                 <div
@@ -242,7 +243,7 @@ export default function RewardsTab() {
                   <div className="text-right flex-shrink-0 max-w-[45%]">
                     <div className={`font-medium text-sm whitespace-nowrap ${refColor ?? "text-white"}`}>{formatXess6(r.amount)} XESS</div>
 
-                    {isPaid ? (
+                    {isClaimed ? (
                       r.txSig ? (
                         <a
                           href={solanaExplorerTxUrl(r.txSig)}
@@ -254,10 +255,12 @@ export default function RewardsTab() {
                           Claimed
                         </a>
                       ) : (
-                        <div className="text-xs text-green-400">Paid</div>
+                        <div className="text-xs text-green-400">Claimed</div>
                       )
+                    ) : isPendingClaim ? (
+                      <div className="text-xs text-yellow-400">Pending Claim</div>
                     ) : (
-                      <div className="text-xs text-yellow-400">Pending</div>
+                      <div className="text-xs text-white/50">Pending</div>
                     )}
                   </div>
                 </div>

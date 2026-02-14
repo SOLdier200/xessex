@@ -469,6 +469,38 @@ a {
   }
 }
 
+/* Top 20 reveal — card-deal animation */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-60px) translateY(-30px) rotate(-12deg) scale(0.7);
+  }
+  40% {
+    opacity: 1;
+    transform: translateX(8px) translateY(4px) rotate(2deg) scale(1.04);
+  }
+  70% {
+    transform: translateX(-3px) translateY(-2px) rotate(-0.5deg) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+/* Top 20 logo glow pulse */
+@keyframes top20-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(255, 43, 214, 0.4)) drop-shadow(0 0 12px rgba(255, 182, 217, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 43, 214, 0.7)) drop-shadow(0 0 24px rgba(255, 182, 217, 0.4));
+  }
+}
+.animate-top20-glow {
+  animation: top20-glow 2s ease-in-out infinite;
+}
+
 /* Thin scrollbar for horizontal scroll areas */
 .scrollbar-thin {
   scrollbar-width: thin;

@@ -536,7 +536,14 @@ function ProfilePageInner() {
       refreshLivePending();
     }, 240000);
 
-    return () => clearInterval(interval);
+    // Refresh when user returns to this tab (e.g. after rating a video)
+    const onFocus = () => refreshLivePending();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   // Listen for claim events from PayoutHistoryModal (or other components)

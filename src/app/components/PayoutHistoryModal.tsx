@@ -41,6 +41,7 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<WeeksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasClaimableEpochs, setHasClaimableEpochs] = useState(false);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -56,6 +57,12 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Check if there are actually claimable on-chain epochs
+    fetch("/api/rewards/claim/all")
+      .then((r) => r.json())
+      .then((d) => setHasClaimableEpochs(!!(d.ok && d.claimableEpochs?.length)))
+      .catch(() => setHasClaimableEpochs(false));
   }, []);
 
   useEffect(() => {
@@ -73,7 +80,7 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const hasUnclaimed = data && BigInt(data.allTime.pending) > 0n;
+  const hasUnclaimed = data && BigInt(data.allTime.pending) > 0n && hasClaimableEpochs;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto overscroll-contain min-h-[100dvh]">
@@ -124,7 +131,9 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-yellow-400/70 uppercase tracking-wide">Unclaimed</div>
+                  <div className="text-[10px] text-yellow-400/70 uppercase tracking-wide">
+                    {hasClaimableEpochs ? "Unclaimed" : "Pending"}
+                  </div>
                   <div className="text-lg font-bold text-yellow-400 mt-0.5">
                     {formatXess6(data.allTime.pending)}
                   </div>
@@ -176,12 +185,12 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
                           )}
                           {partiallyClaimed && (
                             <span className="text-xs text-amber-400">
-                              {formatXess6(w.paid)} claimed, {formatXess6(w.pending)} unclaimed
+                              {formatXess6(w.paid)} claimed, {formatXess6(w.pending)} {hasClaimableEpochs ? "unclaimed" : "pending"}
                             </span>
                           )}
                           {nothingClaimed && (
                             <span className="text-xs text-yellow-400">
-                              {formatXess6(w.pending)} ready to claim
+                              {formatXess6(w.pending)} {hasClaimableEpochs ? "ready to claim" : "pending"}
                             </span>
                           )}
                         </div>

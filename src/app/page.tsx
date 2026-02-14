@@ -8,6 +8,7 @@ import LockedFeaturedCard from "./components/LockedFeaturedCard";
 import RoadmapMarquee from "./components/RoadmapMarquee";
 import HoverPreviewVideo from "./components/HoverPreviewVideo";
 import VideoCardWithPlaylist from "./components/VideoCardWithPlaylist";
+import Top20Reveal, { Top20RevealProvider, RevealGate } from "./components/Top20Reveal";
 import { getAccessContext } from "@/lib/access";
 import { db } from "@/lib/prisma";
 
@@ -74,24 +75,6 @@ export default async function HomePage() {
   const idMap = new Map(dbVideos.map((v) => [v.slug, v.id]));
   const freeSlugs = dbVideos.filter((v) => v.unlockCost === 0).map((v) => v.slug);
 
-  // Get XESSEX videos (original content)
-  const xessexVideos = await db.video.findMany({
-    where: { kind: "XESSEX", isActive: true },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      thumbnailUrl: true,
-      posterUrl: true,
-      mediaUrl: true,
-      unlockCost: true,
-      viewsCount: true,
-      rank: true,
-    },
-    orderBy: { sortOrder: "asc" },
-    take: 3,
-  });
-
   // Get user's unlocked videos if authenticated
   let unlockedSlugs: string[] = [];
   if (access.user?.id) {
@@ -136,57 +119,51 @@ export default async function HomePage() {
       <TopNav />
 
       <div className="px-4 md:px-6 pb-10">
+        <Top20RevealProvider>
 
         {/* Top 20 Videos */}
-        <section className="rounded-2xl p-4 md:p-6 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #050a1a, #0a1628)', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")` }}>
-          <div className="mb-4">
-            <Image src="/logos/textlogo/siteset3/top20100.png" alt="Top 20" width={938} height={276} className="h-[51px] w-auto" />
-          </div>
+        <Top20Reveal>
+          {videos.slice(0, 21).map((v) => {
+            const isFree = freeSet.has(v.viewkey);
+            const hasUnlocked = unlockedSet.has(v.viewkey);
+            const isLocked = !isFree && !hasUnlocked;
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-y-2 sm:gap-x-1.5">
-            {videos.slice(0, 21).map((v) => {
-              const isFree = freeSet.has(v.viewkey);
-              const hasUnlocked = unlockedSet.has(v.viewkey);
-              // Video is locked unless it's free OR user has unlocked it
-              const isLocked = !isFree && !hasUnlocked;
-
-              if (isLocked) {
-                return (
-                  <LockedVideoCard
-                    key={v.viewkey}
-                    viewkey={v.viewkey}
-                    title={v.title}
-                    thumb={v.primary_thumb}
-                    duration={formatDuration(v.duration)}
-                    rank={v.rank}
-                    isAuthed={isAuthed}
-                    size="small"
-                    className="w-full max-w-full sm:max-w-[98%] sm:mx-auto"
-                    viewsCount={v.xessViews ?? 0}
-                    showMetaBelow
-                  />
-                );
-              }
-
+            if (isLocked) {
               return (
-                <VideoCardWithPlaylist
+                <LockedVideoCard
                   key={v.viewkey}
-                  videoId={v.videoId || ""}
                   viewkey={v.viewkey}
                   title={v.title}
                   thumb={v.primary_thumb}
                   duration={formatDuration(v.duration)}
                   rank={v.rank}
-                  isFree={isFree}
                   isAuthed={isAuthed}
-                  viewsCount={v.xessViews ?? 0}
-                  isFavorite={v.favorite === 1}
+                  size="small"
                   className="w-full max-w-full sm:max-w-[98%] sm:mx-auto"
+                  viewsCount={v.xessViews ?? 0}
+                  showMetaBelow
                 />
               );
-            })}
-          </div>
-        </section>
+            }
+
+            return (
+              <VideoCardWithPlaylist
+                key={v.viewkey}
+                videoId={v.videoId || ""}
+                viewkey={v.viewkey}
+                title={v.title}
+                thumb={v.primary_thumb}
+                duration={formatDuration(v.duration)}
+                rank={v.rank}
+                isFree={isFree}
+                isAuthed={isAuthed}
+                viewsCount={v.xessViews ?? 0}
+                isFavorite={v.favorite === 1}
+                className="w-full max-w-full sm:max-w-[98%] sm:mx-auto"
+              />
+            );
+          })}
+        </Top20Reveal>
 
         {videos.length > 20 && (
           <div className="mt-6 text-center">
@@ -290,159 +267,69 @@ export default async function HomePage() {
             return card;
           })()}
 
-          {/* Top Ranked Video */}
-          {videos.length > 0 && (() => {
-            // Get actual #1 ranked video (find by rank=1, not array position)
-            const topRanked = videos.find((v) => v.rank === 1) || videos[0];
-            const isTopFree = freeSet.has(topRanked.viewkey);
-            const isTopUnlocked = unlockedSet.has(topRanked.viewkey);
-            // Locked unless free OR user has unlocked it
-            const isTopLocked = !isTopFree && !isTopUnlocked;
-            const topRankedViews = viewCountMap.get(topRanked.viewkey) ?? 0;
+          {/* Top Ranked Video — hidden until Top 20 reveal */}
+          <RevealGate delay={3200}>
+            {videos.length > 0 && (() => {
+              const topRanked = videos.find((v) => v.rank === 1) || videos[0];
+              const isTopFree = freeSet.has(topRanked.viewkey);
+              const isTopUnlocked = unlockedSet.has(topRanked.viewkey);
+              const isTopLocked = !isTopFree && !isTopUnlocked;
+              const topRankedViews = viewCountMap.get(topRanked.viewkey) ?? 0;
 
-            return (
-              <div className="w-full max-w-full md:max-w-[70%]">
-                <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
-                {isTopLocked ? (
-                  <LockedVideoCard
-                    viewkey={topRanked.viewkey}
-                    title={topRanked.title}
-                    thumb={topRanked.primary_thumb}
-                    duration={formatDuration(topRanked.duration)}
-                    rank={1}
-                    isAuthed={isAuthed}
-                    size="small"
-                    className="w-full"
-                    viewsCount={topRankedViews}
-                    showMetaBelow
-                    borderVariant="blue"
-                  />
-                ) : (
-                  <Link
-                    href={`/videos/${topRanked.viewkey}`}
-                    className="neon-border-blue rounded-lg sm:rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group block"
-                  >
-                    <div className="relative aspect-video bg-black/60">
-                      {topRanked.primary_thumb ? (
-                        <img
-                          src={topRanked.primary_thumb}
-                          alt={topRanked.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/30">
-                          No Thumbnail
-                        </div>
-                      )}
-                      <div
-                        className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
-                        style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
-                      >
-                        #1
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
-                      <span>{formatDuration(topRanked.duration)}</span>
-                      <span>{formatViews(topRankedViews)} XESS Views</span>
-                    </div>
-                  </Link>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Xessex Content Video */}
-          <div className="w-full max-w-full md:max-w-[70%]">
-            <h2 className="text-lg font-semibold text-yellow-400 mb-4">Xessex Original</h2>
-            {xessexVideos.length > 0 ? (
-              // Display first XESSEX video with link to its page
-              (() => {
-                const xv = xessexVideos[0];
-                const isXvFree = xv.unlockCost === 0;
-                const isXvUnlocked = unlockedSet.has(xv.slug);
-                const xvLocked = !isXvFree && !isXvUnlocked;
-
-                if (xvLocked) {
-                  return (
+              return (
+                <div className="w-full max-w-full md:max-w-[70%]">
+                  <h2 className="text-lg font-semibold text-yellow-400 mb-4">Top Ranked Video</h2>
+                  {isTopLocked ? (
                     <LockedVideoCard
-                      viewkey={xv.slug}
-                      title={xv.title}
-                      thumb={xv.thumbnailUrl || xv.posterUrl}
-                      duration=""
-                      rank={xv.rank}
-                      viewsCount={xv.viewsCount ?? 0}
+                      viewkey={topRanked.viewkey}
+                      title={topRanked.title}
+                      thumb={topRanked.primary_thumb}
+                      duration={formatDuration(topRanked.duration)}
+                      rank={1}
                       isAuthed={isAuthed}
-                      size="normal"
+                      size="small"
+                      className="w-full"
+                      viewsCount={topRankedViews}
                       showMetaBelow
-                      borderVariant="gold"
+                      borderVariant="blue"
                     />
-                  );
-                }
-
-                return (
-                  <Link href={`/videos/${xv.slug}`} className="block">
-                    <div className="neon-border-gold rounded-lg sm:rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group">
-                      {xv.mediaUrl ? (
-                        <HoverPreviewVideo
-                          src={xv.mediaUrl}
-                          poster={xv.thumbnailUrl || xv.posterUrl}
-                          alt={xv.title}
-                          segmentLen={2}
-                          segments={8}
-                          startAt={5}
-                          className="relative aspect-video bg-black/60"
-                          videoClassName="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="relative aspect-video bg-black/60">
-                          {xv.thumbnailUrl || xv.posterUrl ? (
-                            <img
-                              src={xv.thumbnailUrl || xv.posterUrl || ""}
-                              alt={xv.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white/30">
-                              No Thumbnail
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <div className="p-3">
-                        <div className="flex items-center justify-between text-[10px] md:text-xs text-white/70">
-                          <span className="text-yellow-400 font-medium">Xessex Original</span>
-                          <span>{formatViews(xv.viewsCount ?? 0)} Views</span>
+                  ) : (
+                    <Link
+                      href={`/videos/${topRanked.viewkey}`}
+                      className="neon-border-blue rounded-lg sm:rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group block"
+                    >
+                      <div className="relative aspect-video bg-black/60">
+                        {topRanked.primary_thumb ? (
+                          <img
+                            src={topRanked.primary_thumb}
+                            alt={topRanked.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/30">
+                            No Thumbnail
+                          </div>
+                        )}
+                        <div
+                          className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                          style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                        >
+                          #1
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                );
-              })()
-            ) : (
-              // Hardcoded XESSEX preview - links directly to video page
-              <Link href="/videos/pinkhairgirlfirst" className="block">
-                <div className="neon-border-gold rounded-2xl bg-black/30 overflow-hidden hover:bg-white/5 transition group cursor-pointer">
-                  <HoverPreviewVideo
-                    src="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.mp4"
-                    poster="https://pub-3be2d42bdfdd4dba95d39ef9bd537016.r2.dev/pinkhairgirlfirst.jpg"
-                    alt="Pink Hair Girl - Xessex Original"
-                    segmentLen={2}
-                    segments={8}
-                    startAt={5}
-                    className="relative aspect-video bg-black/60"
-                    videoClassName="w-full h-full object-cover"
-                  />
-                  <div className="p-3">
-                    <div className="flex items-center justify-between text-[10px] md:text-xs text-white/70">
-                      <span className="text-yellow-400 font-medium">Xessex Original</span>
-                      <span>Click to Watch</span>
-                    </div>
-                  </div>
+                      <div className="flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+                        <span>{formatDuration(topRanked.duration)}</span>
+                        <span>{formatViews(topRankedViews)} XESS Views</span>
+                      </div>
+                    </Link>
+                  )}
                 </div>
-              </Link>
-            )}
-          </div>
+              );
+            })()}
+          </RevealGate>
+
         </div>
+        </Top20RevealProvider>
 
       </div>
 
