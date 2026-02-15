@@ -89,8 +89,36 @@ async function main() {
     console.log("\nSet Epoch Root TX:", sig);
     console.log("View on explorer: https://explorer.solana.com/tx/" + sig + "?cluster=devnet");
   } catch (err) {
-    if (err.message?.includes("already in use")) {
-      console.log("\nEpoch root already set!");
+    const msg = String(err?.message || err);
+
+    if (msg.includes("already in use")) {
+      console.log("\nEpoch root already set! Verifying on-chain root...");
+
+      const data = await program.account.epochRoot.fetch(epochRootPda);
+
+      // Verify epoch matches what we're trying to set
+      const onChainEpoch = Number(data.epoch?.toString?.() ?? data.epoch);
+      if (onChainEpoch !== Number(EPOCH)) {
+        throw new Error(
+          `EpochRoot PDA exists but epoch mismatch. onChain=${onChainEpoch} wanted=${EPOCH}`
+        );
+      }
+
+      // root: number[] (32 bytes) -> hex
+      const onChainRootHex = Buffer.from(data.root).toString("hex").toLowerCase();
+      const wantedRootHex = ROOT_HEX.toLowerCase();
+
+      console.log(`On-chain root: ${onChainRootHex}`);
+      console.log(`Wanted root : ${wantedRootHex}`);
+
+      if (onChainRootHex !== wantedRootHex) {
+        throw new Error(
+          `Epoch root mismatch for epoch=${EPOCH}. onChain=${onChainRootHex} wanted=${wantedRootHex}`
+        );
+      }
+
+      console.log("Epoch root already set (matches).");
+      console.log("Set Epoch Root TX: ALREADY_SET");
     } else {
       throw err;
     }
