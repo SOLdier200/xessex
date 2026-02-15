@@ -36,6 +36,14 @@ const CATEGORY_META: Record<string, { title: string; description: string }> = {
     title: "Asian Adult Videos – Watch & Earn Crypto on Xessex",
     description: "Browse verified Asian adult videos. Earn crypto rewards for watching curated content on Xessex.",
   },
+  "latina": {
+    title: "Latina Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified Latina adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
+  "black": {
+    title: "Black Adult Videos – Watch & Earn Crypto on Xessex",
+    description: "Browse verified Black adult videos. Earn crypto rewards for watching curated content on Xessex.",
+  },
   "2d": {
     title: "2D Animated Adult Videos – Watch & Earn Crypto on Xessex",
     description: "Browse verified animated adult videos. Earn crypto rewards for watching curated content on Xessex.",
@@ -116,6 +124,8 @@ const CATEGORY_INFO: Record<string, { name: string; icon: string; image?: string
   "threesome": { name: "Threesome", icon: "", image: `${R2_BASE}/threesome2.png` },
   "for-women": { name: "For Women", icon: "♀️" },
   "anal": { name: "Anal", icon: "", image: `${R2_BASE}/anal23.png` },
+  "latina": { name: "Latina", icon: "", image: `${R2_BASE}/latina.jpg` },
+  "black": { name: "Black", icon: "", image: `${R2_BASE}/black.jpg` },
   "asian": { name: "Asian", icon: "", image: `${R2_BASE}/asian100.webp` },
   "2d": { name: "2D Animated", icon: "", image: `${R2_BASE}/2dpic.webp` },
   "highest-rated": { name: "Highest Rated", icon: "⭐" },
@@ -218,6 +228,19 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       .filter((v) => {
         const cats = v.categories?.toLowerCase() ?? "";
         return cats.includes("cartoon") || cats.includes("hentai");
+      })
+      .sort((a, b) => {
+        if (a.rank != null && b.rank != null) return a.rank - b.rank;
+        if (a.rank != null) return -1;
+        if (b.rank != null) return 1;
+        return 0;
+      });
+  } else if (slug === "black") {
+    // "Black" matches "ebony" or "black" in categories
+    videos = allVideos
+      .filter((v) => {
+        const cats = v.categories?.toLowerCase() ?? "";
+        return cats.includes("ebony") || cats.includes("black");
       })
       .sort((a, b) => {
         if (a.rank != null && b.rank != null) return a.rank - b.rank;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -149,8 +150,8 @@ export default function LockedVideoCard({
         )}
       </div>
 
-      {/* Unlock Confirmation Modal */}
-      {showModal && (
+      {/* Unlock Confirmation Modal — portaled to body to escape CSS containment */}
+      {showModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gray-900 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -232,7 +233,8 @@ export default function LockedVideoCard({
               to get XESS tokens to hold in your wallet and earn special credits!
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

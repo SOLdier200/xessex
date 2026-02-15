@@ -57,24 +57,30 @@ function useCols() {
 }
 
 /* ── Timing constants ── */
-const DEAL_DURATION = 2200;  // ms – all first-row cards share one duration
-const DROP_BASE = 1200;      // ms – row 1 drop duration
-const DROP_PER_ROW = 600;    // ms – extra per additional row
+const SLIDE_PAD = 80;        // cqw – base off-screen distance (even card 0 travels this far)
+const SLIDE_BASE_MS = 1000;  // ms – how long card 0 takes (shortest journey)
+
+function getRowDone(rowIndex: number, cols: number): number {
+  // Time when a given row's last card finishes sliding in
+  const cellPercent = 100 / cols;
+  const maxDistance = SLIDE_PAD + (cols - 1) * cellPercent;
+  const rowDuration = Math.round(SLIDE_BASE_MS * maxDistance / SLIDE_PAD);
+  // Each row starts after the previous row fully finishes
+  return rowIndex * rowDuration;
+}
 
 function getCardAnim(i: number, cols: number) {
   const row = Math.floor(i / cols);
+  const col = i % cols;
+  const cellPercent = 100 / cols;
 
-  if (row === 0) {
-    // All cards start simultaneously, same duration.
-    // Different travel distances (via --deal-start-x) make them land left-to-right.
-    return { name: "dealSlide", duration: DEAL_DURATION, delay: 0 };
-  }
+  // Every row uses the same slide animation — all cards in the row
+  // start simultaneously from off-screen left, same speed, left lands first.
+  const distance = SLIDE_PAD + col * cellPercent;
+  const duration = Math.round(SLIDE_BASE_MS * distance / SLIDE_PAD);
+  const delay = getRowDone(row, cols);
 
-  return {
-    name: "dropDown",
-    duration: DROP_BASE + (row - 1) * DROP_PER_ROW,
-    delay: DEAL_DURATION,
-  };
+  return { name: "dealSlide", duration, delay };
 }
 
 /* ── Top 20 grid section ── */
@@ -105,9 +111,16 @@ export default function Top20Reveal({ children }: { children: React.ReactNode })
 
       {!revealed ? (
         <div className="relative z-10 flex flex-col items-center justify-center py-16 md:py-24">
+          <Image
+            src="/logos/xessexcoinlogo2.png"
+            alt=""
+            width={400}
+            height={400}
+            className="absolute w-[200px] md:w-[280px] h-auto opacity-[0.07] pointer-events-none"
+          />
           <button
             onClick={() => doReveal?.()}
-            className="cursor-pointer focus:outline-none group"
+            className="relative cursor-pointer focus:outline-none group"
           >
             <Image
               src="/logos/textlogo/siteset3/top20100.png"
@@ -134,29 +147,18 @@ export default function Top20Reveal({ children }: { children: React.ReactNode })
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-y-2 sm:gap-x-1.5" style={{ containerType: "inline-size" }}>
             {items.map((child, i) => {
               const anim = getCardAnim(i, cols);
-              const isFirstRow = Math.floor(i / cols) === 0;
               const col = i % cols;
-
-              // First row: all cards start from the same off-screen left position.
-              // Each card's grid cell is at col*(100/cols) cqw, so we translate
-              // backwards by that amount + a small pad to put them all off-screen left.
               const cellPercent = 100 / cols;
-              const startX = isFirstRow ? -(col * cellPercent + 8) : 0;
+              const startX = -(SLIDE_PAD + col * cellPercent);
 
               return (
                 <div
                   key={i}
                   style={{
                     opacity: 0,
-                    ...(isFirstRow
-                      ? {
-                          animation: `dealSlide ${anim.duration}ms cubic-bezier(0.25, 0.1, 0.25, 1) ${anim.delay}ms forwards`,
-                          "--deal-start-x": `${startX}cqw`,
-                        } as React.CSSProperties
-                      : {
-                          animation: `dropDown ${anim.duration}ms cubic-bezier(0.33, 0, 0.67, 1) ${anim.delay}ms forwards`,
-                        }),
-                  }}
+                    animation: `dealSlide ${anim.duration}ms cubic-bezier(0.25, 0.1, 0.25, 1) ${anim.delay}ms forwards`,
+                    "--deal-start-x": `${startX}cqw`,
+                  } as React.CSSProperties}
                 >
                   {child}
                 </div>

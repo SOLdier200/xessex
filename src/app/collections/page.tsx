@@ -44,6 +44,8 @@ const R2_BASE = "https://pub-77b523433fb04971ba656a572f298a11.r2.dev";
 const CATEGORIES = [
   { slug: "blonde", name: "Blonde", image: `${R2_BASE}/blonde.jpg` },
   { slug: "brunette", name: "Brunette", image: `${R2_BASE}/brunette.jpg` },
+  { slug: "latina", name: "Latina", image: `${R2_BASE}/latina.jpg` },
+  { slug: "black", name: "Black", image: `${R2_BASE}/black.jpg` },
   { slug: "blowjob", name: "Blowjob", image: `${R2_BASE}/blowjob.jpg` },
   { slug: "threesome", name: "Threesome", image: `${R2_BASE}/threesome2.png` },
   { slug: "anal", name: "Anal", image: `${R2_BASE}/anal23.png` },
@@ -61,6 +63,12 @@ export default function CategoriesPage() {
       return videos.filter((v) => {
         const cats = v.categories?.toLowerCase() ?? "";
         return cats.includes("cartoon") || cats.includes("hentai");
+      }).length;
+    }
+    if (slug === "black") {
+      return videos.filter((v) => {
+        const cats = v.categories?.toLowerCase() ?? "";
+        return cats.includes("ebony") || cats.includes("black");
       }).length;
     }
     const categoryName = slug.replace("-", " ");
