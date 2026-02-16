@@ -28,9 +28,10 @@ import crypto from "crypto";
 export const runtime = "nodejs";
 
 // Environment configuration
+import { rpc, connPrimary } from "@/lib/rpc";
+
 const TREASURY_WALLET = process.env.PRESALE_TREASURY_WALLET!;
 const USDC_ATA = process.env.PRESALE_USDC_ATA!;
-const RPC_URL = process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com";
 const MAX_TX_AGE_SECONDS = Number(process.env.PRESALE_TX_MAX_AGE_SECONDS || "600");
 
 type Asset = "SOL" | "USDC";
@@ -271,7 +272,7 @@ export async function POST(req: NextRequest) {
     const requiredUsdcAtomic = priceUsdMicros * xessAmount;
 
     // On-chain verification
-    const connection = new Connection(RPC_URL, "confirmed");
+    const connection = connPrimary();
 
     // Check tx age
     const age = await getTxAgeSeconds(connection, txSig);
@@ -391,7 +392,7 @@ export async function POST(req: NextRequest) {
         buyer: buyer.toBase58(),
         buyerAta: buyerAta.toBase58(),
         xessAtomic: xessAtomic.toString(),
-        rpc: RPC_URL,
+        rpc: "gatekeeper",
       });
 
       const ixs: Parameters<Transaction["add"]> = [];

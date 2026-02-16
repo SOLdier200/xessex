@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
+import { sendSignedTx } from "@/lib/sendSignedTx";
 import * as anchor from "@coral-xyz/anchor";
 import { buildClaimTx, ClaimPreparePayload } from "@/lib/xessClaimTx";
 
@@ -39,7 +40,7 @@ export function ClaimPendingXessButton() {
       const walletPubkey = new PublicKey(provider.publicKey.toString());
 
       // connection (devnet helius or your NEXT_PUBLIC rpc)
-      const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC || "https://api.devnet.solana.com";
+      const rpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
       const connection = new Connection(rpc, "confirmed");
 
       // load IDL from chain
@@ -56,8 +57,7 @@ export function ClaimPendingXessButton() {
       });
 
       const signed = await provider.signTransaction(tx);
-      const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-      await connection.confirmTransaction(sig, "confirmed");
+      const sig = await sendSignedTx(signed, connection);
 
       setTxSig(sig);
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { sendSignedTx } from "@/lib/sendSignedTx";
 import {
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction,
@@ -157,10 +158,7 @@ export default function ClaimAllButton({ onSuccess, className }: Props) {
 
           tx.add(claimIx);
           const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize(), {
-            skipPreflight: false,
-          });
-          await connection.confirmTransaction(sig, "confirmed");
+          const sig = await sendSignedTx(signed, connection);
 
           // Confirm with backend
           await fetch("/api/rewards/claim/confirm", {

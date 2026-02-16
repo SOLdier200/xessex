@@ -53,6 +53,13 @@ type PresaleData = {
   totals: Totals;
 };
 
+type TreasuryBalances = {
+  treasuryWallet: string;
+  usdcAta: string;
+  solLamports: string;
+  usdcAtomic: string;
+};
+
 function formatXess(amount: string): string {
   const num = BigInt(amount);
   if (num >= 1_000_000n) {
@@ -100,6 +107,9 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [solPrice, setSolPrice] = useState<number | null>(null);
+  const [usdcPrice, setUsdcPrice] = useState<number | null>(null);
+  const [balances, setBalances] = useState<TreasuryBalances | null>(null);
+  const [balancesLoading, setBalancesLoading] = useState(true);
 
   // Edit form state (USD prices only — lamports are auto-computed)
   const [editPhase, setEditPhase] = useState("");
@@ -130,16 +140,38 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
     fetchData();
   }, [fetchData]);
 
-  // Fetch live SOL price from Pyth proxy
+  // Fetch live SOL + USDC prices from Pyth proxy
   useEffect(() => {
-    function fetchSolPrice() {
+    function fetchPrices() {
       fetchPresale("/api/pyth/prices")
         .then((r) => r.json())
-        .then((d) => { if (d.ok && d.SOL_USD?.price) setSolPrice(d.SOL_USD.price); })
+        .then((d) => {
+          if (d.ok) {
+            if (d.SOL_USD?.price) setSolPrice(d.SOL_USD.price);
+            if (d.USDC_USD?.price) setUsdcPrice(d.USDC_USD.price);
+          }
+        })
         .catch(() => {});
     }
-    fetchSolPrice();
-    const iv = setInterval(fetchSolPrice, 30_000);
+    fetchPrices();
+    const iv = setInterval(fetchPrices, 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Fetch treasury on-chain balances
+  useEffect(() => {
+    function fetchBalances() {
+      setBalancesLoading(true);
+      fetchPresale("/api/admin/presale/balances", { credentials: "include" })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.ok) setBalances(d);
+        })
+        .catch(() => {})
+        .finally(() => setBalancesLoading(false));
+    }
+    fetchBalances();
+    const iv = setInterval(fetchBalances, 180_000);
     return () => clearInterval(iv);
   }, []);
 
@@ -254,6 +286,114 @@ export default function PresaleAdminClient({ isAdmin }: { isAdmin: boolean }) {
               {config.activePhase.toUpperCase()}
             </div>
           </div>
+        </div>
+
+        {/* Treasury Wallet Balances */}
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-6">
+          <h2 className="text-xl font-semibold text-cyan-300 mb-4">
+            Treasury Wallet Balances
+          </h2>
+          {balancesLoading && !balances ? (
+            <div className="text-white/50 text-sm">Loading on-chain balances...</div>
+          ) : !balances ? (
+            <div className="text-red-400 text-sm">Failed to load balances</div>
+          ) : (() => {
+            const solBal = Number(balances.solLamports) / 1e9;
+            const usdcBal = Number(balances.usdcAtomic) / 1e6;
+            const solUsd = solPrice ? solBal * solPrice : null;
+            const usdcUsd = usdcPrice ? usdcBal * usdcPrice : usdcBal;
+            const totalUsd = solUsd !== null ? solUsd + usdcUsd : null;
+
+            // Earned totals from DB (confirmed contributions)
+            const earnedSol = Number(totals.solLamports) / 1e9;
+            const earnedUsdc = Number(totals.usdcAtomic) / 1e6;
+            const earnedSolUsd = solPrice ? earnedSol * solPrice : null;
+            const earnedUsdcUsd = usdcPrice ? earnedUsdc * usdcPrice : earnedUsdc;
+            const earnedTotalUsd = earnedSolUsd !== null ? earnedSolUsd + earnedUsdcUsd : null;
+
+            return (
+              <div className="space-y-6">
+                {/* On-chain balances */}
+                <div>
+                  <h3 className="text-sm font-medium text-white/60 mb-3 uppercase tracking-wider">
+                    Current On-Chain Balance
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
+                      <div className="text-white/50 text-xs mb-1">SOL Balance</div>
+                      <div className="text-xl font-bold text-purple-400 font-mono">
+                        {solBal.toFixed(4)} SOL
+                      </div>
+                      <div className="text-sm text-white/40 font-mono">
+                        {solUsd !== null ? `$${solUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
+                      <div className="text-white/50 text-xs mb-1">USDC Balance</div>
+                      <div className="text-xl font-bold text-blue-400 font-mono">
+                        {usdcBal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
+                      </div>
+                      <div className="text-sm text-white/40 font-mono">
+                        ${usdcUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4">
+                      <div className="text-white/50 text-xs mb-1">Total Value (USD)</div>
+                      <div className="text-2xl font-bold text-cyan-400 font-mono">
+                        {totalUsd !== null
+                          ? `$${totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : "—"}
+                      </div>
+                      <div className="text-xs text-white/30 mt-1">
+                        SOL @ {solPrice ? `$${solPrice.toFixed(2)}` : "—"} &middot; USDC @ {usdcPrice ? `$${usdcPrice.toFixed(4)}` : "$1.00"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Earned totals from DB */}
+                <div>
+                  <h3 className="text-sm font-medium text-white/60 mb-3 uppercase tracking-wider">
+                    Total Earned (Confirmed Sales)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
+                      <div className="text-white/50 text-xs mb-1">SOL Earned</div>
+                      <div className="text-xl font-bold text-purple-400 font-mono">
+                        {earnedSol.toFixed(4)} SOL
+                      </div>
+                      <div className="text-sm text-white/40 font-mono">
+                        {earnedSolUsd !== null ? `$${earnedSolUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/40 p-4">
+                      <div className="text-white/50 text-xs mb-1">USDC Earned</div>
+                      <div className="text-xl font-bold text-blue-400 font-mono">
+                        {earnedUsdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
+                      </div>
+                      <div className="text-sm text-white/40 font-mono">
+                        ${earnedUsdcUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                      <div className="text-white/50 text-xs mb-1">Total Earned (USD)</div>
+                      <div className="text-2xl font-bold text-emerald-400 font-mono">
+                        {earnedTotalUsd !== null
+                          ? `$${earnedTotalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Wallet addresses */}
+                <div className="flex flex-wrap gap-4 text-xs text-white/30 font-mono">
+                  <span>Treasury: {balances.treasuryWallet}</span>
+                  <span>USDC ATA: {balances.usdcAta}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Allocation Progress */}

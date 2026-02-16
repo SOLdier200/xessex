@@ -21,6 +21,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import * as anchor from "@coral-xyz/anchor";
+import { sendSignedTx } from "@/lib/sendSignedTx";
 
 // Strict hex-to-bytes converter for merkle proof elements (must be exactly 32 bytes)
 function hexToU8_32(hex: string): number[] {
@@ -700,8 +701,7 @@ function ProfilePageInner() {
           tx.add(claimIx);
 
           const signed = await signTransaction(tx);
-          const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-          await connection.confirmTransaction(sig, "confirmed");
+          const sig = await sendSignedTx(signed, connection);
 
           // Confirm with backend
           await fetch("/api/rewards/claim/confirm", {
@@ -920,14 +920,7 @@ function ProfilePageInner() {
         description: "Broadcasting to Solana network",
       });
 
-      const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-
-      toast.loading("Confirming transaction...", {
-        id: claimToastId,
-        description: "Waiting for blockchain confirmation",
-      });
-
-      await connection.confirmTransaction(sig, "confirmed");
+      const sig = await sendSignedTx(signed, connection);
 
       toast.loading("Finalizing claim...", {
         id: claimToastId,

@@ -20,6 +20,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { toast } from "sonner";
+import { sendSignedTx } from "@/lib/sendSignedTx";
 
 interface Balances {
   sol: { lamports: number; formatted: string };
@@ -39,7 +40,7 @@ const XESS_DECIMALS = 9;
 const SOL_FEE_BUFFER = 0.005;
 
 export default function WalletBalancesModal({ isOpen, onClose, inline }: Props) {
-  const { publicKey, connected, sendTransaction } = useWallet();
+  const { publicKey, connected, signTransaction } = useWallet();
   const [balances, setBalances] = useState<Balances | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +128,7 @@ export default function WalletBalancesModal({ isOpen, onClose, inline }: Props) 
   }
 
   async function handleSend() {
-    if (!publicKey || !balances || !sendMode) return;
+    if (!publicKey || !balances || !sendMode || !signTransaction) return;
 
     const id = toast.loading(`Preparing ${sendMode === "sol" ? "SOL" : "XESS"} transfer...`);
     setSending(true);
@@ -225,10 +226,9 @@ export default function WalletBalancesModal({ isOpen, onClose, inline }: Props) 
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
-      const sig = await sendTransaction(tx, connection);
-
-      toast.loading("Confirming transaction...", { id });
-      await connection.confirmTransaction(sig, "confirmed");
+      const signed = await signTransaction(tx);
+      toast.loading("Submitting transaction...", { id });
+      const sig = await sendSignedTx(signed, connection);
 
       const tokenLabel = sendMode === "sol" ? "SOL" : "XESS";
       toast.success(`Sent ${sendAmount} ${tokenLabel}!`, { id });

@@ -17,6 +17,7 @@ import RoadmapMarquee from "@/app/components/RoadmapMarquee";
 import TopNav from "@/app/components/TopNav";
 import PythPriceTicker from "@/components/PythPriceTicker";
 import { fetchPresale } from "@/lib/fetchByHost";
+import { sendSignedTx } from "@/lib/sendSignedTx";
 
 // Treasury addresses
 const TREASURY_SOL = "FuG1tCeK53s17nQxvNcpKKo5bvESnPdHduhemHLu7aeS";
@@ -435,17 +436,10 @@ export default function LaunchClient() {
       tx.lastValidBlockHeight = lastValidBlockHeight;
       tx.feePayer = walletPubkey;
 
-      // Sign and send
+      // Sign and send (uses relay on mainnet, direct on devnet)
       const signed = await wallet.signTransaction(tx);
-      const txSig = await connection.sendRawTransaction(signed.serialize());
-
-      // Wait for confirmation
       toast.loading("Confirming transaction...", { id: "tx" });
-      await connection.confirmTransaction({
-        signature: txSig,
-        blockhash,
-        lastValidBlockHeight,
-      });
+      const txSig = await sendSignedTx(signed, connection);
       toast.dismiss("tx");
 
       // Submit contribution to backend with on-chain verification
