@@ -379,7 +379,12 @@ export async function POST(req: NextRequest) {
       const treasuryKeypair = loadKeypair(treasuryKeyStr);
       const buyer = new PublicKey(sessionWallet);
 
-      const treasuryAta = await getAssociatedTokenAddress(xessMint, treasuryKeypair.publicKey);
+      // Use explicit ATA env var if set (bypasses any derivation mismatch),
+      // otherwise compute from keypair public key + mint.
+      const ataOverride = process.env.XESS_TREASURY_ATA;
+      const treasuryAta = ataOverride
+        ? new PublicKey(ataOverride)
+        : await getAssociatedTokenAddress(xessMint, treasuryKeypair.publicKey);
       const buyerAta = await getAssociatedTokenAddress(xessMint, buyer);
 
       // Convert whole XESS → atomic units (9 decimals)
@@ -389,6 +394,7 @@ export async function POST(req: NextRequest) {
         mint: xessMintStr,
         treasuryPubkey: treasuryKeypair.publicKey.toBase58(),
         treasuryAta: treasuryAta.toBase58(),
+        ataSource: ataOverride ? "env_override" : "derived",
         buyer: buyer.toBase58(),
         buyerAta: buyerAta.toBase58(),
         xessAtomic: xessAtomic.toString(),
