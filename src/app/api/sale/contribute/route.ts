@@ -439,7 +439,11 @@ export async function POST(req: NextRequest) {
         connection,
         deliveryTx,
         [treasuryKeypair],
-        { commitment: "confirmed" },
+        {
+          commitment: "confirmed",
+          skipPreflight: true,
+          maxRetries: 3,
+        },
       );
 
       // Store delivery sig in DB
