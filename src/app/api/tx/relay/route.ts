@@ -10,7 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { rpc } from "@/lib/rpc";
+import { connSend, connRead } from "@/lib/rpc";
 
 export const runtime = "nodejs";
 
@@ -33,11 +33,13 @@ export async function POST(req: Request) {
 
     const raw = Buffer.from(signedTxB64, "base64");
 
-    const signature = await rpc((c) =>
-      c.sendRawTransaction(raw, { skipPreflight: false })
-    );
+    // Send via Gatekeeper (priority fees, no preflight needed)
+    const signature = await connSend().sendRawTransaction(raw, {
+      skipPreflight: true,
+    });
 
-    await rpc((c) => c.confirmTransaction(signature, "confirmed"));
+    // Confirm via standard endpoint (Gatekeeper can't poll)
+    await connRead().confirmTransaction(signature, "confirmed");
 
     return NextResponse.json({ ok: true, signature });
   } catch (e: unknown) {

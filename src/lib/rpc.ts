@@ -1,20 +1,29 @@
 /**
- * Server-side RPC helper with Gatekeeper primary + fallback.
+ * Server-side RPC helper.
  *
- * On mainnet (presale): uses HELIUS_RPC_PRIMARY (Gatekeeper) with
- * automatic fallback to HELIUS_RPC_FALLBACK on transient errors.
+ * Two connection types:
+ *   connSend()  – Gatekeeper (HELIUS_RPC_PRIMARY) for sending txs.
+ *                 Send-only; does NOT support reads or preflight.
+ *   connRead()  – Standard endpoint (HELIUS_RPC_FALLBACK) for reads,
+ *                 getParsedTransaction, getAccountInfo, etc.
+ *                 Falls back to primary if no fallback is configured
+ *                 (e.g. on devnet where there's only one endpoint).
  *
- * On devnet (main site): falls back to SOLANA_RPC_URL / NEXT_PUBLIC_SOLANA_RPC_URL
- * or the public devnet endpoint.
+ * rpc() helper: runs reads against connRead(), falls back to connSend()
+ * on transient errors.
+ *
+ * On devnet (main site): only SOLANA_RPC_URL / NEXT_PUBLIC_SOLANA_RPC_URL
+ * is set, so connRead() and connSend() resolve to the same endpoint.
  *
  * Usage:
- *   import { rpc } from "@/lib/rpc";
+ *   import { rpc, connRead, connSend } from "@/lib/rpc";
  *   const info = await rpc((c) => c.getAccountInfo(pubkey));
+ *   const sig = await sendAndConfirmTransaction(connSend(), tx, [kp]);
  */
 
 import { Connection } from "@solana/web3.js";
 
-function getPrimaryUrl(): string {
+function getGatekeeperUrl(): string {
   return (
     process.env.HELIUS_RPC_PRIMARY ||
     process.env.SOLANA_RPC_URL ||
@@ -23,33 +32,46 @@ function getPrimaryUrl(): string {
   );
 }
 
-function getFallbackUrl(): string | null {
-  return process.env.HELIUS_RPC_FALLBACK || null;
+function getStandardUrl(): string {
+  return (
+    process.env.HELIUS_RPC_FALLBACK ||
+    process.env.SOLANA_RPC_URL ||
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+    "https://api.devnet.solana.com"
+  );
 }
 
-let _connPrimary: Connection | null = null;
-let _connFallback: Connection | null = null;
-let _lastPrimary = "";
-let _lastFallback = "";
+let _connSend: Connection | null = null;
+let _connRead: Connection | null = null;
+let _lastSend = "";
+let _lastRead = "";
 
-export function connPrimary(): Connection {
-  const url = getPrimaryUrl();
-  if (!_connPrimary || _lastPrimary !== url) {
-    _connPrimary = new Connection(url, "confirmed");
-    _lastPrimary = url;
+/** Gatekeeper endpoint — for sending transactions only. */
+export function connSend(): Connection {
+  const url = getGatekeeperUrl();
+  if (!_connSend || _lastSend !== url) {
+    _connSend = new Connection(url, "confirmed");
+    _lastSend = url;
   }
-  return _connPrimary;
+  return _connSend;
 }
 
-export function connFallback(): Connection | null {
-  const url = getFallbackUrl();
-  if (!url) return null;
-  if (!_connFallback || _lastFallback !== url) {
-    _connFallback = new Connection(url, "confirmed");
-    _lastFallback = url;
+/** Standard endpoint — for reads, getParsedTransaction, getAccountInfo, etc. */
+export function connRead(): Connection {
+  const url = getStandardUrl();
+  if (!_connRead || _lastRead !== url) {
+    _connRead = new Connection(url, "confirmed");
+    _lastRead = url;
   }
-  return _connFallback;
+  return _connRead;
 }
+
+// Backwards compat aliases
+export const connPrimary = connSend;
+export const connFallback = (): Connection | null => {
+  const url = process.env.HELIUS_RPC_FALLBACK;
+  return url ? connRead() : null;
+};
 
 function isTransient(e: unknown): boolean {
   const msg = String((e as Error)?.message || e);
@@ -65,15 +87,15 @@ function isTransient(e: unknown): boolean {
 }
 
 /**
- * Execute an RPC call against the primary connection.
- * On transient failure, automatically retries against the fallback (if configured).
+ * Execute a read RPC call against the standard endpoint.
+ * On transient failure, retries against the Gatekeeper (if different).
  */
 export async function rpc<T>(fn: (c: Connection) => Promise<T>): Promise<T> {
   try {
-    return await fn(connPrimary());
+    return await fn(connRead());
   } catch (e) {
-    const fb = connFallback();
-    if (!fb || !isTransient(e)) throw e;
-    return await fn(fb);
+    const send = connSend();
+    if (send === connRead() || !isTransient(e)) throw e;
+    return await fn(send);
   }
 }

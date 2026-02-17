@@ -580,7 +580,7 @@ export default function LaunchClient() {
                     : `${formatNumber(BigInt(cfg.publicAllocation) - BigInt(cfg.soldPublicXess))} XESS`
                   }
                 />
-                <Row k="Accepted" v="SOL + USDC" />
+                <Row k="Accepted" v="SOL" />
                 <Row k="Vesting" v="None - Immediate delivery" />
                 <CopyRow label="Mint" value="HvfmE1stqxvBfUXtKX4L4w3BeMMjcDM48Qh6ZfGtgrpE" />
                 <CopyRow label="Treasury" value="FuG1tCeK53s17nQxvNcpKKo5bvESnPdHduhemHLu7aeS" />
@@ -761,14 +761,11 @@ export default function LaunchClient() {
                       Pay with SOL
                     </button>
                     <button
-                      className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                        asset === "USDC"
-                          ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-300"
-                          : "border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.05]"
-                      }`}
-                      onClick={() => setAsset("USDC")}
+                      className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/30 cursor-not-allowed"
+                      disabled
+                      title="USDC payments coming soon"
                     >
-                      Pay with USDC
+                      USDC (coming soon)
                     </button>
                   </div>
 
@@ -885,7 +882,7 @@ export default function LaunchClient() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-                Accepted assets: SOL & USDC
+                Accepted asset: SOL
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />

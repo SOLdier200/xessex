@@ -28,7 +28,7 @@ import crypto from "crypto";
 export const runtime = "nodejs";
 
 // Environment configuration
-import { rpc, connPrimary } from "@/lib/rpc";
+import { connRead, connSend } from "@/lib/rpc";
 
 const TREASURY_WALLET = process.env.PRESALE_TREASURY_WALLET!;
 const USDC_ATA = process.env.PRESALE_USDC_ATA!;
@@ -271,8 +271,8 @@ export async function POST(req: NextRequest) {
 
     const requiredUsdcAtomic = priceUsdMicros * xessAmount;
 
-    // On-chain verification
-    const connection = connPrimary();
+    // On-chain verification (use standard endpoint for reads, NOT Gatekeeper)
+    const connection = connRead();
 
     // Check tx age
     const age = await getTxAgeSeconds(connection, txSig);
