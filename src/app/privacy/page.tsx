@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import TopNav from "../components/TopNav";
 
 export const metadata: Metadata = {
   title: "Privacy Policy – Xessex",
@@ -11,10 +11,9 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12">
-      <Link href="/" className="text-gray-400 hover:text-white mb-6 inline-block">
-        ← Back to Home
-      </Link>
+    <main className="min-h-screen bg-black text-white">
+      <TopNav />
+      <div className="max-w-3xl mx-auto px-6 py-12">
 
       <h1 className="text-3xl font-bold mb-8">Privacy Policy</h1>
 
@@ -67,6 +66,7 @@ export default function PrivacyPage() {
         <p className="text-sm text-gray-500 pt-6">
           Last updated: {new Date().toLocaleDateString()}
         </p>
+      </div>
       </div>
     </main>
   );

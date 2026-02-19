@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import TopNav from "../components/TopNav";
 
 export const metadata: Metadata = {
   title: "Terms of Service – Xessex",
@@ -11,13 +12,12 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12">
-      <Link href="/age" className="text-gray-400 hover:text-white mb-6 inline-block">
-        ← Back
-      </Link>
+    <main className="min-h-screen bg-black text-white">
+      <TopNav />
+      <div className="max-w-3xl mx-auto px-6 py-12">
 
       <h1 className="text-3xl font-bold mb-2">XESSEX — TERMS OF SERVICE</h1>
-      <p className="text-sm text-gray-500 mb-8">Last Updated: January 2026</p>
+      <p className="text-sm text-gray-500 mb-8">Last Updated: February 2026</p>
 
       <div className="prose prose-invert max-w-none space-y-8 text-gray-300">
         <section>
@@ -156,7 +156,87 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">9. Prohibited Conduct</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">9. User Comments and Community Conduct Policy</h2>
+          <p>
+            Xessex is an adult platform. We support open expression and free speech, including the use of adult language, explicit discussion, and controversial opinions. However, this freedom does not extend to illegal conduct, abuse, or content that threatens the safety of others.
+          </p>
+          <p className="mt-3">
+            By posting comments or other user-generated content on Xessex, you agree that you will not post, upload, transmit, or otherwise make available any content that violates the following rules:
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.1 Illegal Content and Activity</h3>
+          <p>You may not post content that:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Violates any applicable law or regulation</li>
+            <li>Promotes, facilitates, or instructs others to commit illegal acts</li>
+            <li>Includes admissions of ongoing criminal activity where harm may occur</li>
+            <li>Exploits, endangers, or harms minors in any way</li>
+            <li>Involves human trafficking, coercion, or non-consensual exploitation</li>
+          </ul>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.2 Violence, Threats, and Harm</h3>
+          <p>You may not post content that:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Threatens violence against any person or group</li>
+            <li>Encourages, glorifies, or incites violence</li>
+            <li>Promotes or endorses rape, sexual assault, or non-consensual sexual activity</li>
+            <li>Encourages self-harm or harm to others</li>
+            <li>Expresses intent to commit violent wrongdoing</li>
+          </ul>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.3 Non-Consensual, Abusive, or Exploitative Conduct</h3>
+          <p>You may not post content that:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Promotes or depicts non-consensual sexual conduct</li>
+            <li>Harasses, stalks, or targets individuals with credible threats</li>
+            <li>Shares or threatens to share personal, private, or identifying information without consent (doxxing)</li>
+            <li>Attempts to extort, blackmail, or coerce any person</li>
+          </ul>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.4 Platform Integrity and Safety</h3>
+          <p>You may not post content that:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Impersonates another person or entity in a misleading way</li>
+            <li>Is intended to scam, defraud, or deceive others</li>
+            <li>Interferes with the proper functioning or safety of the platform</li>
+          </ul>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.5 What Is Allowed</h3>
+          <p>Xessex permits:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Adult language and explicit discussion</li>
+            <li>Consensual adult sexual discussion</li>
+            <li>Controversial, offensive, or unpopular opinions</li>
+            <li>Strong criticism, debate, or disagreement</li>
+          </ul>
+          <p className="mt-3">
+            We do not remove content solely because it is offensive, vulgar, or unpopular.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.6 Enforcement and Moderation</h3>
+          <p>Xessex reserves the right, at its sole discretion, to:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Remove any content that violates these Terms</li>
+            <li>Suspend or permanently terminate accounts</li>
+            <li>Report unlawful activity to law enforcement when required or appropriate</li>
+          </ul>
+          <p className="mt-3">
+            We may take action to protect the safety of users, the platform, and the public.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.7 No Obligation to Host Content</h3>
+          <p>
+            Xessex supports free expression but is a private platform. We are not obligated to host or maintain any content and may remove content that violates these Terms or poses legal, safety, or operational risks.
+          </p>
+
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.8 User Responsibility</h3>
+          <p>
+            You are solely responsible for the content you post. By posting content, you represent and warrant that it complies with these Terms and all applicable laws.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">10. Prohibited Conduct</h2>
           <p>You may not:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
             <li>Access Xessex if under 18</li>
@@ -168,7 +248,7 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">10. Disclaimers</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">11. Disclaimers</h2>
           <p>
             Xessex is provided &quot;as is.&quot; We do not guarantee uptime, availability, or accuracy of embedded third-party content.
           </p>
@@ -178,28 +258,28 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">11. Limitation of Liability</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">12. Limitation of Liability</h2>
           <p>
             To the fullest extent allowed by law, Xessex is not liable for any damages arising from your use of the Platform, including exposure to adult content or third-party media.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">12. Termination</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">13. Termination</h2>
           <p>
             We may suspend or terminate access at any time for violations of these Terms or misuse.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">13. Changes to These Terms</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">14. Changes to These Terms</h2>
           <p>
             We may update these Terms at any time. Continued use of Xessex after changes means you accept the updated Terms.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">14. Contact</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">15. Contact</h2>
           <p>Reach us at the appropriate address:</p>
           <div className="mt-2 space-y-1">
             <p>Help &amp; Support: <a href="mailto:help@xessex.me" className="text-pink-400 hover:underline">help@xessex.me</a></p>
@@ -208,6 +288,7 @@ export default function TermsPage() {
             <p>Complaints: <a href="mailto:complaints@xessex.me" className="text-pink-400 hover:underline">complaints@xessex.me</a></p>
           </div>
         </section>
+      </div>
       </div>
     </main>
   );

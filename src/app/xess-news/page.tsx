@@ -36,6 +36,63 @@ export default function XessNewsPage() {
         </Link>
 
         <div className="space-y-6">
+          {/* Private Sale Live + TGE Update */}
+          <article className="bg-gradient-to-br from-pink-900/40 to-purple-900/30 border-2 border-pink-400/50 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 text-xs font-bold bg-pink-500/30 text-pink-300 rounded-full uppercase tracking-wide">
+                  Major Update
+                </span>
+                <span className="text-sm text-pink-400/70">February 2026</span>
+              </div>
+              <h2 className="text-2xl font-bold mb-3 text-white">Private XESS Token Sale Is Live!</h2>
+              <div className="space-y-3 text-white/80">
+                <p>
+                  The <Link href="/launch" className="text-pink-300 font-semibold hover:underline">Private XESS Token Sale</Link> is
+                  now live on Solana Mainnet via our Token Launch page. You can purchase XESS tokens directly — all tokens purchased
+                  will be <span className="text-pink-300 font-semibold">instantly deposited into your wallet</span>, although they
+                  will not be tradeable until TGE (Token Generation Event).
+                </p>
+                <p>
+                  <span className="text-pink-300 font-semibold">Core Platform Complete:</span> The core of Xessex is complete. Although
+                  we are still in Devnet testing, everything appears to be working. We are now onboarding users to test the site at
+                  scale during the private sale as we prepare to go fully live on Mainnet.
+                </p>
+                <p>
+                  <span className="text-pink-300 font-semibold">TGE Target: April 12th, 2026.</span> At TGE, all comments will be
+                  cleared, ratings will be reset, and Mainnet operations will begin. This is the day Xessex goes fully live.
+                </p>
+                <p>
+                  <span className="text-pink-300 font-semibold">Payout Systems Online:</span> Both the
+                  Credits payout system and the XESS Token payout system are fully online and functioning. Users are earning
+                  rewards right now.
+                </p>
+                <p>
+                  <span className="text-pink-300 font-semibold">New Features:</span>
+                </p>
+                <ul className="list-disc list-inside space-y-2 ml-2">
+                  <li><span className="text-pink-300">Playlist Feature</span> — Create playlists of your favorite videos for easy access.</li>
+                  <li><span className="text-pink-300">Messages System</span> — Now live. The system can send messages to users, and users can interact with each other.</li>
+                  <li><span className="text-pink-300">Content Moderation</span> — An active moderation system watches for comments that violate our policies. Violations are taken down immediately. (<Link href="/terms" className="text-pink-300 hover:underline">See Terms of Service</Link>)</li>
+                </ul>
+                <p>
+                  <span className="text-pink-300 font-semibold">Tier Matters:</span> Your tier determines the rate at which you
+                  accumulate Special Credits, which are needed for video unlocks to reach the large XESS token payouts. Until those
+                  large payouts on Xessex content are reached, all those hundreds of thousands of tokens per week will be burned —
+                  fully documented on the <Link href="/burned" className="text-pink-300 hover:underline">Burn Page</Link>.
+                </p>
+                <Link
+                  href="/launch"
+                  className="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-xl bg-pink-500/20 border border-pink-400/50 text-pink-300 font-semibold hover:bg-pink-500/30 transition"
+                >
+                  Go to Token Launch
+                  <span>→</span>
+                </Link>
+              </div>
+            </div>
+          </article>
+
           {/* Xessex Goes Free Announcement */}
           <article className="bg-gradient-to-br from-cyan-900/40 to-blue-900/30 border-2 border-cyan-400/50 rounded-2xl p-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-400/10 rounded-full blur-3xl -mr-16 -mt-16" />
@@ -63,22 +120,46 @@ export default function XessNewsPage() {
                 <p className="mt-4">
                   <span className="text-cyan-300 font-semibold">Special Credits Tiers:</span> The more XESS you hold, the more credits you earn daily:
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 text-sm">
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">10K XESS</div>
+                    <div className="text-white/60">160/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">25K XESS</div>
+                    <div className="text-white/60">480/month</div>
+                  </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">50K XESS</div>
-                    <div className="text-white/60">60/month</div>
+                    <div className="text-white/60">960/month</div>
                   </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">100K XESS</div>
-                    <div className="text-white/60">200/month</div>
+                    <div className="text-white/60">3,200/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">250K XESS</div>
+                    <div className="text-white/60">8,000/month</div>
                   </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
                     <div className="text-cyan-300 font-bold">500K XESS</div>
-                    <div className="text-white/60">1,000/month</div>
+                    <div className="text-white/60">16,000/month</div>
                   </div>
                   <div className="bg-black/30 rounded-lg p-2 text-center">
-                    <div className="text-cyan-300 font-bold">1M+ XESS</div>
-                    <div className="text-white/60">2,000+/month</div>
+                    <div className="text-cyan-300 font-bold">1M XESS</div>
+                    <div className="text-white/60">32,000/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">2.5M XESS</div>
+                    <div className="text-white/60">48,000/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">5M XESS</div>
+                    <div className="text-white/60">64,000/month</div>
+                  </div>
+                  <div className="bg-black/30 rounded-lg p-2 text-center">
+                    <div className="text-cyan-300 font-bold">10M XESS</div>
+                    <div className="text-white/60">80,000/month</div>
                   </div>
                 </div>
                 <p className="mt-4 text-white/60 text-sm">
@@ -196,9 +277,6 @@ export default function XessNewsPage() {
             </p>
           </article>
 
-          <div className="text-center py-8">
-            <p className="text-white/50">More news coming soon...</p>
-          </div>
         </div>
       </div>
     </main>

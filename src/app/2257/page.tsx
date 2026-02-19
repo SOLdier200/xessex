@@ -1,11 +1,10 @@
-import Link from "next/link";
+import TopNav from "../components/TopNav";
 
 export default function Page2257() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-12">
-      <Link href="/" className="text-gray-400 hover:text-white mb-6 inline-block">
-        ← Back to Home
-      </Link>
+    <main className="min-h-screen bg-black text-white">
+      <TopNav />
+      <div className="max-w-3xl mx-auto px-6 py-12">
 
       <h1 className="text-3xl font-bold mb-8">18 U.S.C. § 2257 Compliance Notice</h1>
 
@@ -51,6 +50,7 @@ export default function Page2257() {
         <p className="text-sm text-gray-500 pt-6">
           Last updated: {new Date().toLocaleDateString()}
         </p>
+      </div>
       </div>
     </main>
   );
