@@ -93,7 +93,13 @@ export async function GET() {
   }
 
   // Pending wins (credits only) — with lazy expiry
-  let pendingWins: Awaited<ReturnType<typeof db.raffleWinner.findMany>> = [];
+  let pendingWins: Array<{
+    id: string;
+    place: number;
+    prizeCreditsMicro: bigint;
+    expiresAt: Date;
+    raffle: { weekKey: string };
+  }> = [];
   let expiredWins: Array<{
     winnerId: string;
     weekKey: string;
