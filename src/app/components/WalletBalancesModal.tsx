@@ -476,10 +476,10 @@ export default function WalletBalancesModal({ isOpen, onClose, inline }: Props) 
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-2xl border border-white/10 bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden my-auto"
+              className="w-full max-w-md rounded-2xl neon-border bg-black/90 backdrop-blur-md shadow-2xl overflow-hidden my-auto"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-pink-500/30">
                 <h2 className="text-xl font-bold text-white">Wallet Balances</h2>
                 <button
                   onClick={onClose}

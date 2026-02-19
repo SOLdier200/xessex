@@ -73,6 +73,14 @@ export const connFallback = (): Connection | null => {
   return url ? connRead() : null;
 };
 
+/** Expose raw URLs so callers can detect Gatekeeper vs standard. */
+export function rpcUrls() {
+  return {
+    send: getGatekeeperUrl(),
+    read: getStandardUrl(),
+  };
+}
+
 function isTransient(e: unknown): boolean {
   const msg = String((e as Error)?.message || e);
   return (

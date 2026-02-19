@@ -121,7 +121,7 @@ export default function SwapPage() {
               </div>
               <div className="flex items-center justify-between py-2 border-b border-white/10">
                 <span className="text-white/60">Network</span>
-                <span className="text-white/80">Solana Mainnet</span>
+                <span className="text-white/80">Solana Devnet</span>
               </div>
               <div className="flex items-center justify-between py-2">
                 <span className="text-white/60">Decimals</span>

@@ -10,6 +10,7 @@ import PayoutCountdown from "./PayoutCountdown";
 import CreditAccrualCountdown from "./CreditAccrualCountdown";
 import CreditManagementModal from "./CreditManagementModal";
 import PayoutHistoryModal from "./PayoutHistoryModal";
+import WalletBalanceChip from "./WalletBalanceChip";
 import { AnimatePresence, motion } from "framer-motion";
 import { PRESALE_ORIGIN, MAIN_ORIGIN } from "@/lib/origins";
 
@@ -53,7 +54,6 @@ type TokenLink =
 
 // Links that only exist on the main site need MAIN_ORIGIN prefix when viewed on presale
 const tokenLinks: TokenLink[] = [
-  { label: "Wallet", action: "wallet" },
   { label: "Token Launch", href: `${PRESALE_ORIGIN}/launch` },
   { label: "Tokenomics", href: `${PRESALE_ORIGIN}/tokenomics` },
   { label: "Whitepaper", href: `${MAIN_ORIGIN}/whitepaper` },
@@ -235,6 +235,7 @@ export default function TopNav() {
               className="flex items-center gap-2 md:gap-3"
             >
               <div className="hidden md:flex items-center gap-3">
+                <WalletBalanceChip onClick={() => setWalletModalOpen(true)} />
                 <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
                 <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
               </div>
@@ -406,6 +407,7 @@ export default function TopNav() {
 
         {/* Mobile: countdowns stacked below logo */}
         <div className="flex md:hidden flex-col gap-1.5 mt-1.5">
+          <WalletBalanceChip onClick={() => setWalletModalOpen(true)} />
           <PayoutCountdown variant="inline" showSeconds onClick={() => setPayoutHistoryModalOpen(true)} />
           <CreditAccrualCountdown variant="inline" onClick={() => setCreditRankingModalOpen(true)} />
         </div>

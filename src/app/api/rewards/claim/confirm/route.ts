@@ -188,7 +188,9 @@ export async function POST(req: Request) {
   // IDEMPOTENT: If receipt already exists on-chain, mark DB and return success
   const receiptInfo = await connection.getAccountInfo(receiptV2Pda, "confirmed");
   if (receiptInfo && receiptInfo.owner.equals(getProgramId())) {
-    await markClaimedInDbV2(signature);
+    // Don't store empty/garbage signature — use a safe fallback
+    const safeSig = signature?.length > 10 ? signature : "onchain-receipt";
+    await markClaimedInDbV2(safeSig);
 
     const userAta = getAssociatedTokenAddressSync(getXessMint(), claimerPk);
     return NextResponse.json({

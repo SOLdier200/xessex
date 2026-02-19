@@ -151,35 +151,77 @@ export async function POST(req: NextRequest) {
       const debug = shouldDebug(req, wallet, userId);
       const balanceAtomic = balances.get(wallet);
 
-      if (balanceAtomic === null || balanceAtomic === undefined) {
-        snapshotsRpcNull++;
-        creditsSkipRpcNull++;
+      // Fall back to latest Prisma snapshot when RPC returns null/stale data
+      // (matches the display tier logic in /api/credits/history)
+      let effectiveBalance = balanceAtomic;
 
-        if (debug) {
-          console.warn(
-            `[TWICE_DAILY_SNAPSHOT][${userId}][${wallet}] RPC balance missing -> skip`
-          );
-        }
+      if (effectiveBalance === null || effectiveBalance === undefined) {
+        // RPC failed — try latest snapshot
+        const lastSnap = await db.walletBalanceSnapshot.findFirst({
+          where: { wallet },
+          orderBy: { dateKey: "desc" },
+          select: { balanceAtomic: true },
+        });
+        if (lastSnap && BigInt(lastSnap.balanceAtomic) > 0n) {
+          effectiveBalance = BigInt(lastSnap.balanceAtomic);
+          if (debug) {
+            console.warn(
+              `[TWICE_DAILY_SNAPSHOT][${userId}][${wallet}] RPC null -> using snapshot balance ${effectiveBalance.toString()}`
+            );
+          }
+        } else {
+          snapshotsRpcNull++;
+          creditsSkipRpcNull++;
 
-        if (includeReceipts && receipts.length < 500) {
-          receipts.push({
-            userId,
-            wallet,
-            dateKey,
-            timeSlot,
-            weekKey,
-            balanceXess: "0",
-            tier: 0,
-            snapshot: "rpc_null",
-            credit: "skip_rpc_null",
-            note: "RPC balance null/undefined",
-          });
+          if (debug) {
+            console.warn(
+              `[TWICE_DAILY_SNAPSHOT][${userId}][${wallet}] RPC balance missing, no snapshot fallback -> skip`
+            );
+          }
+
+          if (includeReceipts && receipts.length < 500) {
+            receipts.push({
+              userId,
+              wallet,
+              dateKey,
+              timeSlot,
+              weekKey,
+              balanceXess: "0",
+              tier: 0,
+              snapshot: "rpc_null",
+              credit: "skip_rpc_null",
+              note: "RPC balance null/undefined, no snapshot fallback",
+            });
+          }
+          continue;
         }
-        continue;
+      } else {
+        // RPC returned a value — but check if snapshot has a higher balance
+        // (batch getMultipleAccountsInfo can return stale data)
+        const lastSnap = await db.walletBalanceSnapshot.findFirst({
+          where: { wallet },
+          orderBy: { dateKey: "desc" },
+          select: { balanceAtomic: true },
+        });
+        if (lastSnap) {
+          const snapBalance = BigInt(lastSnap.balanceAtomic);
+          if (snapBalance > effectiveBalance) {
+            const snapTier = getTierFromBalance(snapBalance);
+            const rpcTier = getTierFromBalance(effectiveBalance);
+            if (snapTier > rpcTier) {
+              if (debug) {
+                console.warn(
+                  `[TWICE_DAILY_SNAPSHOT][${userId}][${wallet}] RPC tier=${rpcTier} < snapshot tier=${snapTier}, using snapshot balance`
+                );
+              }
+              effectiveBalance = snapBalance;
+            }
+          }
+        }
       }
 
-      const tier = getTierFromBalance(balanceAtomic);
-      const balanceXess = (balanceAtomic / XESS_MULTIPLIER).toString();
+      const tier = getTierFromBalance(effectiveBalance);
+      const balanceXess = (effectiveBalance / XESS_MULTIPLIER).toString();
 
       if (debug) {
         console.log(
@@ -207,17 +249,17 @@ export async function POST(req: NextRequest) {
 
         if (!existingSnapshot) {
           await db.walletBalanceSnapshot.create({
-            data: { wallet, dateKey, weekKey, balanceAtomic, tier, userId },
+            data: { wallet, dateKey, weekKey, balanceAtomic: effectiveBalance, tier, userId },
           });
           snapshotsCreated++;
           snapshotStatus = "created";
         } else if (
-          existingSnapshot.balanceAtomic !== balanceAtomic ||
+          existingSnapshot.balanceAtomic !== effectiveBalance ||
           existingSnapshot.tier !== tier
         ) {
           await db.walletBalanceSnapshot.update({
             where: { id: existingSnapshot.id },
-            data: { balanceAtomic, tier, weekKey },
+            data: { balanceAtomic: effectiveBalance, tier, weekKey },
           });
           snapshotsUpdated++;
           snapshotStatus = "updated";

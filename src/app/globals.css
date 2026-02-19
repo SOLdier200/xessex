@@ -344,6 +344,24 @@ a {
   }
 }
 
+/* ── Wallet Balance Chip: tier-based animated border ── */
+@keyframes wallet-chip-border {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+/* Max tier (10): pulsing glow + brightness boost */
+.wallet-chip-max {
+  animation:
+    wallet-chip-border 1.8s linear infinite,
+    wallet-chip-pulse 2s ease-in-out infinite !important;
+  filter: brightness(1.15);
+}
+@keyframes wallet-chip-pulse {
+  0%, 100% { filter: brightness(1.15); }
+  50%      { filter: brightness(1.4); }
+}
+
 /* Horizontal bounce for scroll hint arrow */
 @keyframes bounce-x {
   0%, 100% {
