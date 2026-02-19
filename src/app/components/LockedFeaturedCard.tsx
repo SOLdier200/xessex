@@ -97,6 +97,7 @@ export default function LockedFeaturedCard({
               <img
                 src={thumb}
                 alt="Locked video"
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             )}

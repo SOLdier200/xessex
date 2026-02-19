@@ -486,7 +486,7 @@ export default function RoadmapMarquee() {
 
         <div
           ref={viewportRef}
-          className="relative mt-5 sm:mt-7 overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 bg-black/40 sm:bg-black/60 backdrop-blur-xl p-3 sm:p-4"
+          className="relative mt-5 sm:mt-7 overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 bg-black/40 sm:bg-black/60 md:backdrop-blur-xl p-3 sm:p-4"
           style={{
             // Past fades away on the left - gentler on mobile
             WebkitMaskImage: isMobile
@@ -525,7 +525,7 @@ export default function RoadmapMarquee() {
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-full border border-white/30 bg-black/70 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[11px] tracking-widest text-white/80 backdrop-blur-xl whitespace-nowrap"
+              className="rounded-full border border-white/30 bg-black/70 px-2 sm:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[11px] tracking-widest text-white/80 md:backdrop-blur-xl whitespace-nowrap"
             >
               CURRENT PHASE
             </motion.div>
@@ -602,7 +602,7 @@ function PhaseCard({ phase, index }: { phase: RoadmapPhase; index: number }) {
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.5, delay: Math.min(index * 0.03, 0.3) }}
       className={cn(
-        "relative w-[260px] sm:w-[320px] shrink-0 rounded-2xl sm:rounded-3xl border p-4 sm:p-5 backdrop-blur",
+        "relative w-[260px] sm:w-[320px] shrink-0 rounded-2xl sm:rounded-3xl border p-4 sm:p-5 md:backdrop-blur",
         s.card,
         s.glow
       )}

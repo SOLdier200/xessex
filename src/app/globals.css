@@ -71,6 +71,26 @@ a {
   overflow: hidden;
 }
 
+/* Mobile: no glow, just colored border for performance */
+@media (max-width: 767px) {
+  .neon-border {
+    border: 1px solid var(--neon-pink);
+    box-shadow: none;
+  }
+  .neon-border-blue {
+    border: 1px solid #06b6d4;
+    outline: 1px solid var(--neon-pink);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+  .neon-border-gold {
+    border: 1px solid #fbbf24;
+    outline: 1px solid var(--neon-pink);
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+}
+
 /* Tablet: reduced motion (subtle glow only) */
 @media (min-width: 768px) and (max-width: 1023px) {
   .neon-border {

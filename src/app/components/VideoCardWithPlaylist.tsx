@@ -47,6 +47,7 @@ export default function VideoCardWithPlaylist({
             <img
               src={thumb}
               alt={title}
+              loading="lazy"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform"
             />
           ) : (
@@ -56,7 +57,7 @@ export default function VideoCardWithPlaylist({
           )}
           {rank != null && (
             <div
-              className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+              className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white shadow-md"
               style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
             >
               #{rank}
@@ -73,9 +74,9 @@ export default function VideoCardWithPlaylist({
             </div>
           )}
         </div>
-        <div className="hidden md:flex items-center justify-between px-2 py-1 text-[10px] md:text-xs text-white/70 bg-black/30">
+        <div className="flex items-center justify-between px-1.5 py-0.5 md:px-2 md:py-1 text-[9px] md:text-xs text-white/60 md:text-white/70 bg-black/30">
           <span>{duration}</span>
-          <span>{formatViews(viewsCount)} XESS Views</span>
+          <span>{formatViews(viewsCount)} Views</span>
         </div>
       </Link>
 
@@ -85,7 +86,7 @@ export default function VideoCardWithPlaylist({
           <AddToPlaylistButton
             videoId={videoId}
             iconOnly
-            className="p-1.5 bg-black/70 hover:bg-black/90 rounded-lg backdrop-blur-sm"
+            className="p-1.5 bg-black/80 hover:bg-black/90 rounded-lg"
           />
         </div>
       )}

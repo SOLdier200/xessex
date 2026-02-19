@@ -92,14 +92,13 @@ export default function Top20Reveal({ children }: { children: React.ReactNode })
 
   return (
     <section
-      className="rounded-2xl p-4 md:p-6 relative overflow-hidden"
+      className="rounded-xl sm:rounded-2xl p-2.5 sm:p-4 md:p-6 relative overflow-hidden"
       style={{
         background: "linear-gradient(to bottom, #050a1a, #0a1628)",
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.5' opacity='0.15'%3E%3Ccircle cx='100' cy='100' r='1'/%3E%3Ccircle cx='300' cy='50' r='0.5'/%3E%3Ccircle cx='500' cy='120' r='1.5'/%3E%3Ccircle cx='700' cy='80' r='0.8'/%3E%3Ccircle cx='150' cy='250' r='1'/%3E%3Ccircle cx='400' cy='200' r='0.6'/%3E%3Ccircle cx='600' cy='280' r='1.2'/%3E%3Ccircle cx='50' cy='400' r='0.7'/%3E%3Ccircle cx='250' cy='350' r='1'/%3E%3Ccircle cx='450' cy='420' r='0.5'/%3E%3Ccircle cx='650' cy='380' r='1.3'/%3E%3Ccircle cx='750' cy='450' r='0.9'/%3E%3Ccircle cx='100' cy='550' r='1.1'/%3E%3Ccircle cx='350' cy='500' r='0.6'/%3E%3Ccircle cx='550' cy='580' r='1'/%3E%3Ccircle cx='200' cy='650' r='0.8'/%3E%3Ccircle cx='400' cy='700' r='1.4'/%3E%3Ccircle cx='600' cy='650' r='0.5'/%3E%3Ccircle cx='750' cy='720' r='1'/%3E%3Ccircle cx='50' cy='750' r='0.7'/%3E%3C/g%3E%3C/svg%3E")`,
       }}
     >
-      {/* Transparent coin logo behind everything */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      {/* Transparent coin logo behind everything — hidden on mobile for performance */}
+      <div className="absolute inset-0 hidden sm:flex items-center justify-center pointer-events-none">
         <Image
           src="/logos/xessexcoinlogo2.png"
           alt=""
@@ -116,7 +115,7 @@ export default function Top20Reveal({ children }: { children: React.ReactNode })
             alt=""
             width={400}
             height={400}
-            className="absolute w-[200px] md:w-[280px] h-auto opacity-[0.07] pointer-events-none"
+            className="absolute w-[200px] md:w-[280px] h-auto opacity-[0.07] pointer-events-none hidden sm:block"
           />
           <button
             onClick={() => doReveal?.()}
@@ -144,7 +143,7 @@ export default function Top20Reveal({ children }: { children: React.ReactNode })
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-y-2 sm:gap-x-1.5" style={{ containerType: "inline-size" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-y-2 sm:gap-x-1.5" style={{ containerType: "inline-size" }}>
             {items.map((child, i) => {
               const anim = getCardAnim(i, cols);
               const col = i % cols;

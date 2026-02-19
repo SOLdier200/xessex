@@ -51,6 +51,11 @@ export async function POST(req: Request) {
   }
 
   if (now > w.expiresAt) {
+    // Lazy-mark as EXPIRED so DB stays consistent
+    await db.raffleWinner.update({
+      where: { id: w.id },
+      data: { status: "EXPIRED" },
+    });
     return NextResponse.json({ ok: false, error: "prize_expired" }, { status: 400 });
   }
 

@@ -6,7 +6,6 @@ import TopNav from "./components/TopNav";
 import LockedVideoCard from "./components/LockedVideoCard";
 import LockedFeaturedCard from "./components/LockedFeaturedCard";
 import RoadmapMarquee from "./components/RoadmapMarquee";
-import HoverPreviewVideo from "./components/HoverPreviewVideo";
 import VideoCardWithPlaylist from "./components/VideoCardWithPlaylist";
 import Top20Reveal, { Top20RevealProvider, RevealGate } from "./components/Top20Reveal";
 import { getAccessContext } from "@/lib/access";
@@ -118,7 +117,7 @@ export default async function HomePage() {
     <main className="min-h-screen">
       <TopNav />
 
-      <div className="px-4 md:px-6 pb-10">
+      <div className="px-3 sm:px-4 md:px-6 pb-10 safe-bottom">
         <Top20RevealProvider>
 
         {/* Top 20 Videos */}
@@ -166,10 +165,10 @@ export default async function HomePage() {
         </Top20Reveal>
 
         {videos.length > 20 && (
-          <div className="mt-6 text-center">
+          <div className="mt-4 sm:mt-6 text-center">
             <Link
               href="/videos"
-              className="inline-flex items-center gap-2 text-pink-300 font-semibold hover:opacity-80 transition"
+              className="inline-flex items-center gap-1.5 sm:gap-2 text-pink-300 font-semibold hover:opacity-80 transition"
             >
               View All
               <Image
@@ -177,26 +176,26 @@ export default async function HomePage() {
                 alt="Videos"
                 width={938}
                 height={276}
-                className="h-[48px] w-auto -mt-[22px]"
+                className="h-[32px] sm:h-[48px] w-auto -mt-[14px] sm:-mt-[22px]"
               />
             </Link>
           </div>
         )}
 
-        <section className="mt-10 rounded-2xl border border-white/10 bg-black/20 px-5 py-6 md:px-8 md:py-8 text-center">
-          <h1 className="text-2xl md:text-3xl font-semibold text-white">
+        <section className="mt-6 sm:mt-10 rounded-2xl border border-white/10 bg-black/20 px-4 py-5 sm:px-5 sm:py-6 md:px-8 md:py-8 text-center">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">
             HD Porn Videos, Premium Sex Content & Crypto Rewards
           </h1>
-          <p className="mt-4 text-white/70">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/70">
             Xessex is a next-generation adult platform offering high-quality HD porn and premium sex
             videos. Every release is curated, verified, and ranked by the community.
           </p>
-          <p className="mt-4 text-white/70">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/70">
             Users can earn crypto rewards for watching videos, engaging with content, and
             supporting creators. Xessex runs on Solana, enabling fast rewards with XESS tokens and
             Diamond tiers for premium access.
           </p>
-          <p className="mt-4 text-white/70">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-white/70">
             If you are looking for the best porn online and top-ranked XXX videos with a modern,
             reward-driven experience, Xessex delivers quality, speed, and privacy.
           </p>
@@ -211,7 +210,7 @@ export default async function HomePage() {
         </section>
 
         {/* Featured & Top Ranked Videos */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 max-w-full md:max-w-[95%] mx-auto">
+        <div className="mt-4 sm:mt-6 grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 max-w-full md:max-w-[95%] mx-auto">
           {/* Featured Video */}
           {videos.length > 0 && videos[0].favorite === 1 && (() => {
             const featured = videos[0];
@@ -243,6 +242,7 @@ export default async function HomePage() {
                       <img
                         src={featured.primary_thumb}
                         alt={`Featured video: ${featured.title}`}
+                        loading="lazy"
                         className="w-full h-full object-cover hover:scale-105 transition-transform"
                       />
                     )}
@@ -303,6 +303,7 @@ export default async function HomePage() {
                           <img
                             src={topRanked.primary_thumb}
                             alt={topRanked.title}
+                            loading="lazy"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
                         ) : (
@@ -311,7 +312,7 @@ export default async function HomePage() {
                           </div>
                         )}
                         <div
-                          className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/40 to-pink-500/40 text-white backdrop-blur-sm shadow-md"
+                          className="absolute top-1 left-1 md:top-1.5 md:left-1.5 min-w-[20px] md:min-w-[22px] h-5 flex items-center justify-center text-[10px] md:text-xs font-bold px-1 md:px-1.5 rounded-md bg-gradient-to-br from-purple-500/80 to-pink-500/80 text-white shadow-md"
                           style={{ textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
                         >
                           #1

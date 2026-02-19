@@ -92,18 +92,68 @@ export async function GET() {
     };
   }
 
-  // Pending wins (credits only)
-  const pendingWins = ctx.user?.id
-    ? await db.raffleWinner.findMany({
-        where: {
-          userId: ctx.user.id,
-          status: "PENDING",
-          raffle: { type: "CREDITS" },
-        },
-        include: { raffle: true },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
+  // Pending wins (credits only) — with lazy expiry
+  let pendingWins: Awaited<ReturnType<typeof db.raffleWinner.findMany>> = [];
+  let expiredWins: Array<{
+    winnerId: string;
+    weekKey: string;
+    place: number;
+    prizeCreditsMicro: string;
+    expiredAt: string;
+  }> = [];
+
+  if (ctx.user?.id) {
+    const rawPending = await db.raffleWinner.findMany({
+      where: {
+        userId: ctx.user.id,
+        status: "PENDING",
+        raffle: { type: "CREDITS" },
+      },
+      include: { raffle: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Split into truly-pending vs past-expiry
+    const stillPending: typeof rawPending = [];
+    const nowExpiredIds: string[] = [];
+    for (const w of rawPending) {
+      if (w.expiresAt < now) {
+        nowExpiredIds.push(w.id);
+      } else {
+        stillPending.push(w);
+      }
+    }
+
+    // Lazy-mark expired ones (same as cron would do)
+    if (nowExpiredIds.length > 0) {
+      await db.raffleWinner.updateMany({
+        where: { id: { in: nowExpiredIds } },
+        data: { status: "EXPIRED" },
+      });
+    }
+
+    pendingWins = stillPending;
+
+    // Fetch user's EXPIRED wins (last 6 weeks) for history display
+    const expiredRows = await db.raffleWinner.findMany({
+      where: {
+        userId: ctx.user.id,
+        status: "EXPIRED",
+        raffle: { type: "CREDITS" },
+      },
+      include: { raffle: true },
+      orderBy: { createdAt: "desc" },
+      take: 18,
+    });
+
+    expiredWins = expiredRows.map((w) => ({
+      winnerId: w.id,
+      weekKey: w.raffle.weekKey,
+      place: w.place,
+      prizeCreditsMicro: w.prizeCreditsMicro.toString(),
+      expiredAt: w.expiresAt.toISOString(),
+    }));
+  }
 
   // Recent winners (last 6 weeks, credits only)
   const recentWinners = await db.raffleWinner.findMany({
@@ -156,6 +206,7 @@ export async function GET() {
       prizeCreditsMicro: w.prizeCreditsMicro.toString(),
       expiresAt: w.expiresAt.toISOString(),
     })),
+    expiredWins,
     recentWinners: Array.from(winnersByWeek.entries()).map(([week, winners]) => ({
       weekKey: week,
       winners,

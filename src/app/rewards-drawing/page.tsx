@@ -28,6 +28,13 @@ type DrawingStatusResp = {
     prizeCreditsMicro: string;
     expiresAt: string; // ISO
   }>;
+  expiredWins?: Array<{
+    winnerId: string;
+    weekKey: string;
+    place: number;
+    prizeCreditsMicro: string;
+    expiredAt: string; // ISO
+  }>;
   recentWinners?: Array<{
     weekKey: string;
     winners: Array<{
@@ -235,7 +242,14 @@ export default function RewardsDrawingPage() {
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json?.ok) throw new Error(json?.error || "claim_failed");
+      if (!res.ok || !json?.ok) {
+        if (json?.error === "prize_expired") {
+          toast.error("This prize has expired. Unclaimed prizes roll into next week's pool.");
+          await refetch();
+          return;
+        }
+        throw new Error(json?.error || "claim_failed");
+      }
 
       await refetch();
       window.dispatchEvent(new Event("credits-changed"));
@@ -397,6 +411,41 @@ export default function RewardsDrawingPage() {
             )}
           </div>
 
+          {/* Expired wins history */}
+          {data.expiredWins && data.expiredWins.length > 0 && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-900/10 p-6 mb-6">
+              <div className="text-amber-400 font-bold text-xl">Expired Prizes</div>
+              <div className="text-white/60 text-sm mt-1">
+                These prizes were not claimed in time. Credits rolled into the next week&apos;s pool.
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {data.expiredWins.map((w) => (
+                  <div
+                    key={w.winnerId}
+                    className="rounded-xl border border-amber-500/20 bg-amber-900/10 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                  >
+                    <div>
+                      <div className="text-amber-400/80 font-semibold">
+                        {placeLabel(w.place)} Place — Week {w.weekKey}
+                      </div>
+                      <div className="text-white/60 text-sm">
+                        Won: <span className="text-amber-400/70 font-mono">{microToCreditsStr(w.prizeCreditsMicro)} Special Credits</span>
+                      </div>
+                      <div className="text-white/50 text-xs mt-1">
+                        Expired: {new Date(w.expiredAt).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} PT
+                      </div>
+                    </div>
+
+                    <div className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-400 text-sm font-semibold self-start md:self-center">
+                      Expired
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recent winners */}
           <div className="rounded-2xl border border-white/10 bg-black/40 p-6 mb-6">
             <div className="text-white font-bold text-xl">Recent Winners</div>
@@ -412,11 +461,19 @@ export default function RewardsDrawingPage() {
                     <div className="space-y-2">
                       {wk.winners.map((w) => (
                         <div key={`${wk.weekKey}-${w.place}`} className="flex items-center justify-between">
-                          <div className="text-white/80 text-sm">
+                          <div className={`text-sm ${w.status === "EXPIRED" ? "text-white/40 line-through" : "text-white/80"}`}>
                             {placeLabel(w.place)} — {w.label || "Unknown"}
                           </div>
-                          <div className="text-emerald-400 text-sm font-semibold">
-                            {microToCreditsStr(w.prizeCreditsMicro)} Credits
+                          <div className="flex items-center gap-2">
+                            <div className={`text-sm font-semibold ${w.status === "EXPIRED" ? "text-amber-400/70 line-through" : "text-emerald-400"}`}>
+                              {microToCreditsStr(w.prizeCreditsMicro)} Credits
+                            </div>
+                            {w.status === "EXPIRED" && (
+                              <span className="text-xs text-amber-400/60">(expired)</span>
+                            )}
+                            {w.status === "CLAIMED" && (
+                              <span className="text-xs text-emerald-400/60">(claimed)</span>
+                            )}
                           </div>
                         </div>
                       ))}
