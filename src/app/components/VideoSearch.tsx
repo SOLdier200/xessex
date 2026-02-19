@@ -429,6 +429,7 @@ export default function VideoSearch({
               <option value="threesome">Threesome</option>
               <option value="for-women">For Women</option>
               <option value="anal">Anal</option>
+              <option value="black">Black</option>
             </select>
           </div>
 
