@@ -313,8 +313,8 @@ export default function TopNav() {
                           <Image
                             src={it.img}
                             alt={it.alt}
-                            width={1000}
-                            height={300}
+                            width={250}
+                            height={74}
                             style={{ height: it.h }}
                             className="w-auto object-contain"
                           />
@@ -330,8 +330,8 @@ export default function TopNav() {
                           <Image
                             src={it.img}
                             alt={it.alt}
-                            width={1000}
-                            height={300}
+                            width={250}
+                            height={74}
                             style={{ height: it.h }}
                             className="w-auto object-contain"
                           />
@@ -351,8 +351,8 @@ export default function TopNav() {
                             <Image
                               src={it.img}
                               alt={it.alt}
-                              width={1000}
-                              height={300}
+                              width={250}
+                              height={74}
                               style={{ height: it.h }}
                               className="w-auto object-contain"
                             />

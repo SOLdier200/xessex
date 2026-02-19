@@ -115,8 +115,8 @@ export default function PayoutHistoryModal({ open, onClose }: Props) {
 
         {data && !loading && (
           <div className="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0">
-            {/* All-Time Summary */}
-            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-xl p-4">
+            {/* All-Time Summary — hidden on mobile to avoid redundancy with per-week list */}
+            <div className="hidden sm:block bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-xl p-4">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <div className="text-[10px] text-white/40 uppercase tracking-wide">Total Earned</div>

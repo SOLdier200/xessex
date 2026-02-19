@@ -1088,7 +1088,7 @@ function ProfilePageInner() {
             <>
               {/* Account Info Card */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
-                <Image src="/logos/textlogo/siteset3/accouintinfoirmation.png" alt="Account Information" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto mb-4" />
+                <Image src="/logos/textlogo/siteset3/accouintinfoirmation.png" alt="Account Information" width={250} height={74} className="h-[32px] sm:h-[38px] w-auto mb-4" />
 
                 <div className="space-y-4">
                   {data.email && (
@@ -1782,7 +1782,7 @@ function ProfilePageInner() {
               {/* Your Referral Link Card */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-gradient-to-r from-purple-500/10 via-black/30 to-pink-500/10 border-purple-400/30 mb-6">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <Image src="/logos/textlogo/siteset3/referrals.png" alt="Your Referral Link" width={938} height={276} className="h-[32px] sm:h-[38px] w-auto" />
+                  <Image src="/logos/textlogo/siteset3/referrals.png" alt="Your Referral Link" width={250} height={74} className="h-[32px] sm:h-[38px] w-auto" />
                   {isAuthed && (
                     <button
                       onClick={() => setShowBenefitsModal(true)}
@@ -1855,7 +1855,7 @@ function ProfilePageInner() {
               {/* Referral Earnings + Network */}
               <div className="neon-border rounded-2xl p-4 sm:p-6 bg-black/30 mb-6">
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <img src="/logos/textlogo/siteset3/referralearnings.png" alt="Referral Earnings" className="h-[28px] w-auto" />
+                  <Image src="/logos/textlogo/siteset3/referralearnings.png" alt="Referral Earnings" width={250} height={74} className="h-[28px] w-auto" />
                   {referralLoading && (
                     <span className="text-xs text-white/50">Loading…</span>
                   )}
@@ -2067,7 +2067,7 @@ function ProfilePageInner() {
           {/* History Tab Content (Member and Diamond) */}
           {activeTab === "history" && isAuthed && (
             <div className="neon-border rounded-2xl p-3 sm:p-6 bg-black/30">
-              <Image src="/logos/textlogo/siteset3/tokenallocation.png" alt="XESS History" width={938} height={276} className="h-[37px] sm:h-[44px] w-auto mb-4" />
+              <Image src="/logos/textlogo/siteset3/tokenallocation.png" alt="XESS History" width={250} height={74} className="h-[37px] sm:h-[44px] w-auto mb-4" />
               <RewardsTab />
             </div>
           )}
