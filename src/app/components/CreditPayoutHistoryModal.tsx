@@ -100,6 +100,7 @@ export default function CreditPayoutHistoryModal({ open, onClose }: Props) {
     setError(null);
     fetch("/api/credits/payouts")
       .then((r) => {
+        if (r.status === 401) throw new Error("Sign in to view credit payouts");
         if (!r.ok) throw new Error("Failed to load");
         return r.json();
       })
@@ -122,6 +123,7 @@ export default function CreditPayoutHistoryModal({ open, onClose }: Props) {
     setMonthLoading(true);
     fetch(`/api/credits/payouts?month=${m}`)
       .then((r) => {
+        if (r.status === 401) throw new Error("Sign in to view credit payouts");
         if (!r.ok) throw new Error("Failed to load");
         return r.json();
       })
@@ -184,7 +186,7 @@ export default function CreditPayoutHistoryModal({ open, onClose }: Props) {
         )}
 
         {error && (
-          <div className="text-red-400 text-sm text-center py-8">{error}</div>
+          <div className={`text-sm text-center py-8 ${error.startsWith("Sign in") ? "text-yellow-400" : "text-red-400"}`}>{error}</div>
         )}
 
         {!loading && !error && view === "recent" && (

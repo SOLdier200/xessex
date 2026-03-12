@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import LogoutModal from "./LogoutModal";
 import { useWalletSessionAutoFix } from "@/hooks/useWalletSessionAutoFix";
+import { syncWalletSession } from "@/lib/walletAuthFlow";
 import { getTierColor } from "@/lib/tierColors";
 
 type AuthData = {
@@ -19,7 +20,8 @@ type AuthData = {
 export default function WalletStatus() {
   const pathname = usePathname();
   const router = useRouter();
-  const { wallet, publicKey, connected } = useWallet();
+  const walletCtx = useWallet();
+  const { wallet, publicKey, connected, disconnect } = walletCtx;
   const [auth, setAuth] = useState<AuthData | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -81,6 +83,26 @@ export default function WalletStatus() {
   const authLite = auth ? { authed: true, tier: "diamond" as const } : null;
   useWalletSessionAutoFix(authLite);
 
+  // Wallet-session mismatch guard:
+  // If the browser's connected wallet doesn't match the logged-in user's
+  // linked wallet, disconnect it immediately. This prevents cross-account
+  // state where autoConnect reconnects a wallet belonging to a different user.
+  useEffect(() => {
+    if (!auth?.walletAddress || !publicKey || !connected) return;
+    // Don't auto-disconnect on pages where user intentionally connects a different wallet
+    if (pathname.startsWith("/login") || pathname.startsWith("/link-wallet") || pathname === "/wallet-test") return;
+
+    const connectedPub = publicKey.toBase58();
+    const sessionWallet = auth.walletAddress;
+
+    if (connectedPub !== sessionWallet) {
+      console.warn(
+        `[WalletStatus] Wallet mismatch: connected=${connectedPub.slice(0, 8)}… session=${sessionWallet.slice(0, 8)}… — disconnecting stale wallet`
+      );
+      disconnect().catch(() => {});
+    }
+  }, [auth?.walletAddress, publicKey?.toBase58(), connected, pathname, disconnect]);
+
   const handleLogoutComplete = () => {
     setAuth(null);
     if (pathname.startsWith("/videos/")) {
@@ -100,37 +122,39 @@ export default function WalletStatus() {
 
   const authed = !!auth?.authed;
   const hasWallet = !!auth?.walletAddress;
+  const walletConnected = connected && publicKey;
 
   // Handle click based on state
-  const handleClick = () => {
-    if (!authed) {
-      // Not logged in - redirect to wallet connect/sign-in on main site
+  const handleClick = async () => {
+    if (authed) {
+      // Signed in - refresh auth data (gets fresh avatar signed URL) then show modal
+      fetchAuth(0);
+      setShowLogoutModal(true);
+    } else if (walletConnected) {
+      // Wallet connected but not signed in - trigger wallet sign-in directly
+      const result = await syncWalletSession(walletCtx as any, { mode: "manual" });
+      if (result.ok) {
+        window.dispatchEvent(new Event("auth-changed"));
+        fetchAuth(0);
+      }
+    } else {
+      // No wallet connected - redirect to wallet connect/sign-in
       const isPresale = typeof window !== "undefined" && window.location.hostname.startsWith("presale.");
       if (isPresale) {
         window.location.href = "https://xessex.me/login/diamond";
       } else {
         router.push("/login/diamond");
       }
-    } else {
-      // Refresh auth data (gets fresh avatar signed URL) then show modal
-      fetchAuth(0);
-      setShowLogoutModal(true);
     }
   };
-
-  // Three states:
-  // 1. Not connected (no wallet) → "Connect"
-  // 2. Connected but not signed in → "Sign in"
-  // 3. Signed in → Show pubkey
-  const walletConnected = connected && publicKey;
 
   // Determine styles based on state
   let bgClass = "";
   let borderClass = "";
   let textColor = "";
 
-  if (authed && hasWallet) {
-    // State 3: Signed in with wallet - color by wallet type
+  if (authed && walletConnected) {
+    // State 3: Signed in with wallet actually connected - color by wallet type
     const isPhantom = walletName.includes("phantom");
     const isSolflare = walletName.includes("solflare");
     if (isPhantom) {
@@ -146,8 +170,8 @@ export default function WalletStatus() {
       borderClass = "border-sky-400/50";
       textColor = "text-sky-400";
     }
-  } else if (walletConnected && !authed) {
-    // State 2: Wallet connected but not signed in - yellow prompt
+  } else if ((walletConnected && !authed) || (authed && !walletConnected)) {
+    // State 2: Wallet connected but not signed in, or signed in but wallet not connected - yellow prompt
     bgClass = "bg-gradient-to-r from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30";
     borderClass = "border-yellow-400/50";
     textColor = "text-yellow-400";
@@ -164,8 +188,8 @@ export default function WalletStatus() {
         onClick={handleClick}
         className={`border-2 border-[var(--neon-pink)] rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2 flex items-center gap-1.5 md:gap-2 cursor-pointer transition ${bgClass}`}
       >
-        {authed ? (
-          // State 3: Signed in - show username or pubkey + tier + credits
+        {authed && walletConnected ? (
+          // State 3: Signed in AND wallet connected - show username or pubkey + tier + credits
           <div className="flex items-center gap-2">
             {auth?.username ? (
               <div className={`text-[10px] md:text-xs font-semibold ${textColor}`}>
@@ -206,6 +230,14 @@ export default function WalletStatus() {
               }
               return null;
             })()}
+          </div>
+        ) : authed ? (
+          // State 2b: Signed in but wallet NOT connected - prompt to connect wallet
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full animate-pulse shrink-0 bg-yellow-400" />
+            <div className="text-[10px] md:text-xs font-semibold text-yellow-400">
+              Connect Wallet
+            </div>
           </div>
         ) : walletConnected ? (
           // State 2: Wallet connected but not signed in

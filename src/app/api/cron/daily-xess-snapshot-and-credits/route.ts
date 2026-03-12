@@ -196,25 +196,20 @@ export async function POST(req: NextRequest) {
           continue;
         }
       } else {
-        // RPC returned a value — but check if snapshot has a higher balance
-        // (batch getMultipleAccountsInfo can return stale data)
-        const lastSnap = await db.walletBalanceSnapshot.findFirst({
-          where: { wallet },
-          orderBy: { dateKey: "desc" },
-          select: { balanceAtomic: true },
-        });
-        if (lastSnap) {
-          const snapBalance = BigInt(lastSnap.balanceAtomic);
-          if (snapBalance > effectiveBalance) {
-            const snapTier = getTierFromBalance(snapBalance);
-            const rpcTier = getTierFromBalance(effectiveBalance);
-            if (snapTier > rpcTier) {
-              if (debug) {
-                console.warn(
-                  `[TWICE_DAILY_SNAPSHOT][${userId}][${wallet}] RPC tier=${rpcTier} < snapshot tier=${snapTier}, using snapshot balance`
-                );
-              }
-              effectiveBalance = snapBalance;
+        // RPC returned a value — trust it. Balances can legitimately decrease
+        // (user sold/transferred tokens). Always use the live RPC value.
+        if (debug) {
+          const lastSnap = await db.walletBalanceSnapshot.findFirst({
+            where: { wallet },
+            orderBy: { dateKey: "desc" },
+            select: { balanceAtomic: true },
+          });
+          if (lastSnap) {
+            const snapBalance = BigInt(lastSnap.balanceAtomic);
+            if (snapBalance !== effectiveBalance) {
+              console.log(
+                `[TWICE_DAILY_SNAPSHOT][${userId}][${wallet}] balance changed: snapshot=${snapBalance.toString()} -> rpc=${effectiveBalance!.toString()}`
+              );
             }
           }
         }

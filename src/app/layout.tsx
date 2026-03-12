@@ -185,6 +185,13 @@ export default function RootLayout({
             </a>
           </div>
 
+          {/* X / Twitter */}
+          <div className="flex justify-center my-4">
+            <a href="https://x.com/Xessexdotme" target="_blank" rel="noopener noreferrer" className="text-2xl font-bold hover:opacity-70 transition" style={{ color: "white" }}>
+              𝕏
+            </a>
+          </div>
+
           {/* RTA - Centered */}
           <div className="flex flex-col items-center gap-2 my-4">
             <a

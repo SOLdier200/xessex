@@ -95,15 +95,40 @@ function isTransient(e: unknown): boolean {
 }
 
 /**
- * Execute a read RPC call against the standard endpoint.
- * On transient failure, retries against the Gatekeeper (if different).
+ * Sleep helper for backoff delays.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Execute a read RPC call with exponential backoff on transient errors.
+ * Retries up to 4 times: 500ms → 1s → 2s → 4s before giving up.
+ * On final failure, falls back to the Gatekeeper endpoint (if different).
  */
 export async function rpc<T>(fn: (c: Connection) => Promise<T>): Promise<T> {
-  try {
-    return await fn(connRead());
-  } catch (e) {
-    const send = connSend();
-    if (send === connRead() || !isTransient(e)) throw e;
+  const MAX_RETRIES = 4;
+  let lastError: unknown;
+
+  // Try connRead() with exponential backoff
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn(connRead());
+    } catch (e) {
+      lastError = e;
+      if (!isTransient(e)) throw e;
+      if (attempt < MAX_RETRIES) {
+        const delay = 500 * Math.pow(2, attempt); // 500, 1000, 2000, 4000
+        await sleep(delay);
+      }
+    }
+  }
+
+  // Final fallback: try Gatekeeper if it's a different endpoint
+  const send = connSend();
+  if (send !== connRead()) {
     return await fn(send);
   }
+
+  throw lastError;
 }

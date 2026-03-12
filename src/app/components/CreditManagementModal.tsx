@@ -118,6 +118,7 @@ export default function CreditManagementModal({ open, onClose }: Props) {
     // Fetch credit history and live wallet balance in parallel
     const creditsFetch = fetch("/api/credits/history")
       .then((r) => {
+        if (r.status === 401) throw new Error("Sign in to view credits");
         if (!r.ok) throw new Error("Failed to load");
         return r.json();
       });
@@ -217,7 +218,7 @@ export default function CreditManagementModal({ open, onClose }: Props) {
         )}
 
         {error && (
-          <div className="text-red-400 text-sm text-center py-8">{error}</div>
+          <div className={`text-sm text-center py-8 ${error.startsWith("Sign in") ? "text-yellow-400" : "text-red-400"}`}>{error}</div>
         )}
 
         {data && !loading && (

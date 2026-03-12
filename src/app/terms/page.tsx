@@ -22,271 +22,259 @@ export default function TermsPage() {
       <div className="prose prose-invert max-w-none space-y-8 text-gray-300">
         <section>
           <p>
-            Welcome to Xessex (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Xessex website, services, and any content made available through them (collectively, the &quot;Platform&quot;). By accessing or using Xessex, you agree to be bound by these Terms. If you do not agree, do not use the Platform.
+            Welcome to Xessex (&quot;Xessex,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Xessex website, services, features, and content (collectively, the &quot;Platform&quot;).
+          </p>
+          <p className="mt-3">
+            By accessing or using Xessex, you agree to be legally bound by these Terms.
+          </p>
+          <p className="mt-3">
+            If you do not agree, you must not use the Platform.
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-3">1. Adult-Only Platform</h2>
-          <p>
-            Xessex is strictly for adults. By accessing this Platform, you confirm that:
-          </p>
-          <ul className="list-disc list-inside mt-3 space-y-2">
-            <li>You are at least eighteen (18) years of age or the age of majority in your jurisdiction</li>
-            <li>You have the legal capacity to agree to these Terms</li>
-            <li>You are accessing the Platform from a location where adult content is lawful</li>
-            <li>You will not allow any minor to access or view this Platform</li>
-          </ul>
-          <p className="mt-3">
-            Any attempt by a minor to access Xessex is strictly prohibited.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-white mb-3">2. RTA (Restricted to Adults) Compliance</h2>
-          <p>
-            Xessex is fully RTA (Restricted to Adults) compliant and maintains active RTA verification, including RTA tags and logos displayed across all pages of the Platform.
-          </p>
-          <p className="mt-3">
-            This allows parental control software, ISPs, browsers, operating systems, and device-level filters to automatically block Xessex when adult filtering is enabled.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-semibold text-white mb-3">3. Parental Responsibility</h2>
-          <p>
-            We are committed to protecting minors. However, parents and guardians are responsible for monitoring and controlling their children&apos;s internet access.
-          </p>
-          <p className="mt-3">We strongly encourage the use of:</p>
+          <p>Xessex is strictly for adults.</p>
+          <p className="mt-3">By accessing the Platform, you represent and warrant that:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Device-level parental controls (Windows, macOS, iOS, Android)</li>
-            <li>ISP filtering services</li>
-            <li>Third-party parental control software</li>
+            <li>You are at least eighteen (18) years of age or the age of majority in your jurisdiction, whichever is higher</li>
+            <li>You have the legal capacity to enter into binding agreements</li>
+            <li>You are accessing from a jurisdiction where adult content is lawful</li>
+            <li>You will not permit minors to access the Platform</li>
           </ul>
-          <p className="mt-3">
-            Xessex is designed to be blocked when these tools are enabled.
-          </p>
+          <p className="mt-3">Any access by minors is strictly prohibited.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">4. Nature of the Content (Embedded Third-Party Media)</h2>
-          <p>
-            <strong className="text-white">Xessex does not host, store, or upload any adult content.</strong>
-          </p>
-          <p className="mt-3">
-            All videos and media displayed on Xessex are embedded from third-party platforms, such as Pornhub and similar providers, which maintain their own content moderation systems, performer age-verification, consent verification, copyright compliance, and legal responsibilities.
-          </p>
-          <p className="mt-3">
-            Xessex functions as an indexing and viewing interface that displays embedded media hosted and controlled entirely by third-party platforms.
-          </p>
-          <p className="mt-3">
-            We do not control, produce, or upload the embedded content.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">2. RTA Compliance</h2>
+          <p>Xessex uses Restricted to Adults (RTA) labeling and tagging.</p>
+          <p className="mt-3">Filtering software, parental controls, and operating systems may block the Platform accordingly.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">5. No User Uploads</h2>
+          <h2 className="text-xl font-semibold text-white mb-3">3. Third-Party Embedded Content</h2>
           <p>
-            Users are not permitted to upload, submit, or distribute any content on Xessex under any circumstances.
+            <strong className="text-white">Xessex does not produce, upload, host, or store adult video content.</strong>
           </p>
-          <p className="mt-3">
-            There are no user-generated videos, images, or uploads of any kind on this Platform.
-          </p>
+          <p className="mt-3">All media is embedded from third-party providers.</p>
+          <p className="mt-3">Those providers are solely responsible for:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Age verification</li>
+            <li>Consent verification</li>
+            <li>Legal compliance</li>
+            <li>Content moderation</li>
+          </ul>
+          <p className="mt-3">Xessex disclaims all liability related to third-party content.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">6. Accounts & Access</h2>
-          <p>
-            Xessex is a wallet-native platform. Your connected Solana wallet serves as your identity.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">4. Wallet-Based Accounts</h2>
+          <p>Your Solana wallet serves as your account identity.</p>
           <p className="mt-3">You agree that:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>You are responsible for securing your wallet and private keys</li>
-            <li>You will not share or transfer your account access</li>
-            <li>You are responsible for all activity under your wallet</li>
-            <li>You will not attempt to bypass restrictions or exploit the platform</li>
+            <li>You are solely responsible for wallet security</li>
+            <li>You control all wallet activity</li>
+            <li>Lost wallet access cannot be recovered by Xessex</li>
+            <li>Xessex is not liable for wallet compromise</li>
           </ul>
-          <p className="mt-3">
-            We reserve the right to suspend or terminate access for misuse or violations.
-          </p>
+          <p className="mt-3">All actions performed through your wallet are your responsibility.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">7. Video Access & Unlocks</h2>
-          <p>
-            Access to certain videos may require spending Special Credits earned through platform participation.
-          </p>
-          <p className="mt-3">You agree that:</p>
+          <h2 className="text-xl font-semibold text-white mb-3">5. Special Credits and Token-Related Features</h2>
+          <p>The Platform may provide loyalty-based digital credits (&quot;Credits&quot;).</p>
+          <p className="mt-3">Credits:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Special Credits have no monetary value and cannot be purchased or sold</li>
-            <li>Video unlocks are permanent and non-refundable</li>
-            <li>Access to unlocked content depends on third-party platform availability</li>
+            <li>Have no monetary value</li>
+            <li>Are not currency</li>
+            <li>Are not cryptocurrency</li>
+            <li>Are not securities</li>
+            <li>Cannot be transferred</li>
+            <li>Cannot be sold</li>
+            <li>Cannot be redeemed for money</li>
           </ul>
+          <p className="mt-3">Credits exist solely as a platform loyalty system.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">8. Rewards Credits System</h2>
-          <p>
-            Users may earn non-transferable &quot;Special Credits&quot; (&quot;Credits&quot;) through participation in the Xessex platform, including but not limited to holding Xess tokens in a compatible wallet. Credits are issued solely as a loyalty reward and have no monetary value. Credits cannot be purchased, sold, traded, transferred, exchanged for cryptocurrency, exchanged for cash, or redeemed for any item of monetary value.
-          </p>
-          <p className="mt-3">
-            Credits may only be redeemed for platform-specific benefits such as video unlocks or other non-monetary digital perks offered by the site. Credits do not represent any financial interest, ownership interest, or right to receive compensation of any kind.
-          </p>
-
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.1 Reward Drawings</h3>
-          <p>
-            From time to time, the platform may offer optional reward drawings (&quot;Drawings&quot;) in which users may choose to spend Credits for a chance to receive additional Credits. Participation in Drawings is entirely optional. Drawings do not require payment, cryptocurrency, or any item of value to enter. Only Credits may be used to participate.
-          </p>
-          <p className="mt-3">
-            Prizes awarded in Drawings consist exclusively of additional Credits, which retain the same non-monetary, non-transferable nature described above. Drawings do not provide cash, cryptocurrency, or any item of monetary value.
-          </p>
-
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.2 No Gambling or Wagering</h3>
-          <p>
-            The platform does not offer gambling, wagering, or games of chance involving money, cryptocurrency, or items of value. Credits cannot be used as a substitute for money or cryptocurrency. Credits cannot be withdrawn, cashed out, or exchanged for anything of monetary value.
-          </p>
-          <p className="mt-3">
-            All activities involving Credits are intended solely as loyalty rewards and entertainment features within the platform.
-          </p>
-
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">8.3 No Financial Returns</h3>
-          <p>
-            Holding Xess tokens does not entitle users to financial returns, interest, dividends, staking rewards, or any form of passive income. Any Credits earned through holding Xess tokens are loyalty rewards and not financial compensation. Xess tokens are not investment products, and the platform does not promote them as such.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">6. XESS Tokens and Blockchain Disclaimer</h2>
+          <p>Xessex may interact with blockchain tokens.</p>
+          <p className="mt-3">You acknowledge:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Blockchain assets may lose value</li>
+            <li>Blockchain transactions are irreversible</li>
+            <li>Tokens are not investments</li>
+            <li>Tokens do not represent ownership</li>
+            <li>Tokens do not guarantee profit</li>
+          </ul>
+          <p className="mt-3">Xessex makes no financial guarantees.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">9. User Comments and Community Conduct Policy</h2>
-          <p>
-            Xessex is an adult platform. We support open expression and free speech, including the use of adult language, explicit discussion, and controversial opinions. However, this freedom does not extend to illegal conduct, abuse, or content that threatens the safety of others.
-          </p>
-          <p className="mt-3">
-            By posting comments or other user-generated content on Xessex, you agree that you will not post, upload, transmit, or otherwise make available any content that violates the following rules:
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">7. User Comments and Community Standards</h2>
+          <p>Xessex supports lawful free expression.</p>
+          <p className="mt-3">Adult language, explicit discussion, and controversial opinions are permitted.</p>
+          <p className="mt-3">However, users may not post content that:</p>
 
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.1 Illegal Content and Activity</h3>
-          <p>You may not post content that:</p>
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">Illegal Content</h3>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Violates any applicable law or regulation</li>
-            <li>Promotes, facilitates, or instructs others to commit illegal acts</li>
-            <li>Includes admissions of ongoing criminal activity where harm may occur</li>
-            <li>Exploits, endangers, or harms minors in any way</li>
-            <li>Involves human trafficking, coercion, or non-consensual exploitation</li>
+            <li>Violates any law</li>
+            <li>Promotes illegal activity</li>
+            <li>Exploits minors</li>
           </ul>
 
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.2 Violence, Threats, and Harm</h3>
-          <p>You may not post content that:</p>
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">Violence and Threats</h3>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Threatens violence against any person or group</li>
-            <li>Encourages, glorifies, or incites violence</li>
-            <li>Promotes or endorses rape, sexual assault, or non-consensual sexual activity</li>
-            <li>Encourages self-harm or harm to others</li>
-            <li>Expresses intent to commit violent wrongdoing</li>
+            <li>Threatens violence</li>
+            <li>Promotes violence</li>
+            <li>Encourages rape or assault</li>
           </ul>
 
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.3 Non-Consensual, Abusive, or Exploitative Conduct</h3>
-          <p>You may not post content that:</p>
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">Exploitation</h3>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Promotes or depicts non-consensual sexual conduct</li>
-            <li>Harasses, stalks, or targets individuals with credible threats</li>
-            <li>Shares or threatens to share personal, private, or identifying information without consent (doxxing)</li>
-            <li>Attempts to extort, blackmail, or coerce any person</li>
+            <li>Promotes non-consensual acts</li>
+            <li>Engages in harassment</li>
+            <li>Shares private personal information without consent</li>
           </ul>
 
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.4 Platform Integrity and Safety</h3>
-          <p>You may not post content that:</p>
+          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">Fraud and Abuse</h3>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Impersonates another person or entity in a misleading way</li>
-            <li>Is intended to scam, defraud, or deceive others</li>
-            <li>Interferes with the proper functioning or safety of the platform</li>
+            <li>Impersonates others</li>
+            <li>Attempts scams</li>
           </ul>
 
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.5 What Is Allowed</h3>
-          <p>Xessex permits:</p>
+          <p className="mt-3">Xessex reserves the right to remove content at its sole discretion.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">8. Free Speech Position</h2>
+          <p>Xessex does not remove lawful content solely because it is:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Adult language and explicit discussion</li>
-            <li>Consensual adult sexual discussion</li>
-            <li>Controversial, offensive, or unpopular opinions</li>
-            <li>Strong criticism, debate, or disagreement</li>
+            <li>Offensive</li>
+            <li>Explicit</li>
+            <li>Controversial</li>
+            <li>Vulgar</li>
+            <li>Politically unpopular</li>
           </ul>
-          <p className="mt-3">
-            We do not remove content solely because it is offensive, vulgar, or unpopular.
-          </p>
+          <p className="mt-3">However, unlawful content is prohibited.</p>
+        </section>
 
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.6 Enforcement and Moderation</h3>
-          <p>Xessex reserves the right, at its sole discretion, to:</p>
-          <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Remove any content that violates these Terms</li>
-            <li>Suspend or permanently terminate accounts</li>
-            <li>Report unlawful activity to law enforcement when required or appropriate</li>
-          </ul>
-          <p className="mt-3">
-            We may take action to protect the safety of users, the platform, and the public.
-          </p>
-
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.7 No Obligation to Host Content</h3>
-          <p>
-            Xessex supports free expression but is a private platform. We are not obligated to host or maintain any content and may remove content that violates these Terms or poses legal, safety, or operational risks.
-          </p>
-
-          <h3 className="text-lg font-medium text-white/90 mt-4 mb-2">9.8 User Responsibility</h3>
-          <p>
-            You are solely responsible for the content you post. By posting content, you represent and warrant that it complies with these Terms and all applicable laws.
-          </p>
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">9. Platform License</h2>
+          <p>By posting comments, you grant Xessex a worldwide, perpetual, irrevocable, royalty-free license to use your content.</p>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold text-white mb-3">10. Prohibited Conduct</h2>
           <p>You may not:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Access Xessex if under 18</li>
-            <li>Share or resell access</li>
-            <li>Copy, scrape, download, or redistribute content</li>
-            <li>Attempt to bypass security or filters</li>
-            <li>Interfere with platform operations</li>
+            <li>Access under age 18</li>
+            <li>Hack or exploit the Platform</li>
+            <li>Scrape content</li>
+            <li>Interfere with operations</li>
+            <li>Abuse systems</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">11. Disclaimers</h2>
-          <p>
-            Xessex is provided &quot;as is.&quot; We do not guarantee uptime, availability, or accuracy of embedded third-party content.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">11. No Financial Relationship</h2>
+          <p>You agree:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>You are not an employee</li>
+            <li>You are not a contractor</li>
+            <li>You are not entitled to compensation</li>
+          </ul>
+          <p className="mt-3">Credits and tokens are not wages.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">12. Platform Provided &quot;As-Is&quot;</h2>
+          <p>Xessex is provided &quot;as-is.&quot;</p>
+          <p className="mt-3">We make no guarantees regarding:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Availability</li>
+            <li>Reliability</li>
+            <li>Content accuracy</li>
+          </ul>
+          <p className="mt-3">Use at your own risk.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">13. Limitation of Liability</h2>
+          <p>To the maximum extent permitted by law, Xessex is not liable for:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>User content</li>
+            <li>User conduct</li>
+            <li>Financial loss</li>
+            <li>Token loss</li>
+            <li>Emotional harm</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">14. Indemnification</h2>
+          <p>You agree to indemnify Xessex from claims arising from:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Your use</li>
+            <li>Your content</li>
+            <li>Your violations</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">15. Account Termination</h2>
+          <p>We may suspend or terminate access at any time. For any reason. Without notice.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">16. Law Enforcement Cooperation</h2>
+          <p>We may cooperate with law enforcement, including disclosure of records when legally required.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">17. Copyright and DMCA Compliance</h2>
+          <p>Xessex respects copyright law.</p>
           <p className="mt-3">
-            You use this Platform at your own risk.
+            If you believe content infringes copyright, contact: <a href="mailto:legal@xessex.me" className="text-pink-400 hover:underline">legal@xessex.me</a>
           </p>
+          <p className="mt-3">We may remove content.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">12. Limitation of Liability</h2>
-          <p>
-            To the fullest extent allowed by law, Xessex is not liable for any damages arising from your use of the Platform, including exposure to adult content or third-party media.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">18. Arbitration Agreement and Class Action Waiver</h2>
+          <p>You agree that all disputes will be resolved through binding arbitration.</p>
+          <p className="mt-3">You waive the right to:</p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li>Jury trial</li>
+            <li>Class action lawsuits</li>
+          </ul>
+          <p className="mt-3">Disputes will be resolved individually.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">13. Termination</h2>
-          <p>
-            We may suspend or terminate access at any time for violations of these Terms or misuse.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">19. Governing Law</h2>
+          <p>These Terms are governed by United States law and applicable state law.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">14. Changes to These Terms</h2>
-          <p>
-            We may update these Terms at any time. Continued use of Xessex after changes means you accept the updated Terms.
-          </p>
+          <h2 className="text-xl font-semibold text-white mb-3">20. Changes to Terms</h2>
+          <p>We may update these Terms at any time. When we do, we will update the &quot;Last Updated&quot; date at the top of this page and notify all users via the platform messaging system.</p>
+          <p className="mt-3">Continued use of the Platform after changes constitutes acceptance of the updated Terms.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mb-3">15. Contact</h2>
-          <p>Reach us at the appropriate address:</p>
-          <div className="mt-2 space-y-1">
-            <p>Help &amp; Support: <a href="mailto:help@xessex.me" className="text-pink-400 hover:underline">help@xessex.me</a></p>
-            <p>Legal &amp; Compliance: <a href="mailto:legal@xessex.me" className="text-pink-400 hover:underline">legal@xessex.me</a></p>
-            <p>General Contact: <a href="mailto:contact@xessex.me" className="text-pink-400 hover:underline">contact@xessex.me</a></p>
-            <p>Complaints: <a href="mailto:complaints@xessex.me" className="text-pink-400 hover:underline">complaints@xessex.me</a></p>
-          </div>
+          <h2 className="text-xl font-semibold text-white mb-3">21. Contact</h2>
+          <p>Legal Contact: <a href="mailto:legal@xessex.me" className="text-pink-400 hover:underline">legal@xessex.me</a></p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">22. Entire Agreement</h2>
+          <p>These Terms represent the entire agreement between you and Xessex.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-3">23. Severability</h2>
+          <p>If any provision is invalid, the remaining provisions remain in effect.</p>
         </section>
       </div>
       </div>
