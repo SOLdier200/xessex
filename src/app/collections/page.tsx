@@ -44,7 +44,7 @@ const R2_BASE = "https://pub-77b523433fb04971ba656a572f298a11.r2.dev";
 const CATEGORIES = [
   { slug: "blonde", name: "Blonde", image: `${R2_BASE}/blonde.jpg` },
   { slug: "brunette", name: "Brunette", image: `${R2_BASE}/brunette.jpg` },
-  { slug: "latina", name: "Latina", image: `${R2_BASE}/latina.jpg` },
+  { slug: "latina", name: "Latina", image: `${R2_BASE}/latina.png` },
   { slug: "black", name: "Black", image: `${R2_BASE}/black.jpg` },
   { slug: "blowjob", name: "Blowjob", image: `${R2_BASE}/blowjob.jpg` },
   { slug: "threesome", name: "Threesome", image: `${R2_BASE}/threesome2.png` },
