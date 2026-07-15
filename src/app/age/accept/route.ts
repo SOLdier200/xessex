@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookieOptionsForHost } from "@/lib/authCookies";
 
 export const runtime = "nodejs";
 
@@ -15,17 +16,7 @@ function sanitizeNext(nextValue: string | null | undefined) {
  * Some in-app browsers (Backpack, etc.) may have malformed req.url
  */
 function getOrigin(req: NextRequest): string {
-  // Prefer x-forwarded headers (set by Cloudflare/proxies)
-  const proto = req.headers.get("x-forwarded-proto") || "https";
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-
-  // Validate host - must not be localhost or contain unexpected ports
-  if (host && !host.includes("localhost") && !host.includes("127.0.0.1") && !host.match(/:\d+$/)) {
-    return `${proto}://${host}`;
-  }
-
-  // Fallback to production URL
-  return "https://xessex.me";
+  return req.nextUrl.origin;
 }
 
 export async function POST(req: NextRequest) {
@@ -39,24 +30,18 @@ export async function POST(req: NextRequest) {
 
   // Keep SameSite=None for iOS wallet deep-link returns
   const maxAge = 60 * 60 * 24 * 365; // 1 year
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  const cookieBase = cookieOptionsForHost(host);
 
   res.cookies.set("age_ok", "1", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
-    domain: ".xessex.me",
+    ...cookieBase,
     maxAge,
   });
 
   // Optional: keep if any legacy client code still reads it
   // If AgeGateEnforcer is removed, you can delete this cookie later.
   res.cookies.set("age_verified", "1", {
-    httpOnly: false,
-    secure: true,
-    sameSite: "none",
-    path: "/",
-    domain: ".xessex.me",
+    ...cookieBase,
     maxAge,
   });
 
