@@ -125,7 +125,7 @@ const CATEGORY_INFO: Record<string, { name: string; icon: string; image?: string
   "for-women": { name: "For Women", icon: "♀️" },
   "anal": { name: "Anal", icon: "", image: `${R2_BASE}/anal23.png` },
   "latina": { name: "Latina", icon: "", image: `${R2_BASE}/latina.png` },
-  "black": { name: "Black", icon: "", image: `${R2_BASE}/black.jpg` },
+  "black": { name: "Black", icon: "", image: `${R2_BASE}/black.png` },
   "asian": { name: "Asian", icon: "", image: `${R2_BASE}/asian100.webp` },
   "2d": { name: "2D Animated", icon: "", image: `${R2_BASE}/2dpic.webp` },
   "highest-rated": { name: "Highest Rated", icon: "⭐" },
