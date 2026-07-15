@@ -274,37 +274,21 @@ function ProfilePageInner() {
 
     setAvatarUploading(true);
     try {
-      // 1. Get presigned upload URL
+      // Upload the file through the app server so we do not depend on R2 browser CORS.
+      const formData = new FormData();
+      formData.append("file", file);
+
       const uploadRes = await fetch("/api/profile/avatar/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: file.type }),
+        body: formData,
       });
       const uploadJson = await uploadRes.json();
       if (!uploadJson.ok) {
-        throw new Error(uploadJson.error || "Failed to get upload URL");
-      }
-
-      // 2. Upload directly to R2
-      await fetch(uploadJson.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-
-      // 3. Confirm upload
-      const confirmRes = await fetch("/api/profile/avatar/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: uploadJson.key }),
-      });
-      const confirmJson = await confirmRes.json();
-      if (!confirmJson.ok) {
-        throw new Error(confirmJson.error || "Failed to confirm upload");
+        throw new Error(uploadJson.error || "Failed to upload avatar");
       }
 
       // Update local data
-      setData((prev) => prev ? { ...prev, avatarUrl: confirmJson.avatarUrl } : prev);
+      setData((prev) => (prev ? { ...prev, avatarUrl: uploadJson.avatarUrl } : prev));
       toast.success("Profile picture updated!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to upload image");

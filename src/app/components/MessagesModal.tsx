@@ -322,39 +322,21 @@ export default function MessagesModal({ isOpen, onClose, onUnreadCountChange, in
 
     setUploadingAvatar(true);
     try {
-      // Step 1: Get upload URL
+      const formData = new FormData();
+      formData.append("file", file);
+
       const uploadRes = await fetch("/api/profile/avatar/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: file.type }),
+        body: formData,
       });
 
       const uploadData = await uploadRes.json();
       if (!uploadData.ok) {
-        throw new Error(uploadData.error || "Failed to get upload URL");
-      }
-
-      // Step 2: Upload to R2
-      await fetch(uploadData.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-
-      // Step 3: Confirm upload
-      const confirmRes = await fetch("/api/profile/avatar/confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: uploadData.key }),
-      });
-
-      const confirmData = await confirmRes.json();
-      if (!confirmData.ok) {
-        throw new Error(confirmData.error || "Failed to confirm upload");
+        throw new Error(uploadData.error || "Failed to upload avatar");
       }
 
       // Success! Update local state to hide upload button
-      setAvatarPreview(confirmData.avatarUrl);
+      setAvatarPreview(uploadData.avatarUrl);
       setMessages((prev) =>
         prev.map((m) => (m.isAvatarPrompt ? { ...m, showAvatarUpload: false } : m))
       );

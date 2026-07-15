@@ -3,7 +3,12 @@
  * Uses AWS SDK v3 with S3-compatible R2 endpoint.
  */
 
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // R2 configuration from environment
@@ -104,6 +109,27 @@ export async function signR2PutUrl(
   });
 
   return getSignedUrl(client, command, { expiresIn });
+}
+
+/**
+ * Upload an object directly to R2 from the server.
+ * This avoids browser-side CORS requirements for direct PUT uploads.
+ */
+export async function putR2Object(
+  key: string,
+  body: Uint8Array,
+  contentType: string
+): Promise<void> {
+  const client = getR2Client();
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
 }
 
 /**
